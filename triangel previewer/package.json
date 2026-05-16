@@ -1,0 +1,10 @@
+{
+  "name": "triangel-previewer",
+  "version": "1.0.0",
+  "description": "Browser previewer + serial bridge for the Triangel LED installation",
+  "private": true,
+  "dependencies": {
+    "serialport": "^13.0.0",
+    "ws": "^8.20.1"
+  }
+}

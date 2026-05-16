@@ -1,0 +1,5 @@
+{
+  "serial": "COM3",
+  "baud": 921600,
+  "wsPort": 8080
+}

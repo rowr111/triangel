@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Triangel Previewer</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #111; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+    canvas { display: block; }
+    #status {
+      position: fixed; top: 10px; right: 12px;
+      font: 11px/1 monospace; padding: 3px 7px; border-radius: 3px;
+      background: #222; color: #666;
+    }
+    #status.live { background: #0a2a0a; color: #4c4; }
+  </style>
+</head>
+<body>
+  <canvas id="c"></canvas>
+  <div id="status">no bridge</div>
+
+  <script src="led_map.js"></script>
+  <script src="animation.js"></script>
+  <script>
+  (function () {
+    const PADDING = 32;
+
+    // Board geometry — must match generate_map.js exactly.
+    const LOCAL_CORNERS = [[100, 150], [200, 150], [150, 63.397]];
+    const LOCAL_CX = 150, LOCAL_CY = 121.132;
+    const BOARD_GAP = 2;
+    const CENTROID_DIST = 100 / Math.sqrt(3);
+    const GRID_K = (CENTROID_DIST + BOARD_GAP) / CENTROID_DIST;
+    const H    = 100 * Math.sqrt(3) / 2 * GRID_K;
+    const STEP = 50 * GRID_K;
+
+    const BOARDS = [];
+    for (let r = 1; r <= 5; r++) {
+      const count = 11 - 2 * r;
+      for (let p = 1; p <= count; p++) {
+        const down = (p % 2 === 1);
+        const cx = STEP * (r - 1 + p);
+        const cy = down ? (3*r - 2) / 3 * H : (3*r - 1) / 3 * H;
+        BOARDS.push({ down, cx, cy });
+      }
+    }
+
+    function toWorld(board, lx, ly) {
+      const dx = lx - LOCAL_CX, dy = ly - LOCAL_CY;
+      return board.down
+        ? [board.cx - dx, board.cy - dy]
+        : [board.cx + dx, board.cy + dy];
+    }
+
+    // World bounds from LED positions.
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    for (const { wx, wy } of LED_MAP) {
+      if (wx < minX) minX = wx; if (wx > maxX) maxX = wx;
+      if (wy < minY) minY = wy; if (wy > maxY) maxY = wy;
+    }
+    const MARGIN = 8;
+    const WORLD_W = maxX - minX + 2 * MARGIN;
+    const WORLD_H = maxY - minY + 2 * MARGIN;
+    const ORIGIN_X = minX - MARGIN;
+    const ORIGIN_Y = minY - MARGIN;
+
+    // Inverse chain map: chainIdx → LED_MAP index, for decoding bridge frames.
+    const byChain = new Array(600);
+    LED_MAP.forEach((led, i) => { byChain[led.chainIdx] = i; });
+
+    // Live frame from bridge — null means use animation.js instead.
+    let liveColors = null;
+
+    // --- WebSocket bridge connection ---------------------------------------
+    const statusEl = document.getElementById('status');
+
+    function connectBridge(wsUrl) {
+      const ws = new WebSocket(wsUrl);
+      ws.binaryType = 'arraybuffer';
+
+      ws.onopen = () => {
+        statusEl.textContent = 'bridge live';
+        statusEl.className = 'live';
+      };
+
+      ws.onmessage = (event) => {
+        const bytes = new Uint8Array(event.data);
+        if (bytes.length !== 1800) return;
+        const frame = new Array(600);
+        for (let c = 0; c < 600; c++) {
+          frame[byChain[c]] = [bytes[c * 3], bytes[c * 3 + 1], bytes[c * 3 + 2]];
+        }
+        liveColors = frame;
+      };
+
+      ws.onclose = () => {
+        liveColors = null;
+        statusEl.textContent = 'no bridge';
+        statusEl.className = '';
+        setTimeout(() => connectBridge(wsUrl), 2000); // auto-reconnect
+      };
+
+      ws.onerror = () => ws.close();
+    }
+
+    connectBridge('ws://localhost:8080');
+
+    // --- Canvas -----------------------------------------------------------
+    const canvas = document.getElementById('c');
+    const ctx = canvas.getContext('2d');
+    let scale = 1;
+
+    const px = x => PADDING + (x - ORIGIN_X) * scale;
+    const py = y => PADDING + (y - ORIGIN_Y) * scale;
+
+    function resize() {
+      const availW = window.innerWidth  - PADDING * 2;
+      const availH = window.innerHeight - PADDING * 2;
+      scale = Math.min(availW / WORLD_W, availH / WORLD_H);
+      canvas.width  = Math.round(WORLD_W * scale + PADDING * 2);
+      canvas.height = Math.round(WORLD_H * scale + PADDING * 2);
+    }
+
+    function draw(t) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Bridge data when connected, animation.js otherwise.
+      const colors = liveColors || getFrame(LED_MAP, t);
+
+      const radius = Math.max(2, scale * 1.2);
+      for (let i = 0; i < LED_MAP.length; i++) {
+        const { wx, wy } = LED_MAP[i];
+        const [r, g, b] = colors[i] || [0, 0, 0];
+        if (r === 0 && g === 0 && b === 0) continue;
+        ctx.fillStyle = `rgb(${r},${g},${b})`;
+        ctx.beginPath();
+        ctx.arc(px(wx), py(wy), radius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Outlines last — always visible on top.
+      ctx.strokeStyle = '#555';
+      ctx.lineWidth = 1;
+      for (const board of BOARDS) {
+        const pts = LOCAL_CORNERS.map(([lx, ly]) => toWorld(board, lx, ly));
+        ctx.beginPath();
+        ctx.moveTo(px(pts[0][0]), py(pts[0][1]));
+        ctx.lineTo(px(pts[1][0]), py(pts[1][1]));
+        ctx.lineTo(px(pts[2][0]), py(pts[2][1]));
+        ctx.closePath();
+        ctx.stroke();
+      }
+
+      requestAnimationFrame(draw);
+    }
+
+    resize();
+    window.addEventListener('resize', resize);
+    requestAnimationFrame(draw);
+  })();
+  </script>
+</body>
+</html>
