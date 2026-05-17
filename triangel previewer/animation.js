@@ -67,11 +67,41 @@ function horizontalScan(ledMap, t) {
   });
 }
 
+// Shimmer radiating from the triangle centroid (1/3 from each edge)
+function centerShimmer(ledMap, t) {
+  const CX = 258;
+  const CY = WORLD_TOP + (WORLD_BOT - WORLD_TOP) / 3; // ~149mm
+
+  const speed      = 60;  // mm/s outward
+  const wavelength = 120; // mm per cycle
+
+  return ledMap.map((led) => {
+    const dist = Math.sqrt((led.wx - CX) ** 2 + (led.wy - CY) ** 2);
+
+    // Outward radial wave, positive half only
+    const wave = (Math.sin((dist / wavelength - (t / 1000) * speed / wavelength) * Math.PI * 2) + 1) / 2;
+
+    // Per-LED sparkle: each LED gets a unique phase from a simple hash
+    const hash = (led.boardId * 7 + led.localIdx * 13) % 97;
+    const shimmer = 0.6 + 0.4 * Math.sin(t * 0.0025 + hash);
+
+    const brightness = wave * shimmer;
+
+    // Cool blue-white
+    return [
+      Math.round(brightness * 160),
+      Math.round(brightness * 210),
+      Math.round(brightness * 255),
+    ];
+  });
+}
+
 // ─── Active animation ─────────────────────────────────────────────────────────
 
 function getFrame(ledMap, t) {
-  return apexRipple(ledMap, t);
-  //return rainbowX(ledMap, t);
-  //return horizontalScan(ledMap, t);
+  return centerShimmer(ledMap, t);
+  // return apexRipple(ledMap, t);
+  // return rainbowX(ledMap, t);
+  // return horizontalScan(ledMap, t);
   // return staticWhite(ledMap);
 }
