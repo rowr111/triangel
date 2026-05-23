@@ -1,5 +1,17 @@
+# Rust
+target/
+
 # Node
 node_modules/
 package-lock.json
 
+# KiCad
+*-backups/
+**/.history/
+
+# Claude
 .claude/
+
+# OS
+.DS_Store
+Thumbs.db
