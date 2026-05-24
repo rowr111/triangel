@@ -19,7 +19,7 @@ use cmds::*;
 use led::map::LED_MAP;
 use setlist::SetlistManager;
 
-const TARGET_FRAME_MS: u64 = 1000 / 30; // ~33 ms → 30 fps
+const TARGET_FRAME_MS: u64 = 1000 / 30; // ~33 ms -> 30 fps
 
 fn main() -> ! {
     #[cfg(not(feature = "previewer"))]
@@ -47,7 +47,7 @@ fn main() -> ! {
     // Setlist manager owns pattern cycling, brightness, sound mode
     let mut setlist = SetlistManager::new(tt.elapsed_ms() as u32);
 
-    // Frame buffer — reused every frame to avoid allocation
+    // Frame buffer - reused every frame to avoid allocation
     let mut frame = [[0u8; 3]; led::map::LED_COUNT];
 
     #[cfg(feature = "bringup")]
@@ -56,7 +56,7 @@ fn main() -> ! {
     #[cfg(not(feature = "previewer"))]
     log::info!("entering render loop");
 
-    // Absolute next-frame deadline — prevents timing drift across frames.
+    // Absolute next-frame deadline - prevents timing drift across frames.
     let mut next_frame = tt.elapsed_ms();
 
     loop {

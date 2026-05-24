@@ -13,10 +13,10 @@ const NEC_BIT_PULSE_US:    u32 =   560;
 const NEC_BIT_0_SPACE_US:  u32 =   560;
 const NEC_BIT_1_SPACE_US:  u32 = 1_690;
 const NEC_REPEAT_SPACE_US: u32 = 2_250;
-const NEC_TIMING_MARGIN:   u32 =   200; // ±µs tolerance
+const NEC_TIMING_MARGIN:   u32 =   200; // +/-us tolerance
 
-// NEC command byte → function mapping.
-// These are placeholder codes — capture the actual codes from the chosen remote
+// NEC command byte -> function mapping.
+// These are placeholder codes - capture the actual codes from the chosen remote
 // with a logic analyser or by running the NEC decoder and logging received bytes.
 const IR_CMD_BRIGHTNESS_UP:   u8 = 0x40;
 const IR_CMD_BRIGHTNESS_DOWN: u8 = 0x41;
@@ -41,18 +41,18 @@ fn poll_loop(queue: EventQueue) {
         //
         // NEC frame structure (as seen after the receiver module):
         //   9ms LOW (leader burst) + 4.5ms HIGH (leader space)
-        //   + 32 bits: each bit = 560µs LOW pulse + space
-        //     (560µs space = 0, 1690µs space = 1)
-        //   + final 560µs LOW pulse
+        //   + 32 bits: each bit = 560us LOW pulse + space
+        //     (560us space = 0, 1690us space = 1)
+        //   + final 560us LOW pulse
         //   + idle HIGH
         //
         // 32 bits = address (8) + ~address (8) + command (8) + ~command (8).
         // Validate: address ^ ~address == 0xFF and cmd ^ ~cmd == 0xFF.
         //
         // Options for timing on bao1x:
-        //   a) BIO core — configure as pulse-width capture (most efficient, no CPU spin)
-        //   b) GPIO interrupt + timestamp — OS-supported, reasonable resolution
-        //   c) Busy-wait at ~100µs intervals — simple but spins CPU for 67ms per frame
+        //   a) BIO core - configure as pulse-width capture (most efficient, no CPU spin)
+        //   b) GPIO interrupt + timestamp - OS-supported, reasonable resolution
+        //   c) Busy-wait at ~100us intervals - simple but spins CPU for 67ms per frame
         //
         // Once a valid frame is received:
         //   map_ir_cmd(cmd_byte, &queue);

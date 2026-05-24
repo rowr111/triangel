@@ -4,9 +4,18 @@ Shared types and wire protocol definitions for the triangel two-chip lighting sy
 
 ## Contents
 
-### `mel` — ear→eye mel frame protocol
+### `mel` - ear->eye mel frame protocol
 
 The ear chip streams 24 mel frequency band values to the eye chip over UART at ~30 fps.
+
+#### Constants
+
+| Constant | Value | Description |
+|---|---|---|
+| `EAR_UART_BAUD` | `921_600` | Baud rate for the ear->eye UART link - must match on both chips |
+| `SYNC_BYTE` | `0xAA` | Sync byte at the start of every mel frame |
+| `MEL_BANDS` | `24` | Number of mel frequency bands per frame |
+| `FRAME_LEN` | `51` | Wire frame length in bytes |
 
 #### Wire frame format (51 bytes)
 
@@ -49,4 +58,4 @@ if let Some(frame) = MelFrame::decode(&buf) {
 triangel-shared = { path = "../shared" }
 ```
 
-This crate has no external dependencies and no OS requirements — safe to use in both chips.
+This crate has no external dependencies and no OS requirements - safe to use in both chips.

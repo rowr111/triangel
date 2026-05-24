@@ -13,14 +13,14 @@ fn ambient_patterns() -> Vec<Box<dyn Pattern>> {
 }
 
 fn reactive_patterns() -> Vec<Box<dyn Pattern>> {
-    // Placeholder reactive patterns — replace with real sound-reactive patterns.
+    // Placeholder reactive patterns - replace with real sound-reactive patterns.
     vec![
         Box::new(RainbowX   { speed: 180.0 }),
         Box::new(ApexRipple { speed: 200.0, wavelength: 50.0 }),
     ]
 }
 
-// ─── Sound mode ───────────────────────────────────────────────────────────────
+// --- Sound mode ---
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum SoundMode {
@@ -29,7 +29,7 @@ pub enum SoundMode {
     On,
 }
 
-// ─── Setlist manager ──────────────────────────────────────────────────────────
+// --- Setlist manager ---
 
 pub struct SetlistManager {
     ambient:        Vec<Box<dyn Pattern>>,
@@ -96,7 +96,7 @@ impl SetlistManager {
     }
 
     /// Returns whether sound-reactive setlist should be active.
-    /// `activity` is the flag from the ear chip — sustained absolute loudness above its
+    /// `activity` is the flag from the ear chip - sustained absolute loudness above its
     /// calibrated threshold. Used only in Auto mode; On/Off ignore it.
     pub fn sound_active(&self, activity: bool) -> bool {
         match self.sound_mode {

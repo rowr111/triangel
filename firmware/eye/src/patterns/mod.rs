@@ -9,13 +9,13 @@ pub type Frame = [[u8; 3]; crate::led::map::LED_COUNT];
 
 pub trait Pattern: Send {
     /// Render one frame into `out`.
-    /// `leds`        — world-position metadata for each LED, indexed by chain position
-    /// `t_ms`        — monotonic time in milliseconds
-    /// `sound_level` — smoothed normalised sound level 0.0–1.0 (ignored by ambient patterns)
+    /// `leds`        - world-position metadata for each LED, indexed by chain position
+    /// `t_ms`        - monotonic time in milliseconds
+    /// `sound_level` - smoothed normalised sound level 0.0-1.0 (ignored by ambient patterns)
     fn render(&mut self, leds: &[Led], t_ms: u32, sound_level: f32, out: &mut Frame);
 }
 
-// ─── Envelope ─────────────────────────────────────────────────────────────────
+// --- Envelope ---
 
 /// Attack/decay envelope for sound-reactive patterns.
 /// Hold one as a field on your pattern struct and call `update()` each frame.
@@ -30,7 +30,7 @@ impl Envelope {
         Envelope { attack, decay, value: 0.0 }
     }
 
-    /// Feed a new input sample (0.0–1.0), returns the smoothed value.
+    /// Feed a new input sample (0.0-1.0), returns the smoothed value.
     pub fn update(&mut self, input: f32) -> f32 {
         if input > self.value {
             self.value += self.attack * (input - self.value);
@@ -41,9 +41,9 @@ impl Envelope {
     }
 }
 
-// ─── Shared math utilities ────────────────────────────────────────────────────
+// --- Shared math utilities ---
 
-/// HSV → RGB. h: 0–360, s/v: 0–1. Returns [r, g, b] each 0–255.
+/// HSV -> RGB. h: 0-360, s/v: 0-1. Returns [r, g, b] each 0-255.
 pub fn hsv(h: f32, s: f32, v: f32) -> [u8; 3] {
     let f = |n: f32| -> f32 {
         let k = (n + h / 60.0) % 6.0;

@@ -1,0 +1,16 @@
+{
+	"folders": [
+		{
+			"path": "../../eye"
+		},
+		{
+			"path": ".."
+		}
+	],
+	"settings": {
+		"baochip.flashLocation": "e:\\",
+		"baochip.buildTarget": "dabao",
+		"baochip.serialPortBootloader": "COM5",
+		"baochip.serialPortRun": "COM6"
+	}
+}

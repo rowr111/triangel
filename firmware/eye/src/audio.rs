@@ -28,12 +28,12 @@ impl AudioReceiver {
         receiver
     }
 
-    /// Smoothed normalised sound level 0.0–1.0 with attack/decay envelope.
+    /// Smoothed normalised sound level 0.0-1.0 with attack/decay envelope.
     pub fn smoothed_level(&self) -> f32 {
         self.state.lock().map(|s| s.smoothed_level).unwrap_or(0.0)
     }
 
-    /// Raw mel band values, 24 bands, each 0.0–1.0.
+    /// Raw mel band values, 24 bands, each 0.0-1.0.
     pub fn current_mel(&self) -> [f32; MEL_BANDS] {
         self.state.lock().map(|s| s.mel).unwrap_or([0.0; MEL_BANDS])
     }
@@ -53,7 +53,7 @@ impl AudioReceiver {
     }
 }
 
-// Fast attack, slow decay — level jumps quickly on loud sounds and fades gradually.
+// Fast attack, slow decay - level jumps quickly on loud sounds and fades gradually.
 const ATTACK: f32 = 0.25;
 const DECAY:  f32 = 0.02;
 

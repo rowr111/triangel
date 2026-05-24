@@ -1,10 +1,13 @@
-/// Sync byte that starts every mel frame on the ear→eye UART wire.
+/// Baud rate for the ear->eye UART link. Must match on both chips.
+pub const EAR_UART_BAUD: u32 = 921_600;
+
+/// Sync byte that starts every mel frame on the ear->eye UART wire.
 pub const SYNC_BYTE: u8 = 0xAA;
 
 /// Number of mel frequency bands the ear chip computes.
 pub const MEL_BANDS: usize = 24;
 
-/// Wire frame length in bytes: 1 sync + MEL_BANDS×2 data + 1 activity + 1 checksum.
+/// Wire frame length in bytes: 1 sync + MEL_BANDS*2 data + 1 activity + 1 checksum.
 pub const FRAME_LEN: usize = 1 + MEL_BANDS * 2 + 1 + 1; // 51 bytes
 
 /// One frame of mel band data sent from the ear chip to the eye chip.

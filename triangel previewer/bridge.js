@@ -1,13 +1,13 @@
-// bridge.js — serial-to-WebSocket bridge for the Triangel previewer.
+// bridge.js - serial-to-WebSocket bridge for the Triangel previewer.
 //
 // Usage:
 //   node bridge.js
 //   node bridge.js --serial COM4 --baud 460800 --ws-port 9000
 //
 // Config file bridge.config.json is read first; CLI args override it.
-// The Baochip sends 1804 bytes per frame: 4-byte magic + 1800 RGB bytes (600 LEDs × RGB) in chain order.
+// The Baochip sends 1804 bytes per frame: 4-byte magic + 1800 RGB bytes (600 LEDs x RGB) in chain order.
 // Magic [0xFF, 0xFF, 0xFF, 0xFF] allows the bridge to sync to frame boundaries mid-stream.
-// LED channel values are clamped to 0–254 in firmware so 0xFF never appears in payload.
+// LED channel values are clamped to 0-254 in firmware so 0xFF never appears in payload.
 
 'use strict';
 
@@ -73,7 +73,7 @@ serial.on('data', (chunk) => {
   while (true) {
     const idx = buf.indexOf(FRAME_MAGIC);
     if (idx === -1) {
-      // No magic found — keep last 3 bytes in case the marker is split across chunks.
+      // No magic found - keep last 3 bytes in case the marker is split across chunks.
       buf = buf.subarray(buf.length - (FRAME_MAGIC.length - 1));
       break;
     }

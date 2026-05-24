@@ -43,7 +43,7 @@ impl LedOutput {
 
     /// Send one frame. `frame[i]` is `[r, g, b]` for the LED described by `LED_MAP[i]`.
     /// LED_MAP is sorted by boardId/localIdx, not by chainIdx, so we reorder before
-    /// sending — the hardware and previewer bridge both expect bytes in chainIdx order.
+    /// sending - the hardware and previewer bridge both expect bytes in chainIdx order.
     pub fn send_frame(&mut self, frame: &[[u8; 3]; LED_COUNT]) {
         // Reorder: chain_ordered[chainIdx] = colour for that physical chain position.
         let mut chain_ordered = [[0u8; 3]; LED_COUNT];
@@ -65,7 +65,7 @@ impl LedOutput {
             // 4-byte magic + 1800 RGB bytes in chain order.
             // Magic lets bridge.js sync to frame boundaries even if it connects mid-stream.
             // Must match FRAME_MAGIC in triangel previewer/bridge.js.
-            // LED channels are clamped to 0–254 so 0xFF never appears in payload,
+            // LED channels are clamped to 0-254 so 0xFF never appears in payload,
             // making the all-0xFF magic unambiguous.
             const MAGIC: [u8; 4] = [0xFF, 0xFF, 0xFF, 0xFF];
             let mut buf = [0u8; 4 + LED_COUNT * 3];

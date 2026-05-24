@@ -24,7 +24,7 @@
   (function () {
     const PADDING = 32;
 
-    // Board geometry — must match generate_map.js exactly.
+    // Board geometry - must match generate_map.js exactly.
     const LOCAL_CORNERS = [[100, 150], [200, 150], [150, 63.397]];
     const LOCAL_CX = 150, LOCAL_CY = 121.132;
     const BOARD_GAP = 2;
@@ -63,11 +63,11 @@
     const ORIGIN_X = minX - MARGIN;
     const ORIGIN_Y = minY - MARGIN;
 
-    // Inverse chain map: chainIdx → LED_MAP index, for decoding bridge frames.
+    // Inverse chain map: chainIdx -> LED_MAP index, for decoding bridge frames.
     const byChain = new Array(600);
     LED_MAP.forEach((led, i) => { byChain[led.chainIdx] = i; });
 
-    // Live frame from bridge — null means use animation.js instead.
+    // Live frame from bridge - null means use animation.js instead.
     let liveColors = null;
 
     // --- WebSocket bridge connection ---------------------------------------
@@ -123,7 +123,7 @@
     function draw(t) {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // Only render live frames from the bridge — no animation.js fallback.
+      // Only render live frames from the bridge - no animation.js fallback.
       const colors = liveColors;
       if (!colors) { requestAnimationFrame(draw); return; }
 
@@ -138,7 +138,7 @@
         ctx.fill();
       }
 
-      // Outlines last — always visible on top.
+      // Outlines last - always visible on top.
       ctx.strokeStyle = '#555';
       ctx.lineWidth = 1;
       for (const board of BOARDS) {

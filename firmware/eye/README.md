@@ -10,13 +10,13 @@ The **eye** chip drives 600 WS2812 LEDs across 25 triangle PCBs. It manages:
 - Two pattern setlists (ambient and sound-reactive), cycling every ~3 minutes
 - D-pad + 3-position switch controls for brightness, pattern stepping, hold, and sound mode
 - IR remote (same functions as the physical controls)
-- Receives mel frequency data from the **ear** chip over UART — 24 band values for pattern reactivity plus a sustained-activity flag for Auto sound mode switching
+- Receives mel frequency data from the **ear** chip over UART - 24 band values for pattern reactivity plus a sustained-activity flag for Auto sound mode switching
 
 ## Hardware
 
 | Thing | Detail |
 |---|---|
-| Chip | Baochip-1x — 350 MHz VexRiscv RV32-IMAC, 2 MB SRAM, 4 MB ReRAM |
+| Chip | Baochip-1x - 350 MHz VexRiscv RV32-IMAC, 2 MB SRAM, 4 MB ReRAM |
 | BIO cores | 4x PicoRV at 700 MHz - one used for WS2812 bit-timing |
 | LED output | Single WS2812 daisy chain, 600 LEDs, BIO pin 5 |
 | LED variant | WS2812B (`LedVariant::B`) |
@@ -49,7 +49,7 @@ Build via the Baochip VSCode extension (`buildMode: out-of-tree`). Optional feat
 | `previewer` | Send LED frames over USB serial to the browser simulator instead of driving WS2812 |
 | `bringup` | Enable the hardware debug REPL over USB serial |
 
-These two are mutually exclusive — both claim the USB serial port and will conflict if combined.
+These two are mutually exclusive - both claim the USB serial port and will conflict if combined.
 
 ## Using the previewer
 
@@ -58,7 +58,7 @@ The previewer is a browser-based LED simulator at `../../triangel previewer/`. I
 1. Enable the `previewer` feature in the Baochip extension settings and build
 2. Flash and boot the DABAO
 3. In the previewer directory: `npm install` (first time), then `node bridge.js`
-4. Open `index.html` in a browser — it will show the live pattern output
+4. Open `index.html` in a browser - it will show the live pattern output
 
 Bridge defaults: COM3, 921600 baud, WebSocket port 8080. Override via `bridge.config.json` or CLI flags.
 
@@ -68,7 +68,7 @@ See [PATTERNS.md](PATTERNS.md) for a full guide including world coordinates, ava
 
 ## Sound reactivity
 
-The **ear** chip sends 24 mel-frequency band values per frame over UART at ~30 fps. The eye chip applies a fixed attack/decay envelope (attack 0.25, decay 0.02) and exposes two things to patterns: `sound_level` (a single smoothed scalar 0.0–1.0) and `current_mel()` (raw per-band values for patterns that want to apply their own smoothing).
+The **ear** chip sends 24 mel-frequency band values per frame over UART at ~30 fps. The eye chip applies a fixed attack/decay envelope (attack 0.25, decay 0.02) and exposes two things to patterns: `sound_level` (a single smoothed scalar 0.0-1.0) and `current_mel()` (raw per-band values for patterns that want to apply their own smoothing).
 
 Sound mode is controlled by the 3-position switch:
 

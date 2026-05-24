@@ -4,7 +4,7 @@ use std::sync::{Arc, Mutex};
 use super::{EventQueue, InputEvent};
 use crate::setlist::SoundMode;
 
-// GPIO pin assignments — placeholder numbers, update when PCB layout is finalized.
+// GPIO pin assignments - placeholder numbers, update when PCB layout is finalized.
 // All button inputs are active-low: button press connects pin to GND; pull-up resistors
 // on the button board keep them HIGH when unpressed.
 const PIN_BTN_UP:     u8 = 0;
@@ -15,9 +15,9 @@ const PIN_BTN_CENTER: u8 = 4;
 
 // 3-position switch: two active-low GPIO lines encode position.
 // With pull-ups, a floating pin reads HIGH. Switch connects one pin to GND per position:
-//   SW_A LOW,  SW_B HIGH → SoundMode::Off
-//   SW_A HIGH, SW_B HIGH → SoundMode::Auto  (center — neither connected)
-//   SW_A HIGH, SW_B LOW  → SoundMode::On
+//   SW_A LOW,  SW_B HIGH -> SoundMode::Off
+//   SW_A HIGH, SW_B HIGH -> SoundMode::Auto  (center - neither connected)
+//   SW_A HIGH, SW_B LOW  -> SoundMode::On
 const PIN_SW_A: u8 = 5;
 const PIN_SW_B: u8 = 6;
 
@@ -46,11 +46,11 @@ impl Debouncer {
 
     fn update(&mut self, raw: bool) -> bool {
         if raw != self.candidate {
-            // Different from what we've been counting — restart
+            // Different from what we've been counting - restart
             self.candidate = raw;
             self.count = 1;
         } else if raw != self.confirmed {
-            // Same candidate, different from confirmed — keep accumulating
+            // Same candidate, different from confirmed - keep accumulating
             self.count += 1;
             if self.count >= DEBOUNCE_TICKS {
                 let was_high = self.confirmed;
@@ -118,5 +118,5 @@ fn poll_loop(queue: Arc<Mutex<VecDeque<InputEvent>>>) {
 /// TODO: replace with actual bao1x GPIO HAL call once pin assignments are confirmed.
 #[allow(unused_variables)]
 fn read_pin(pin: u8) -> bool {
-    true // stub — HIGH = unpressed (active-low buttons with pull-ups)
+    true // stub - HIGH = unpressed (active-low buttons with pull-ups)
 }

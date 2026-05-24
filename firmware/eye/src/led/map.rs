@@ -1,7 +1,7 @@
-// Auto-generated from triangel previewer/led_map.js — do not edit by hand.
+// Auto-generated from triangel previewer/led_map.js - do not edit by hand.
 // Run generate_map.js in the previewer, then re-run the generation script to update.
-// 600 LEDs across 25 boards. Single chain, chainIdx 0–599.
-// Chain snake: row1 left→right, row2 right→left, row3 left→right, row4 right→left, row5.
+// 600 LEDs across 25 boards. Single chain, chainIdx 0-599.
+// Chain snake: row1 left->right, row2 right->left, row3 left->right, row4 right->left, row5.
 // Baochip data wire connects at board 1 (top-left of fixture).
 
 pub const WORLD_CX: f32  = 258.0;

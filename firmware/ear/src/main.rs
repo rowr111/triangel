@@ -1,40 +1,38 @@
-mod cmds;
-#[cfg(feature = "ctap-bringup")]
-mod ctap;
-mod repl;
-mod shell;
-use cmds::*;
-#[cfg(feature = "usb")]
-use usb_bao1x::UsbHid;
+mod audio;
+mod mel;
+mod uart_out;
 
-fn main() {
+use audio::{ActiveAudio, AudioSource};
+use mel::MelProcessor;
+use uart_out::UartOut;
+
+fn main() -> ! {
     log_server::init_wait().unwrap();
     log::set_max_level(log::LevelFilter::Info);
-    log::info!("my PID is {}", xous::process::id());
-    let tt = ticktimer::Ticktimer::new().unwrap();
+    log::info!("ear starting, PID {}", xous::process::id());
 
     let hal = bao1x_hal_service::Hal::new();
-    // allow preemption in the dabao console environment
     hal.set_preemption(true);
 
-    // spawn the shell thread
-    shell::start_shell();
+    // Audio source is selected by feature flag:
+    //   uart-audio  -> UartAudio: receives PCM packets over USB serial from ear_sim.py
+    //   (default)   -> I2sAudio: reads from ICS43434 MEMS mic via I2S hardware
+    let mut audio = ActiveAudio::new();
 
-    #[cfg(feature = "usb")]
-    {
-        tt.sleep_ms(500).ok(); // pause for the system to startup
-        let usb = UsbHid::new();
-        usb.serial_console_input_injection();
-    }
+    // Mel filterbank - builds FFT plan and filter weights once at startup
+    let mut mel = MelProcessor::new();
 
-    #[cfg(feature = "ctap-bringup")]
-    {
-        tt.sleep_ms(4000).ok();
-        crate::ctap::ctap_test();
-    }
+    // UART output to eye chip
+    let mut uart_out = UartOut::new();
 
-    // idle the main thread, all children are spawned
+    log::info!("ear ready");
+
+    // Main loop: read_frame() blocks until a complete 512-sample audio frame
+    // arrives (~32 ms at 16 kHz), so the loop runs at ~31 fps naturally.
+    // No explicit sleep or timer needed - the audio source sets the pace.
     loop {
-        tt.sleep_ms(2_000).ok();
+        let samples = audio.read_frame();
+        let frame = mel.process(&samples);
+        uart_out.send(&frame);
     }
 }

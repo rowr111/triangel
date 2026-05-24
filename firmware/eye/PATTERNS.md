@@ -16,8 +16,8 @@ pub struct YourPattern {
 impl Pattern for YourPattern {
     fn render(&mut self, leds: &[Led], t_ms: u32, _sound_level: f32, out: &mut Frame) {
         for (i, led) in leds.iter().enumerate() {
-            // led.wx, led.wy — position in mm
-            // t_ms — monotonic time
+            // led.wx, led.wy - position in mm
+            // t_ms - monotonic time
             out[i] = [r, g, b];
         }
     }
@@ -37,8 +37,8 @@ And add `pub mod your_pattern;` to `src/patterns/mod.rs`.
 
 ```
 origin: top-left of fixture
-x: increases rightward, 0–517 mm
-y: increases downward,  0–436 mm
+x: increases rightward, 0-517 mm
+y: increases downward,  0-436 mm
 
 WORLD_CX  = 258 mm  - horizontal centre
 WORLD_TOP =   6 mm  - topmost LED
@@ -80,7 +80,7 @@ impl MyReactivePattern {
 impl Pattern for MyReactivePattern {
     fn render(&mut self, leds: &[Led], t_ms: u32, _sound_level: f32, out: &mut Frame) {
         // drive level from a specific mel band instead of the global scalar
-        // (mel data not yet wired — placeholder uses sound_level for now)
+        // (mel data not yet wired - placeholder uses sound_level for now)
         let level = self.envelope.update(_sound_level);
         // ...
     }

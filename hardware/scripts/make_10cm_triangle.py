@@ -4,7 +4,7 @@ board = pcbnew.GetBoard()
 
 # Triangle settings
 side_mm = 100  # 10cm sides
-cx, cy = 0, 0  # center position in mm — adjust if needed
+cx, cy = 0, 0  # center position in mm - adjust if needed
 
 # Calculate vertices
 h = side_mm * math.sqrt(3) / 2
