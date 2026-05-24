@@ -1,0 +1,23 @@
+repos:
+  - repo: local
+    hooks:
+      - id: clippy-eye
+        name: cargo clippy (eye)
+        language: system
+        entry: cargo clippy --manifest-path firmware/eye/Cargo.toml -- -D warnings
+        files: ^firmware/
+        pass_filenames: false
+
+      - id: clippy-ear
+        name: cargo clippy (ear)
+        language: system
+        entry: cargo clippy --manifest-path firmware/ear/Cargo.toml -- -D warnings
+        files: ^firmware/
+        pass_filenames: false
+
+      - id: clippy-shared
+        name: cargo clippy (shared)
+        language: system
+        entry: cargo clippy --manifest-path firmware/shared/Cargo.toml -- -D warnings
+        files: ^firmware/
+        pass_filenames: false

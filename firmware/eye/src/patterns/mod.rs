@@ -19,12 +19,15 @@ pub trait Pattern: Send {
 
 /// Attack/decay envelope for sound-reactive patterns.
 /// Hold one as a field on your pattern struct and call `update()` each frame.
+// Unused until the ear chip I2S mic is wired and audio.rs UART receive is implemented.
+#[allow(dead_code)]
 pub struct Envelope {
     pub attack: f32,
     pub decay:  f32,
     value:      f32,
 }
 
+#[allow(dead_code)]
 impl Envelope {
     pub fn new(attack: f32, decay: f32) -> Self {
         Envelope { attack, decay, value: 0.0 }
@@ -47,11 +50,13 @@ impl Envelope {
 pub fn hsv(h: f32, s: f32, v: f32) -> [u8; 3] {
     let f = |n: f32| -> f32 {
         let k = (n + h / 60.0) % 6.0;
-        v - v * s * k.min(4.0 - k).min(1.0_f32).max(0.0)
+        v - v * s * k.min(4.0 - k).clamp(0.0, 1.0_f32)
     };
     [(f(5.0) * 255.0) as u8, (f(3.0) * 255.0) as u8, (f(1.0) * 255.0) as u8]
 }
 
+#[allow(dead_code)]
 pub fn lerp(a: f32, b: f32, t: f32) -> f32 { a + (b - a) * t }
 
+#[allow(dead_code)]
 pub fn clamp(x: f32, lo: f32, hi: f32) -> f32 { x.max(lo).min(hi) }

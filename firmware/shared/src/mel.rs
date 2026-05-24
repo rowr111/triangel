@@ -56,9 +56,9 @@ impl MelFrame {
             return None;
         }
         let mut bands = [0u16; MEL_BANDS];
-        for i in 0..MEL_BANDS {
+        for (i, band) in bands.iter_mut().enumerate() {
             let off = 1 + i * 2;
-            bands[i] = (buf[off] as u16) | ((buf[off + 1] as u16) << 8);
+            *band = (buf[off] as u16) | ((buf[off + 1] as u16) << 8);
         }
         let activity = buf[FRAME_LEN - 2] != 0;
         Some(MelFrame { bands, activity })

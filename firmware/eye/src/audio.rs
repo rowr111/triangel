@@ -3,6 +3,8 @@ use std::sync::{Arc, Mutex};
 pub use triangel_shared::mel::MEL_BANDS;
 use triangel_shared::mel::{MelFrame, FRAME_LEN};
 
+// Fields unused until the ear chip I2S mic is wired and the UART receive loop below is implemented.
+#[allow(dead_code)]
 struct AudioState {
     mel:            [f32; MEL_BANDS],
     smoothed_level: f32,
@@ -34,6 +36,8 @@ impl AudioReceiver {
     }
 
     /// Raw mel band values, 24 bands, each 0.0-1.0.
+    // Unused until the ear chip I2S mic is wired and the UART receive loop below is implemented.
+    #[allow(dead_code)]
     pub fn current_mel(&self) -> [f32; MEL_BANDS] {
         self.state.lock().map(|s| s.mel).unwrap_or([0.0; MEL_BANDS])
     }
