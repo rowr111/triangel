@@ -4,7 +4,7 @@
 //! (sync + 48 bytes mel bands + 1 activity byte + 1 XOR checksum).
 //! The eye chip's `audio.rs` receives and decodes these on the other end.
 //!
-//! Physical connection: ear UART TX pin -> eye UART RX pin (single wire + GND).
+//! Physical connection: ear pin 15 (PB14, UART2 TX) -> eye pin 16 (PB13, UART2 RX) + GND.
 //! Baud rate must match `EAR_UART_BAUD` in eye's `audio.rs`.
 
 use bao1x_hal::clocks::PERCLK_HZ;
@@ -19,12 +19,11 @@ pub struct UartOut {
 impl UartOut {
     /// Initialise the UART TX peripheral.
     ///
-    /// Which `UartChannel` maps to the ear->eye wire depends on which pins are
-    /// broken out on the ear board header - check the schematic and update
-    /// `UartChannel::Uart1` below accordingly.
+    /// UART2 TX is physical pin 15 (PB14) on the DABAO header — the only UART
+    /// broken out. Wire to eye board physical pin 16 (PB13, UART2 RX) + GND.
     pub fn new() -> Self {
         // SAFETY: called once at startup before any other UART use on this channel.
-        let uart = unsafe { Uart::new(UartChannel::Uart1, EAR_UART_BAUD, PERCLK_HZ) };
+        let uart = unsafe { Uart::new(UartChannel::Uart2, EAR_UART_BAUD, PERCLK_HZ) };
         Self { uart }
     }
 

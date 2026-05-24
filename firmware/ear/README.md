@@ -20,7 +20,7 @@ The 24 mel bands span 40–8000 Hz on a perceptual (mel) scale — lower bands a
 |---|---|
 | Chip | Baochip-1x - 350 MHz VexRiscv RV32-IMAC, 2 MB SRAM, 4 MB ReRAM |
 | Microphone | ICS43434 MEMS mic (JLCPCB C5656610), I2S slave |
-| Eye link | UART TX → eye UART RX, single wire + GND, 921600 baud |
+| Eye link | Pin 15 PB14 (UART2 TX) → eye pin 16 PB13 (UART2 RX), single wire + GND, 921600 baud |
 
 ## Audio configuration
 
