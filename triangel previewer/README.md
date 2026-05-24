@@ -32,17 +32,6 @@ Edit `animation.js`. The single function `getFrame(ledMap, t)` is called every f
 
 Reload the browser after saving to see changes.
 
-### Sample animations
-
-Switch between them by changing the `return` line at the bottom of `animation.js`:
-
-| Function | Description |
-|---|---|
-| `staticWhite` | All LEDs dim white. Useful for verifying geometry. |
-| `rainbowX` | Hue cycles across the x axis, scrolling over time. |
-| `apexRipple` | Orange pulse radiating outward from the bottom apex. |
-| `horizontalScan` | Cyan/blue band sweeping top to bottom, frequency-band style. |
-
 ## Live data from the Baochip
 
 When the Baochip is connected, `bridge.js` reads its serial output and streams frames to the browser over a local WebSocket. The browser automatically switches from `animation.js` to live data when the bridge connects, and falls back when it disconnects. A **"bridge live"** indicator appears in the top-right corner.

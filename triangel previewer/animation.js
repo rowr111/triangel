@@ -25,83 +25,8 @@ function hsv(h, s, v) {
 function lerp(a, b, t) { return a + (b - a) * t; }
 function clamp(x, lo, hi) { return Math.max(lo, Math.min(hi, x)); }
 
-// --- Animations ---
-
-// Static white - geometry check
-function staticWhite(ledMap) {
-  return ledMap.map(() => [200, 200, 200]);
-}
-
-// Rainbow by x position
-function rainbowX(ledMap, t) {
-  const speed = 60; // mm/s
-  const offset = (t / 1000) * speed;
-  return ledMap.map(({ wx }) => {
-    const hue = ((wx + offset) / 517 * 360) % 360;
-    return hsv(hue, 1, 1);
-  });
-}
-
-// Ripple from apex (bottom-center) upward
-function apexRipple(ledMap, t) {
-  const APEX_X = 258, APEX_Y = 436;
-  const speed = 100; // mm/s
-  const wavelength = 80; // mm
-  return ledMap.map(({ wx, wy }) => {
-    const dist = Math.sqrt((wx - APEX_X) ** 2 + (wy - APEX_Y) ** 2);
-    const phase = (dist - (t / 1000) * speed) / wavelength * Math.PI * 2;
-    const brightness = (Math.sin(phase) + 1) / 2;
-    return [Math.round(brightness * 255), Math.round(brightness * 100), 0];
-  });
-}
-
-// Horizontal scan (frequency-band style)
-function horizontalScan(ledMap, t) {
-  const period = 2000; // ms
-  const scanY = WORLD_TOP + ((t % period) / period) * WORLD_H;
-  const bandwidth = 30; // mm
-  return ledMap.map(({ wy }) => {
-    const dist = Math.abs(wy - scanY);
-    const brightness = Math.max(0, 1 - dist / bandwidth);
-    return [0, Math.round(brightness * 200), Math.round(brightness * 255)];
-  });
-}
-
-// Shimmer radiating from the triangle centroid (1/3 from each edge)
-function centerShimmer(ledMap, t) {
-  const CX = 258;
-  const CY = WORLD_TOP + (WORLD_BOT - WORLD_TOP) / 3; // ~149mm
-
-  const speed      = 60;  // mm/s outward
-  const wavelength = 120; // mm per cycle
-
-  return ledMap.map((led) => {
-    const dist = Math.sqrt((led.wx - CX) ** 2 + (led.wy - CY) ** 2);
-
-    // Outward radial wave, positive half only
-    const wave = (Math.sin((dist / wavelength - (t / 1000) * speed / wavelength) * Math.PI * 2) + 1) / 2;
-
-    // Per-LED sparkle: each LED gets a unique phase from a simple hash
-    const hash = (led.boardId * 7 + led.localIdx * 13) % 97;
-    const shimmer = 0.6 + 0.4 * Math.sin(t * 0.0025 + hash);
-
-    const brightness = wave * shimmer;
-
-    // Cool blue-white
-    return [
-      Math.round(brightness * 160),
-      Math.round(brightness * 210),
-      Math.round(brightness * 255),
-    ];
-  });
-}
-
 // --- Active animation ---
 
 function getFrame(ledMap, t) {
-  return centerShimmer(ledMap, t);
-  // return apexRipple(ledMap, t);
-  // return rainbowX(ledMap, t);
-  // return horizontalScan(ledMap, t);
-  // return staticWhite(ledMap);
+  return ledMap.map(() => [0, 0, 0]);
 }
