@@ -26,6 +26,7 @@ xous-usb-hid = { git = "https://github.com/betrusted-io/xous-usb-hid.git", branc
 
 bio-lib = { git = "https://github.com/betrusted-io/xous-core", rev = "b439d312a45479419fb8853481ce92269eecf7ff" }
 arbitrary-int = "1.2"
+triangel-shared = { path = "../shared" }
 
 [patch.crates-io]
 getrandom = { git = "https://github.com/betrusted-io/xous-core", rev = "b439d312a45479419fb8853481ce92269eecf7ff" }
@@ -40,9 +41,14 @@ board-dabao = [
     "bio-lib/ws2812",
     "bio-lib/captouch",
 ]
+# Send frames to the browser previewer via USB serial instead of real WS2812 LEDs.
+# Use this when developing without triangle boards connected.
+previewer = ["usb"]
+# Enable the interactive bringup shell (hardware debugging).
+bringup = ["usb", "bio-math-test", "bio-wheel-test"]
 bio-math-test = ["bio-lib/c-math-test"]
 bio-wheel-test = ["bio-lib/c-colorwheel"]
 ctap-bringup = []
 usb = []
 aestests = ["aes"]
-default = ["usb", "bio-math-test", "bio-wheel-test"]
+default = []

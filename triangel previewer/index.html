@@ -20,7 +20,6 @@
   <div id="status">no bridge</div>
 
   <script src="led_map.js"></script>
-  <script src="animation.js"></script>
   <script>
   (function () {
     const PADDING = 32;
@@ -124,8 +123,9 @@
     function draw(t) {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // Bridge data when connected, animation.js otherwise.
-      const colors = liveColors || getFrame(LED_MAP, t);
+      // Only render live frames from the bridge — no animation.js fallback.
+      const colors = liveColors;
+      if (!colors) { requestAnimationFrame(draw); return; }
 
       const radius = Math.max(2, scale * 1.2);
       for (let i = 0; i < LED_MAP.length; i++) {

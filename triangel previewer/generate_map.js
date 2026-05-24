@@ -61,8 +61,11 @@ for (let r = 1; r <= 5; r++) {
   }
 }
 
-// Chain wiring: single daisy chain, right-to-left per row top-to-bottom, D1→D24 per board.
-const CHAIN_ORDER = [9,8,7,6,5,4,3,2,1, 16,15,14,13,12,11,10, 21,20,19,18,17, 24,23,22, 25];
+// Chain wiring: single daisy chain, snake pattern for shortest inter-row connections.
+// Row 1 left→right, row 2 right→left, row 3 left→right, row 4 right→left, row 5.
+// Inter-row connections: 9→16, 10→17, 21→24, 22→25 (each ~52mm, one board-step).
+// Baochip data wire connects at board 1 (top-left corner of fixture).
+const CHAIN_ORDER = [1,2,3,4,5,6,7,8,9, 16,15,14,13,12,11,10, 17,18,19,20,21, 24,23,22, 25];
 const BOARD_CHAIN_POS = {};
 CHAIN_ORDER.forEach((boardId, pos) => { BOARD_CHAIN_POS[boardId] = pos; });
 

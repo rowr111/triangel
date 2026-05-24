@@ -12,6 +12,12 @@ package-lock.json
 # Claude
 .claude/
 
+# VSCode
+.vscode/
+
+# Build artifacts
+*.uf2
+
 # OS
 .DS_Store
 Thumbs.db
