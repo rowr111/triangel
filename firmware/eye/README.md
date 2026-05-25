@@ -1,6 +1,6 @@
 # triangel - eye firmware
 
-LED controller firmware for the triangel fixture. Runs on a [Baochip DABAO](https://www.crowdsupply.com/baochip/dabao) under [Xous OS](https://betrusted.io/xous-book/). See [`../README.md`](../README.md) for the overall system and physical fixture description.
+LED controller firmware for the triangel fixture. Runs on a Baochip-1x under [Xous OS](https://betrusted.io/xous-book/) (DABAO dev board used during development). See [`../README.md`](../README.md) for the overall system and physical fixture description.
 
 ## What this is
 

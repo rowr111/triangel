@@ -12,25 +12,11 @@ Browser-based simulator for the Triangel LED installation - 600 LEDs across 25 t
 | File | Purpose |
 |---|---|
 | `index.html` | Renderer - open this in a browser |
-| `animation.js` | **Edit this** to write animations |
 | `led_map.js` | Pre-generated LED positions - do not edit by hand |
 | `generate_map.js` | Regenerates `led_map.js` - run if geometry changes |
 | `bridge.js` | Serial-to-WebSocket bridge for live Baochip data |
 | `bridge.config.json` | Bridge configuration |
 | `ear_sim.py` | Desktop audio simulator - streams mic or system audio to the ear board over USB serial |
-
-## Writing animations
-
-Edit `animation.js`. The single function `getFrame(ledMap, t)` is called every frame (~60fps):
-
-- **`ledMap`** - array of 600 objects: `{wx, wy, boardId, localIdx, chainIdx}`
-  - `wx`, `wy` - world position in mm; origin top-left, y increases downward
-  - World spans roughly 0-517mm (x) x 0-436mm (y), apex at bottom-center
-  - `chainIdx` - position in the physical daisy chain (0-599); see chain wiring below
-- **`t`** - timestamp in milliseconds (from `requestAnimationFrame`)
-- **Returns** - array of 600 `[r, g, b]` values (0-255)
-
-Reload the browser after saving to see changes.
 
 ## Live data from the Baochip
 

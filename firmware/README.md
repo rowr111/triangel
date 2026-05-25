@@ -1,6 +1,6 @@
 # triangel - controller firmware
 
-The triangel fixture is driven by two [Baochip DABAO](https://www.crowdsupply.com/baochip/dabao) boards running [Xous OS](https://betrusted.io/xous-book/):
+The triangel fixture is driven by two Baochip-1x chips running [Xous OS](https://betrusted.io/xous-book/) (DABAO dev boards used during development):
 
 | Chip | Role |
 |---|---|
