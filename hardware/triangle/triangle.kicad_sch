@@ -3791,7 +3791,31 @@
 		)
 		(uuid "ffa482e4-e378-41d7-86c7-bd8d1aa11f35")
 	)
-	(global_label "5V POWER"
+	(global_label "5V Power"
+		(shape output)
+		(at 93.98 173.355 180)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "1c590f1c-1fb3-4a33-b082-241729eede87")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 82.1048 173.355 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+	)
+	(global_label "5V Power"
 		(shape input)
 		(at 150.495 19.05 0)
 		(fields_autoplaced yes)
@@ -3803,7 +3827,7 @@
 		)
 		(uuid "5bd7a827-ab0e-47ba-a07f-3d03e3a9604e")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 163.2168 19.05 0)
+			(at 162.3702 19.05 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3860,6 +3884,54 @@
 					(size 1.27 1.27)
 				)
 				(justify left)
+			)
+		)
+	)
+	(global_label "LED_DATA_OUT"
+		(shape input)
+		(at 93.98 168.275 180)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "93e9ade8-3331-434f-afb4-0e55671eef5b")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 77.5691 168.275 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+	)
+	(global_label "LED_DATA_IN"
+		(shape output)
+		(at 93.98 165.735 180)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "b24d41a7-dbc9-4776-b602-9b8a80fb4509")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 79.2624 165.735 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
 			)
 		)
 	)
@@ -7570,7 +7642,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "Connector_JST:JST_PH_S2B-PH-SM4-TB_1x02-1MP_P2.00mm_Horizontal"
+		(property "Footprint" "footprints:CONN-SMD_ZX-XH2.54-2PLT"
 			(at 99.06 173.355 0)
 			(hide yes)
 			(show_name no)
@@ -7593,6 +7665,17 @@
 			)
 		)
 		(property "Description" "Generic connector, single row, 01x02, script generated"
+			(at 99.06 173.355 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "JLCPCB Part #" "C7429680"
 			(at 99.06 173.355 0)
 			(hide yes)
 			(show_name no)
@@ -8771,7 +8854,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "Connector_JST:JST_PH_S2B-PH-SM4-TB_1x02-1MP_P2.00mm_Horizontal"
+		(property "Footprint" "footprints:CONN-SMD_ZX-XH2.54-2PLT"
 			(at 99.06 165.735 0)
 			(hide yes)
 			(show_name no)
@@ -8794,6 +8877,17 @@
 			)
 		)
 		(property "Description" "Generic connector, single row, 01x02, script generated"
+			(at 99.06 165.735 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "JLCPCB Part #" "C7429680"
 			(at 99.06 165.735 0)
 			(hide yes)
 			(show_name no)
@@ -8917,6 +9011,85 @@
 			(project "triangle"
 				(path "/f9839f04-8b32-4f6f-9cb5-92c3ed04dc78"
 					(reference "C16")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:GND")
+		(at 93.98 175.895 270)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "f6ad4a03-5703-47e6-bec3-9bc5b74362a5")
+		(property "Reference" "#PWR01"
+			(at 87.63 175.895 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "GND"
+			(at 90.17 175.8949 90)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(property "Footprint" ""
+			(at 93.98 175.895 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 93.98 175.895 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
+			(at 93.98 175.895 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "8123e2e9-a3f3-42dd-8f0e-cb18aa6862dd")
+		)
+		(instances
+			(project "triangle"
+				(path "/f9839f04-8b32-4f6f-9cb5-92c3ed04dc78"
+					(reference "#PWR01")
 					(unit 1)
 				)
 			)
