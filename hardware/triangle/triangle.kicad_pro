@@ -647,7 +647,7 @@
         "uuid": "f9839f04-8b32-4f6f-9cb5-92c3ed04dc78"
       }
     ],
-    "used_designators": "#PWR1",
+    "used_designators": "TP1-4,TP1\\-5V1,#PWR2,TP3\\-LED_DATA_IN1,TP2\\-GND1,TP4\\-LED_DATA_OUT1",
     "variants": []
   },
   "sheets": [
