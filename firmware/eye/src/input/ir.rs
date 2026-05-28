@@ -1,10 +1,9 @@
 use super::{EventQueue, InputEvent};
+use crate::pins;
 use crate::setlist::SoundMode;
 
-// GPIO pin for the IR receiver module data output.
-// Receiver modules invert and demodulate the 38kHz carrier: idle = HIGH, burst = LOW.
-// TODO: update when PCB layout is finalized.
-const PIN_IR: u8 = 7;
+// IR receiver module data output: idle = HIGH, burst = LOW
+// (module inverts and demodulates the 38kHz carrier).
 
 // NEC protocol timing in microseconds.
 const NEC_LEADER_PULSE_US: u32 = 9_000;
@@ -61,7 +60,7 @@ fn poll_loop(queue: EventQueue) {
 
         tt.sleep_ms(10).ok();
 
-        let _ = (queue.clone(), map_ir_cmd, PIN_IR); // keep reachable until wired
+        let _ = (queue.clone(), map_ir_cmd, pins::IR_PORT, pins::IR_PIN); // keep reachable until wired
         let _ = (NEC_LEADER_PULSE_US, NEC_LEADER_SPACE_US, NEC_BIT_PULSE_US,
                  NEC_BIT_0_SPACE_US, NEC_BIT_1_SPACE_US, NEC_REPEAT_SPACE_US,
                  NEC_TIMING_MARGIN);

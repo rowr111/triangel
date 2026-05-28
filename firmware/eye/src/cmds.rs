@@ -84,16 +84,8 @@ use trng_cmd::*;
 mod usb;
 #[cfg(feature = "usb")]
 use usb::*;
-#[cfg(feature = "aestests")]
-mod aes_cmd;
-#[cfg(feature = "aestests")]
-use aes_cmd::*;
-mod i2cdetect;
-use i2cdetect::*;
 mod ws2812;
 use ws2812::*;
-mod touch;
-use touch::*;
 
 pub struct CmdEnv {
     common_env: CommonEnv,
@@ -102,10 +94,7 @@ pub struct CmdEnv {
     trng_cmd: TrngCmd,
     #[cfg(feature = "usb")]
     usb: Usb,
-    #[cfg(feature = "aestests")]
-    aes_cmd: Aes,
     ws2812_cmd: Ws2812,
-    touch_cmd: Touch,
 }
 impl CmdEnv {
     pub fn new(xns: &xous_names::XousNames) -> CmdEnv {
@@ -118,8 +107,6 @@ impl CmdEnv {
             trng: trng::Trng::new(&xns).unwrap(),
             xns: xous_names::XousNames::new().unwrap(),
         };
-        #[cfg(feature = "aestests")]
-        let aes_cmd = Aes::new(&xns, &mut _common);
         CmdEnv {
             common_env: _common,
             lastverb: String::new(),
@@ -130,10 +117,7 @@ impl CmdEnv {
             },
             #[cfg(feature = "usb")]
             usb: Usb::new(),
-            #[cfg(feature = "aestests")]
-            aes_cmd,
             ws2812_cmd: Ws2812::new(),
-            touch_cmd: Touch::new(),
         }
     }
 
@@ -147,21 +131,15 @@ impl CmdEnv {
         let mut echo_cmd = Echo {}; // this command has no persistent storage, so we can "create" it every time we call dispatch (but it's a zero-cost absraction so this doesn't actually create any instructions)
         let mut ver_cmd = Ver {};
         let mut console_cmd = Test {};
-        let mut i2cdetect_cmd = I2cDetect {};
-
         let commands: &mut [&mut dyn ShellCmdApi] = &mut [
             ///// 4. add your command to this array, so that it can be looked up and dispatched
             &mut echo_cmd,
             &mut ver_cmd,
             &mut self.trng_cmd,
-            &mut i2cdetect_cmd,
             &mut console_cmd,
             #[cfg(feature = "usb")]
             &mut self.usb,
-            #[cfg(feature = "aestests")]
-            &mut self.aes_cmd,
             &mut self.ws2812_cmd,
-            &mut self.touch_cmd,
         ];
 
         if let Some(cmdline) = maybe_cmdline {

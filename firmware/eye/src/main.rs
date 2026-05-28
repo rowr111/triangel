@@ -2,6 +2,7 @@ mod audio;
 mod input;
 mod led;
 mod patterns;
+mod pins;
 mod setlist;
 
 #[cfg(feature = "bringup")]
