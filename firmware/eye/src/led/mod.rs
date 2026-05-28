@@ -2,7 +2,8 @@ pub mod map;
 
 use map::LED_COUNT;
 
-const LED_PIN: u8 = 5;
+use crate::pins;
+
 
 /// Abstracts over WS2812 hardware output and USB-serial previewer output.
 /// Compile with `--features previewer` to target the previewer bridge instead of real LEDs.
@@ -24,7 +25,7 @@ struct Inner {
 impl LedOutput {
     #[cfg(not(feature = "previewer"))]
     pub fn new() -> Self {
-        let pin = arbitrary_int::u5::new(LED_PIN);
+        let pin = arbitrary_int::u5::new(pins::LED_BIO_PIN);
         let ws2812 = bio_lib::ws2812::Ws2812::new(
             bio_lib::ws2812::LedVariant::B,
             pin,
