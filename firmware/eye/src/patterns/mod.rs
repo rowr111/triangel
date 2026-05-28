@@ -1,3 +1,4 @@
+pub mod audio_fill;
 pub mod rainbow;
 pub mod ripple;
 pub mod scan;
