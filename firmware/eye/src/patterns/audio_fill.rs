@@ -1,5 +1,5 @@
 use super::{Frame, Pattern};
-use crate::led::map::{Led, WORLD_BOT, WORLD_H};
+use crate::led::map::{Led, WORLD_BOT, WORLD_H, WORLD_TOP};
 
 /// Fills the triangle from the apex upward proportional to sound level, with
 /// brightness also scaling with sound level. Loud = more LEDs lit AND brighter.
@@ -19,6 +19,11 @@ impl Pattern for AudioFill {
             } else {
                 out[i] = [0, 0, 0];
             }
+        }
+
+        // debug: top-left corner LED always red so we can confirm frames are live
+        if let Some(i) = leds.iter().position(|l| l.wy <= WORLD_TOP + 1.0 && l.wx < 15.0) {
+            out[i] = [255, 0, 0];
         }
     }
 }
