@@ -152,6 +152,8 @@ fn listen_loop(state: Arc<Mutex<AudioState>>) {
     };
 
     let mut buf = [0u8; FRAME_LEN];
+    let mut peak_level: f32 = 0.0;          // highest raw_level seen since last envelope tick
+    let mut last_envelope_ms: u32 = 0;      // when we last ran apply_envelope
     loop {
         // Signal waiting-for-frame before blocking read so render can detect gaps.
         UART_STATUS.store(STATUS_INIT_OK, Ordering::Relaxed);
@@ -168,15 +170,25 @@ fn listen_loop(state: Arc<Mutex<AudioState>>) {
         match MelFrame::decode(&buf) {
             Some(frame) => {
                 UART_STATUS.store(STATUS_RECEIVING, Ordering::Relaxed);
-                UART_LAST_FRAME_MS.store(tt.elapsed_ms() as u32, Ordering::Relaxed);
-                let mut s = state.lock().unwrap();
-                for (i, &raw) in frame.bands.iter().enumerate() {
-                    s.mel[i] = raw as f32 / 65535.0;
+                let now = tt.elapsed_ms() as u32;
+                UART_LAST_FRAME_MS.store(now, Ordering::Relaxed);
+
+                let raw_level = frame.bands.iter().map(|&b| b as f32 / 65535.0).fold(0.0_f32, f32::max);
+                if raw_level > peak_level { peak_level = raw_level; }
+
+                // Rate-limit envelope updates to ~60fps so ATTACK/DECAY constants
+                // behave as designed (they were tuned for ~30fps, not ~1960fps).
+                if now.wrapping_sub(last_envelope_ms) >= 16 {
+                    let mut s = state.lock().unwrap();
+                    for (i, &raw) in frame.bands.iter().enumerate() {
+                        s.mel[i] = raw as f32 / 65535.0;
+                    }
+                    s.envelope       = apply_envelope(s.envelope, peak_level);
+                    s.smoothed_level = s.envelope;
+                    s.activity       = frame.activity;
+                    peak_level       = 0.0;
+                    last_envelope_ms = now;
                 }
-                let raw_level = s.mel.iter().copied().fold(0.0_f32, f32::max);
-                s.envelope    = apply_envelope(s.envelope, raw_level);
-                s.smoothed_level = s.envelope;
-                s.activity    = frame.activity;
             }
             None => {
                 // bad sync or checksum — discard one byte to re-align with frame boundary
