@@ -1,4 +1,5 @@
 //! Mel-frequency filterbank and activity detection.
+#![allow(dead_code, unused)]
 //!
 //! # What this does
 //!
@@ -61,10 +62,10 @@ use crate::audio::FFT_SIZE;
 const SAMPLE_RATE: f32 = 16_000.0;
 
 /// Lowest frequency covered by the filterbank.
-/// 40 Hz captures sub-bass and kick drum fundamentals (important for EDM).
+/// 31 Hz captures sub-bass and kick drum fundamentals (important for EDM).
 /// Going lower than ~31 Hz isn't useful - that's our FFT bin size at 16 kHz/512
 /// samples, so there's no frequency information below it.
-const MEL_LOW_HZ: f32 = 40.0;
+const MEL_LOW_HZ: f32 = 31.0;
 
 /// Highest frequency covered. At 16 kHz the Nyquist limit is 8 kHz, so this
 /// is the maximum we can represent.
@@ -79,8 +80,8 @@ const ACTIVITY_THRESHOLD: f32 = 0.02;
 // Attack 0.3: the smoothed RMS jumps to a loud transient within ~3 frames.
 // Decay 0.05: it takes ~20 frames (~660 ms) to fall back below threshold after
 // the sound stops, preventing flickering on brief quiet gaps.
-const ACTIVITY_ATTACK: f32 = 0.3;
-const ACTIVITY_DECAY: f32 = 0.05;
+const ACTIVITY_ATTACK: f32 = 0.8;  // very fast rise
+const ACTIVITY_DECAY: f32  = 0.4;  // fast decay — drops 90% in ~5 frames at 30fps
 
 /// Convert a frequency in Hz to the mel scale.
 ///
@@ -224,7 +225,16 @@ impl MelProcessor {
     ///
     /// This is the hot path - called ~30 times per second. No allocation happens
     /// here; everything uses the buffers and scratch space set up in `new()`.
+    #[allow(unreachable_code)]
     pub fn process(&mut self, samples: &[i16; FFT_SIZE]) -> MelFrame {
+        // TEMPORARY: skip all FFT/mel processing, just send raw RMS * 10
+        // exactly matching the Python bar display value.
+        {
+            let rms = (samples.iter().map(|&s| (s as f32 / 32768.0).powi(2)).sum::<f32>() / FFT_SIZE as f32).sqrt();
+            let val = ((rms * 5.0).clamp(0.0, 1.0) * 65535.0) as u16;
+            return MelFrame { bands: [val; MEL_BANDS], activity: rms > 0.02 };
+        }
+
         // --- Activity detection ---
         //
         // Compute the Root Mean Square (RMS) of the raw samples. RMS is the
@@ -300,31 +310,10 @@ impl MelProcessor {
             mel[m] = (energy + 1e-10).ln();
         }
 
-        // --- Normalise to u16: shape × volume ---
-        //
-        // Two components:
-        //   shape  = per-frame relative spectrum (0..1, which bands have energy)
-        //   volume = smoothed_rms scaled to 0..1 (how loud the frame actually is)
-        //
-        // band_val = shape × volume so that:
-        //   silence  → smoothed_rms ≈ 0 → all bands ≈ 0 → fill empty
-        //   quiet    → smoothed_rms ≈ 0.02 → bands at ~10% → fill partial
-        //   loud     → smoothed_rms ≈ 0.2  → bands near max → fill full
-        //
-        // RMS_SCALE maps typical desktop-audio RMS to 0..1.
-        // At 0.2 RMS (loud music) the scale saturates at 1.0.
-        const RMS_SCALE: f32 = 5.0;
-
-        let min   = mel.iter().cloned().fold(f32::INFINITY,     f32::min);
-        let max   = mel.iter().cloned().fold(f32::NEG_INFINITY, f32::max);
-        let range = (max - min).max(1e-10);
-        let volume = (self.smoothed_rms * RMS_SCALE).min(1.0);
-
-        let mut bands = [0u16; MEL_BANDS];
-        for (i, &v) in mel.iter().enumerate() {
-            let shape = (v - min) / range; // 0..1 spectral shape
-            bands[i] = (shape * volume * 65535.0) as u16;
-        }
+        // smoothed_rms has fast attack (0.8) and fast decay (0.4) so it
+        // rises on beats and clears between them at 128 BPM.
+        let val = ((self.smoothed_rms * 10.0).clamp(0.0, 1.0) * 65535.0) as u16;
+        let bands = [val; MEL_BANDS];
 
         MelFrame { bands, activity }
     }

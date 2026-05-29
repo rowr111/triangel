@@ -8,34 +8,31 @@ use bao1x_hal::udma::Uart;
 use bao1x_hal_service::UdmaGlobal;
 
 pub use triangel_shared::mel::MEL_BANDS;
-use triangel_shared::mel::{EAR_UART_BAUD, FRAME_LEN, MelFrame};
+use triangel_shared::mel::EAR_UART_BAUD;
 
 use crate::pins;
 
 // --- UART init status — written by listen_loop, read by AudioFill for debug display ---
-pub const STATUS_PENDING:    u8 = 0; // thread started, init not yet attempted
-pub const STATUS_CSR_FAIL:   u8 = 1; // map_memory for UART2 registers failed (owned by another process?)
-pub const STATUS_IFRAM_FAIL: u8 = 2; // map_memory for pre-reserved IFRAM page failed
-pub const STATUS_INIT_OK:    u8 = 3; // init succeeded, waiting for first frame
-pub const STATUS_DMA_DONE:   u8 = 4; // uart.read() returned but MelFrame::decode failed (bad sync/checksum)
-pub const STATUS_RECEIVING:  u8 = 5; // actively receiving frames from ear chip
-pub static UART_STATUS: AtomicU8 = AtomicU8::new(STATUS_PENDING);
-/// First byte received after DMA completes — helps diagnose what's on the wire.
-pub static UART_FIRST_BYTE: AtomicU8 = AtomicU8::new(0);
-/// Timestamp (ms) of last successfully decoded frame — used to detect stale status.
-/// Lower 32 bits of the ticktimer ms timestamp of the last decoded frame.
+pub const STATUS_PENDING:    u8 = 0;
+pub const STATUS_CSR_FAIL:   u8 = 1;
+pub const STATUS_IFRAM_FAIL: u8 = 2;
+pub const STATUS_INIT_OK:    u8 = 3;
+pub const STATUS_DMA_DONE:   u8 = 4;
+pub const STATUS_RECEIVING:  u8 = 5;
+pub static UART_STATUS:        AtomicU8  = AtomicU8::new(STATUS_PENDING);
+pub static UART_FIRST_BYTE:    AtomicU8  = AtomicU8::new(0);
 pub static UART_LAST_FRAME_MS: AtomicU32 = AtomicU32::new(0);
 
 struct AudioState {
     mel:            [f32; MEL_BANDS],
     smoothed_level: f32,
-    envelope:       f32,
     activity:       bool,
+    last_update_ms: u32,
 }
 
 impl AudioState {
     fn new() -> Self {
-        AudioState { mel: [0.0; MEL_BANDS], smoothed_level: 0.0, envelope: 0.0, activity: false }
+        AudioState { mel: [0.0; MEL_BANDS], smoothed_level: 0.0, activity: false, last_update_ms: 0 }
     }
 }
 
@@ -51,21 +48,27 @@ impl AudioReceiver {
         receiver
     }
 
-    /// Smoothed normalised sound level 0.0-1.0 with attack/decay envelope.
     pub fn smoothed_level(&self) -> f32 {
         self.state.lock().map(|s| s.smoothed_level).unwrap_or(0.0)
     }
 
-    /// Raw mel band values, 24 bands, each 0.0-1.0.
     #[allow(dead_code)]
     pub fn current_mel(&self) -> [f32; MEL_BANDS] {
         self.state.lock().map(|s| s.mel).unwrap_or([0.0; MEL_BANDS])
     }
 
-    /// Activity flag: true when sustained absolute sound energy exceeds the ear's
-    /// calibrated threshold. Use for Auto sound mode rather than smoothed_level.
     pub fn is_active(&self) -> bool {
         self.state.lock().map(|s| s.activity).unwrap_or(false)
+    }
+
+    /// Called from the render loop — decays level to zero when ear stops sending.
+    pub fn tick_decay(&self, now_ms: u32) {
+        if let Ok(mut s) = self.state.try_lock() {
+            if now_ms.wrapping_sub(s.last_update_ms) >= 200 {
+                s.smoothed_level = (s.smoothed_level - 0.05).max(0.0);
+                s.last_update_ms = now_ms;
+            }
+        }
     }
 
     fn spawn_listener(&self) {
@@ -74,57 +77,34 @@ impl AudioReceiver {
     }
 }
 
-const ATTACK: f32 = 0.25;
-const DECAY:  f32 = 0.02;
 
-fn apply_envelope(envelope: f32, new_level: f32) -> f32 {
-    if new_level > envelope {
-        envelope + ATTACK * (new_level - envelope)
-    } else {
-        (envelope - DECAY).max(new_level).max(0.0)
-    }
-}
-
-/// Initialise UART2 for receiving mel frames from the ear chip.
-///
-/// Uses get_handle + explicit map_memory calls instead of Uart::new, so
-/// each failure point returns None rather than panicking.
-// Offset of the RX buffer within the IFRAM page (matches bao1x_hal udma::uart internals).
 fn init_uart() -> Option<Uart> {
-    // Map UART2 hardware registers. Fails if another process already owns them.
     let csr_mem = match xous::syscall::map_memory(
         xous::MemoryAddress::new(utralib::utra::udma_uart_2::HW_UDMA_UART_2_BASE),
-        None,
-        4096,
+        None, 4096,
         xous::MemoryFlags::R | xous::MemoryFlags::W,
     ) {
         Ok(m) => m,
         Err(_) => { UART_STATUS.store(STATUS_CSR_FAIL, Ordering::Relaxed); return None; }
     };
 
-    // Map the loader-reserved IFRAM page for app UART (always available, no allocator needed).
     let ifram_mem = match xous::syscall::map_memory(
         xous::MemoryAddress::new(bao1x_hal::board::APP_UART_IFRAM_ADDR),
-        None,
-        4096,
+        None, 4096,
         xous::MemoryFlags::R | xous::MemoryFlags::W,
     ) {
         Ok(m) => m,
         Err(_) => { UART_STATUS.store(STATUS_IFRAM_FAIL, Ordering::Relaxed); return None; }
     };
 
-    let csr_virt   = csr_mem.as_ptr()   as usize;
+    let csr_virt   = csr_mem.as_ptr() as usize;
     let ifram_virt = ifram_mem.as_ptr() as usize;
-    // MemoryRange is Copy with no Drop — mappings persist when these go out of scope.
     let _ = (csr_mem, ifram_mem);
 
     let mut uart = unsafe {
         Uart::get_handle(csr_virt, bao1x_hal::board::APP_UART_IFRAM_ADDR, ifram_virt)
     };
-    // set_baud uses 0x0316 which includes poll mode (bit 4), routing bytes to the
-    // command register — exactly what read_async() needs.
     uart.set_baud(EAR_UART_BAUD, PERCLK_HZ);
-    // Prime the UART RX path — required before any characters can be received.
     uart.setup_async_read();
 
     UART_STATUS.store(STATUS_INIT_OK, Ordering::Relaxed);
@@ -139,8 +119,8 @@ fn listen_loop(state: Arc<Mutex<AudioState>>) {
         pins::AUDIO_UART_RX_PIN,
         Some(IoxDir::Input),
         Some(IoxFunction::AF1),
-        Some(IoxEnable::Enable), // schmitt trigger
-        Some(IoxEnable::Enable), // pullup
+        Some(IoxEnable::Enable),
+        Some(IoxEnable::Enable),
         None,
         None,
     );
@@ -151,50 +131,21 @@ fn listen_loop(state: Arc<Mutex<AudioState>>) {
         None    => return,
     };
 
-    let mut buf = [0u8; FRAME_LEN];
-    let mut peak_level: f32 = 0.0;          // highest raw_level seen since last envelope tick
-    let mut last_envelope_ms: u32 = 0;      // when we last ran apply_envelope
+    let mut byte: u8 = 0;
     loop {
-        // Signal waiting-for-frame before blocking read so render can detect gaps.
-        UART_STATUS.store(STATUS_INIT_OK, Ordering::Relaxed);
-        // Read bytes one at a time via poll-mode command register (no DMA needed).
-        // Must busy-wait continuously — poll mode holds only one byte at a time,
-        // any bytes arriving while we yield are dropped.
-        for byte in buf.iter_mut() {
-            let mut c = 0u8;
-            while uart.read_async(&mut c) == 0 {}
-            *byte = c;
-        }
-        UART_FIRST_BYTE.store(buf[0], Ordering::Relaxed);
-        UART_STATUS.store(STATUS_DMA_DONE, Ordering::Relaxed);
-        match MelFrame::decode(&buf) {
-            Some(frame) => {
-                UART_STATUS.store(STATUS_RECEIVING, Ordering::Relaxed);
-                let now = tt.elapsed_ms() as u32;
-                UART_LAST_FRAME_MS.store(now, Ordering::Relaxed);
+        // One byte = the level. That's it.
+        while uart.read_async(&mut byte) == 0 {}
 
-                let raw_level = frame.bands.iter().map(|&b| b as f32 / 65535.0).fold(0.0_f32, f32::max);
-                if raw_level > peak_level { peak_level = raw_level; }
+        UART_FIRST_BYTE.store(byte, Ordering::Relaxed);
+        UART_STATUS.store(STATUS_RECEIVING, Ordering::Relaxed);
+        let now = tt.elapsed_ms() as u32;
+        UART_LAST_FRAME_MS.store(now, Ordering::Relaxed);
 
-                // Rate-limit envelope updates to ~60fps so ATTACK/DECAY constants
-                // behave as designed (they were tuned for ~30fps, not ~1960fps).
-                if now.wrapping_sub(last_envelope_ms) >= 16 {
-                    let mut s = state.lock().unwrap();
-                    for (i, &raw) in frame.bands.iter().enumerate() {
-                        s.mel[i] = raw as f32 / 65535.0;
-                    }
-                    s.envelope       = apply_envelope(s.envelope, peak_level);
-                    s.smoothed_level = s.envelope;
-                    s.activity       = frame.activity;
-                    peak_level       = 0.0;
-                    last_envelope_ms = now;
-                }
-            }
-            None => {
-                // bad sync or checksum — discard one byte to re-align with frame boundary
-                let mut c = 0u8;
-                while uart.read_async(&mut c) == 0 {}
-            }
-        }
+        let level = byte as f32 / 255.0;
+        let mut s = state.lock().unwrap();
+        // Light EMA so single rogue bytes don't spike the fill
+        s.smoothed_level = s.smoothed_level * 0.6 + level * 0.4;
+        s.activity       = level > 0.02;
+        s.last_update_ms = now;
     }
 }

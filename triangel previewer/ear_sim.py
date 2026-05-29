@@ -38,7 +38,7 @@ import serial
 SAMPLE_RATE  = 16_000   # Hz
 FRAME_SIZE   = 512      # samples per packet (FFT_SIZE in firmware)
 PCM_SYNC     = 0xBB     # sync byte at the start of each packet
-UART_BAUD    = 921_600  # EAR_UART_BAUD in triangel-shared
+UART_BAUD    = 1_000_000  # EAR_UART_BAUD in triangel-shared
 
 PACKET_BYTES = 1 + FRAME_SIZE * 2  # 1025: sync + 512 i16 LE samples
 
@@ -132,8 +132,11 @@ def resample(mono: np.ndarray, from_rate: int, to_rate: int, n_out: int) -> np.n
         return np.interp(x_out, np.arange(len(mono)), mono)
 
 
-def capture_loopback(p: pyaudio.PyAudio, frame_queue: "queue.Queue[bytes]", stats: Stats) -> None:
-    device      = find_loopback_device(p)
+def capture_loopback(p: pyaudio.PyAudio, frame_queue: "queue.Queue[bytes]", stats: Stats, device_index=None) -> None:
+    if device_index is not None:
+        device = p.get_device_info_by_index(device_index)
+    else:
+        device = find_loopback_device(p)
     native_rate = int(device["defaultSampleRate"])
     channels    = device["maxInputChannels"]
 
@@ -252,7 +255,7 @@ def run(port: str, baud: int, device, loopback: bool) -> None:
 
     p = pyaudio.PyAudio()
     if loopback:
-        target, args = capture_loopback, (p, frame_queue, stats)
+        target, args = capture_loopback, (p, frame_queue, stats, device if device is not None else None)
     else:
         target, args = capture_mic, (p, device, frame_queue, stats)
 

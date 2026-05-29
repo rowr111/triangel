@@ -64,6 +64,9 @@ fn main() -> ! {
         next_frame += TARGET_FRAME_MS;
         let frame_start = tt.elapsed_ms();
 
+        // Decay envelope toward zero when ear is silent (no IPC in audio thread)
+        audio.tick_decay(frame_start as u32);
+
         // Determine sound-reactive mode
         let sound_level = audio.smoothed_level();
         let sound_active = setlist.sound_active(audio.is_active());
