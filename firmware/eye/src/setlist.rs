@@ -1,5 +1,5 @@
 use crate::patterns::Pattern;
-use crate::patterns::{rainbow::RainbowX, ripple::ApexRipple, scan::HorizontalScan, shimmer::CenterShimmer};
+use crate::patterns::{audio_fill::AudioFill, rainbow::RainbowX, ripple::ApexRipple, scan::HorizontalScan, shimmer::CenterShimmer};
 
 const CYCLE_MS: u32 = 3 * 60 * 1_000; // 3 minutes
 
@@ -13,10 +13,8 @@ fn ambient_patterns() -> Vec<Box<dyn Pattern>> {
 }
 
 fn reactive_patterns() -> Vec<Box<dyn Pattern>> {
-    // Placeholder reactive patterns - replace with real sound-reactive patterns.
     vec![
-        Box::new(RainbowX   { speed: 180.0 }),
-        Box::new(ApexRipple { speed: 200.0, wavelength: 50.0 }),
+        Box::new(AudioFill),
     ]
 }
 
@@ -50,7 +48,7 @@ impl SetlistManager {
             last_cycle_ms: now_ms,
             held:          false,
             brightness:    1.0,
-            sound_mode:    SoundMode::Off,
+            sound_mode:    SoundMode::On, // TODO: revert to Off before production
         }
     }
 

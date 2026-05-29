@@ -35,6 +35,7 @@ const WS_PORT      = parseInt(cliArg('ws-port') ?? fileConfig.wsPort  ?? 8080);
 const FRAME_MAGIC  = Buffer.from([0xFF, 0xFF, 0xFF, 0xFF]); // must match MAGIC in led/mod.rs
 const FRAME_SIZE   = 600 * 3;                                // 1800 bytes payload
 const PACKET_SIZE  = FRAME_MAGIC.length + FRAME_SIZE;        // 1804 bytes on the wire
+const RECONNECT_MS = 2000;
 
 console.log(`Config: serial=${SERIAL_PATH}  baud=${BAUD_RATE}  ws-port=${WS_PORT}`);
 
@@ -53,38 +54,67 @@ function broadcast(data) {
   }
 }
 
-// --- Serial port ----------------------------------------------------------
+// --- Serial port with auto-reconnect -------------------------------------
 
 let buf = Buffer.alloc(0);
 let frameCount = 0;
+let reconnectTimer = null;
+
 setInterval(() => {
   if (frameCount > 0) console.log(`frames/s: ${frameCount}`);
   frameCount = 0;
 }, 1000);
 
-const serial = new SerialPort({ path: SERIAL_PATH, baudRate: BAUD_RATE });
+function scheduleReconnect() {
+  if (reconnectTimer) return;
+  reconnectTimer = setTimeout(() => {
+    reconnectTimer = null;
+    connect();
+  }, RECONNECT_MS);
+}
 
-serial.on('open', () => {
-  console.log(`Serial open: ${SERIAL_PATH} @ ${BAUD_RATE} baud`);
-});
+function connect() {
+  buf = Buffer.alloc(0);
 
-serial.on('data', (chunk) => {
-  buf = Buffer.concat([buf, chunk]);
-  while (true) {
-    const idx = buf.indexOf(FRAME_MAGIC);
-    if (idx === -1) {
-      // No magic found - keep last 3 bytes in case the marker is split across chunks.
-      buf = buf.subarray(buf.length - (FRAME_MAGIC.length - 1));
-      break;
+  const serial = new SerialPort({ path: SERIAL_PATH, baudRate: BAUD_RATE, autoOpen: false });
+
+  serial.open((err) => {
+    if (err) {
+      scheduleReconnect();
+      return;
     }
-    if (idx > 0) buf = buf.subarray(idx);
-    if (buf.length < PACKET_SIZE) break;   // wait for a full packet
-    broadcast(buf.subarray(FRAME_MAGIC.length, PACKET_SIZE)); // strip magic, send 1800 bytes
-    buf = buf.subarray(PACKET_SIZE);
-    frameCount++;
-  }
-});
+    console.log(`Serial open: ${SERIAL_PATH} @ ${BAUD_RATE} baud`);
+  });
 
-serial.on('error', (err) => {
-  console.error('Serial error:', err.message);
-});
+  serial.on('data', (chunk) => {
+    buf = Buffer.concat([buf, chunk]);
+    while (true) {
+      const idx = buf.indexOf(FRAME_MAGIC);
+      if (idx === -1) {
+        // No magic found - keep last 3 bytes in case the marker is split across chunks.
+        buf = buf.subarray(buf.length - (FRAME_MAGIC.length - 1));
+        break;
+      }
+      if (idx > 0) buf = buf.subarray(idx);
+      if (buf.length < PACKET_SIZE) break;   // wait for a full packet
+      broadcast(buf.subarray(FRAME_MAGIC.length, PACKET_SIZE)); // strip magic, send 1800 bytes
+      buf = buf.subarray(PACKET_SIZE);
+      frameCount++;
+    }
+  });
+
+  serial.on('close', () => {
+    console.log('Serial closed, reconnecting...');
+    scheduleReconnect();
+  });
+
+  serial.on('error', (err) => {
+    // suppress "port not found" noise during reconnect attempts
+    if (!err.message.includes('cannot find') && !err.message.includes('File not found')) {
+      console.error('Serial error:', err.message);
+    }
+    scheduleReconnect();
+  });
+}
+
+connect();

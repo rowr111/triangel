@@ -1,5 +1,5 @@
 /// Baud rate for the ear->eye UART link. Must match on both chips.
-pub const EAR_UART_BAUD: u32 = 921_600;
+pub const EAR_UART_BAUD: u32 = 1_000_000;
 
 /// Sync byte that starts every mel frame on the ear->eye UART wire.
 pub const SYNC_BYTE: u8 = 0xAA;

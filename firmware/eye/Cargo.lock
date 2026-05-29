@@ -5,7 +5,7 @@ version = 4
 [[package]]
 name = "aes"
 version = "0.8.4"
-source = "git+https://github.com/betrusted-io/xous-core?rev=b439d312a45479419fb8853481ce92269eecf7ff#b439d312a45479419fb8853481ce92269eecf7ff"
+source = "git+https://github.com/betrusted-io/xous-core?rev=0b3b4813225247e152d3927370bb5f53bc656231#0b3b4813225247e152d3927370bb5f53bc656231"
 dependencies = [
  "cipher",
 ]
@@ -49,7 +49,7 @@ checksum = "f2032f911046de80f0a198e0901378627c33f59ea0ac00e363d481118bd70a53"
 [[package]]
 name = "bao1x-api"
 version = "0.1.0"
-source = "git+https://github.com/betrusted-io/xous-core?rev=b439d312a45479419fb8853481ce92269eecf7ff#b439d312a45479419fb8853481ce92269eecf7ff"
+source = "git+https://github.com/betrusted-io/xous-core?rev=0b3b4813225247e152d3927370bb5f53bc656231#0b3b4813225247e152d3927370bb5f53bc656231"
 dependencies = [
  "arbitrary-int",
  "bitbybit",
@@ -66,7 +66,7 @@ dependencies = [
 [[package]]
 name = "bao1x-emu"
 version = "0.1.0"
-source = "git+https://github.com/betrusted-io/xous-core?rev=b439d312a45479419fb8853481ce92269eecf7ff#b439d312a45479419fb8853481ce92269eecf7ff"
+source = "git+https://github.com/betrusted-io/xous-core?rev=0b3b4813225247e152d3927370bb5f53bc656231#0b3b4813225247e152d3927370bb5f53bc656231"
 dependencies = [
  "bao1x-api",
  "log",
@@ -88,7 +88,7 @@ dependencies = [
 [[package]]
 name = "bao1x-hal"
 version = "0.1.0"
-source = "git+https://github.com/betrusted-io/xous-core?rev=b439d312a45479419fb8853481ce92269eecf7ff#b439d312a45479419fb8853481ce92269eecf7ff"
+source = "git+https://github.com/betrusted-io/xous-core?rev=0b3b4813225247e152d3927370bb5f53bc656231#0b3b4813225247e152d3927370bb5f53bc656231"
 dependencies = [
  "arbitrary-int",
  "bao1x-api",
@@ -114,7 +114,7 @@ dependencies = [
 [[package]]
 name = "bao1x-hal-service"
 version = "0.1.0"
-source = "git+https://github.com/betrusted-io/xous-core?rev=b439d312a45479419fb8853481ce92269eecf7ff#b439d312a45479419fb8853481ce92269eecf7ff"
+source = "git+https://github.com/betrusted-io/xous-core?rev=0b3b4813225247e152d3927370bb5f53bc656231#0b3b4813225247e152d3927370bb5f53bc656231"
 dependencies = [
  "arbitrary-int",
  "bao1x-api",
@@ -124,8 +124,8 @@ dependencies = [
  "bitfield",
  "bytemuck",
  "chrono",
- "flatipc",
- "flatipc-derive",
+ "flatipc 0.1.0 (git+https://github.com/betrusted-io/xous-core?rev=0b3b4813225247e152d3927370bb5f53bc656231)",
+ "flatipc-derive 0.1.2 (git+https://github.com/betrusted-io/xous-core?rev=0b3b4813225247e152d3927370bb5f53bc656231)",
  "log",
  "num-derive",
  "num-traits",
@@ -163,7 +163,7 @@ dependencies = [
 [[package]]
 name = "bio-lib"
 version = "0.1.0"
-source = "git+https://github.com/betrusted-io/xous-core?rev=b439d312a45479419fb8853481ce92269eecf7ff#b439d312a45479419fb8853481ce92269eecf7ff"
+source = "git+https://github.com/betrusted-io/xous-core?rev=0b3b4813225247e152d3927370bb5f53bc656231#0b3b4813225247e152d3927370bb5f53bc656231"
 dependencies = [
  "arbitrary-int",
  "bao1x-api",
@@ -458,10 +458,29 @@ checksum = "5baebc0774151f905a1a2cc41989300b1e6fbb29aff0ceffa1064fdd3088d582"
 [[package]]
 name = "flatipc"
 version = "0.1.0"
+source = "git+https://github.com/betrusted-io/xous-core?rev=0b3b4813225247e152d3927370bb5f53bc656231#0b3b4813225247e152d3927370bb5f53bc656231"
+dependencies = [
+ "flatipc-derive 0.1.2 (git+https://github.com/betrusted-io/xous-core?rev=0b3b4813225247e152d3927370bb5f53bc656231)",
+ "xous",
+]
+
+[[package]]
+name = "flatipc"
+version = "0.1.0"
 source = "git+https://github.com/betrusted-io/xous-core?rev=b439d312a45479419fb8853481ce92269eecf7ff#b439d312a45479419fb8853481ce92269eecf7ff"
 dependencies = [
- "flatipc-derive",
+ "flatipc-derive 0.1.2 (git+https://github.com/betrusted-io/xous-core?rev=b439d312a45479419fb8853481ce92269eecf7ff)",
  "xous",
+]
+
+[[package]]
+name = "flatipc-derive"
+version = "0.1.2"
+source = "git+https://github.com/betrusted-io/xous-core?rev=0b3b4813225247e152d3927370bb5f53bc656231#0b3b4813225247e152d3927370bb5f53bc656231"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.117",
 ]
 
 [[package]]
@@ -647,7 +666,7 @@ version = "0.2.12"
 source = "git+https://github.com/betrusted-io/xous-core?rev=b439d312a45479419fb8853481ce92269eecf7ff#b439d312a45479419fb8853481ce92269eecf7ff"
 dependencies = [
  "cfg-if",
- "flatipc",
+ "flatipc 0.1.0 (git+https://github.com/betrusted-io/xous-core?rev=b439d312a45479419fb8853481ce92269eecf7ff)",
  "libc",
  "rkyv",
  "wasi",
@@ -829,7 +848,7 @@ checksum = "32a66949e030da00e8c7d4434b251670a91556f4144941d37452769c25d58a53"
 [[package]]
 name = "locales"
 version = "0.1.0"
-source = "git+https://github.com/betrusted-io/xous-core?rev=b439d312a45479419fb8853481ce92269eecf7ff#b439d312a45479419fb8853481ce92269eecf7ff"
+source = "git+https://github.com/betrusted-io/xous-core?rev=0b3b4813225247e152d3927370bb5f53bc656231#0b3b4813225247e152d3927370bb5f53bc656231"
 dependencies = [
  "glob",
  "lazy_static",
@@ -1539,7 +1558,7 @@ checksum = "ebc1c04c71510c7f702b52b7c350734c9ff1295c464a03335b00bb84fc54f853"
 [[package]]
 name = "usb-bao1x"
 version = "0.1.0"
-source = "git+https://github.com/betrusted-io/xous-core?rev=b439d312a45479419fb8853481ce92269eecf7ff#b439d312a45479419fb8853481ce92269eecf7ff"
+source = "git+https://github.com/betrusted-io/xous-core?rev=0b3b4813225247e152d3927370bb5f53bc656231#0b3b4813225247e152d3927370bb5f53bc656231"
 dependencies = [
  "bao1x-api",
  "bao1x-hal",
@@ -1609,7 +1628,7 @@ dependencies = [
 [[package]]
 name = "ux-api"
 version = "0.1.0"
-source = "git+https://github.com/betrusted-io/xous-core?rev=b439d312a45479419fb8853481ce92269eecf7ff#b439d312a45479419fb8853481ce92269eecf7ff"
+source = "git+https://github.com/betrusted-io/xous-core?rev=0b3b4813225247e152d3927370bb5f53bc656231#0b3b4813225247e152d3927370bb5f53bc656231"
 dependencies = [
  "base64",
  "digest 0.9.0",
@@ -2045,7 +2064,7 @@ dependencies = [
 [[package]]
 name = "xous-api-susres"
 version = "0.9.68"
-source = "git+https://github.com/betrusted-io/xous-core?rev=b439d312a45479419fb8853481ce92269eecf7ff#b439d312a45479419fb8853481ce92269eecf7ff"
+source = "git+https://github.com/betrusted-io/xous-core?rev=0b3b4813225247e152d3927370bb5f53bc656231#0b3b4813225247e152d3927370bb5f53bc656231"
 dependencies = [
  "log",
  "num-derive",

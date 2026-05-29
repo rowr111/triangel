@@ -11,6 +11,12 @@ use bao1x_hal::clocks::PERCLK_HZ;
 use bao1x_hal::udma::{Uart, UartChannel};
 use triangel_shared::mel::{EAR_UART_BAUD, FRAME_LEN, MelFrame};
 
+/// Simple 3-byte level frame: [0xAA, value_0_255, value^0xFF]
+#[allow(dead_code)]
+pub const LEVEL_SYNC: u8 = 0xAA;
+#[allow(dead_code)]
+pub const LEVEL_FRAME_LEN: usize = 3;
+
 /// Owns the UART TX peripheral and serialises `MelFrame` packets onto the wire.
 pub struct UartOut {
     uart: Uart,
@@ -27,10 +33,15 @@ impl UartOut {
         Self { uart }
     }
 
-    /// Encode `frame` into 51 wire bytes and transmit synchronously.
-    ///
-    /// At 921600 baud, 51 bytes takes ~0.5 ms - well within our 33 ms frame
-    /// budget, so a simple blocking write is fine.
+    /// Send a raw level (0.0-1.0) as a 3-byte frame matching the Python bar value.
+    /// Format: [0xAA, value_0_255, value^0xFF]
+    pub fn send_level(&mut self, level: f32) {
+        let v = (level.clamp(0.0, 1.0) * 255.0) as u8;
+        self.uart.write(&[v]);
+    }
+
+    /// Full mel frame send (kept for future use).
+    #[allow(dead_code)]
     pub fn send(&mut self, frame: &MelFrame) {
         let mut buf = [0u8; FRAME_LEN];
         frame.encode(&mut buf);

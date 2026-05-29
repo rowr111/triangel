@@ -3,7 +3,6 @@ mod mel;
 mod uart_out;
 
 use audio::{ActiveAudio, AudioSource};
-use mel::MelProcessor;
 use uart_out::UartOut;
 
 fn main() -> ! {
@@ -14,25 +13,17 @@ fn main() -> ! {
     let hal = bao1x_hal_service::Hal::new();
     hal.set_preemption(true);
 
-    // Audio source is selected by feature flag:
-    //   uart-audio  -> UartAudio: receives PCM packets over USB serial from ear_sim.py
-    //   (default)   -> I2sAudio: reads from ICS43434 MEMS mic via I2S hardware
-    let mut audio = ActiveAudio::new();
-
-    // Mel filterbank - builds FFT plan and filter weights once at startup
-    let mut mel = MelProcessor::new();
-
-    // UART output to eye chip
+    let mut audio    = ActiveAudio::new();
     let mut uart_out = UartOut::new();
 
     log::info!("ear ready");
 
-    // Main loop: read_frame() blocks until a complete 512-sample audio frame
-    // arrives (~32 ms at 16 kHz), so the loop runs at ~31 fps naturally.
-    // No explicit sleep or timer needed - the audio source sets the pace.
+    // Send raw RMS level directly — same math as the Python bar display.
+    // level = min(rms * 10, 1.0)  =>  100% bar = full fill.
     loop {
         let samples = audio.read_frame();
-        let frame = mel.process(&samples);
-        uart_out.send(&frame);
+        let rms = (samples.iter().map(|&s| (s as f32 / 32768.0).powi(2)).sum::<f32>()
+            / samples.len() as f32).sqrt();
+        uart_out.send_level(rms * 1.8); // tune: higher = more sensitive
     }
 }
