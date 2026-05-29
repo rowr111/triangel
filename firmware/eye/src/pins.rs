@@ -2,6 +2,7 @@ use bao1x_api::IoxPort;
 
 // ── LED output ────────────────────────────────────────────────────────────────
 // BIO pin 5 = PB5. Passed to bio_lib::ws2812::Ws2812::new().
+#[allow(dead_code)]
 pub const LED_BIO_PIN: u8 = 5;
 
 // ── Audio UART (ear → eye) ────────────────────────────────────────────────────

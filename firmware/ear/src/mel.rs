@@ -131,6 +131,7 @@ pub struct MelProcessor {
     /// Exponentially-smoothed RMS level used for activity detection.
     /// Updated every frame with asymmetric attack/decay (see constants above).
     smoothed_rms: f32,
+
 }
 
 impl MelProcessor {
@@ -299,25 +300,30 @@ impl MelProcessor {
             mel[m] = (energy + 1e-10).ln();
         }
 
-        // --- Normalize to u16 ---
+        // --- Normalise to u16: shape × volume ---
         //
-        // Find the min and max log-energy across all 24 bands and stretch them
-        // to fill the full 0-65535 u16 range. This is "per-frame" normalisation:
-        // the quietest band in this frame becomes 0 and the loudest becomes 65535,
-        // regardless of overall volume.
+        // Two components:
+        //   shape  = per-frame relative spectrum (0..1, which bands have energy)
+        //   volume = smoothed_rms scaled to 0..1 (how loud the frame actually is)
         //
-        // The effect: the LED patterns always react to whatever structure is
-        // present in the sound, even during quiet passages. The activity flag
-        // (derived from raw RMS above) is the signal for "is there actually
-        // sound" - the bands tell you what shape the sound has.
+        // band_val = shape × volume so that:
+        //   silence  → smoothed_rms ≈ 0 → all bands ≈ 0 → fill empty
+        //   quiet    → smoothed_rms ≈ 0.02 → bands at ~10% → fill partial
+        //   loud     → smoothed_rms ≈ 0.2  → bands near max → fill full
         //
-        // Per-frame min-max normalize to u16
-        let min = mel.iter().cloned().fold(f32::INFINITY, f32::min);
-        let max = mel.iter().cloned().fold(f32::NEG_INFINITY, f32::max);
-        let range = (max - min).max(1e-10); // avoid divide-by-zero on flat frames
+        // RMS_SCALE maps typical desktop-audio RMS to 0..1.
+        // At 0.2 RMS (loud music) the scale saturates at 1.0.
+        const RMS_SCALE: f32 = 5.0;
+
+        let min   = mel.iter().cloned().fold(f32::INFINITY,     f32::min);
+        let max   = mel.iter().cloned().fold(f32::NEG_INFINITY, f32::max);
+        let range = (max - min).max(1e-10);
+        let volume = (self.smoothed_rms * RMS_SCALE).min(1.0);
+
         let mut bands = [0u16; MEL_BANDS];
         for (i, &v) in mel.iter().enumerate() {
-            bands[i] = ((v - min) / range * 65535.0) as u16;
+            let shape = (v - min) / range; // 0..1 spectral shape
+            bands[i] = (shape * volume * 65535.0) as u16;
         }
 
         MelFrame { bands, activity }

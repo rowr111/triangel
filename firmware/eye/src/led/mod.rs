@@ -2,6 +2,7 @@ pub mod map;
 
 use map::LED_COUNT;
 
+#[cfg(not(feature = "previewer"))]
 use crate::pins;
 
 

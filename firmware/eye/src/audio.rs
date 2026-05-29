@@ -1,10 +1,31 @@
 use std::sync::{Arc, Mutex};
+use std::sync::atomic::{AtomicU32, AtomicU8, Ordering};
+
+use bao1x_api::iox::IoxHal;
+use bao1x_api::{IoxDir, IoxEnable, IoxFunction, IoSetup, PeriphId};
+use bao1x_hal::clocks::PERCLK_HZ;
+use bao1x_hal::udma::Uart;
+use bao1x_hal_service::UdmaGlobal;
 
 pub use triangel_shared::mel::MEL_BANDS;
-use triangel_shared::mel::{MelFrame, FRAME_LEN};
+use triangel_shared::mel::{EAR_UART_BAUD, FRAME_LEN, MelFrame};
 
-// Fields unused until the ear chip I2S mic is wired and the UART receive loop below is implemented.
-#[allow(dead_code)]
+use crate::pins;
+
+// --- UART init status — written by listen_loop, read by AudioFill for debug display ---
+pub const STATUS_PENDING:    u8 = 0; // thread started, init not yet attempted
+pub const STATUS_CSR_FAIL:   u8 = 1; // map_memory for UART2 registers failed (owned by another process?)
+pub const STATUS_IFRAM_FAIL: u8 = 2; // map_memory for pre-reserved IFRAM page failed
+pub const STATUS_INIT_OK:    u8 = 3; // init succeeded, waiting for first frame
+pub const STATUS_DMA_DONE:   u8 = 4; // uart.read() returned but MelFrame::decode failed (bad sync/checksum)
+pub const STATUS_RECEIVING:  u8 = 5; // actively receiving frames from ear chip
+pub static UART_STATUS: AtomicU8 = AtomicU8::new(STATUS_PENDING);
+/// First byte received after DMA completes — helps diagnose what's on the wire.
+pub static UART_FIRST_BYTE: AtomicU8 = AtomicU8::new(0);
+/// Timestamp (ms) of last successfully decoded frame — used to detect stale status.
+/// Lower 32 bits of the ticktimer ms timestamp of the last decoded frame.
+pub static UART_LAST_FRAME_MS: AtomicU32 = AtomicU32::new(0);
+
 struct AudioState {
     mel:            [f32; MEL_BANDS],
     smoothed_level: f32,
@@ -36,28 +57,23 @@ impl AudioReceiver {
     }
 
     /// Raw mel band values, 24 bands, each 0.0-1.0.
-    // Unused until the ear chip I2S mic is wired and the UART receive loop below is implemented.
     #[allow(dead_code)]
     pub fn current_mel(&self) -> [f32; MEL_BANDS] {
         self.state.lock().map(|s| s.mel).unwrap_or([0.0; MEL_BANDS])
     }
 
-    /// Activity flag set by the ear chip: true when sustained absolute sound energy
-    /// exceeds the ear's calibrated threshold. Use this for Auto sound mode rather
-    /// than smoothed_level, which is post-normalisation and not a reliable loudness indicator.
+    /// Activity flag: true when sustained absolute sound energy exceeds the ear's
+    /// calibrated threshold. Use for Auto sound mode rather than smoothed_level.
     pub fn is_active(&self) -> bool {
         self.state.lock().map(|s| s.activity).unwrap_or(false)
     }
 
     fn spawn_listener(&self) {
         let state = self.state.clone();
-        std::thread::spawn(move || {
-            listen_loop(state);
-        });
+        std::thread::spawn(move || listen_loop(state));
     }
 }
 
-// Fast attack, slow decay - level jumps quickly on loud sounds and fades gradually.
 const ATTACK: f32 = 0.25;
 const DECAY:  f32 = 0.02;
 
@@ -69,29 +85,104 @@ fn apply_envelope(envelope: f32, new_level: f32) -> f32 {
     }
 }
 
+/// Initialise UART2 for receiving mel frames from the ear chip.
+///
+/// Uses get_handle + explicit map_memory calls instead of Uart::new, so
+/// each failure point returns None rather than panicking.
+// Offset of the RX buffer within the IFRAM page (matches bao1x_hal udma::uart internals).
+fn init_uart() -> Option<Uart> {
+    // Map UART2 hardware registers. Fails if another process already owns them.
+    let csr_mem = match xous::syscall::map_memory(
+        xous::MemoryAddress::new(utralib::utra::udma_uart_2::HW_UDMA_UART_2_BASE),
+        None,
+        4096,
+        xous::MemoryFlags::R | xous::MemoryFlags::W,
+    ) {
+        Ok(m) => m,
+        Err(_) => { UART_STATUS.store(STATUS_CSR_FAIL, Ordering::Relaxed); return None; }
+    };
+
+    // Map the loader-reserved IFRAM page for app UART (always available, no allocator needed).
+    let ifram_mem = match xous::syscall::map_memory(
+        xous::MemoryAddress::new(bao1x_hal::board::APP_UART_IFRAM_ADDR),
+        None,
+        4096,
+        xous::MemoryFlags::R | xous::MemoryFlags::W,
+    ) {
+        Ok(m) => m,
+        Err(_) => { UART_STATUS.store(STATUS_IFRAM_FAIL, Ordering::Relaxed); return None; }
+    };
+
+    let csr_virt   = csr_mem.as_ptr()   as usize;
+    let ifram_virt = ifram_mem.as_ptr() as usize;
+    // MemoryRange is Copy with no Drop — mappings persist when these go out of scope.
+    let _ = (csr_mem, ifram_mem);
+
+    let mut uart = unsafe {
+        Uart::get_handle(csr_virt, bao1x_hal::board::APP_UART_IFRAM_ADDR, ifram_virt)
+    };
+    // set_baud uses 0x0316 which includes poll mode (bit 4), routing bytes to the
+    // command register — exactly what read_async() needs.
+    uart.set_baud(EAR_UART_BAUD, PERCLK_HZ);
+    // Prime the UART RX path — required before any characters can be received.
+    uart.setup_async_read();
+
+    UART_STATUS.store(STATUS_INIT_OK, Ordering::Relaxed);
+    Some(uart)
+}
+
 fn listen_loop(state: Arc<Mutex<AudioState>>) {
     let tt = ticktimer::Ticktimer::new().unwrap();
-    loop {
-        // TODO: receive mel frames from ear chip over UART.
-        // Frame format is defined in triangel-shared: MelFrame::decode(&buf).
-        // Expected: FRAME_LEN (51) bytes at ~30 fps.
-        // For now, leave state at zeros so the lighting app runs cleanly without the ear chip.
-        tt.sleep_ms(16).ok();
+    let iox = IoxHal::new();
+    iox.setup_pin(
+        pins::AUDIO_UART_RX_PORT,
+        pins::AUDIO_UART_RX_PIN,
+        Some(IoxDir::Input),
+        Some(IoxFunction::AF1),
+        Some(IoxEnable::Enable), // schmitt trigger
+        Some(IoxEnable::Enable), // pullup
+        None,
+        None,
+    );
+    UdmaGlobal::new().udma_clock_config(PeriphId::Uart2, true);
 
-        // Once UART is wired, parse the frame here and update state:
-        //
-        //   let mut buf = [0u8; FRAME_LEN];
-        //   uart.read_exact(&mut buf).ok();
-        //   if let Some(frame) = MelFrame::decode(&buf) {
-        //       let mut s = state.lock().unwrap();
-        //       for (i, &raw) in frame.bands.iter().enumerate() {
-        //           s.mel[i] = raw as f32 / 65535.0;
-        //       }
-        //       let raw_level = s.mel.iter().copied().fold(0.0_f32, f32::max);
-        //       s.envelope = apply_envelope(s.envelope, raw_level);
-        //       s.smoothed_level = s.envelope;
-        //       s.activity = frame.activity;
-        //   }
-        let _ = (state.clone(), apply_envelope, FRAME_LEN, MelFrame::decode); // keep reachable until wired
+    let mut uart = match init_uart() {
+        Some(u) => u,
+        None    => return,
+    };
+
+    let mut buf = [0u8; FRAME_LEN];
+    loop {
+        // Signal waiting-for-frame before blocking read so render can detect gaps.
+        UART_STATUS.store(STATUS_INIT_OK, Ordering::Relaxed);
+        // Read bytes one at a time via poll-mode command register (no DMA needed).
+        // Must busy-wait continuously — poll mode holds only one byte at a time,
+        // any bytes arriving while we yield are dropped.
+        for byte in buf.iter_mut() {
+            let mut c = 0u8;
+            while uart.read_async(&mut c) == 0 {}
+            *byte = c;
+        }
+        UART_FIRST_BYTE.store(buf[0], Ordering::Relaxed);
+        UART_STATUS.store(STATUS_DMA_DONE, Ordering::Relaxed);
+        match MelFrame::decode(&buf) {
+            Some(frame) => {
+                UART_STATUS.store(STATUS_RECEIVING, Ordering::Relaxed);
+                UART_LAST_FRAME_MS.store(tt.elapsed_ms() as u32, Ordering::Relaxed);
+                let mut s = state.lock().unwrap();
+                for (i, &raw) in frame.bands.iter().enumerate() {
+                    s.mel[i] = raw as f32 / 65535.0;
+                }
+                let raw_level = s.mel.iter().copied().fold(0.0_f32, f32::max);
+                s.envelope    = apply_envelope(s.envelope, raw_level);
+                s.smoothed_level = s.envelope;
+                s.activity    = frame.activity;
+            }
+            None => {
+                // bad sync or checksum — discard one byte to re-align with frame boundary
+                let mut c = 0u8;
+                while uart.read_async(&mut c) == 0 {}
+            }
+        }
     }
 }

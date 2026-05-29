@@ -195,18 +195,49 @@ def capture_mic(p: pyaudio.PyAudio, device, frame_queue: "queue.Queue[bytes]", s
 
 def run(port: str, baud: int, device, loopback: bool) -> None:
     frame_queue: "queue.Queue[bytes | None]" = queue.Queue(maxsize=4)
+    reconnect_delay = 2.0
 
-    try:
-        ser = serial.Serial(port, baud, timeout=1)
-    except serial.SerialException as e:
-        sys.exit(f"Error opening {port}: {e}")
+    ser_lock = threading.Lock()
+    ser_ref: list = [None]  # mutable serial reference shared with writer thread
+
+    def open_serial() -> bool:
+        try:
+            s = serial.Serial(port, baud, timeout=1)
+            with ser_lock:
+                ser_ref[0] = s
+            print(f"\rSerial open: {port} @ {baud} baud          ")
+            return True
+        except serial.SerialException as e:
+            print(f"\rSerial unavailable ({e}), retrying in {reconnect_delay:.0f}s...", end="")
+            return False
+
+    # Wait for initial connection
+    while not open_serial():
+        time.sleep(reconnect_delay)
 
     def serial_writer() -> None:
         while True:
             packet = frame_queue.get()
             if packet is None:
                 return
-            ser.write(packet)
+            while True:
+                with ser_lock:
+                    s = ser_ref[0]
+                if s is None:
+                    time.sleep(0.1)
+                    continue
+                try:
+                    s.write(packet)
+                    break
+                except serial.SerialException:
+                    with ser_lock:
+                        try: ser_ref[0].close()
+                        except Exception: pass
+                        ser_ref[0] = None
+                    print("\rSerial lost, reconnecting...", end="")
+                    while not open_serial():
+                        time.sleep(reconnect_delay)
+                    break  # drop this packet, resume with next
 
     writer = threading.Thread(target=serial_writer, daemon=True)
     writer.start()
@@ -240,7 +271,8 @@ def run(port: str, baud: int, device, loopback: bool) -> None:
         display.join(timeout=1)
         frame_queue.put(None)
         writer.join(timeout=2)
-        ser.close()
+        with ser_lock:
+            if ser_ref[0]: ser_ref[0].close()
         p.terminate()
         print("Stopped.")
 
