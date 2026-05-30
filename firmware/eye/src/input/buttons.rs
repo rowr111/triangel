@@ -1,7 +1,8 @@
 use std::collections::VecDeque;
 use std::sync::{Arc, Mutex};
 
-use bao1x_api::IoxPort;
+use bao1x_api::iox::IoxHal;
+use bao1x_api::{IoxDir, IoxEnable, IoxFunction, IoxPort, IoxValue, IoSetup};
 
 use super::{EventQueue, InputEvent};
 use crate::pins;
@@ -58,9 +59,9 @@ impl Debouncer {
     }
 }
 
-fn read_switch_position() -> SoundMode {
-    let a = read_pin(pins::SW_A_PORT, pins::SW_A_PIN); // true = HIGH = not in this switch position
-    let b = read_pin(pins::SW_B_PORT, pins::SW_B_PIN);
+fn read_switch_position(iox: &IoxHal) -> SoundMode {
+    let a = read_pin(iox, pins::SW_A_PORT, pins::SW_A_PIN);
+    let b = read_pin(iox, pins::SW_B_PORT, pins::SW_B_PIN);
     match (a, b) {
         (false, true)  => SoundMode::Off,
         (true,  true)  => SoundMode::Auto,
@@ -69,8 +70,33 @@ fn read_switch_position() -> SoundMode {
     }
 }
 
+fn setup_pins(iox: &IoxHal) {
+    // Configure all button and switch pins: active-low inputs with pull-up + schmitt trigger.
+    // External pull-ups are on the button board; internal pull-ups add robustness.
+    let btn_pins = [
+        (pins::BTN_UP_PORT,     pins::BTN_UP_PIN),
+        (pins::BTN_DOWN_PORT,   pins::BTN_DOWN_PIN),
+        (pins::BTN_LEFT_PORT,   pins::BTN_LEFT_PIN),
+        (pins::BTN_RIGHT_PORT,  pins::BTN_RIGHT_PIN),
+        (pins::BTN_CENTER_PORT, pins::BTN_CENTER_PIN),
+        (pins::SW_A_PORT,       pins::SW_A_PIN),
+        (pins::SW_B_PORT,       pins::SW_B_PIN),
+    ];
+    for (port, pin) in btn_pins {
+        iox.setup_pin(port, pin,
+            Some(IoxDir::Input),
+            Some(IoxFunction::Gpio),
+            Some(IoxEnable::Enable), // schmitt trigger
+            Some(IoxEnable::Enable), // pull-up
+            None, None,
+        );
+    }
+}
+
 fn poll_loop(queue: Arc<Mutex<VecDeque<InputEvent>>>) {
-    let tt = ticktimer::Ticktimer::new().unwrap();
+    let tt  = ticktimer::Ticktimer::new().unwrap();
+    let iox = IoxHal::new();
+    setup_pins(&iox);
 
     let mut db_up     = Debouncer::new();
     let mut db_down   = Debouncer::new();
@@ -78,19 +104,19 @@ fn poll_loop(queue: Arc<Mutex<VecDeque<InputEvent>>>) {
     let mut db_right  = Debouncer::new();
     let mut db_center = Debouncer::new();
 
-    let mut last_switch = read_switch_position();
+    let mut last_switch = read_switch_position(&iox);
 
     loop {
         let mut pending = [None::<InputEvent>; 6];
         let mut n = 0;
 
-        if db_up.update(read_pin(pins::BTN_UP_PORT,     pins::BTN_UP_PIN))     { pending[n] = Some(InputEvent::BrightnessUp);   n += 1; }
-        if db_down.update(read_pin(pins::BTN_DOWN_PORT,   pins::BTN_DOWN_PIN))   { pending[n] = Some(InputEvent::BrightnessDown); n += 1; }
-        if db_left.update(read_pin(pins::BTN_LEFT_PORT,   pins::BTN_LEFT_PIN))   { pending[n] = Some(InputEvent::PatternPrev);    n += 1; }
-        if db_right.update(read_pin(pins::BTN_RIGHT_PORT,  pins::BTN_RIGHT_PIN))  { pending[n] = Some(InputEvent::PatternNext);    n += 1; }
-        if db_center.update(read_pin(pins::BTN_CENTER_PORT, pins::BTN_CENTER_PIN)) { pending[n] = Some(InputEvent::ToggleHold);     n += 1; }
+        if db_up.update(read_pin(&iox, pins::BTN_UP_PORT,     pins::BTN_UP_PIN))     { pending[n] = Some(InputEvent::BrightnessUp);   n += 1; }
+        if db_down.update(read_pin(&iox, pins::BTN_DOWN_PORT,   pins::BTN_DOWN_PIN))   { pending[n] = Some(InputEvent::BrightnessDown); n += 1; }
+        if db_left.update(read_pin(&iox, pins::BTN_LEFT_PORT,   pins::BTN_LEFT_PIN))   { pending[n] = Some(InputEvent::PatternPrev);    n += 1; }
+        if db_right.update(read_pin(&iox, pins::BTN_RIGHT_PORT,  pins::BTN_RIGHT_PIN))  { pending[n] = Some(InputEvent::PatternNext);    n += 1; }
+        if db_center.update(read_pin(&iox, pins::BTN_CENTER_PORT, pins::BTN_CENTER_PIN)) { pending[n] = Some(InputEvent::ToggleHold);     n += 1; }
 
-        let sw = read_switch_position();
+        let sw = read_switch_position(&iox);
         if sw != last_switch {
             last_switch = sw;
             pending[n] = Some(InputEvent::SetSoundMode(sw));
@@ -110,8 +136,6 @@ fn poll_loop(queue: Arc<Mutex<VecDeque<InputEvent>>>) {
 }
 
 /// Read a GPIO pin. Returns true if HIGH, false if LOW.
-/// TODO: replace with actual bao1x GPIO HAL call once pin assignments are confirmed.
-#[allow(unused_variables)]
-fn read_pin(port: IoxPort, pin: u8) -> bool {
-    true // stub - HIGH = unpressed (active-low buttons with pull-ups)
+fn read_pin(iox: &IoxHal, port: IoxPort, pin: u8) -> bool {
+    iox.get_gpio_pin_value(port, pin) == IoxValue::High
 }

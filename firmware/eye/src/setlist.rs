@@ -48,7 +48,7 @@ impl SetlistManager {
             last_cycle_ms: now_ms,
             held:          false,
             brightness:    1.0,
-            sound_mode:    SoundMode::On, // TODO: revert to Off before production
+            sound_mode:    SoundMode::Off,
         }
     }
 
