@@ -1696,6 +1696,16 @@
 	)
 	(wire
 		(pts
+			(xy 132.715 183.515) (xy 133.985 183.515)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "05610b81-ddf2-421c-bfc2-88de11e59a33")
+	)
+	(wire
+		(pts
 			(xy 115.57 52.07) (xy 115.57 53.34)
 		)
 		(stroke
@@ -2433,6 +2443,16 @@
 			(type default)
 		)
 		(uuid "3ffa3d70-dd9d-4558-9877-de3aeedeeea1")
+	)
+	(wire
+		(pts
+			(xy 142.24 189.23) (xy 142.24 186.055)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "40e4d3dc-4446-4f67-ae40-f8e7857903e2")
 	)
 	(wire
 		(pts
@@ -3876,6 +3896,16 @@
 	)
 	(wire
 		(pts
+			(xy 141.605 183.515) (xy 142.24 183.515)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "f74923a2-b0bc-4913-8f0c-13c3cd493c47")
+	)
+	(wire
+		(pts
 			(xy 104.775 143.51) (xy 113.665 143.51)
 		)
 		(stroke
@@ -3916,7 +3946,7 @@
 	)
 	(global_label "5V Power"
 		(shape output)
-		(at 141.605 177.8 180)
+		(at 132.715 183.515 180)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -3926,7 +3956,7 @@
 		)
 		(uuid "1c590f1c-1fb3-4a33-b082-241729eede87")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 129.7298 177.8 0)
+			(at 120.8398 183.515 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -7740,6 +7770,97 @@
 		)
 	)
 	(symbol
+		(lib_id "Device:C")
+		(at 137.795 183.515 90)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "a6e3dc92-0880-4d03-a983-5a02e1c963aa")
+		(property "Reference" "C25"
+			(at 137.795 175.895 90)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "47µF"
+			(at 137.795 178.435 90)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "Capacitor_SMD:C_1206_3216Metric"
+			(at 141.605 182.5498 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" "https://jlc-prod-smt.oss-eu-central-1.aliyuncs.com/smtDataManualFile/8586178840691683328-C77101.pdf?response-content-disposition=attachment%3B%20filename%3DC77101.pdf%3B%20filename%2A%3DUTF-8%27%27C77101.pdf&x-oss-date=20260530T174020Z&x-oss-expires=1800&x-oss-security-token=CAISgAN1q6Ft5B2yfSjIr5n%2Bfdvem%2Bts05SjcVeCpXNkYt5rmo3Mrzz2IHhMdHJsAOodtv0%2FmmhT6PkclqRLcbhpcmfjV%2BZHzLB8qbk31zBO4J7b16cNrbH4M4H6aXeirtuwDsz9SNTCALjPD3nPii50x5bjaDymRCbLGJaViJlhHLN1Ow6jdmhpCctxLAlvo9NgFxm3D%2Fu2NQPwiWf9FVdhvhEG6Vly8qOi2MaRmFy8yFTx0b0SvJ%2BjYMrmPctoN9JnSdC5mfdzau3a1TJ84gRD0a5wkaVA1zbDs5bfISEIuUzebreLqY03dV4mOvdqIcMe8qigz88fk%2FfIioH6xyxKOexoSCnFTOiiupCcQLPyao9jLu6iayqViY7QaIOTqQohZmkAMwVOasAsI3Ngh4zF97Qt0cVNkXO9gWfLI8DtuMleWkppw9R5cnSgc5lCkRRYwGs1287ugXlSQzo890KPDAEovaKCnZ2ZSfh7Y4sNknI6i%2Bfc2Se2MIkIWjBNb6KWD5sagAGr5rmBvHeFC8TZ%2BJcd86gyYT9ErQ9X%2B0arh9aBqEUpMV00uZssw%2BpJ0wDNLR3IfY4Emrombd1Qhrr0MuB3K8fJjJk9FM3xSkdaC6wlZzPtmjTVgp5eXx0QJhMfflRGyQBUK%2FfqX4UcQ0%2FVp31Qo2ufdtTd4b5xoRPi6Re0vJceYCAA&x-oss-signature-version=OSS4-HMAC-SHA256&x-oss-credential=STS.NZK6ajv4MdVHsq3As1nQGuHgM%2F20260530%2Feu-central-1%2Foss%2Faliyun_v4_request&x-oss-signature=60c0d3c6bb64dcbae917457d6a6bcf0bef18835ea05f75f079bc953471331657"
+			(at 137.795 183.515 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Unpolarized capacitor"
+			(at 137.795 183.515 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "JLCPCB Part #" "C77101"
+			(at 137.795 183.515 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "8923be9c-f009-4f8f-b0be-5853b25f8343")
+		)
+		(pin "2"
+			(uuid "f84a97c5-c0eb-4cf0-86db-44ea3f54854f")
+		)
+		(instances
+			(project "triangle"
+				(path "/f9839f04-8b32-4f6f-9cb5-92c3ed04dc78"
+					(reference "C25")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "LED:WS2812B-2020")
 		(at 160.02 37.465 0)
 		(unit 1)
@@ -8200,7 +8321,7 @@
 	)
 	(symbol
 		(lib_id "Connector:Conn_01x02_Socket")
-		(at 146.685 177.8 0)
+		(at 147.32 183.515 0)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -8211,7 +8332,7 @@
 		(fields_autoplaced yes)
 		(uuid "adfd0f07-259d-434d-9a1b-04485da0485e")
 		(property "Reference" "J2"
-			(at 147.955 177.7999 0)
+			(at 148.59 183.5149 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -8222,7 +8343,7 @@
 			)
 		)
 		(property "Value" "Conn_01x02_Socket"
-			(at 147.955 180.3399 0)
+			(at 148.59 186.0549 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -8233,7 +8354,7 @@
 			)
 		)
 		(property "Footprint" "footprints:CONN-SMD_ZX-XH2.54-2PLT"
-			(at 146.685 177.8 0)
+			(at 147.32 183.515 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -8244,7 +8365,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 146.685 177.8 0)
+			(at 147.32 183.515 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -8255,7 +8376,7 @@
 			)
 		)
 		(property "Description" "Generic connector, single row, 01x02, script generated"
-			(at 146.685 177.8 0)
+			(at 147.32 183.515 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -8266,7 +8387,7 @@
 			)
 		)
 		(property "JLCPCB Part #" "C7429680"
-			(at 146.685 177.8 0)
+			(at 147.32 183.515 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -9608,7 +9729,7 @@
 	)
 	(symbol
 		(lib_id "power:GND")
-		(at 141.605 180.34 270)
+		(at 142.24 189.23 270)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -9619,7 +9740,7 @@
 		(fields_autoplaced yes)
 		(uuid "f6ad4a03-5703-47e6-bec3-9bc5b74362a5")
 		(property "Reference" "#PWR01"
-			(at 135.255 180.34 0)
+			(at 135.89 189.23 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -9630,7 +9751,7 @@
 			)
 		)
 		(property "Value" "GND"
-			(at 137.795 180.3399 90)
+			(at 138.43 189.2299 90)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -9641,7 +9762,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 141.605 180.34 0)
+			(at 142.24 189.23 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -9652,7 +9773,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 141.605 180.34 0)
+			(at 142.24 189.23 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -9663,7 +9784,7 @@
 			)
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
-			(at 141.605 180.34 0)
+			(at 142.24 189.23 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
