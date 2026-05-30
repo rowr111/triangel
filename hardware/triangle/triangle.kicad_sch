@@ -4114,7 +4114,7 @@
 	)
 	(global_label "LED_DATA_OUT"
 		(shape input)
-		(at 35.56 181.61 180)
+		(at 35.56 173.99 180)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -4124,7 +4124,7 @@
 		)
 		(uuid "c010feb8-8924-4706-9f80-f9483c2ddfe9")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 19.1491 181.61 0)
+			(at 19.1491 173.99 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -4162,7 +4162,7 @@
 	)
 	(global_label "LED_DATA_IN"
 		(shape input)
-		(at 35.56 174.625 180)
+		(at 35.56 167.005 180)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -4172,7 +4172,7 @@
 		)
 		(uuid "fa323afa-8649-44e1-9919-3b2ed71acc03")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 20.8424 174.625 0)
+			(at 20.8424 167.005 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -5472,85 +5472,6 @@
 		)
 	)
 	(symbol
-		(lib_id "Connector:TestPoint")
-		(at 35.56 167.005 0)
-		(unit 1)
-		(body_style 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(in_pos_files yes)
-		(dnp no)
-		(fields_autoplaced yes)
-		(uuid "2865965a-eed7-4e39-b3f3-0eb1919f7fe3")
-		(property "Reference" "TP2-GND1"
-			(at 38.1 162.4329 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Value" "TestPoint"
-			(at 38.1 164.9729 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Footprint" "TestPoint:TestPoint_Pad_1.0x1.0mm"
-			(at 40.64 167.005 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Datasheet" ""
-			(at 40.64 167.005 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description" "test point"
-			(at 35.56 167.005 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "1"
-			(uuid "76dbcb5e-cb6f-43b1-bc18-4329e5858ca0")
-		)
-		(instances
-			(project "triangle"
-				(path "/f9839f04-8b32-4f6f-9cb5-92c3ed04dc78"
-					(reference "TP2-GND1")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
 		(lib_id "Mechanical:MountingHole")
 		(at 100.965 181.61 0)
 		(unit 1)
@@ -6202,85 +6123,6 @@
 			(project "triangle"
 				(path "/f9839f04-8b32-4f6f-9cb5-92c3ed04dc78"
 					(reference "D24")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "power:GND")
-		(at 35.56 167.005 270)
-		(unit 1)
-		(body_style 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(in_pos_files yes)
-		(dnp no)
-		(fields_autoplaced yes)
-		(uuid "49b4bb0f-5ffc-4e17-a4ad-d74efef0f950")
-		(property "Reference" "#PWR02"
-			(at 29.21 167.005 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Value" "GND"
-			(at 31.75 167.0049 90)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify right)
-			)
-		)
-		(property "Footprint" ""
-			(at 35.56 167.005 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Datasheet" ""
-			(at 35.56 167.005 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
-			(at 35.56 167.005 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "1"
-			(uuid "e4242106-a889-4c1a-ab92-8e33cb969a3b")
-		)
-		(instances
-			(project "triangle"
-				(path "/f9839f04-8b32-4f6f-9cb5-92c3ed04dc78"
-					(reference "#PWR02")
 					(unit 1)
 				)
 			)
@@ -7502,7 +7344,7 @@
 	)
 	(symbol
 		(lib_id "Connector:TestPoint")
-		(at 35.56 181.61 0)
+		(at 35.56 173.99 0)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -7512,8 +7354,8 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "942dec58-c27f-4530-a7c3-073401394603")
-		(property "Reference" "TP4-LED_DATA_OUT1"
-			(at 38.1 177.0379 0)
+		(property "Reference" "TP3-LED_DATA_OUT1"
+			(at 38.1 169.4179 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -7524,7 +7366,7 @@
 			)
 		)
 		(property "Value" "TestPoint"
-			(at 38.1 179.5779 0)
+			(at 38.1 171.9579 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -7535,7 +7377,7 @@
 			)
 		)
 		(property "Footprint" "TestPoint:TestPoint_Pad_1.0x1.0mm"
-			(at 40.64 181.61 0)
+			(at 40.64 173.99 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -7546,7 +7388,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 40.64 181.61 0)
+			(at 40.64 173.99 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -7557,7 +7399,7 @@
 			)
 		)
 		(property "Description" "test point"
-			(at 35.56 181.61 0)
+			(at 35.56 173.99 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -7573,7 +7415,7 @@
 		(instances
 			(project "triangle"
 				(path "/f9839f04-8b32-4f6f-9cb5-92c3ed04dc78"
-					(reference "TP4-LED_DATA_OUT1")
+					(reference "TP3-LED_DATA_OUT1")
 					(unit 1)
 				)
 			)
@@ -7949,7 +7791,7 @@
 	)
 	(symbol
 		(lib_id "Connector:TestPoint")
-		(at 35.56 174.625 0)
+		(at 35.56 167.005 0)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -7959,8 +7801,8 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "a9708859-3e54-4daf-a1b7-29055a403fb9")
-		(property "Reference" "TP3-LED_DATA_IN1"
-			(at 38.1 170.0529 0)
+		(property "Reference" "TP2-LED_DATA_IN1"
+			(at 38.1 162.4329 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -7971,7 +7813,7 @@
 			)
 		)
 		(property "Value" "TestPoint"
-			(at 38.1 172.5929 0)
+			(at 38.1 164.9729 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -7982,7 +7824,7 @@
 			)
 		)
 		(property "Footprint" "TestPoint:TestPoint_Pad_1.0x1.0mm"
-			(at 40.64 174.625 0)
+			(at 40.64 167.005 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -7993,7 +7835,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 40.64 174.625 0)
+			(at 40.64 167.005 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -8004,7 +7846,7 @@
 			)
 		)
 		(property "Description" "test point"
-			(at 35.56 174.625 0)
+			(at 35.56 167.005 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -8020,7 +7862,7 @@
 		(instances
 			(project "triangle"
 				(path "/f9839f04-8b32-4f6f-9cb5-92c3ed04dc78"
-					(reference "TP3-LED_DATA_IN1")
+					(reference "TP2-LED_DATA_IN1")
 					(unit 1)
 				)
 			)

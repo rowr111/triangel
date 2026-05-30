@@ -2658,6 +2658,30 @@
 			)
 		)
 	)
+	(global_label "LED_DATA_OUT"
+		(shape input)
+		(at 52.07 153.67 180)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "55117768-3452-4acf-b702-698ef026bb00")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 35.6591 153.67 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+	)
 	(global_label "LED DATA"
 		(shape input)
 		(at 58.42 43.18 0)
@@ -2871,30 +2895,6 @@
 					(size 1.27 1.27)
 				)
 				(justify left)
-			)
-		)
-	)
-	(global_label "LED_DATA_OUT"
-		(shape input)
-		(at 60.325 160.02 180)
-		(fields_autoplaced yes)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify right)
-		)
-		(uuid "9bdcc4e7-9003-4fb1-a313-f2205a3c462e")
-		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 43.9141 160.02 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify right)
 			)
 		)
 	)
@@ -7006,99 +7006,6 @@
 		)
 	)
 	(symbol
-		(lib_id "Connector:Conn_01x02_Socket")
-		(at 65.405 157.48 0)
-		(unit 1)
-		(body_style 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(in_pos_files yes)
-		(dnp no)
-		(fields_autoplaced yes)
-		(uuid "d8a50199-b335-43b9-bfe6-f341fa919d58")
-		(property "Reference" "J1"
-			(at 66.675 157.4799 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Value" "Conn_01x02_Socket"
-			(at 66.675 160.0199 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Footprint" "footprints:CONN-SMD_ZX-XH2.54-2PLT"
-			(at 65.405 157.48 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Datasheet" ""
-			(at 65.405 157.48 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description" "Generic connector, single row, 01x02, script generated"
-			(at 65.405 157.48 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "JLCPCB Part #" "C7429680"
-			(at 65.405 157.48 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "2"
-			(uuid "2e2f1b72-e878-4ee2-9fa4-654f9d7c7306")
-		)
-		(pin "1"
-			(uuid "fcd77013-59d1-4f5b-9716-0d29f907bf63")
-		)
-		(instances
-			(project "controller"
-				(path "/d7bd6c74-3e25-4440-9b6a-904f2e2d9596"
-					(reference "J1")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
 		(lib_id "power:GND")
 		(at 55.88 115.57 0)
 		(unit 1)
@@ -7264,6 +7171,99 @@
 			(project "controller"
 				(path "/d7bd6c74-3e25-4440-9b6a-904f2e2d9596"
 					(reference "R15")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Connector:Conn_01x02_Socket")
+		(at 57.15 151.13 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "f8153944-adda-4e8d-ad91-517c9a50d25c")
+		(property "Reference" "J1"
+			(at 58.42 151.1299 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "Conn_01x02_Socket"
+			(at 58.42 153.6699 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "footprints:CONN-SMD_B2B-PH-SM4-TBT-LF-SN"
+			(at 57.15 151.13 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" "https://jlc-prod-smt.oss-eu-central-1.aliyuncs.com/smtDataManualFile/8588902703158607872-C265003.pdf?response-content-disposition=attachment%3B%20filename%3DC265003.pdf%3B%20filename%2A%3DUTF-8%27%27C265003.pdf&x-oss-date=20260530T184618Z&x-oss-expires=1800&x-oss-security-token=CAISgAN1q6Ft5B2yfSjIr5mMGOPH2b5C56u6RmrwoVgfesNa3pGdrjz2IHhMdHJsAOodtv0%2FmmhT6PkclqRLcbhpcmfjV%2BZHzLB8qYMJrTZO4J7b16cNrbH4M4H6aXeirtuwDsz9SNTCALjPD3nPii50x5bjaDymRCbLGJaViJlhHLN1Ow6jdmhpCctxLAlvo9NgFxm3D%2Fu2NQPwiWf9FVdhvhEG6Vly8qOi2MaRmFy8yFTx0b0SvJ%2BjYMrmPctoN9JnSdC5mfdzau3a1TJ84gRD0a5wkaVA1zbDs5bfISEIuUzebreLqY03dV4mOvdqIcMe8qigz88fk%2FfIioH6xyxKOexoSCnFTOiiupCcQLPyao9jLu6iayqViY7QaIOTqQohZmkAMwVOasAsI3Ngh4zF97Qt0cVNkXO9gWfLI8DtuMleWorMUcNC5tHD0eS19jklBdzSlusJRAJJUVBflCeKEaRNSAd3WGhEfM2%2BBt4QT30w5N2u00S8OSMIj6WwtaKWD5sagAEiB9a8Fe3Xz48X2tP6dxg54Vro9nibq7GRPtzBohN8u1QdmxofnrAafgnnqWIAyQYzEZD7Qmyn521BE9LOYbykf0HEMcjUKnha5PhgCA%2BaTkV%2BbWuE1SITzT9cI0CaBUqZ3vKId6FEL2fcnTSF0BDC6iF%2Bhf1ATGD2uciyP2xLKSAA&x-oss-signature-version=OSS4-HMAC-SHA256&x-oss-credential=STS.NZ9SYs4acPiQDLAEXJvLv1T6L%2F20260530%2Feu-central-1%2Foss%2Faliyun_v4_request&x-oss-signature=9be76bdf4ed042f2478c7de920dfc88ba2fe608f5eef2b87c8aebd4d72e4c4dc"
+			(at 57.15 151.13 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Generic connector, single row, 01x02, script generated"
+			(at 57.15 151.13 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "JLCPCB Part #" "C265003"
+			(at 57.15 151.13 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "2"
+			(uuid "e6a024b5-b5da-4507-8010-34fdb8b27a1f")
+		)
+		(pin "1"
+			(uuid "e16f11f8-5c92-43b8-96fb-e3a4cd322596")
+		)
+		(instances
+			(project "controller"
+				(path "/d7bd6c74-3e25-4440-9b6a-904f2e2d9596"
+					(reference "J1")
 					(unit 1)
 				)
 			)
