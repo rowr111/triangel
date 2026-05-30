@@ -9565,7 +9565,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "footprints:CONN-SMD_ZX-XH2.54-2PLT"
+		(property "Footprint" "footprints:CONN-SMD_B2B-PH-SM4-TBT-LF-SN"
 			(at 146.685 170.18 0)
 			(hide yes)
 			(show_name no)
@@ -9576,7 +9576,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://jlc-prod-smt.oss-eu-central-1.aliyuncs.com/smtDataManualFile/8588902703158607872-C265003.pdf?response-content-disposition=attachment%3B%20filename%3DC265003.pdf%3B%20filename%2A%3DUTF-8%27%27C265003.pdf&x-oss-date=20260530T184618Z&x-oss-expires=1800&x-oss-security-token=CAISgAN1q6Ft5B2yfSjIr5mMGOPH2b5C56u6RmrwoVgfesNa3pGdrjz2IHhMdHJsAOodtv0%2FmmhT6PkclqRLcbhpcmfjV%2BZHzLB8qYMJrTZO4J7b16cNrbH4M4H6aXeirtuwDsz9SNTCALjPD3nPii50x5bjaDymRCbLGJaViJlhHLN1Ow6jdmhpCctxLAlvo9NgFxm3D%2Fu2NQPwiWf9FVdhvhEG6Vly8qOi2MaRmFy8yFTx0b0SvJ%2BjYMrmPctoN9JnSdC5mfdzau3a1TJ84gRD0a5wkaVA1zbDs5bfISEIuUzebreLqY03dV4mOvdqIcMe8qigz88fk%2FfIioH6xyxKOexoSCnFTOiiupCcQLPyao9jLu6iayqViY7QaIOTqQohZmkAMwVOasAsI3Ngh4zF97Qt0cVNkXO9gWfLI8DtuMleWorMUcNC5tHD0eS19jklBdzSlusJRAJJUVBflCeKEaRNSAd3WGhEfM2%2BBt4QT30w5N2u00S8OSMIj6WwtaKWD5sagAEiB9a8Fe3Xz48X2tP6dxg54Vro9nibq7GRPtzBohN8u1QdmxofnrAafgnnqWIAyQYzEZD7Qmyn521BE9LOYbykf0HEMcjUKnha5PhgCA%2BaTkV%2BbWuE1SITzT9cI0CaBUqZ3vKId6FEL2fcnTSF0BDC6iF%2Bhf1ATGD2uciyP2xLKSAA&x-oss-signature-version=OSS4-HMAC-SHA256&x-oss-credential=STS.NZ9SYs4acPiQDLAEXJvLv1T6L%2F20260530%2Feu-central-1%2Foss%2Faliyun_v4_request&x-oss-signature=9be76bdf4ed042f2478c7de920dfc88ba2fe608f5eef2b87c8aebd4d72e4c4dc"
 			(at 146.685 170.18 0)
 			(hide yes)
 			(show_name no)
@@ -9598,7 +9598,7 @@
 				)
 			)
 		)
-		(property "JLCPCB Part #" "C7429680"
+		(property "JLCPCB Part #" "C265003"
 			(at 146.685 170.18 0)
 			(hide yes)
 			(show_name no)

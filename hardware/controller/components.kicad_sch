@@ -5,6 +5,189 @@
 	(uuid "0ac5dad8-a171-4aae-876f-5259e6d6a043")
 	(paper "A4")
 	(lib_symbols
+		(symbol "Connector:Conn_01x02_Socket"
+			(pin_names
+				(offset 1.016)
+				(hide yes)
+			)
+			(exclude_from_sim no)
+			(in_bom yes)
+			(on_board yes)
+			(in_pos_files yes)
+			(duplicate_pin_numbers_are_jumpers no)
+			(property "Reference" "J"
+				(at 0 2.54 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Value" "Conn_01x02_Socket"
+				(at 0 -5.08 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Footprint" ""
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Datasheet" ""
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Description" "Generic connector, single row, 01x02, script generated"
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "ki_locked" ""
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "ki_keywords" "connector"
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "ki_fp_filters" "Connector*:*_1x??_*"
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(symbol "Conn_01x02_Socket_1_1"
+				(polyline
+					(pts
+						(xy -1.27 0) (xy -0.508 0)
+					)
+					(stroke
+						(width 0.1524)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy -1.27 -2.54) (xy -0.508 -2.54)
+					)
+					(stroke
+						(width 0.1524)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(arc
+					(start 0 -0.508)
+					(mid -0.5058 0)
+					(end 0 0.508)
+					(stroke
+						(width 0.1524)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(arc
+					(start 0 -3.048)
+					(mid -0.5058 -2.54)
+					(end 0 -2.032)
+					(stroke
+						(width 0.1524)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(pin passive line
+					(at -5.08 0 0)
+					(length 3.81)
+					(name "Pin_1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at -5.08 -2.54 0)
+					(length 3.81)
+					(name "Pin_2"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "2"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+			)
+			(embedded_fonts no)
+		)
 		(symbol "Device:C"
 			(pin_numbers
 				(hide yes)
@@ -2081,6 +2264,16 @@
 	)
 	(wire
 		(pts
+			(xy 51.435 170.815) (xy 52.705 170.815)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "7cc8edd0-b794-4e9d-a76a-1b3e382511a0")
+	)
+	(wire
+		(pts
 			(xy 50.8 25.4) (xy 50.8 33.02)
 		)
 		(stroke
@@ -2108,6 +2301,16 @@
 			(type default)
 		)
 		(uuid "90313ad4-832e-448c-b981-0703ab85c462")
+	)
+	(wire
+		(pts
+			(xy 60.96 176.53) (xy 60.96 173.355)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "93af251e-897a-4905-b237-36e685fbe68f")
 	)
 	(wire
 		(pts
@@ -2188,6 +2391,16 @@
 			(type default)
 		)
 		(uuid "af36ed5e-aeca-4ed9-9718-98999fd9d48f")
+	)
+	(wire
+		(pts
+			(xy 60.325 170.815) (xy 60.96 170.815)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "b08c3e34-9430-4beb-a624-d8c0bf6bf9c6")
 	)
 	(wire
 		(pts
@@ -2394,6 +2607,30 @@
 					(size 1.27 1.27)
 				)
 				(justify left)
+			)
+		)
+	)
+	(global_label "5V Power"
+		(shape output)
+		(at 51.435 170.815 180)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "201e8fb9-d307-4f0b-bcdd-c71b2afa2dcc")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 39.5598 170.815 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
 			)
 		)
 	)
@@ -2637,6 +2874,30 @@
 			)
 		)
 	)
+	(global_label "LED_DATA_OUT"
+		(shape input)
+		(at 60.325 160.02 180)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "9bdcc4e7-9003-4fb1-a313-f2205a3c462e")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 43.9141 160.02 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+	)
 	(global_label "USB Data -"
 		(shape output)
 		(at 162.56 109.855 180)
@@ -2866,6 +3127,99 @@
 			(project "controller"
 				(path "/d7bd6c74-3e25-4440-9b6a-904f2e2d9596"
 					(reference "R8")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Connector:Conn_01x02_Socket")
+		(at 66.04 170.815 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "0fa2867a-a851-4386-b5f5-619e283c2682")
+		(property "Reference" "J2"
+			(at 67.31 170.8149 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "Conn_01x02_Socket"
+			(at 67.31 173.3549 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "footprints:CONN-SMD_ZX-XH2.54-2PLT"
+			(at 66.04 170.815 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 66.04 170.815 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Generic connector, single row, 01x02, script generated"
+			(at 66.04 170.815 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "JLCPCB Part #" "C7429680"
+			(at 66.04 170.815 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "2"
+			(uuid "06275f74-ec64-4c60-81f4-476b7766a152")
+		)
+		(pin "1"
+			(uuid "ed9e4c10-faea-4ad0-950f-4e2f75f71290")
+		)
+		(instances
+			(project "controller"
+				(path "/d7bd6c74-3e25-4440-9b6a-904f2e2d9596"
+					(reference "J2")
 					(unit 1)
 				)
 			)
@@ -6122,6 +6476,97 @@
 		)
 	)
 	(symbol
+		(lib_id "Device:C")
+		(at 56.515 170.815 90)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "c7c0798f-e113-45bd-be51-dfe6032aaa40")
+		(property "Reference" "C27"
+			(at 56.515 163.195 90)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "47µF"
+			(at 56.515 165.735 90)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "Capacitor_SMD:C_1206_3216Metric"
+			(at 60.325 169.8498 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" "https://jlc-prod-smt.oss-eu-central-1.aliyuncs.com/smtDataManualFile/8586178840691683328-C77101.pdf?response-content-disposition=attachment%3B%20filename%3DC77101.pdf%3B%20filename%2A%3DUTF-8%27%27C77101.pdf&x-oss-date=20260530T174020Z&x-oss-expires=1800&x-oss-security-token=CAISgAN1q6Ft5B2yfSjIr5n%2Bfdvem%2Bts05SjcVeCpXNkYt5rmo3Mrzz2IHhMdHJsAOodtv0%2FmmhT6PkclqRLcbhpcmfjV%2BZHzLB8qbk31zBO4J7b16cNrbH4M4H6aXeirtuwDsz9SNTCALjPD3nPii50x5bjaDymRCbLGJaViJlhHLN1Ow6jdmhpCctxLAlvo9NgFxm3D%2Fu2NQPwiWf9FVdhvhEG6Vly8qOi2MaRmFy8yFTx0b0SvJ%2BjYMrmPctoN9JnSdC5mfdzau3a1TJ84gRD0a5wkaVA1zbDs5bfISEIuUzebreLqY03dV4mOvdqIcMe8qigz88fk%2FfIioH6xyxKOexoSCnFTOiiupCcQLPyao9jLu6iayqViY7QaIOTqQohZmkAMwVOasAsI3Ngh4zF97Qt0cVNkXO9gWfLI8DtuMleWkppw9R5cnSgc5lCkRRYwGs1287ugXlSQzo890KPDAEovaKCnZ2ZSfh7Y4sNknI6i%2Bfc2Se2MIkIWjBNb6KWD5sagAGr5rmBvHeFC8TZ%2BJcd86gyYT9ErQ9X%2B0arh9aBqEUpMV00uZssw%2BpJ0wDNLR3IfY4Emrombd1Qhrr0MuB3K8fJjJk9FM3xSkdaC6wlZzPtmjTVgp5eXx0QJhMfflRGyQBUK%2FfqX4UcQ0%2FVp31Qo2ufdtTd4b5xoRPi6Re0vJceYCAA&x-oss-signature-version=OSS4-HMAC-SHA256&x-oss-credential=STS.NZK6ajv4MdVHsq3As1nQGuHgM%2F20260530%2Feu-central-1%2Foss%2Faliyun_v4_request&x-oss-signature=60c0d3c6bb64dcbae917457d6a6bcf0bef18835ea05f75f079bc953471331657"
+			(at 56.515 170.815 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Unpolarized capacitor"
+			(at 56.515 170.815 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "JLCPCB Part #" "C77101"
+			(at 56.515 170.815 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "2e20b62d-de3c-41a2-913f-f3b7689ef311")
+		)
+		(pin "2"
+			(uuid "79663bc9-476c-46f4-bd5f-530d3d792e24")
+		)
+		(instances
+			(project "controller"
+				(path "/d7bd6c74-3e25-4440-9b6a-904f2e2d9596"
+					(reference "C27")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "USB_C:TYPE-C-31-M-12")
 		(at 177.8 45.085 0)
 		(unit 1)
@@ -6325,6 +6770,85 @@
 	)
 	(symbol
 		(lib_id "power:GND")
+		(at 60.96 176.53 270)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "d1b4db24-42e0-4903-89c0-b89b81c0e460")
+		(property "Reference" "#PWR01"
+			(at 54.61 176.53 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "GND"
+			(at 57.15 176.5299 90)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(property "Footprint" ""
+			(at 60.96 176.53 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 60.96 176.53 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
+			(at 60.96 176.53 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "4bff11d6-b294-4acc-adfb-ba56f0a4d48b")
+		)
+		(instances
+			(project "controller"
+				(path "/d7bd6c74-3e25-4440-9b6a-904f2e2d9596"
+					(reference "#PWR01")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:GND")
 		(at 142.24 104.775 270)
 		(unit 1)
 		(body_style 1)
@@ -6476,6 +7000,99 @@
 			(project "controller"
 				(path "/d7bd6c74-3e25-4440-9b6a-904f2e2d9596"
 					(reference "#PWR027")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Connector:Conn_01x02_Socket")
+		(at 65.405 157.48 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "d8a50199-b335-43b9-bfe6-f341fa919d58")
+		(property "Reference" "J1"
+			(at 66.675 157.4799 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "Conn_01x02_Socket"
+			(at 66.675 160.0199 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "footprints:CONN-SMD_ZX-XH2.54-2PLT"
+			(at 65.405 157.48 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 65.405 157.48 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Generic connector, single row, 01x02, script generated"
+			(at 65.405 157.48 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "JLCPCB Part #" "C7429680"
+			(at 65.405 157.48 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "2"
+			(uuid "2e2f1b72-e878-4ee2-9fa4-654f9d7c7306")
+		)
+		(pin "1"
+			(uuid "fcd77013-59d1-4f5b-9716-0d29f907bf63")
+		)
+		(instances
+			(project "controller"
+				(path "/d7bd6c74-3e25-4440-9b6a-904f2e2d9596"
+					(reference "J1")
 					(unit 1)
 				)
 			)
