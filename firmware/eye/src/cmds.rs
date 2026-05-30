@@ -78,8 +78,6 @@ mod ver;
 use ver::*;
 mod test;
 use test::*;
-mod trng_cmd;
-use trng_cmd::*;
 #[cfg(feature = "usb")]
 mod usb;
 #[cfg(feature = "usb")]
@@ -91,7 +89,6 @@ pub struct CmdEnv {
     common_env: CommonEnv,
     lastverb: String,
     ///// 2. declare storage for your command here.
-    trng_cmd: TrngCmd,
     #[cfg(feature = "usb")]
     usb: Usb,
     ws2812_cmd: Ws2812,
@@ -111,10 +108,6 @@ impl CmdEnv {
             common_env: _common,
             lastverb: String::new(),
             ///// 3. initialize your storage, by calling new()
-            trng_cmd: {
-                log::debug!("trng");
-                TrngCmd::new()
-            },
             #[cfg(feature = "usb")]
             usb: Usb::new(),
             ws2812_cmd: Ws2812::new(),
@@ -135,7 +128,6 @@ impl CmdEnv {
             ///// 4. add your command to this array, so that it can be looked up and dispatched
             &mut echo_cmd,
             &mut ver_cmd,
-            &mut self.trng_cmd,
             &mut console_cmd,
             #[cfg(feature = "usb")]
             &mut self.usb,

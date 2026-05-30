@@ -12,7 +12,7 @@ use triangel_shared::mel::EAR_UART_BAUD;
 
 use crate::pins;
 
-// --- UART init status — written by listen_loop, read by AudioFill for debug display ---
+// --- UART init status - written by listen_loop, read by AudioFill for debug display ---
 pub const STATUS_PENDING:    u8 = 0;
 pub const STATUS_CSR_FAIL:   u8 = 1;
 pub const STATUS_IFRAM_FAIL: u8 = 2;
@@ -61,7 +61,7 @@ impl AudioReceiver {
         self.state.lock().map(|s| s.activity).unwrap_or(false)
     }
 
-    /// Called from the render loop — decays level to zero when ear stops sending.
+    /// Called from the render loop - decays level to zero when ear stops sending.
     pub fn tick_decay(&self, now_ms: u32) {
         if let Ok(mut s) = self.state.try_lock() {
             if now_ms.wrapping_sub(s.last_update_ms) >= 200 {

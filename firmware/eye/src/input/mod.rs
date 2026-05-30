@@ -14,6 +14,7 @@ pub enum InputEvent {
     PatternPrev,
     ToggleHold,
     SetSoundMode(SoundMode),
+    CycleSoundMode, // gear button: Off -> Auto -> On -> Off -> ...
 }
 
 /// Shared event queue written by input threads, drained by the render loop.
@@ -34,6 +35,11 @@ pub fn apply_events(queue: &EventQueue, setlist: &mut SetlistManager, sound_acti
                 InputEvent::PatternPrev       => setlist.step_prev(sound_active),
                 InputEvent::ToggleHold        => setlist.toggle_hold(),
                 InputEvent::SetSoundMode(m)   => setlist.sound_mode = m,
+                InputEvent::CycleSoundMode    => setlist.sound_mode = match setlist.sound_mode {
+                    SoundMode::Off  => SoundMode::Auto,
+                    SoundMode::Auto => SoundMode::On,
+                    SoundMode::On   => SoundMode::Off,
+                },
             }
         }
     }

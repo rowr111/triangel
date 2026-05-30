@@ -81,7 +81,7 @@ const ACTIVITY_THRESHOLD: f32 = 0.02;
 // Decay 0.05: it takes ~20 frames (~660 ms) to fall back below threshold after
 // the sound stops, preventing flickering on brief quiet gaps.
 const ACTIVITY_ATTACK: f32 = 0.8;  // very fast rise
-const ACTIVITY_DECAY: f32  = 0.4;  // fast decay — drops 90% in ~5 frames at 30fps
+const ACTIVITY_DECAY: f32  = 0.4;  // fast decay - drops 90% in ~5 frames at 30fps
 
 /// Convert a frequency in Hz to the mel scale.
 ///

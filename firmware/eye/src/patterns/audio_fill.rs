@@ -36,17 +36,17 @@ impl Pattern for AudioFill {
         let stale = UART_STATUS.load(Ordering::Relaxed) == STATUS_RECEIVING
             && t_ms.wrapping_sub(UART_LAST_FRAME_MS.load(Ordering::Relaxed)) > 500;
         let status_color: [u8; 3] = if stale { [0, 100, 200] } else { match UART_STATUS.load(Ordering::Relaxed) {
-            STATUS_CSR_FAIL   => [200, 0,   200], // magenta  — UART2 owned by another process
-            STATUS_IFRAM_FAIL => [200, 200, 0  ], // yellow   — IFRAM map failed
-            STATUS_INIT_OK    => [0,   100, 200], // blue     — waiting for first byte
+            STATUS_CSR_FAIL   => [200, 0,   200], // magenta  - UART2 owned by another process
+            STATUS_IFRAM_FAIL => [200, 200, 0  ], // yellow   - IFRAM map failed
+            STATUS_INIT_OK    => [0,   100, 200], // blue     - waiting for first byte
             STATUS_DMA_DONE   => match UART_FIRST_BYTE.load(Ordering::Relaxed) {
-                0x00 => [150, 0,   150], // purple — buf[0]=0x00, UART idle or nothing sending
-                0xAA => [200, 200, 0  ], // yellow — buf[0]=sync byte, checksum failing
-                0xFF => [200, 200, 200], // white  — buf[0]=0xFF, line stuck high
-                _    => [255, 80,  0  ], // orange — buf[0]=other, wrong data/baud
+                0x00 => [150, 0,   150], // purple - buf[0]=0x00, UART idle or nothing sending
+                0xAA => [200, 200, 0  ], // yellow - buf[0]=sync byte, checksum failing
+                0xFF => [200, 200, 200], // white  - buf[0]=0xFF, line stuck high
+                _    => [255, 80,  0  ], // orange - buf[0]=other, wrong data/baud
             },
-            STATUS_RECEIVING  => [0,   200, 50 ], // green    — receiving good frames
-            _                 => [60,  60,  60 ], // grey     — pending
+            STATUS_RECEIVING  => [0,   200, 50 ], // green    - receiving good frames
+            _                 => [60,  60,  60 ], // grey     - pending
         } };
         for (i, led) in leds.iter().enumerate() {
             if led.board_id == 2 { out[i] = status_color; }

@@ -25,7 +25,7 @@ pub struct UartOut {
 impl UartOut {
     /// Initialise the UART TX peripheral.
     ///
-    /// UART2 TX is physical pin 15 (PB14) on the DABAO header — the only UART
+    /// UART2 TX is physical pin 15 (PB14) on the DABAO header - the only UART
     /// broken out. Wire to eye board physical pin 16 (PB13, UART2 RX) + GND.
     pub fn new() -> Self {
         // SAFETY: called once at startup before any other UART use on this channel.

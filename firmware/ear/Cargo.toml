@@ -38,7 +38,6 @@ board-dabao = [
     "bao1x-hal/board-dabao",
     "usb-bao1x/board-dabao",
 ]
-ctap-bringup = []
 usb = []
 uart-audio = ["usb"]
 aestests = ["aes"]

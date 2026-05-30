@@ -8,8 +8,6 @@ mod setlist;
 #[cfg(feature = "bringup")]
 mod cmds;
 #[cfg(feature = "bringup")]
-mod ctap;
-#[cfg(feature = "bringup")]
 mod repl;
 #[cfg(feature = "bringup")]
 mod shell;

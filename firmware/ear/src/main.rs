@@ -18,7 +18,7 @@ fn main() -> ! {
 
     log::info!("ear ready");
 
-    // Send raw RMS level directly — same math as the Python bar display.
+    // Send raw RMS level directly - same math as the Python bar display.
     // level = min(rms * 10, 1.0)  =>  100% bar = full fill.
     loop {
         let samples = audio.read_frame();

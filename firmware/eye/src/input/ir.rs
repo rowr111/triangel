@@ -1,6 +1,5 @@
 use super::{EventQueue, InputEvent};
 use crate::pins;
-use crate::setlist::SoundMode;
 
 // IR receiver module data output: idle = HIGH, burst = LOW
 // (module inverts and demodulates the 38kHz carrier).
@@ -14,17 +13,30 @@ const NEC_BIT_1_SPACE_US:  u32 = 1_690;
 const NEC_REPEAT_SPACE_US: u32 = 2_250;
 const NEC_TIMING_MARGIN:   u32 =   200; // +/-us tolerance
 
-// NEC command byte -> function mapping.
-// These are placeholder codes - capture the actual codes from the chosen remote
-// with a logic analyser or by running the NEC decoder and logging received bytes.
-const IR_CMD_BRIGHTNESS_UP:   u8 = 0x40;
-const IR_CMD_BRIGHTNESS_DOWN: u8 = 0x41;
-const IR_CMD_PATTERN_NEXT:    u8 = 0x42;
-const IR_CMD_PATTERN_PREV:    u8 = 0x43;
-const IR_CMD_HOLD:            u8 = 0x44;
-const IR_CMD_SOUND_OFF:       u8 = 0x45;
-const IR_CMD_SOUND_AUTO:      u8 = 0x46;
-const IR_CMD_SOUND_ON:        u8 = 0x47;
+// Remote: 7-button remote. Buttons: up, down, left, right,
+// center, gear, TV.
+//
+// Intended mapping:
+//   Up     -> BrightnessUp
+//   Down   -> BrightnessDown
+//   Left   -> PatternPrev
+//   Right  -> PatternNext
+//   Center -> ToggleHold
+//   Gear   -> CycleSoundMode
+//   TV     -> (spare - TBD)
+//
+// Sound mode is handled by the physical 3-position switch, not IR.
+// NEC address confirmed: usercode 00FF.
+const NEC_ADDR: u8 = 0x00;
+
+const IR_CMD_BRIGHTNESS_UP:   u8 = 0x2B; // Up button
+const IR_CMD_BRIGHTNESS_DOWN: u8 = 0x2C; // Down button
+const IR_CMD_PATTERN_NEXT:    u8 = 0x29; // Right button
+const IR_CMD_PATTERN_PREV:    u8 = 0x2A; // Left button
+const IR_CMD_HOLD:            u8 = 0x28; // Center button
+const IR_CMD_GEAR:            u8 = 0x2E; // Gear button -> cycle sound mode
+#[allow(dead_code)]
+const IR_CMD_TV:              u8 = 0x2D; // TV button - spare (use TBD)
 
 /// Spawn the IR remote receiver thread.
 pub fn spawn(queue: EventQueue) {
@@ -60,7 +72,7 @@ fn poll_loop(queue: EventQueue) {
 
         tt.sleep_ms(10).ok();
 
-        let _ = (queue.clone(), map_ir_cmd, pins::IR_PORT, pins::IR_PIN); // keep reachable until wired
+        let _ = (queue.clone(), map_ir_cmd, pins::IR_PORT, pins::IR_PIN, NEC_ADDR); // keep reachable until wired
         let _ = (NEC_LEADER_PULSE_US, NEC_LEADER_SPACE_US, NEC_BIT_PULSE_US,
                  NEC_BIT_0_SPACE_US, NEC_BIT_1_SPACE_US, NEC_REPEAT_SPACE_US,
                  NEC_TIMING_MARGIN);
@@ -75,9 +87,8 @@ fn map_ir_cmd(cmd: u8, queue: &EventQueue) {
         IR_CMD_PATTERN_NEXT    => Some(InputEvent::PatternNext),
         IR_CMD_PATTERN_PREV    => Some(InputEvent::PatternPrev),
         IR_CMD_HOLD            => Some(InputEvent::ToggleHold),
-        IR_CMD_SOUND_OFF       => Some(InputEvent::SetSoundMode(SoundMode::Off)),
-        IR_CMD_SOUND_AUTO      => Some(InputEvent::SetSoundMode(SoundMode::Auto)),
-        IR_CMD_SOUND_ON        => Some(InputEvent::SetSoundMode(SoundMode::On)),
+        IR_CMD_GEAR            => Some(InputEvent::CycleSoundMode),
+        // TV button spare - add mapping once use is decided
         _                      => None,
     };
     if let Some(ev) = event {
