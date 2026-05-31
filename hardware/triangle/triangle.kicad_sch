@@ -5505,7 +5505,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "footprints:SMD_BD5.6-L5.6-W5.6-D4.1"
+		(property "Footprint" "MountingHole:MountingHole_3.2mm_M3"
 			(at 100.965 181.61 0)
 			(hide yes)
 			(show_name no)
@@ -5516,7 +5516,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "https://www.lcsc.com/product-detail/C5301783.html"
+		(property "Datasheet" ""
 			(at 100.965 181.61 0)
 			(hide yes)
 			(show_name no)
@@ -5538,7 +5538,7 @@
 				)
 			)
 		)
-		(property "JLCPCB Part #" "C5301783"
+		(property "JLCPCB Part #" ""
 			(at 100.965 181.61 0)
 			(hide yes)
 			(show_name no)
@@ -7289,7 +7289,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "footprints:SMD_BD5.6-L5.6-W5.6-D4.1"
+		(property "Footprint" "MountingHole:MountingHole_3.2mm_M3"
 			(at 100.965 167.64 0)
 			(hide yes)
 			(show_name no)
@@ -7300,7 +7300,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "https://www.lcsc.com/product-detail/C5301783.html"
+		(property "Datasheet" ""
 			(at 100.965 167.64 0)
 			(hide yes)
 			(show_name no)
@@ -7322,7 +7322,7 @@
 				)
 			)
 		)
-		(property "JLCPCB Part #" "C5301783"
+		(property "JLCPCB Part #" ""
 			(at 100.965 167.64 0)
 			(hide yes)
 			(show_name no)
@@ -8743,7 +8743,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "footprints:SMD_BD5.6-L5.6-W5.6-D4.1"
+		(property "Footprint" "MountingHole:MountingHole_3.2mm_M3"
 			(at 100.965 174.625 0)
 			(hide yes)
 			(show_name no)
@@ -8754,7 +8754,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "https://www.lcsc.com/product-detail/C5301783.html"
+		(property "Datasheet" ""
 			(at 100.965 174.625 0)
 			(hide yes)
 			(show_name no)
@@ -8776,7 +8776,7 @@
 				)
 			)
 		)
-		(property "JLCPCB Part #" "C5301783"
+		(property "JLCPCB Part #" ""
 			(at 100.965 174.625 0)
 			(hide yes)
 			(show_name no)
