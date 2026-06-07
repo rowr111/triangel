@@ -11851,8 +11851,8 @@
 		(at 165.046119 104.991288)
 		(descr "SMD pad as test Point, diameter 2.0mm")
 		(tags "test point SMD pad")
-		(property "Reference" "TP1-4V1"
-			(at 0 1.998 180)
+		(property "Reference" "TP1 4V"
+			(at -0.031838 2.307368 180)
 			(layer "B.SilkS")
 			(uuid "0e8e9ec6-cfd9-43a7-a23a-a8307c3b5259")
 			(effects
@@ -13786,8 +13786,8 @@
 		(at 144.514424 144.692369)
 		(descr "SMD pad as test Point, diameter 2.0mm")
 		(tags "test point SMD pad")
-		(property "Reference" "TP2-LED_DATA_IN1"
-			(at 3.666008 -3.245258 180)
+		(property "Reference" "TP2 DATA_IN"
+			(at 0.310921 -3.172804 180)
 			(layer "B.SilkS")
 			(uuid "26ef0000-6e64-4514-b06c-3a1ea6bb3349")
 			(effects
@@ -15872,8 +15872,8 @@
 		(at 130.272797 113.31922)
 		(descr "SMD pad as test Point, diameter 2.0mm")
 		(tags "test point SMD pad")
-		(property "Reference" "TP3-LED_DATA_OUT1"
-			(at 9.43352 -0.15821 180)
+		(property "Reference" "TP3 DATA_OUT"
+			(at 1.647798 2.701803 180)
 			(layer "B.SilkS")
 			(uuid "36205c6f-107c-434b-9720-e61027e0f866")
 			(effects
@@ -19536,6 +19536,32 @@
 		)
 		(layer "Edge.Cuts")
 		(uuid "18ce86a0-85af-4aa3-9258-5ed25cfd7051")
+	)
+	(gr_text "IN"
+		(at 143.721444 129.967482 0)
+		(layer "B.SilkS")
+		(uuid "42c0ddb6-d0a5-40e1-aecc-9279cca1cb50")
+		(effects
+			(font
+				(size 3 3)
+				(thickness 0.5)
+				(bold yes)
+			)
+			(justify left bottom mirror)
+		)
+	)
+	(gr_text "OUT"
+		(at 155.289075 111.574326 0)
+		(layer "B.SilkS")
+		(uuid "117fcb76-5e4c-489d-926e-f9cc00de0f99")
+		(effects
+			(font
+				(size 3 3)
+				(thickness 0.5)
+				(bold yes)
+			)
+			(justify left bottom mirror)
+		)
 	)
 	(segment
 		(start 116.350567 141.095301)
