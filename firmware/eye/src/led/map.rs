@@ -1,14 +1,18 @@
 // Auto-generated from triangel previewer/led_map.js - do not edit by hand.
 // Run generate_map.js in the previewer, then re-run the generation script to update.
-// 600 LEDs across 25 boards. Single chain, chainIdx 0-599.
+// 600 LEDs across 25 boards. Two chains:
+//   Chain 1 (PB5): boards 1-12,  chainIdx 0-287   (288 LEDs)
+//   Chain 2 (PB6): boards 13-25, chainIdx 288-599  (312 LEDs)
 // Chain snake: row1 left->right, row2 right->left, row3 left->right, row4 right->left, row5.
-// Baochip data wire connects at board 1 (top-left of fixture).
+// Baochip data wires connect at board 1 (chain 1) and board 13 (chain 2).
 
 pub const WORLD_CX: f32  = 258.0;
 pub const WORLD_TOP: f32 =   6.0;
 pub const WORLD_BOT: f32 = 436.0;
 pub const WORLD_H: f32   = 430.0;
 pub const LED_COUNT: usize = 600;
+pub const CHAIN1_LED_COUNT: usize = 288;
+pub const CHAIN2_LED_COUNT: usize = 312;
 
 pub struct Led {
     pub wx:        f32,

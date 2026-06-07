@@ -1,9 +1,13 @@
 use bao1x_api::IoxPort;
 
 // LED output
-// BIO pin 5 = PB5. Passed to bio_lib::ws2812::Ws2812::new().
+// BIO pin 5 = PB5 -> chain 1 (tiles 1-12, 288 LEDs)
+// BIO pin 6 = PB6 -> chain 2 (tiles 13-25, 312 LEDs)
+// Passed to bio_lib::ws2812::Ws2812::new().
 #[allow(dead_code)]
-pub const LED_BIO_PIN: u8 = 5;
+pub const LED_BIO_PIN:   u8 = 5;
+#[allow(dead_code)]
+pub const LED_BIO_PIN_2: u8 = 6;
 
 // Audio UART (ear -> eye)
 // UART2 on the DABAO - the only UART exposed on the board.
