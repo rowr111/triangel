@@ -432,9 +432,19 @@
         "filename": "components.kicad_sch",
         "name": "components",
         "uuid": "d7bd6c74-3e25-4440-9b6a-904f2e2d9596"
+      },
+      {
+        "filename": "usb-c_to_triangles.kicad_sch",
+        "name": "usb-c to triangles and level shifters",
+        "uuid": "f62e3b4d-2397-4cd2-b9ea-47dbc13f5bd4"
+      },
+      {
+        "filename": "voltage_converters.kicad_sch",
+        "name": "voltage converters",
+        "uuid": "95e5c331-6890-437f-94b9-bde400751ae8"
       }
     ],
-    "used_designators": "J1",
+    "used_designators": "R1-15,J1-3,L1-3,#PWR1-49,C1-17,C26-31,C34-37,U1-7,MK1",
     "variants": []
   },
   "sheets": [
@@ -445,6 +455,14 @@
     [
       "d7bd6c74-3e25-4440-9b6a-904f2e2d9596",
       "components"
+    ],
+    [
+      "f62e3b4d-2397-4cd2-b9ea-47dbc13f5bd4",
+      "usb-c to triangles and level shifters"
+    ],
+    [
+      "95e5c331-6890-437f-94b9-bde400751ae8",
+      "voltage converters"
     ]
   ],
   "text_variables": {},
