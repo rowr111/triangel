@@ -439,12 +439,12 @@
         "uuid": "95e5c331-6890-437f-94b9-bde400751ae8"
       },
       {
-        "filename": "baochip_2_-_ear.kicad_sch",
+        "filename": "components.kicad_sch",
         "name": "components",
-        "uuid": "4402ed1c-e995-4381-b736-196a5241313a"
+        "uuid": "ed43b915-8637-4fab-a1d1-340d9f2c05b8"
       }
     ],
-    "used_designators": "R7-9,R13-17,J3-4,L1,#PWR29-35,#PWR43-52,C9-11,U3,SW1-5",
+    "used_designators": "#PWR1-6,#PWR43-52,C1-2,MK1,R1-2,R13-17,SW1-5",
     "variants": []
   },
   "sheets": [
@@ -453,16 +453,16 @@
       "dabao sockets"
     ],
     [
+      "ed43b915-8637-4fab-a1d1-340d9f2c05b8",
+      "components"
+    ],
+    [
       "f62e3b4d-2397-4cd2-b9ea-47dbc13f5bd4",
       "usb-c to triangles and level shifters"
     ],
     [
       "95e5c331-6890-437f-94b9-bde400751ae8",
       "voltage converters"
-    ],
-    [
-      "4402ed1c-e995-4381-b736-196a5241313a",
-      "components"
     ]
   ],
   "text_variables": {},
