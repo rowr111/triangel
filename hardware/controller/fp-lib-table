@@ -1,0 +1,4 @@
+(fp_lib_table
+  (lib (name "baochip") (type "KiCad") (uri "${KIPRJMOD}/baochip.pretty") (options "") (descr "Baochip-1x footprints"))
+  (lib (name "connectors") (type "KiCad") (uri "${KIPRJMOD}/connectors.pretty") (options "") (descr "Connector footprints"))
+)

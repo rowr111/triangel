@@ -425,13 +425,8 @@
     "top_level_sheets": [
       {
         "filename": "controller.kicad_sch",
-        "name": "baochips",
+        "name": "dabao sockets",
         "uuid": "2ec1a6cc-e255-4c8d-bf32-cfafd13c2b2e"
-      },
-      {
-        "filename": "components.kicad_sch",
-        "name": "components",
-        "uuid": "d7bd6c74-3e25-4440-9b6a-904f2e2d9596"
       },
       {
         "filename": "usb-c_to_triangles.kicad_sch",
@@ -442,19 +437,20 @@
         "filename": "voltage_converters.kicad_sch",
         "name": "voltage converters",
         "uuid": "95e5c331-6890-437f-94b9-bde400751ae8"
+      },
+      {
+        "filename": "baochip_2_-_ear.kicad_sch",
+        "name": "components",
+        "uuid": "4402ed1c-e995-4381-b736-196a5241313a"
       }
     ],
-    "used_designators": "R1-15,J1-3,L1-3,#PWR1-49,C1-17,C26-31,C34-37,U1-7,MK1",
+    "used_designators": "R7-9,R13-17,J3-4,L1,#PWR29-35,#PWR43-52,C9-11,U3,SW1-5",
     "variants": []
   },
   "sheets": [
     [
       "2ec1a6cc-e255-4c8d-bf32-cfafd13c2b2e",
-      "baochips"
-    ],
-    [
-      "d7bd6c74-3e25-4440-9b6a-904f2e2d9596",
-      "components"
+      "dabao sockets"
     ],
     [
       "f62e3b4d-2397-4cd2-b9ea-47dbc13f5bd4",
@@ -463,6 +459,10 @@
     [
       "95e5c331-6890-437f-94b9-bde400751ae8",
       "voltage converters"
+    ],
+    [
+      "4402ed1c-e995-4381-b736-196a5241313a",
+      "components"
     ]
   ],
   "text_variables": {},

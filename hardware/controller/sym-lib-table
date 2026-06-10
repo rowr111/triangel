@@ -1,0 +1,3 @@
+(sym_lib_table
+  (lib (name "baochip") (type "KiCad") (uri "${KIPRJMOD}/baochip.kicad_sym") (options "") (descr "Baochip-1x symbol"))
+)
