@@ -4,7 +4,1049 @@
 	(generator_version "10.0")
 	(uuid "2ec1a6cc-e255-4c8d-bf32-cfafd13c2b2e")
 	(paper "A4")
-	(lib_symbols)
+	(lib_symbols
+		(symbol "easyeda2kicad:ZX-PM2.54-1-16PY"
+			(exclude_from_sim no)
+			(in_bom yes)
+			(on_board yes)
+			(in_pos_files yes)
+			(duplicate_pin_numbers_are_jumpers no)
+			(property "Reference" "U"
+				(at 0 24.13 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Value" "ZX-PM2.54-1-16PY"
+				(at 0 -24.13 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Footprint" "easyeda2kicad:HDR-TH_16P-P2.54-V-F-1"
+				(at 0 -26.67 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Datasheet" "https://www.lcsc.com/datasheet/C7499334.pdf"
+				(at 0 -29.21 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Description" ""
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Manufacturer" "Megastar(兆星)"
+				(at 0 -31.75 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "MPN" "ZX-PM2.54-1-16PY"
+				(at 0 -34.29 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "LCSC Part" "C7499334"
+				(at 0 -36.83 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "ki_keywords" "Female Headers"
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(symbol "ZX-PM2.54-1-16PY_0_1"
+				(rectangle
+					(start -1.27 21.59)
+					(end 3.81 -21.59)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type background)
+					)
+				)
+				(circle
+					(center 0 20.32)
+					(radius 0.38)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(pin unspecified line
+					(at -3.81 19.05 0)
+					(length 2.54)
+					(name "1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin unspecified line
+					(at -3.81 16.51 0)
+					(length 2.54)
+					(name "2"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "2"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin unspecified line
+					(at -3.81 13.97 0)
+					(length 2.54)
+					(name "3"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "3"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin unspecified line
+					(at -3.81 11.43 0)
+					(length 2.54)
+					(name "4"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "4"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin unspecified line
+					(at -3.81 8.89 0)
+					(length 2.54)
+					(name "5"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "5"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin unspecified line
+					(at -3.81 6.35 0)
+					(length 2.54)
+					(name "6"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "6"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin unspecified line
+					(at -3.81 3.81 0)
+					(length 2.54)
+					(name "7"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "7"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin unspecified line
+					(at -3.81 1.27 0)
+					(length 2.54)
+					(name "8"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "8"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin unspecified line
+					(at -3.81 -1.27 0)
+					(length 2.54)
+					(name "9"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "9"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin unspecified line
+					(at -3.81 -3.81 0)
+					(length 2.54)
+					(name "10"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "10"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin unspecified line
+					(at -3.81 -6.35 0)
+					(length 2.54)
+					(name "11"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "11"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin unspecified line
+					(at -3.81 -8.89 0)
+					(length 2.54)
+					(name "12"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "12"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin unspecified line
+					(at -3.81 -11.43 0)
+					(length 2.54)
+					(name "13"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "13"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin unspecified line
+					(at -3.81 -13.97 0)
+					(length 2.54)
+					(name "14"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "14"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin unspecified line
+					(at -3.81 -16.51 0)
+					(length 2.54)
+					(name "15"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "15"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin unspecified line
+					(at -3.81 -19.05 0)
+					(length 2.54)
+					(name "16"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "16"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+			)
+			(embedded_fonts no)
+		)
+	)
+	(symbol
+		(lib_id "easyeda2kicad:ZX-PM2.54-1-16PY")
+		(at 98.425 114.3 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "3cb4edc5-6af8-4201-bfdb-88823cb9c44d")
+		(property "Reference" "U6"
+			(at 104.14 114.3 90)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "ZX-PM2.54-1-16PY"
+			(at 106.68 123.825 90)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "easyeda2kicad:HDR-TH_16P-P2.54-V-F-1"
+			(at 98.425 140.97 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" "https://www.lcsc.com/datasheet/C7499334.pdf"
+			(at 98.425 143.51 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 98.425 114.3 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer" "Megastar(兆星)"
+			(at 98.425 146.05 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MPN" "ZX-PM2.54-1-16PY"
+			(at 98.425 148.59 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "JLCPCB #" "C7499334"
+			(at 98.425 151.13 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "2"
+			(uuid "2ffd2715-4879-453b-8df3-f189ca0890a2")
+		)
+		(pin "4"
+			(uuid "f6d1325a-4c08-4113-899b-2f0af24c9b81")
+		)
+		(pin "5"
+			(uuid "59b21057-8717-4afa-b938-23ed0d7de955")
+		)
+		(pin "9"
+			(uuid "8dca3fbd-94b4-4939-a988-74f17e75f90d")
+		)
+		(pin "1"
+			(uuid "da5ab5a0-dc76-4399-b2f3-19a2ec5afd7e")
+		)
+		(pin "12"
+			(uuid "a1458175-ce42-40fa-bdf6-28b623632efb")
+		)
+		(pin "6"
+			(uuid "31ee1aa7-4c01-40ea-9d4a-47ff363f8c26")
+		)
+		(pin "15"
+			(uuid "8c9e4819-298e-40e9-8472-7d1ace30b4ce")
+		)
+		(pin "7"
+			(uuid "4c2eff12-9ca7-4939-85a4-1f918b117650")
+		)
+		(pin "16"
+			(uuid "812baf46-148b-468a-94ac-4167d727681e")
+		)
+		(pin "3"
+			(uuid "e6af8ae8-1d00-4308-897a-01def67610ac")
+		)
+		(pin "10"
+			(uuid "bff87237-af69-45fd-9155-90e943cf9975")
+		)
+		(pin "13"
+			(uuid "a3002eed-a7d1-4b28-bba0-e8be92c8b8f1")
+		)
+		(pin "8"
+			(uuid "ac01b011-c6ad-4c2a-9945-8e19d75f19db")
+		)
+		(pin "14"
+			(uuid "99feeabf-ee40-474f-9d26-ee1843e941d1")
+		)
+		(pin "11"
+			(uuid "4924319e-0a73-40d5-b0f2-db6eb1522c6b")
+		)
+		(instances
+			(project "controller"
+				(path "/2ec1a6cc-e255-4c8d-bf32-cfafd13c2b2e"
+					(reference "U6")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "easyeda2kicad:ZX-PM2.54-1-16PY")
+		(at 248.92 111.125 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "80a756d2-85be-4d01-8f3f-f283edfd651a")
+		(property "Reference" "U8"
+			(at 254.635 111.125 90)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "ZX-PM2.54-1-16PY"
+			(at 257.175 120.65 90)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "easyeda2kicad:HDR-TH_16P-P2.54-V-F-1"
+			(at 248.92 137.795 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" "https://www.lcsc.com/datasheet/C7499334.pdf"
+			(at 248.92 140.335 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 248.92 111.125 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer" "Megastar(兆星)"
+			(at 248.92 142.875 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MPN" "ZX-PM2.54-1-16PY"
+			(at 248.92 145.415 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "JLCPCB #" "C7499334"
+			(at 248.92 147.955 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "2"
+			(uuid "facbbe3c-8361-41bf-b828-a2770b8adedf")
+		)
+		(pin "4"
+			(uuid "aa8b0a76-43f4-4239-938a-1b2ba0f5659c")
+		)
+		(pin "5"
+			(uuid "baaf622e-a1cc-4012-a7b3-06781ee0cb1b")
+		)
+		(pin "9"
+			(uuid "9671247d-9b10-41aa-9f18-86b244c338d5")
+		)
+		(pin "1"
+			(uuid "837b8d00-962c-42bd-8cef-44d77f90234f")
+		)
+		(pin "12"
+			(uuid "bed45af8-19e1-4ff8-81b5-d9eee612677c")
+		)
+		(pin "6"
+			(uuid "cdcb28bf-46bb-4cb4-9245-9646141b7729")
+		)
+		(pin "15"
+			(uuid "550ace99-e60d-4dec-9f42-5a8c5a5e73f1")
+		)
+		(pin "7"
+			(uuid "2055a9d9-1250-4c45-b034-193c44ecc140")
+		)
+		(pin "16"
+			(uuid "0fd27221-f0b9-45b1-ba75-203848f4cb7d")
+		)
+		(pin "3"
+			(uuid "fc12cebb-46d0-4bd2-8c4a-e105101fe1c2")
+		)
+		(pin "10"
+			(uuid "78cb1647-9749-484c-8e61-06c3f687ca2a")
+		)
+		(pin "13"
+			(uuid "d3a23002-639d-4277-8689-08a9e8574bc1")
+		)
+		(pin "8"
+			(uuid "f1a99f0a-4504-4f12-b2e1-5ca64a7db1fe")
+		)
+		(pin "14"
+			(uuid "8ec2a5c1-63b1-48ab-ae0f-1a7fa26f1560")
+		)
+		(pin "11"
+			(uuid "ccd31c9d-85b2-4887-861e-1915da98c633")
+		)
+		(instances
+			(project "controller"
+				(path "/2ec1a6cc-e255-4c8d-bf32-cfafd13c2b2e"
+					(reference "U8")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "easyeda2kicad:ZX-PM2.54-1-16PY")
+		(at 97.79 57.15 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "e05fe6ad-b7b8-45c4-ac58-d9780c27bd5b")
+		(property "Reference" "U5"
+			(at 103.505 57.15 90)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "ZX-PM2.54-1-16PY"
+			(at 106.045 66.675 90)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "easyeda2kicad:HDR-TH_16P-P2.54-V-F-1"
+			(at 97.79 83.82 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" "https://www.lcsc.com/datasheet/C7499334.pdf"
+			(at 97.79 86.36 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 97.79 57.15 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer" "Megastar(兆星)"
+			(at 97.79 88.9 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MPN" "ZX-PM2.54-1-16PY"
+			(at 97.79 91.44 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "JLCPCB #" "C7499334"
+			(at 97.79 93.98 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "2"
+			(uuid "82be3f0f-705f-47c4-9c75-2576c7f3c8c4")
+		)
+		(pin "4"
+			(uuid "e5675960-ecd9-47d8-b076-8e09bdf5bd8f")
+		)
+		(pin "5"
+			(uuid "a6fdf259-92b9-4a60-b6e3-2cce3cc56a59")
+		)
+		(pin "9"
+			(uuid "401efdf5-6318-4366-84cb-0f4bf2aba235")
+		)
+		(pin "1"
+			(uuid "07238472-490d-49b6-8eb9-0af823a1ab1f")
+		)
+		(pin "12"
+			(uuid "6f55087b-2959-471c-929f-8d23509ea986")
+		)
+		(pin "6"
+			(uuid "39efb9b0-20c7-4863-bc62-1a39b512c09f")
+		)
+		(pin "15"
+			(uuid "fe2bf8f3-601f-4dfb-9707-6ee9c47770d8")
+		)
+		(pin "7"
+			(uuid "10c145c7-a82f-4af6-aec9-490d3126bc00")
+		)
+		(pin "16"
+			(uuid "fe05e603-7d27-4b45-bc56-96f63e9bb962")
+		)
+		(pin "3"
+			(uuid "d2bfb208-b906-41dc-9ef4-6b26076d7778")
+		)
+		(pin "10"
+			(uuid "0bfd150e-3069-452b-a95a-12acbd203596")
+		)
+		(pin "13"
+			(uuid "b65d0966-4c13-4205-85d6-be7ad8865afd")
+		)
+		(pin "8"
+			(uuid "604d695b-fb92-4cd4-b236-3417961f91a7")
+		)
+		(pin "14"
+			(uuid "2e6dee77-a24e-42bc-be6c-4b84b0138b47")
+		)
+		(pin "11"
+			(uuid "e2416b5a-2dcc-4da8-9655-bd6e75bc9397")
+		)
+		(instances
+			(project "controller"
+				(path "/2ec1a6cc-e255-4c8d-bf32-cfafd13c2b2e"
+					(reference "U5")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "easyeda2kicad:ZX-PM2.54-1-16PY")
+		(at 248.285 59.69 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "f2ce050d-8948-4500-8d53-ba891004b860")
+		(property "Reference" "U7"
+			(at 254 59.69 90)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "ZX-PM2.54-1-16PY"
+			(at 256.54 69.215 90)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "easyeda2kicad:HDR-TH_16P-P2.54-V-F-1"
+			(at 248.285 86.36 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" "https://www.lcsc.com/datasheet/C7499334.pdf"
+			(at 248.285 88.9 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 248.285 59.69 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer" "Megastar(兆星)"
+			(at 248.285 91.44 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MPN" "ZX-PM2.54-1-16PY"
+			(at 248.285 93.98 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "JLCPCB #" "C7499334"
+			(at 248.285 96.52 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "2"
+			(uuid "c4f17821-e9cb-47a1-841c-66867c28fd21")
+		)
+		(pin "4"
+			(uuid "680b7bef-40f0-4154-bffb-b19b62d2ae59")
+		)
+		(pin "5"
+			(uuid "33cea3be-663e-483b-b44d-adbc6095a340")
+		)
+		(pin "9"
+			(uuid "cdc5cc12-1217-48d2-89ff-5d8a028db50a")
+		)
+		(pin "1"
+			(uuid "1afe6530-9aa7-4380-b582-9bfa992409fb")
+		)
+		(pin "12"
+			(uuid "0a7ec064-faae-4cbc-ae6c-78bc79877127")
+		)
+		(pin "6"
+			(uuid "8225fa85-b265-4c9c-8b4d-b9760d285ad7")
+		)
+		(pin "15"
+			(uuid "f58085eb-f121-4b91-b6d8-5483e2ef0e4a")
+		)
+		(pin "7"
+			(uuid "b0f0f51a-d36a-46a5-a421-1b08c2b0f45b")
+		)
+		(pin "16"
+			(uuid "09e56643-a69e-4b67-8fdf-18de45b093a8")
+		)
+		(pin "3"
+			(uuid "a9bc603e-771c-469a-9db7-ab90dc5e5358")
+		)
+		(pin "10"
+			(uuid "9d26737f-f176-43a5-84dd-ae434af09c41")
+		)
+		(pin "13"
+			(uuid "158a9039-dc3d-42dd-8fb6-60d0392b4141")
+		)
+		(pin "8"
+			(uuid "5988a0b2-6e49-4db2-83b4-6ef87dd720db")
+		)
+		(pin "14"
+			(uuid "5842d988-7466-4365-8a7e-b8762b07b1a7")
+		)
+		(pin "11"
+			(uuid "902155ca-dc87-4edd-b15e-f6e5a4b4fbc8")
+		)
+		(instances
+			(project "controller"
+				(path "/2ec1a6cc-e255-4c8d-bf32-cfafd13c2b2e"
+					(reference "U7")
+					(unit 1)
+				)
+			)
+		)
+	)
 	(sheet_instances
 		(path "/"
 			(page "1")
