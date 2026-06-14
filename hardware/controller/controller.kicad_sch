@@ -423,6 +423,26 @@
 			(embedded_fonts no)
 		)
 	)
+	(text "DABAO - EYE"
+		(exclude_from_sim no)
+		(at 97.79 27.94 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+		)
+		(uuid "02c66f4c-dc9e-40ad-bc43-6a267d591b66")
+	)
+	(text "DABAO - EAR"
+		(exclude_from_sim no)
+		(at 248.285 30.48 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+		)
+		(uuid "fe45ea3e-fd57-43bb-bf96-d04d5d1f132e")
+	)
 	(symbol
 		(lib_id "easyeda2kicad:ZX-PM2.54-1-16PY")
 		(at 98.425 114.3 0)

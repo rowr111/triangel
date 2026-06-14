@@ -1874,6 +1874,26 @@
 			(embedded_fonts no)
 		)
 	)
+	(text "USB 2 -> OUT TO TRIANGLES 13-25"
+		(exclude_from_sim no)
+		(at 163.83 40.64 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+		)
+		(uuid "7823f581-84b8-4cee-bd2d-d51e99ea3e5e")
+	)
+	(text "USB 1 -> OUT TO TRIANGLES 1-12"
+		(exclude_from_sim no)
+		(at 51.435 38.735 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+		)
+		(uuid "a82cbb3c-9afc-4d7b-9c76-a2d8cc05c6f9")
+	)
 	(text "LEVEL SHIFTER 1"
 		(exclude_from_sim no)
 		(at 77.47 151.13 0)
