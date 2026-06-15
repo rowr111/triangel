@@ -4061,6 +4061,17 @@
 				)
 			)
 		)
+		(property "LCSC Part #" "C965555"
+			(at 145.415 35.56 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "2"
 			(uuid "ec0030c3-8aee-423f-9081-171c6310306e")
 		)
@@ -4138,6 +4149,17 @@
 			)
 		)
 		(property "Description" "RGB LED with integrated controller, 2.0 x 2.0 mm, 12 mA"
+			(at 207.645 59.055 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "LCSC Part #" "C965555"
 			(at 207.645 59.055 0)
 			(hide yes)
 			(show_name no)
@@ -4235,6 +4257,17 @@
 				)
 			)
 		)
+		(property "LCSC Part #" "C965555"
+			(at 101.6 35.56 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "2"
 			(uuid "9c56b148-610a-4f39-ae84-4a23108db2b1")
 		)
@@ -4322,18 +4355,7 @@
 				)
 			)
 		)
-		(property "LCSC Part Number" ""
-			(at 76.835 134.62 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "JLCPCB Part #" "C1525"
+		(property "LCSC Part #" "C1525"
 			(at 76.835 134.62 0)
 			(hide yes)
 			(show_name no)
@@ -4415,6 +4437,17 @@
 			)
 		)
 		(property "Description" "RGB LED with integrated controller, 2.0 x 2.0 mm, 12 mA"
+			(at 123.19 35.56 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "LCSC Part #" "C965555"
 			(at 123.19 35.56 0)
 			(hide yes)
 			(show_name no)
@@ -4512,6 +4545,17 @@
 				)
 			)
 		)
+		(property "LCSC Part #" "C965555"
+			(at 251.46 35.56 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "2"
 			(uuid "231fcc10-ccd3-4f92-9fa1-76f9da6c7584")
 		)
@@ -4599,18 +4643,7 @@
 				)
 			)
 		)
-		(property "LCSC Part Number" ""
-			(at 121.285 134.62 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "JLCPCB Part #" "C1525"
+		(property "LCSC Part #" "C1525"
 			(at 121.285 134.62 0)
 			(hide yes)
 			(show_name no)
@@ -4692,6 +4725,17 @@
 			)
 		)
 		(property "Description" "RGB LED with integrated controller, 2.0 x 2.0 mm, 12 mA"
+			(at 101.6 88.9 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "LCSC Part #" "C965555"
 			(at 101.6 88.9 0)
 			(hide yes)
 			(show_name no)
@@ -4789,6 +4833,17 @@
 				)
 			)
 		)
+		(property "LCSC Part #" "C965555"
+			(at 123.19 88.9 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "2"
 			(uuid "2cccfb66-8147-4c6a-8304-84bbf1c9f55b")
 		)
@@ -4876,18 +4931,7 @@
 				)
 			)
 		)
-		(property "LCSC Part Number" ""
-			(at 147.955 134.62 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "JLCPCB Part #" "C1525"
+		(property "LCSC Part #" "C1525"
 			(at 147.955 134.62 0)
 			(hide yes)
 			(show_name no)
@@ -4979,18 +5023,7 @@
 				)
 			)
 		)
-		(property "LCSC Part Number" ""
-			(at 201.295 134.62 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "JLCPCB Part #" "C1525"
+		(property "LCSC Part #" "C1525"
 			(at 201.295 134.62 0)
 			(hide yes)
 			(show_name no)
@@ -5072,6 +5105,17 @@
 			)
 		)
 		(property "Description" "RGB LED with integrated controller, 2.0 x 2.0 mm, 12 mA"
+			(at 123.19 59.055 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "LCSC Part #" "C965555"
 			(at 123.19 59.055 0)
 			(hide yes)
 			(show_name no)
@@ -5169,6 +5213,17 @@
 				)
 			)
 		)
+		(property "LCSC Part #" "C965555"
+			(at 251.46 59.055 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "2"
 			(uuid "cf2b70b8-d46b-49b3-a6aa-37de1c018eae")
 		)
@@ -5256,7 +5311,7 @@
 				)
 			)
 		)
-		(property "JLCPCB Part #" "C1525"
+		(property "LCSC Part #" "C1525"
 			(at 59.055 134.62 0)
 			(hide yes)
 			(show_name no)
@@ -5349,7 +5404,7 @@
 				)
 			)
 		)
-		(property "JLCPCB Part #" ""
+		(property "LCSC Part #" ""
 			(at 32.385 80.01 0)
 			(hide yes)
 			(show_name no)
@@ -5435,18 +5490,7 @@
 				)
 			)
 		)
-		(property "LCSC Part Number" ""
-			(at 103.505 134.62 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "JLCPCB Part #" "C1525"
+		(property "LCSC Part #" "C1525"
 			(at 103.505 134.62 0)
 			(hide yes)
 			(show_name no)
@@ -5528,6 +5572,17 @@
 			)
 		)
 		(property "Description" "RGB LED with integrated controller, 2.0 x 2.0 mm, 12 mA"
+			(at 145.415 88.9 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "LCSC Part #" "C965555"
 			(at 145.415 88.9 0)
 			(hide yes)
 			(show_name no)
@@ -5625,6 +5680,17 @@
 				)
 			)
 		)
+		(property "LCSC Part #" "C965555"
+			(at 186.055 59.055 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "2"
 			(uuid "c10f984f-e4fb-4e42-983e-ed9266904062")
 		)
@@ -5712,18 +5778,7 @@
 				)
 			)
 		)
-		(property "LCSC Part Number" ""
-			(at 112.395 134.62 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "JLCPCB Part #" "C1525"
+		(property "LCSC Part #" "C1525"
 			(at 112.395 134.62 0)
 			(hide yes)
 			(show_name no)
@@ -5815,18 +5870,7 @@
 				)
 			)
 		)
-		(property "LCSC Part Number" ""
-			(at 139.065 134.62 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "JLCPCB Part #" "C1525"
+		(property "LCSC Part #" "C1525"
 			(at 139.065 134.62 0)
 			(hide yes)
 			(show_name no)
@@ -5908,6 +5952,17 @@
 			)
 		)
 		(property "Description" "RGB LED with integrated controller, 2.0 x 2.0 mm, 12 mA"
+			(at 251.46 88.9 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "LCSC Part #" "C965555"
 			(at 251.46 88.9 0)
 			(hide yes)
 			(show_name no)
@@ -6004,7 +6059,7 @@
 				)
 			)
 		)
-		(property "JLCPCB Part #" "C23140"
+		(property "LCSC Part #" "C23140"
 			(at 90.17 35.56 90)
 			(hide yes)
 			(show_name no)
@@ -6096,18 +6151,7 @@
 				)
 			)
 		)
-		(property "LCSC Part Number" ""
-			(at 210.185 134.62 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "JLCPCB Part #" "C1525"
+		(property "LCSC Part #" "C1525"
 			(at 210.185 134.62 0)
 			(hide yes)
 			(show_name no)
@@ -6199,18 +6243,7 @@
 				)
 			)
 		)
-		(property "LCSC Part Number" ""
-			(at 85.725 134.62 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "JLCPCB Part #" "C1525"
+		(property "LCSC Part #" "C1525"
 			(at 85.725 134.62 0)
 			(hide yes)
 			(show_name no)
@@ -6302,18 +6335,7 @@
 				)
 			)
 		)
-		(property "LCSC Part Number" ""
-			(at 183.515 134.62 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "JLCPCB Part #" "C1525"
+		(property "LCSC Part #" "C1525"
 			(at 183.515 134.62 0)
 			(hide yes)
 			(show_name no)
@@ -6395,6 +6417,17 @@
 			)
 		)
 		(property "Description" "RGB LED with integrated controller, 2.0 x 2.0 mm, 12 mA"
+			(at 167.005 35.56 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "LCSC Part #" "C965555"
 			(at 167.005 35.56 0)
 			(hide yes)
 			(show_name no)
@@ -6492,6 +6525,17 @@
 				)
 			)
 		)
+		(property "LCSC Part #" "C965555"
+			(at 229.87 59.055 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "2"
 			(uuid "a72ed58c-3e1b-4fe0-9eae-11f92506ce42")
 		)
@@ -6579,18 +6623,7 @@
 				)
 			)
 		)
-		(property "LCSC Part Number" ""
-			(at 254.635 134.62 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "JLCPCB Part #" "C1525"
+		(property "LCSC Part #" "C1525"
 			(at 254.635 134.62 0)
 			(hide yes)
 			(show_name no)
@@ -6760,18 +6793,7 @@
 				)
 			)
 		)
-		(property "LCSC Part Number" ""
-			(at 156.845 134.62 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "JLCPCB Part #" "C1525"
+		(property "LCSC Part #" "C1525"
 			(at 156.845 134.62 0)
 			(hide yes)
 			(show_name no)
@@ -6942,6 +6964,17 @@
 				)
 			)
 		)
+		(property "LCSC Part #" "C965555"
+			(at 208.915 35.56 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "2"
 			(uuid "83a5b2a3-88ef-4d2c-a94f-0cff67e80bb0")
 		)
@@ -7029,18 +7062,7 @@
 				)
 			)
 		)
-		(property "LCSC Part Number" ""
-			(at 174.625 134.62 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "JLCPCB Part #" "C1525"
+		(property "LCSC Part #" "C1525"
 			(at 174.625 134.62 0)
 			(hide yes)
 			(show_name no)
@@ -7211,7 +7233,7 @@
 				)
 			)
 		)
-		(property "JLCPCB Part #" ""
+		(property "LCSC Part #" ""
 			(at 32.385 66.04 0)
 			(hide yes)
 			(show_name no)
@@ -7376,6 +7398,17 @@
 				)
 			)
 		)
+		(property "LCSC Part #" "C965555"
+			(at 229.87 35.56 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "2"
 			(uuid "cabeabde-4f8c-469c-9c3d-0eb3c3239ef0")
 		)
@@ -7463,18 +7496,7 @@
 				)
 			)
 		)
-		(property "LCSC Part Number" ""
-			(at 130.175 134.62 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "JLCPCB Part #" "C1525"
+		(property "LCSC Part #" "C1525"
 			(at 130.175 134.62 0)
 			(hide yes)
 			(show_name no)
@@ -7556,6 +7578,17 @@
 			)
 		)
 		(property "Description" "RGB LED with integrated controller, 2.0 x 2.0 mm, 12 mA"
+			(at 188.595 35.56 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "LCSC Part #" "C965555"
 			(at 188.595 35.56 0)
 			(hide yes)
 			(show_name no)
@@ -7732,18 +7765,7 @@
 				)
 			)
 		)
-		(property "LCSC Part Number" ""
-			(at 236.855 134.62 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "JLCPCB Part #" "C1525"
+		(property "LCSC Part #" "C1525"
 			(at 236.855 134.62 0)
 			(hide yes)
 			(show_name no)
@@ -7835,18 +7857,7 @@
 				)
 			)
 		)
-		(property "LCSC Part Number" ""
-			(at 165.735 134.62 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "JLCPCB Part #" "C1525"
+		(property "LCSC Part #" "C1525"
 			(at 165.735 134.62 0)
 			(hide yes)
 			(show_name no)
@@ -7928,6 +7939,17 @@
 			)
 		)
 		(property "Description" "RGB LED with integrated controller, 2.0 x 2.0 mm, 12 mA"
+			(at 144.145 59.055 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "LCSC Part #" "C965555"
 			(at 144.145 59.055 0)
 			(hide yes)
 			(show_name no)
@@ -8025,6 +8047,17 @@
 				)
 			)
 		)
+		(property "LCSC Part #" "C965555"
+			(at 164.465 59.055 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "2"
 			(uuid "0a938f83-2e8a-44a4-8ab7-a8548151ff7a")
 		)
@@ -8111,7 +8144,7 @@
 				)
 			)
 		)
-		(property "JLCPCB Part #" "C23140"
+		(property "LCSC Part #" "C23140"
 			(at 262.89 88.9 90)
 			(hide yes)
 			(show_name no)
@@ -8193,6 +8226,17 @@
 			)
 		)
 		(property "Description" "RGB LED with integrated controller, 2.0 x 2.0 mm, 12 mA"
+			(at 188.595 88.9 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "LCSC Part #" "C965555"
 			(at 188.595 88.9 0)
 			(hide yes)
 			(show_name no)
@@ -8290,6 +8334,17 @@
 				)
 			)
 		)
+		(property "LCSC Part #" "C965555"
+			(at 101.6 59.055 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "2"
 			(uuid "70f9d2e4-b356-421b-8186-b64da74c9964")
 		)
@@ -8377,18 +8432,7 @@
 				)
 			)
 		)
-		(property "LCSC Part Number" ""
-			(at 219.075 134.62 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "JLCPCB Part #" "C1525"
+		(property "LCSC Part #" "C1525"
 			(at 219.075 134.62 0)
 			(hide yes)
 			(show_name no)
@@ -8481,7 +8525,7 @@
 				)
 			)
 		)
-		(property "JLCPCB Part #" ""
+		(property "LCSC Part #" ""
 			(at 32.385 73.025 0)
 			(hide yes)
 			(show_name no)
@@ -8567,18 +8611,7 @@
 				)
 			)
 		)
-		(property "LCSC Part Number" ""
-			(at 67.945 134.62 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "JLCPCB Part #" "C1525"
+		(property "LCSC Part #" "C1525"
 			(at 67.945 134.62 0)
 			(hide yes)
 			(show_name no)
@@ -8660,6 +8693,17 @@
 			)
 		)
 		(property "Description" "RGB LED with integrated controller, 2.0 x 2.0 mm, 12 mA"
+			(at 208.915 88.9 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "LCSC Part #" "C965555"
 			(at 208.915 88.9 0)
 			(hide yes)
 			(show_name no)
@@ -8757,18 +8801,7 @@
 				)
 			)
 		)
-		(property "LCSC Part Number" ""
-			(at 227.965 134.62 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "JLCPCB Part #" "C1525"
+		(property "LCSC Part #" "C1525"
 			(at 227.965 134.62 0)
 			(hide yes)
 			(show_name no)
@@ -8860,18 +8893,7 @@
 				)
 			)
 		)
-		(property "LCSC Part Number" ""
-			(at 245.745 134.62 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "JLCPCB Part #" "C1525"
+		(property "LCSC Part #" "C1525"
 			(at 245.745 134.62 0)
 			(hide yes)
 			(show_name no)
@@ -9041,18 +9063,7 @@
 				)
 			)
 		)
-		(property "LCSC Part Number" ""
-			(at 94.615 134.62 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "JLCPCB Part #" "C1525"
+		(property "LCSC Part #" "C1525"
 			(at 94.615 134.62 0)
 			(hide yes)
 			(show_name no)
@@ -9144,18 +9155,7 @@
 				)
 			)
 		)
-		(property "LCSC Part Number" ""
-			(at 192.405 134.62 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "JLCPCB Part #" "C1525"
+		(property "LCSC Part #" "C1525"
 			(at 192.405 134.62 0)
 			(hide yes)
 			(show_name no)
@@ -9247,18 +9247,7 @@
 				)
 			)
 		)
-		(property "LCSC Part Number" ""
-			(at 263.525 134.62 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "JLCPCB Part #" "C1525"
+		(property "LCSC Part #" "C1525"
 			(at 263.525 134.62 0)
 			(hide yes)
 			(show_name no)
@@ -9340,6 +9329,17 @@
 			)
 		)
 		(property "Description" "RGB LED with integrated controller, 2.0 x 2.0 mm, 12 mA"
+			(at 229.87 88.9 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "LCSC Part #" "C965555"
 			(at 229.87 88.9 0)
 			(hide yes)
 			(show_name no)
@@ -9505,6 +9505,17 @@
 			)
 		)
 		(property "Description" "RGB LED with integrated controller, 2.0 x 2.0 mm, 12 mA"
+			(at 167.005 88.9 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "LCSC Part #" "C965555"
 			(at 167.005 88.9 0)
 			(hide yes)
 			(show_name no)
