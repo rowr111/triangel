@@ -2844,7 +2844,7 @@
 				)
 			)
 		)
-		(property "Footprint" "footprints:L0805"
+		(property "Footprint" "easyeda2kicad:L0805"
 			(at 90.17 50.8 0)
 			(hide yes)
 			(show_name no)
@@ -3493,7 +3493,7 @@
 				)
 			)
 		)
-		(property "Footprint" "footprints:L0805"
+		(property "Footprint" "easyeda2kicad:L0805"
 			(at 222.885 51.435 0)
 			(hide yes)
 			(show_name no)
@@ -4626,7 +4626,7 @@
 				)
 			)
 		)
-		(property "Footprint" "footprints:SOT-23-6_L2.9-W1.6-P0.95-LS2.8-BR"
+		(property "Footprint" "easyeda2kicad:SOT-23-6_L2.9-W1.6-P0.95-LS2.8-BR"
 			(at 68.58 158.115 0)
 			(hide yes)
 			(show_name no)
@@ -5168,7 +5168,7 @@
 				)
 			)
 		)
-		(property "Footprint" "footprints:L0805"
+		(property "Footprint" "easyeda2kicad:L0805"
 			(at 90.17 136.525 0)
 			(hide yes)
 			(show_name no)
@@ -5359,7 +5359,7 @@
 				)
 			)
 		)
-		(property "Footprint" "footprints:SOT-23-6_L2.9-W1.6-P0.95-LS2.8-BR"
+		(property "Footprint" "easyeda2kicad:SOT-23-6_L2.9-W1.6-P0.95-LS2.8-BR"
 			(at 201.295 73.025 0)
 			(hide yes)
 			(show_name no)
@@ -5484,7 +5484,7 @@
 				)
 			)
 		)
-		(property "Footprint" "footprints:SOT-23-6_L2.9-W1.6-P0.95-LS2.8-BR"
+		(property "Footprint" "easyeda2kicad:SOT-23-6_L2.9-W1.6-P0.95-LS2.8-BR"
 			(at 68.58 72.39 0)
 			(hide yes)
 			(show_name no)
