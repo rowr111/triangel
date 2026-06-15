@@ -86,7 +86,7 @@
 					)
 				)
 			)
-			(property "LCSC Part" "C7499334"
+			(property "LCSC Part #" "C7499334"
 				(at 0 -36.83 0)
 				(show_name no)
 				(do_not_autoplace no)
@@ -1745,7 +1745,7 @@
 				)
 			)
 		)
-		(property "JLCPCB #" "C7499334"
+		(property "LCSC Part #" "C7499334"
 			(at 99.06 170.18 0)
 			(hide yes)
 			(show_name no)
@@ -2057,7 +2057,7 @@
 				)
 			)
 		)
-		(property "JLCPCB #" "C7499334"
+		(property "LCSC Part #" "C7499334"
 			(at 162.56 170.815 0)
 			(hide yes)
 			(show_name no)
@@ -2369,7 +2369,7 @@
 				)
 			)
 		)
-		(property "JLCPCB #" "C7499334"
+		(property "LCSC Part #" "C7499334"
 			(at 97.79 90.17 0)
 			(hide yes)
 			(show_name no)
@@ -2603,7 +2603,7 @@
 				)
 			)
 		)
-		(property "JLCPCB #" "C7499334"
+		(property "LCSC Part #" "C7499334"
 			(at 167.005 91.44 0)
 			(hide yes)
 			(show_name no)
