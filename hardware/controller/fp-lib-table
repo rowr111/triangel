@@ -1,4 +1,5 @@
 (fp_lib_table
   (lib (name "baochip") (type "KiCad") (uri "${KIPRJMOD}/baochip.pretty") (options "") (descr "Baochip-1x footprints"))
   (lib (name "connectors") (type "KiCad") (uri "${KIPRJMOD}/connectors.pretty") (options "") (descr "Connector footprints"))
+  (lib (name "easyeda2kicad") (type "KiCad") (uri "${KIPRJMOD}/easyeda2kicad.pretty") (options "") (descr "easyeda2kicad imported footprints"))
 )
