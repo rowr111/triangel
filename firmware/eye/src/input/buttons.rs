@@ -8,14 +8,16 @@ use super::{EventQueue, InputEvent};
 use crate::pins;
 use crate::setlist::SoundMode;
 
-// All button inputs are active-low: button press connects pin to GND; pull-up resistors
+// D-pad button inputs are active-low: button press connects pin to GND; pull-up resistors
 // on the button board keep them HIGH when unpressed.
 
-// 3-position switch: two active-low GPIO lines encode position.
-// With pull-ups, a floating pin reads HIGH. Switch connects one pin to GND per position:
-//   SW_A LOW,  SW_B HIGH -> SoundMode::Off
-//   SW_A HIGH, SW_B HIGH -> SoundMode::Auto  (center - neither connected)
-//   SW_A HIGH, SW_B LOW  -> SoundMode::On
+// 3-position sound switch is active-HIGH: the common terminal is tied to +3.3V and each
+// throw has a 10k pull-down, so the selected line reads HIGH and unselected lines read LOW.
+// SW_A = SOUND REACTIVE ON line, SW_B = SOUND REACTIVE OFF line:
+//   SW_A LOW,  SW_B HIGH -> SoundMode::Off    (switch in OFF position)
+//   SW_A LOW,  SW_B LOW  -> SoundMode::Auto   (center - neither throw connected)
+//   SW_A HIGH, SW_B LOW  -> SoundMode::On     (switch in ON position)
+// (SW_A HIGH, SW_B HIGH cannot occur: the common feeds only one throw at a time.)
 
 const POLL_MS: usize = 20;
 const DEBOUNCE_TICKS: u8 = 3; // consecutive matching reads required to confirm a transition

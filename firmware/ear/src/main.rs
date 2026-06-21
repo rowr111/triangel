@@ -1,5 +1,6 @@
 mod audio;
 mod mel;
+mod pins;
 mod uart_out;
 
 use audio::{ActiveAudio, AudioSource};

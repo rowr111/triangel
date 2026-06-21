@@ -11,6 +11,7 @@
 		"baochip.flashLocation": "e:\\",
 		"baochip.buildTarget": "dabao",
 		"baochip.serialPortBootloader": "COM5",
-		"baochip.serialPortRun": "COM6"
+		"baochip.serialPortRun": "COM6",
+		"baochip.outOfTree.kernelMode": "ci-sync"
 	}
 }

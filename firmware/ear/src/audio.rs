@@ -78,23 +78,23 @@ pub struct I2sAudio;
 #[cfg(not(feature = "uart-audio"))]
 impl I2sAudio {
     pub fn new() -> Self {
-        // No I2S HAL exists in bao1x-hal yet (no udma/i2s.rs). The existing
-        // xous-core codec service wraps I2S but is hardwired to a TLV320AIC3100
-        // codec chip at 8 kHz stereo - not suitable for the ICS43434 MEMS mic.
+        // The mic I2S is implemented as a BIO driver (bunnie is writing the BIO
+        // side), NOT the hardware UDMA I2S peripheral - so the pins are not tied
+        // to a fixed alternate-function table and can be any BIO pins. Model the
+        // driver on the existing bio-lib drivers (ws2812 / pulse_capture).
         //
-        // Implementation will need raw UDMA I2S register access via utralib:
-        //   HW_UDMA_I2S_BASE     = 0x5010_e000
-        //   REG_I2S_MST_SETUP    - master mode: sample rate, bit depth, channel count
-        //   REG_I2S_CLKCFG_SETUP - clock divider (derive from PERCLK_HZ = 100 MHz)
+        // BIO pins (see pins.rs): BCLK = crate::pins::MIC_BCLK_BIO_PIN (PB1),
+        // SD = crate::pins::MIC_SD_BIO_PIN (PB2), WS = crate::pins::MIC_WS_BIO_PIN (PB3).
         //
-        // The codec service's audio_handler ISR (services/codec/src/backend/
-        // tlv320aic3100.rs) is a useful reference for the interrupt-driven FIFO
-        // read pattern, even though the chip-specific parts don't apply here.
-        //
-        // The ICS43434 is an I2S slave; the Baochip acts as I2S master.
-        // Target: 16 kHz, 24-bit, mono (IS_SELECT pin low = left channel).
-        // Samples arrive left-justified in 32-bit I2S words.
-        todo!("I2S init: write raw UDMA I2S registers via utralib - see codec service as reference")
+        // The ICS43434 is an I2S slave; the Baochip (via BIO) acts as I2S master,
+        // generating BCLK + WS. Target: 16 kHz, 24-bit, mono (IS_SELECT pin low =
+        // left channel). Samples arrive left-justified in 32-bit I2S words.
+        let _ = (
+            crate::pins::MIC_BCLK_BIO_PIN,
+            crate::pins::MIC_SD_BIO_PIN,
+            crate::pins::MIC_WS_BIO_PIN,
+        );
+        todo!("I2S init: BIO I2S master driver (model on bio-lib ws2812/pulse_capture)")
     }
 }
 
