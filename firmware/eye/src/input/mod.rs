@@ -25,14 +25,14 @@ pub fn new_queue() -> EventQueue {
 }
 
 /// Drain all pending events and apply them to the setlist manager.
-pub fn apply_events(queue: &EventQueue, setlist: &mut SetlistManager, sound_active: bool) {
+pub fn apply_events(queue: &EventQueue, setlist: &mut SetlistManager, now_ms: u32, sound_active: bool) {
     if let Ok(mut q) = queue.lock() {
         while let Some(event) = q.pop_front() {
             match event {
                 InputEvent::BrightnessUp      => setlist.adjust_brightness(0.1),
                 InputEvent::BrightnessDown    => setlist.adjust_brightness(-0.1),
-                InputEvent::PatternNext       => setlist.step_next(sound_active),
-                InputEvent::PatternPrev       => setlist.step_prev(sound_active),
+                InputEvent::PatternNext       => setlist.step_next(now_ms, sound_active),
+                InputEvent::PatternPrev       => setlist.step_prev(now_ms, sound_active),
                 InputEvent::ToggleHold        => setlist.toggle_hold(),
                 InputEvent::SetSoundMode(m)   => setlist.sound_mode = m,
                 InputEvent::CycleSoundMode    => setlist.sound_mode = match setlist.sound_mode {

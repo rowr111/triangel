@@ -73,15 +73,18 @@ impl SetlistManager {
         }
     }
 
-    pub fn step_next(&mut self, sound_active: bool) {
+    /// Advance one pattern. `now_ms` restarts the cycle countdown so a manual
+    /// step doesn't immediately auto-advance.
+    pub fn step_next(&mut self, now_ms: u32, sound_active: bool) {
         self.pattern_idx = (self.pattern_idx + 1) % self.list_len(sound_active);
-        self.last_cycle_ms = 0;
+        self.last_cycle_ms = now_ms;
     }
 
-    pub fn step_prev(&mut self, sound_active: bool) {
+    /// Step back one pattern; `now_ms` restarts the cycle countdown (see step_next).
+    pub fn step_prev(&mut self, now_ms: u32, sound_active: bool) {
         let len = self.list_len(sound_active);
         self.pattern_idx = (self.pattern_idx + len - 1) % len;
-        self.last_cycle_ms = 0;
+        self.last_cycle_ms = now_ms;
     }
 
     pub fn toggle_hold(&mut self) {
