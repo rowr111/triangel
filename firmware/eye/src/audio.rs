@@ -127,9 +127,27 @@ fn listen_loop(state: Arc<Mutex<AudioState>>) {
     );
     UdmaGlobal::new().udma_clock_config(PeriphId::Uart2, true);
 
-    let mut uart = match init_uart() {
-        Some(u) => u,
-        None    => return,
+    // UART2 may be transiently owned by another process at boot; retry with backoff for a
+    // few seconds rather than dying on the first failure. If it never comes up, give up
+    // loudly - a boot-time conflict won't resolve later anyway.
+    const MAX_INIT_ATTEMPTS: u32 = 50; // ~5s at 100ms backoff
+    let mut attempt = 0u32;
+    let mut uart = loop {
+        if let Some(u) = init_uart() {
+            if attempt > 0 {
+                log::info!("audio UART init recovered after {} retries", attempt);
+            }
+            break u;
+        }
+        if attempt == 0 {
+            log::warn!("audio UART init failed (status {}); retrying", UART_STATUS.load(Ordering::Relaxed));
+        }
+        attempt += 1;
+        if attempt >= MAX_INIT_ATTEMPTS {
+            log::error!("audio UART init failed after {} attempts; sound-reactive disabled", MAX_INIT_ATTEMPTS);
+            return;
+        }
+        tt.sleep_ms(100).ok();
     };
 
     let mut byte: u8 = 0;
