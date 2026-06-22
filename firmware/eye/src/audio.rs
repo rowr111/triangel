@@ -135,7 +135,10 @@ fn listen_loop(state: Arc<Mutex<AudioState>>) {
     let mut byte: u8 = 0;
     loop {
         // One byte = the level. That's it.
-        while uart.read_async(&mut byte) == 0 {}
+        // Nap between polls so an idle/silent ear doesn't spin a CPU core.
+        while uart.read_async(&mut byte) == 0 {
+            tt.sleep_ms(2).ok();
+        }
 
         UART_FIRST_BYTE.store(byte, Ordering::Relaxed);
         UART_STATUS.store(STATUS_RECEIVING, Ordering::Relaxed);
