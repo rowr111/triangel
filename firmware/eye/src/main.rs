@@ -36,7 +36,7 @@ fn main() -> ! {
     // Hardware / previewer output
     let mut led_out = led::LedOutput::new();
 
-    // Audio receiver (spawns background UART listener thread)
+    // Audio receiver (interrupt-driven UART RX; no listener thread)
     let audio = audio::AudioReceiver::new();
 
     // Input event queue (spawns button + IR threads)
@@ -62,8 +62,8 @@ fn main() -> ! {
         next_frame += TARGET_FRAME_MS;
         let frame_start = tt.elapsed_ms();
 
-        // Decay envelope toward zero when ear is silent (no IPC in audio thread)
-        audio.tick_decay(frame_start as u32);
+        // Ingest the latest byte from the RX interrupt; decay toward zero when ear is silent
+        audio.update(frame_start as u32);
 
         // Determine sound-reactive mode
         let sound_level = audio.smoothed_level();
