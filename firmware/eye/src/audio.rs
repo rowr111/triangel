@@ -66,6 +66,7 @@ impl AudioReceiver {
         if let Ok(mut s) = self.state.try_lock() {
             if now_ms.wrapping_sub(s.last_update_ms) >= 200 {
                 s.smoothed_level = (s.smoothed_level - 0.05).max(0.0);
+                s.activity = false; // ear stopped sending: drop activity so Auto mode falls back to ambient
                 s.last_update_ms = now_ms;
             }
         }
