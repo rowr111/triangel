@@ -75,8 +75,8 @@ fn main() -> ! {
         // Advance cycling timer
         setlist.tick(frame_start as u32, sound_active);
 
-        // Render current pattern into frame buffer
-        setlist.current_pattern(sound_active).render(&LED_MAP, frame_start as u32, sound_level, &mut frame);
+        // Render current pattern (compositing any in-flight transition) into frame buffer
+        setlist.render(&LED_MAP, frame_start as u32, sound_level, sound_active, &mut frame);
 
         // Apply global brightness
         let brightness = setlist.brightness;

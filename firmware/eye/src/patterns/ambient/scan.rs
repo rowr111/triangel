@@ -1,4 +1,4 @@
-use super::{Frame, Pattern};
+use crate::patterns::{Frame, Pattern};
 use crate::led::map::{Led, WORLD_H, WORLD_TOP};
 
 pub struct HorizontalScan {

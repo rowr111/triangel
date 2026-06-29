@@ -1,4 +1,4 @@
-use super::{Frame, Pattern, hsv};
+use crate::patterns::{Frame, Pattern, hsv};
 use crate::led::map::Led;
 
 pub struct RainbowX {

@@ -1,8 +1,6 @@
-pub mod audio_fill;
-pub mod rainbow;
-pub mod ripple;
-pub mod scan;
-pub mod shimmer;
+pub mod ambient;
+pub mod reactive;
+pub mod transition;
 
 use crate::led::map::Led;
 

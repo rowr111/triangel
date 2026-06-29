@@ -1,4 +1,4 @@
-use super::{Frame, Pattern};
+use crate::patterns::{Frame, Pattern};
 use crate::led::map::Led;
 use core::f32::consts::PI;
 

@@ -1,6 +1,6 @@
 use std::sync::atomic::Ordering;
 
-use super::{Frame, Pattern};
+use crate::patterns::{Frame, Pattern};
 use crate::audio::{
     STATUS_CSR_FAIL, STATUS_DMA_DONE, STATUS_IFRAM_FAIL, STATUS_INIT_OK, STATUS_RECEIVING,
     UART_FIRST_BYTE, UART_LAST_FRAME_MS, UART_STATUS,
