@@ -44,8 +44,17 @@ console.log(`Config: serial=${SERIAL_PATH}  baud=${BAUD_RATE}  ws-port=${WS_PORT
 const wss = new WebSocketServer({ port: WS_PORT });
 console.log(`WebSocket listening on ws://localhost:${WS_PORT}`);
 
-wss.on('connection', () => {
+wss.on('connection', (client) => {
   console.log(`Browser connected (${wss.clients.size} client(s))`);
+
+  // Reverse direction: on-screen control commands from the browser go out to the
+  // Baochip over serial (newline-terminated ASCII, parsed by the eye's previewer
+  // input thread). Dropped silently if the serial port isn't open.
+  client.on('message', (data) => {
+    if (!activeSerial || !activeSerial.isOpen) return;
+    let cmd = data.toString().trim();
+    if (cmd) activeSerial.write(cmd + '\n');
+  });
 });
 
 function broadcast(data) {
@@ -73,6 +82,8 @@ function scheduleReconnect() {
   }, RECONNECT_MS);
 }
 
+let activeSerial = null;
+
 function connect() {
   buf = Buffer.alloc(0);
 
@@ -80,9 +91,11 @@ function connect() {
 
   serial.open((err) => {
     if (err) {
+      activeSerial = null;
       scheduleReconnect();
       return;
     }
+    activeSerial = serial;
     console.log(`Serial open: ${SERIAL_PATH} @ ${BAUD_RATE} baud`);
   });
 
@@ -104,6 +117,7 @@ function connect() {
   });
 
   serial.on('close', () => {
+    activeSerial = null;
     console.log('Serial closed, reconnecting...');
     scheduleReconnect();
   });

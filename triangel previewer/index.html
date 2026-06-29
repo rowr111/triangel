@@ -13,11 +13,51 @@
       background: #222; color: #666;
     }
     #status.live { background: #0a2a0a; color: #4c4; }
+
+    /* On-screen input panel (previewer builds): mirrors the physical d-pad + switch. */
+    #controls {
+      position: fixed; left: 12px; bottom: 12px;
+      font: 11px/1 monospace; color: #aaa;
+      display: flex; gap: 16px; align-items: flex-end;
+      user-select: none;
+    }
+    #controls button {
+      font: inherit; color: #ccc; background: #222;
+      border: 1px solid #444; border-radius: 3px;
+      padding: 6px 0; cursor: pointer;
+    }
+    #controls button:hover  { background: #333; }
+    #controls button:active { background: #0a2a0a; color: #4c4; border-color: #4c4; }
+    #dpad {
+      display: grid; grid-template-columns: repeat(3, 34px); grid-auto-rows: 26px; gap: 3px;
+    }
+    #dpad .up     { grid-column: 2; grid-row: 1; }
+    #dpad .left   { grid-column: 1; grid-row: 2; }
+    #dpad .center { grid-column: 2; grid-row: 2; }
+    #dpad .right  { grid-column: 3; grid-row: 2; }
+    #dpad .down   { grid-column: 2; grid-row: 3; }
+    #switch { display: flex; flex-direction: column; gap: 3px; }
+    #switch button { width: 48px; }
   </style>
 </head>
 <body>
   <canvas id="c"></canvas>
   <div id="status">no bridge</div>
+
+  <div id="controls">
+    <div id="dpad">
+      <button class="up"     data-cmd="U">Br+</button>
+      <button class="left"   data-cmd="L">Prev</button>
+      <button class="center" data-cmd="C">Hold</button>
+      <button class="right"  data-cmd="R">Next</button>
+      <button class="down"   data-cmd="D">Br-</button>
+    </div>
+    <div id="switch">
+      <button data-cmd="S0">Off</button>
+      <button data-cmd="S1">Auto</button>
+      <button data-cmd="S2">On</button>
+    </div>
+  </div>
 
   <script src="led_map.js"></script>
   <script>
@@ -71,12 +111,14 @@
 
     // --- WebSocket bridge connection ---------------------------------------
     const statusEl = document.getElementById('status');
+    let activeWs = null; // set while connected, for sending on-screen input commands
 
     function connectBridge(wsUrl) {
       const ws = new WebSocket(wsUrl);
       ws.binaryType = 'arraybuffer';
 
       ws.onopen = () => {
+        activeWs = ws;
         statusEl.textContent = 'bridge live';
         statusEl.className = 'live';
       };
@@ -92,6 +134,7 @@
       };
 
       ws.onclose = () => {
+        activeWs = null;
         liveColors = null;
         statusEl.textContent = 'no bridge';
         statusEl.className = '';
@@ -102,6 +145,15 @@
     }
 
     connectBridge('ws://localhost:8080');
+
+    // --- On-screen input -> bridge -> firmware (fire-and-forget) -----------
+    document.querySelectorAll('#controls button').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        if (activeWs && activeWs.readyState === WebSocket.OPEN) {
+          activeWs.send(btn.dataset.cmd);
+        }
+      });
+    });
 
     // --- Canvas -----------------------------------------------------------
     const canvas = document.getElementById('c');

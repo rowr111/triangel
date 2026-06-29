@@ -1,5 +1,7 @@
 pub mod buttons;
 pub mod ir;
+#[cfg(feature = "previewer")]
+pub mod previewer;
 
 use std::sync::{Arc, Mutex};
 use std::collections::VecDeque;
@@ -48,5 +50,8 @@ pub fn apply_events(queue: &EventQueue, setlist: &mut SetlistManager, now_ms: u3
 /// Spawn all input handler threads. They write events into `queue`.
 pub fn spawn(queue: EventQueue) {
     buttons::spawn(queue.clone());
-    ir::spawn(queue);
+    ir::spawn(queue.clone());
+    // Previewer builds also accept on-screen d-pad/switch input over USB serial.
+    #[cfg(feature = "previewer")]
+    previewer::spawn(queue);
 }

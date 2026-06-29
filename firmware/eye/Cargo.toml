@@ -12,19 +12,19 @@ log-server = { package = "xous-api-log", version = "0.1.69" }
 log = "0.4.14"
 num-derive = { version = "0.4.2", default-features = false }
 num-traits = { version = "0.2.14", default-features = false }
-bao1x-hal = { git = "https://github.com/betrusted-io/xous-core", rev = "515dd586b3e703d34718ff8506219ca48852205e", features = ["std"], optional = true }
-bao1x-api = { git = "https://github.com/betrusted-io/xous-core", rev = "515dd586b3e703d34718ff8506219ca48852205e" }
-bao1x-hal-service = { git = "https://github.com/betrusted-io/xous-core", rev = "515dd586b3e703d34718ff8506219ca48852205e", optional = true }
-bao1x-emu = { git = "https://github.com/betrusted-io/xous-core", rev = "515dd586b3e703d34718ff8506219ca48852205e", optional = true }
-usb-bao1x = { git = "https://github.com/betrusted-io/xous-core", rev = "515dd586b3e703d34718ff8506219ca48852205e" }
+bao1x-hal = { git = "https://github.com/betrusted-io/xous-core", rev = "bc9e2131bc102c27235e4675cbb18696c0eebf15", features = ["std"], optional = true }
+bao1x-api = { git = "https://github.com/betrusted-io/xous-core", rev = "bc9e2131bc102c27235e4675cbb18696c0eebf15" }
+bao1x-hal-service = { git = "https://github.com/betrusted-io/xous-core", rev = "bc9e2131bc102c27235e4675cbb18696c0eebf15", optional = true }
+bao1x-emu = { git = "https://github.com/betrusted-io/xous-core", rev = "bc9e2131bc102c27235e4675cbb18696c0eebf15", optional = true }
+usb-bao1x = { git = "https://github.com/betrusted-io/xous-core", rev = "bc9e2131bc102c27235e4675cbb18696c0eebf15" }
 bytemuck = "1.24.0"
 
-aes = { git = "https://github.com/betrusted-io/xous-core", rev = "515dd586b3e703d34718ff8506219ca48852205e", default-features = false, optional = true }
+aes = { git = "https://github.com/betrusted-io/xous-core", rev = "bc9e2131bc102c27235e4675cbb18696c0eebf15", default-features = false, optional = true }
 
 # hid bringup
 xous-usb-hid = { git = "https://github.com/betrusted-io/xous-usb-hid.git", branch = "main", optional = true }
 
-bio-lib = { git = "https://github.com/betrusted-io/xous-core", rev = "515dd586b3e703d34718ff8506219ca48852205e" }
+bio-lib = { git = "https://github.com/betrusted-io/xous-core", rev = "bc9e2131bc102c27235e4675cbb18696c0eebf15" }
 arbitrary-int = "1.2"
 triangel-shared = { path = "../shared" }
 
