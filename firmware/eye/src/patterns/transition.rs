@@ -6,7 +6,7 @@ use super::Frame;
 use crate::led::map::{Led, WORLD_BOT, WORLD_CX, WORLD_TOP};
 
 // Triangle centroid - the same point CenterShimmer pulses from (shimmer.rs). The big
-// triangle is point-down, so its centre sits 1/3 of the way down from the top edge.
+// triangle is point-down, so its center sits 1/3 of the way down from the top edge.
 const CENTER_X: f32 = WORLD_CX;
 const CENTER_Y: f32 = WORLD_TOP + (WORLD_BOT - WORLD_TOP) / 3.0;
 
@@ -15,20 +15,20 @@ const CENTER_Y: f32 = WORLD_TOP + (WORLD_BOT - WORLD_TOP) / 3.0;
 const FEATHER_MM: f32 = 60.0;
 const SPARKLE_EDGE: f32 = 0.15;
 
-// Spiral wipe: how many turns the arm winds from centre to edge (tightness), and how many
+// Spiral wipe: how many turns the arm winds from center to edge (tightness), and how many
 // tiles are mid-transition at once (soft per-board edge, as a fraction of progress).
 const SPIRAL_TURNS: f32 = 1.5;
 const SPIRAL_EDGE: f32 = 0.12;
 
 #[derive(Clone, Copy)]
 pub enum TransitionStyle {
-    Crossfade,
+    Crossfade,     // uniform fade of the whole frame, outgoing -> incoming
     RadialOut,     // blooms from the centroid outward
     RadialIn,      // collapses from the edges into the centroid
     Sparkle,       // each LED crosses at its own random moment
     RadialSparkle, // radial front, but raggedy/dissolving rather than a clean ring
-    SpiralOut,     // one triangle at a time, spiralling out from the centre
-    SpiralIn,      // one triangle at a time, spiralling in toward the centre
+    SpiralOut,     // one triangle at a time, spiraling out from the center
+    SpiralIn,      // one triangle at a time, spiraling in toward the center
 }
 
 /// Blend the outgoing frame into the incoming one. `out` holds the incoming (target)
@@ -79,14 +79,14 @@ fn dist_to_center(led: &Led) -> f32 {
 }
 
 /// Farthest LED distance from the centroid, computed once (geometry is fixed). Used to
-/// normalise the radial wipes so they always complete regardless of where the centre is.
+/// normalize the radial wipes so they always complete regardless of where the center is.
 fn max_center_dist(leds: &[Led]) -> f32 {
     static MAX: OnceLock<f32> = OnceLock::new();
     *MAX.get_or_init(|| leds.iter().map(dist_to_center).fold(0.0_f32, f32::max))
 }
 
 /// Per-board switch order for the spiral wipe, indexed by `board_id` (1..=25), each a
-/// normalised rank in [0, 1] (0 = first/innermost, 1 = last/outermost). Computed once.
+/// normalized rank in [0, 1] (0 = first/innermost, 1 = last/outermost). Computed once.
 /// All LEDs on a board share its rank, so a whole triangle flips together.
 fn board_spiral_ranks(leds: &[Led]) -> &'static [f32; 26] {
     static RANKS: OnceLock<[f32; 26]> = OnceLock::new();
@@ -106,7 +106,7 @@ fn compute_spiral_ranks(leds: &[Led]) -> [f32; 26] {
     }
 
     // Per board: radius + angle from the design centroid. Track the radius span so we can
-    // normalise it for the spiral key.
+    // normalize it for the spiral key.
     let mut polar: Vec<(usize, f32, f32)> = Vec::new(); // (board_id, radius, angle)
     let mut rmin = f32::MAX;
     let mut rmax = 0.0f32;
@@ -130,7 +130,7 @@ fn compute_spiral_ranks(leds: &[Led]) -> [f32; 26] {
         .collect();
     keyed.sort_by(|x, y| x.1.partial_cmp(&y.1).unwrap_or(core::cmp::Ordering::Equal));
 
-    // Normalise sorted position to a [0, 1] rank.
+    // Normalize sorted position to a [0, 1] rank.
     let mut ranks = [0.0f32; 26];
     let last = (keyed.len().max(2) - 1) as f32;
     for (pos, &(b, _)) in keyed.iter().enumerate() {

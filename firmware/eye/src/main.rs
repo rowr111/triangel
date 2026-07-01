@@ -95,6 +95,9 @@ fn main() -> ! {
         let now = tt.elapsed_ms();
         if now < next_frame {
             tt.sleep_ms((next_frame - now) as usize).ok();
+        } else {
+            // Overran the deadline; resync so we don't sprint through a burst of catch-up frames.
+            next_frame = now;
         }
     }
 }
