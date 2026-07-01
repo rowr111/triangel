@@ -19,8 +19,8 @@ fn main() -> ! {
 
     log::info!("ear ready");
 
-    // Send raw RMS level directly - same math as the Python bar display.
-    // level = min(rms * 10, 1.0)  =>  100% bar = full fill.
+    // Temporary level path: compute a simple RMS from each audio frame and send it to the
+    // eye as a 0-255 byte. The real mel/I2S pipeline will replace this.
     loop {
         let samples = audio.read_frame();
         let rms = (samples.iter().map(|&s| (s as f32 / 32768.0).powi(2)).sum::<f32>()
