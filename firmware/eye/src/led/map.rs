@@ -1,8 +1,8 @@
 // Auto-generated from triangel previewer/led_map.js - do not edit by hand.
 // Run generate_map.js in the previewer, then re-run the generation script to update.
 // 600 LEDs across 25 boards. Two chains:
-//   Chain 1 (PB5): boards 1-12,  chainIdx 0-287   (288 LEDs)
-//   Chain 2 (PB6): boards 13-25, chainIdx 288-599  (312 LEDs)
+//   Chain 1 (PB4): boards 1-12,  chainIdx 0-287   (288 LEDs)
+//   Chain 2 (PB5): boards 13-25, chainIdx 288-599  (312 LEDs)
 // Chain snake: row1 left->right, row2 right->left, row3 left->right, row4 right->left, row5.
 // Baochip data wires connect at board 1 (chain 1) and board 13 (chain 2).
 

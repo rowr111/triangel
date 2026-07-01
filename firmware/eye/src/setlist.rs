@@ -181,7 +181,8 @@ impl SetlistManager {
 
         // Composite the outgoing pattern over it while a transition is running.
         if let Some(tr) = self.transition {
-            let progress = t_ms.wrapping_sub(tr.start_ms) as f32 / tr.duration_ms as f32;
+            // max(1) guards against a zero-duration transition dividing by zero.
+            let progress = t_ms.wrapping_sub(tr.start_ms) as f32 / tr.duration_ms.max(1) as f32;
             let mut from_buf: Frame = [[0u8; 3]; LED_COUNT];
             self.render_into(tr.from_kind, tr.from_idx, leds, t_ms, sound_level, &mut from_buf);
             transition::blend(tr.style, leds, progress, &from_buf, out);

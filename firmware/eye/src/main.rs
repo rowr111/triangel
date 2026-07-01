@@ -72,6 +72,9 @@ fn main() -> ! {
         // Drain input events and apply to setlist
         input::apply_events(&event_queue, &mut setlist, frame_start as u32, sound_active);
 
+        // Recompute after events: apply_events may have changed the sound mode this frame.
+        let sound_active = setlist.sound_active(audio.is_active());
+
         // Advance cycling timer
         setlist.tick(frame_start as u32, sound_active);
 
