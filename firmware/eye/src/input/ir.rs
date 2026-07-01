@@ -92,8 +92,6 @@ fn map_ir_cmd(cmd: u8, queue: &EventQueue) {
         _                      => None,
     };
     if let Some(ev) = event {
-        if let Ok(mut q) = queue.lock() {
-            q.push_back(ev);
-        }
+        super::lock_queue(queue).push_back(ev);
     }
 }

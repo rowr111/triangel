@@ -22,9 +22,7 @@ fn recv_loop(queue: EventQueue) {
         let line = usb.serial_wait_ascii(Some('\n'));
         for cmd in line.split_whitespace() {
             if let Some(ev) = parse_command(cmd) {
-                if let Ok(mut q) = queue.lock() {
-                    q.push_back(ev);
-                }
+                super::lock_queue(&queue).push_back(ev);
             }
         }
     }

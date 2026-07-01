@@ -37,7 +37,7 @@ fn main() -> ! {
     let mut led_out = led::LedOutput::new();
 
     // Audio receiver (interrupt-driven UART RX; no listener thread)
-    let audio = audio::AudioReceiver::new();
+    let mut audio = audio::AudioReceiver::new();
 
     // Input event queue (spawns button + IR threads)
     let event_queue = input::new_queue();

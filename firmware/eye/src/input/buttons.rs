@@ -126,10 +126,9 @@ fn poll_loop(queue: Arc<Mutex<VecDeque<InputEvent>>>) {
         }
 
         if n > 0 {
-            if let Ok(mut q) = queue.lock() {
-                for ev in pending.iter().take(n).flatten() {
-                    q.push_back(*ev);
-                }
+            let mut q = super::lock_queue(&queue);
+            for ev in pending.iter().take(n).flatten() {
+                q.push_back(*ev);
             }
         }
 

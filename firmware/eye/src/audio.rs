@@ -1,5 +1,4 @@
 use std::pin::Pin;
-use std::sync::Mutex;
 use std::sync::atomic::{AtomicU32, AtomicU8, AtomicUsize, Ordering};
 
 use bao1x_api::iox::IoxHal;
@@ -45,7 +44,9 @@ impl AudioState {
 }
 
 pub struct AudioReceiver {
-    state: Mutex<AudioState>,
+    // Owned and mutated only by the render thread. The RX interrupt hands bytes over through
+    // the lock-free atomics above, not through this struct.
+    state: AudioState,
     // Parks the IRQ handler registration for the life of the program: the handler
     // dereferences this object's heap location, so it must never move or drop.
     #[allow(dead_code)]
@@ -55,45 +56,44 @@ pub struct AudioReceiver {
 impl AudioReceiver {
     pub fn new() -> Self {
         AudioReceiver {
-            state:     Mutex::new(AudioState::new()),
+            state:     AudioState::new(),
             _uart_irq: init_audio_uart(),
         }
     }
 
     pub fn smoothed_level(&self) -> f32 {
-        self.state.lock().map(|s| s.smoothed_level).unwrap_or(0.0)
+        self.state.smoothed_level
     }
 
     #[allow(dead_code)]
     pub fn current_mel(&self) -> [f32; MEL_BANDS] {
-        self.state.lock().map(|s| s.mel).unwrap_or([0.0; MEL_BANDS])
+        self.state.mel
     }
 
     pub fn is_active(&self) -> bool {
-        self.state.lock().map(|s| s.activity).unwrap_or(false)
+        self.state.activity
     }
 
     /// Called once per frame from the render loop. Ingests the latest byte the RX
     /// interrupt captured (EMA + activity), else decays toward silence when the ear
-    /// stops sending. Replaces the old polling listener thread.
-    pub fn update(&self, now_ms: u32) {
-        if let Ok(mut s) = self.state.try_lock() {
-            let seq = UART_RX_SEQ.load(Ordering::Relaxed);
-            if seq != s.last_seq {
-                s.last_seq = seq;
-                let level = UART_LATEST_BYTE.load(Ordering::Relaxed) as f32 / 255.0;
-                // Light EMA so single rogue bytes don't spike the fill
-                s.smoothed_level = s.smoothed_level * 0.6 + level * 0.4;
-                s.activity       = level > 0.02;
-                s.last_update_ms = now_ms;
-                UART_STATUS.store(STATUS_RECEIVING, Ordering::Relaxed);
-                UART_LAST_FRAME_MS.store(now_ms, Ordering::Relaxed);
-            } else if now_ms.wrapping_sub(s.last_update_ms) >= 200 {
-                // ear stopped sending: drop activity so Auto mode falls back to ambient
-                s.smoothed_level = (s.smoothed_level - 0.05).max(0.0);
-                s.activity       = false;
-                s.last_update_ms = now_ms;
-            }
+    /// stops sending.
+    pub fn update(&mut self, now_ms: u32) {
+        // Acquire pairs with the handler's Release bump: a fresh seq guarantees a fresh byte.
+        let seq = UART_RX_SEQ.load(Ordering::Acquire);
+        if seq != self.state.last_seq {
+            self.state.last_seq = seq;
+            let level = UART_LATEST_BYTE.load(Ordering::Relaxed) as f32 / 255.0;
+            // Light EMA so single rogue bytes don't spike the fill
+            self.state.smoothed_level = self.state.smoothed_level * 0.6 + level * 0.4;
+            self.state.activity       = level > 0.02;
+            self.state.last_update_ms = now_ms;
+            UART_STATUS.store(STATUS_RECEIVING, Ordering::Relaxed);
+            UART_LAST_FRAME_MS.store(now_ms, Ordering::Relaxed);
+        } else if now_ms.wrapping_sub(self.state.last_update_ms) >= 200 {
+            // ear stopped sending: drop activity so Auto mode falls back to ambient
+            self.state.smoothed_level = (self.state.smoothed_level - 0.05).max(0.0);
+            self.state.activity       = false;
+            self.state.last_update_ms = now_ms;
         }
     }
 }
@@ -102,7 +102,8 @@ impl AudioReceiver {
 /// Rebuilds a Uart handle from the addresses published by init_uart and drains all
 /// available bytes into the lock-free slots; the render loop's update() consumes them.
 fn audio_uart_handler(_irq_no: usize, _arg: *mut usize) {
-    let csr_virt = UART_CSR_VIRT.load(Ordering::Relaxed);
+    // Acquire pairs with init_uart's Release store of the CSR sentinel.
+    let csr_virt = UART_CSR_VIRT.load(Ordering::Acquire);
     if csr_virt == 0 {
         return; // not initialized yet
     }
@@ -114,7 +115,8 @@ fn audio_uart_handler(_irq_no: usize, _arg: *mut usize) {
     while uart.read_async(&mut byte) != 0 {
         UART_LATEST_BYTE.store(byte, Ordering::Relaxed);
         UART_FIRST_BYTE.store(byte, Ordering::Relaxed);
-        UART_RX_SEQ.fetch_add(1, Ordering::Relaxed);
+        // Release so the reader's Acquire load of the seq sees the byte stores above.
+        UART_RX_SEQ.fetch_add(1, Ordering::Release);
     }
 }
 
@@ -204,9 +206,11 @@ fn init_uart() -> bool {
     uart.set_baud(EAR_UART_BAUD, PERCLK_HZ);
     uart.setup_async_read();
 
-    // Publish the mapped addresses so the RX interrupt handler can rebuild its own handle.
-    UART_CSR_VIRT.store(csr_virt, Ordering::Relaxed);
+    // Publish addresses for the handler. CSR_VIRT is its "initialized" sentinel (it bails
+    // while it reads 0), so store IFRAM first and CSR last with Release - the handler's
+    // Acquire load then guarantees IFRAM is visible before it acts on a non-zero CSR.
     UART_IFRAM_VIRT.store(ifram_virt, Ordering::Relaxed);
+    UART_CSR_VIRT.store(csr_virt, Ordering::Release);
     UART_STATUS.store(STATUS_INIT_OK, Ordering::Relaxed);
     true
 }
