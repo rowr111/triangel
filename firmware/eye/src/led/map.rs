@@ -10,6 +10,10 @@ pub const WORLD_CX: f32  = 258.0;
 pub const WORLD_TOP: f32 =   6.0;
 pub const WORLD_BOT: f32 = 436.0;
 pub const WORLD_H: f32   = 430.0;
+/// Centroid of the point-down triangle (1/3 of the way down from the top edge) - the focal
+/// point CenterShimmer pulses from and the radial transitions bloom around.
+pub const WORLD_CENTROID_X: f32 = WORLD_CX;
+pub const WORLD_CENTROID_Y: f32 = WORLD_TOP + (WORLD_BOT - WORLD_TOP) / 3.0;
 pub const LED_COUNT: usize = 600;
 pub const CHAIN1_LED_COUNT: usize = 288;
 pub const CHAIN2_LED_COUNT: usize = 312;
@@ -20,6 +24,13 @@ pub struct Led {
     pub board_id:  u8,
     pub local_idx: u8,
     pub chain_idx: u16,
+}
+
+impl Led {
+    /// Euclidean distance in mm from this LED to a world point (x, y).
+    pub fn dist_to(&self, x: f32, y: f32) -> f32 {
+        ((self.wx - x).powi(2) + (self.wy - y).powi(2)).sqrt()
+    }
 }
 
 pub static LED_MAP: [Led; LED_COUNT] = [

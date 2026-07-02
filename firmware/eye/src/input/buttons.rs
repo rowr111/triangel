@@ -2,7 +2,7 @@ use std::collections::VecDeque;
 use std::sync::{Arc, Mutex};
 
 use bao1x_api::iox::IoxHal;
-use bao1x_api::{IoxDir, IoxEnable, IoxFunction, IoxPort, IoxValue, IoSetup};
+use bao1x_api::{IoxFunction, IoxPort, IoxValue};
 
 use super::{EventQueue, InputEvent};
 use crate::pins;
@@ -85,13 +85,7 @@ fn setup_pins(iox: &IoxHal) {
         (pins::SW_B_PORT,       pins::SW_B_PIN),
     ];
     for (port, pin) in btn_pins {
-        iox.setup_pin(port, pin,
-            Some(IoxDir::Input),
-            Some(IoxFunction::Gpio),
-            Some(IoxEnable::Enable), // schmitt trigger
-            Some(IoxEnable::Enable), // pull-up
-            None, None,
-        );
+        crate::pins::setup_input_pin(iox, port, pin, IoxFunction::Gpio);
     }
 }
 
@@ -109,26 +103,30 @@ fn poll_loop(queue: Arc<Mutex<VecDeque<InputEvent>>>) {
     let mut last_switch = read_switch_position(&iox);
 
     loop {
-        let mut pending = [None::<InputEvent>; 6];
-        let mut n = 0;
-
-        if db_up.update(read_pin(&iox, pins::BTN_UP_PORT,     pins::BTN_UP_PIN))     { pending[n] = Some(InputEvent::BrightnessUp);   n += 1; }
-        if db_down.update(read_pin(&iox, pins::BTN_DOWN_PORT,   pins::BTN_DOWN_PIN))   { pending[n] = Some(InputEvent::BrightnessDown); n += 1; }
-        if db_left.update(read_pin(&iox, pins::BTN_LEFT_PORT,   pins::BTN_LEFT_PIN))   { pending[n] = Some(InputEvent::PatternPrev);    n += 1; }
-        if db_right.update(read_pin(&iox, pins::BTN_RIGHT_PORT,  pins::BTN_RIGHT_PIN))  { pending[n] = Some(InputEvent::PatternNext);    n += 1; }
-        if db_center.update(read_pin(&iox, pins::BTN_CENTER_PORT, pins::BTN_CENTER_PIN)) { pending[n] = Some(InputEvent::ToggleHold);     n += 1; }
+        let buttons: [(&mut Debouncer, InputEvent, IoxPort, u8); 5] = [
+            (&mut db_up,     InputEvent::BrightnessUp,   pins::BTN_UP_PORT,     pins::BTN_UP_PIN),
+            (&mut db_down,   InputEvent::BrightnessDown, pins::BTN_DOWN_PORT,   pins::BTN_DOWN_PIN),
+            (&mut db_left,   InputEvent::PatternPrev,    pins::BTN_LEFT_PORT,   pins::BTN_LEFT_PIN),
+            (&mut db_right,  InputEvent::PatternNext,    pins::BTN_RIGHT_PORT,  pins::BTN_RIGHT_PIN),
+            (&mut db_center, InputEvent::ToggleHold,     pins::BTN_CENTER_PORT, pins::BTN_CENTER_PIN),
+        ];
+        let mut fired: Vec<InputEvent> = Vec::new();
+        for (db, event, port, pin) in buttons {
+            if db.update(read_pin(&iox, port, pin)) {
+                fired.push(event);
+            }
+        }
 
         let sw = read_switch_position(&iox);
         if sw != last_switch {
             last_switch = sw;
-            pending[n] = Some(InputEvent::SetSoundMode(sw));
-            n += 1;
+            fired.push(InputEvent::SetSoundMode(sw));
         }
 
-        if n > 0 {
+        if !fired.is_empty() {
             let mut q = super::lock_queue(&queue);
-            for ev in pending.iter().take(n).flatten() {
-                q.push_back(*ev);
+            for ev in fired {
+                q.push_back(ev);
             }
         }
 

@@ -51,11 +51,7 @@ pub fn apply_events(queue: &EventQueue, setlist: &mut SetlistManager, now_ms: u3
             InputEvent::PatternPrev       => setlist.step_prev(now_ms, sound_active),
             InputEvent::ToggleHold        => setlist.toggle_hold(),
             InputEvent::SetSoundMode(m)   => setlist.sound_mode = m,
-            InputEvent::CycleSoundMode    => setlist.sound_mode = match setlist.sound_mode {
-                SoundMode::Off  => SoundMode::Auto,
-                SoundMode::Auto => SoundMode::On,
-                SoundMode::On   => SoundMode::Off,
-            },
+            InputEvent::CycleSoundMode    => setlist.sound_mode = setlist.sound_mode.next(),
         }
     }
 }

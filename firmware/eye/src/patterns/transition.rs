@@ -3,12 +3,11 @@ use std::sync::OnceLock;
 use core::f32::consts::TAU;
 
 use super::Frame;
-use crate::led::map::{Led, WORLD_BOT, WORLD_CX, WORLD_TOP};
+use crate::led::map::{Led, WORLD_CENTROID_X, WORLD_CENTROID_Y};
 
-// Triangle centroid - the same point CenterShimmer pulses from (shimmer.rs). The big
-// triangle is point-down, so its center sits 1/3 of the way down from the top edge.
-const CENTER_X: f32 = WORLD_CX;
-const CENTER_Y: f32 = WORLD_TOP + (WORLD_BOT - WORLD_TOP) / 3.0;
+// Triangle centroid, from the shared world constants.
+const CENTER_X: f32 = WORLD_CENTROID_X;
+const CENTER_Y: f32 = WORLD_CENTROID_Y;
 
 // Width of the soft reveal band for radial wipes, and the soft edge for sparkle (as a
 // fraction of progress). Both just shape how hard/soft the transition front looks.
@@ -75,7 +74,7 @@ fn alpha_for(style: TransitionStyle, led: &Led, progress: f32, maxd: f32, board_
 }
 
 fn dist_to_center(led: &Led) -> f32 {
-    ((led.wx - CENTER_X).powi(2) + (led.wy - CENTER_Y).powi(2)).sqrt()
+    led.dist_to(CENTER_X, CENTER_Y)
 }
 
 /// Farthest LED distance from the centroid, computed once (geometry is fixed). Used to

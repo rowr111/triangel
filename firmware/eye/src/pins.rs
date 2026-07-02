@@ -1,4 +1,5 @@
-use bao1x_api::IoxPort;
+use bao1x_api::iox::IoxHal;
+use bao1x_api::{IoxDir, IoxEnable, IoxFunction, IoSetup, IoxPort};
 
 // LED output
 // BIO pin 4 = PB4 -> chain 1 (tiles 1-12, 288 LEDs)   [schematic: LED DATA_1, U2.7]
@@ -54,3 +55,18 @@ pub const SW_B_PIN:  u8      = 2;
 // number for PulseCapture is derived automatically from this port/pin (PC8).
 pub const IR_PORT: IoxPort = IoxPort::PC;
 pub const IR_PIN:  u8      = 8;
+
+/// Configure a pin as an input (schmitt trigger + pull-up) for the given function:
+/// `IoxFunction::Gpio` for buttons, an AFn for a peripheral like UART RX.
+pub fn setup_input_pin(iox: &IoxHal, port: IoxPort, pin: u8, function: IoxFunction) {
+    iox.setup_pin(
+        port,
+        pin,
+        Some(IoxDir::Input),
+        Some(function),
+        Some(IoxEnable::Enable), // schmitt trigger
+        Some(IoxEnable::Enable), // pull-up
+        None,
+        None,
+    );
+}

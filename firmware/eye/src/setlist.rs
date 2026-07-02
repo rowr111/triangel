@@ -97,6 +97,17 @@ pub enum SoundMode {
     On,
 }
 
+impl SoundMode {
+    /// Cycle Off -> Auto -> On -> Off (the gear button).
+    pub fn next(self) -> Self {
+        match self {
+            SoundMode::Off  => SoundMode::Auto,
+            SoundMode::Auto => SoundMode::On,
+            SoundMode::On   => SoundMode::Off,
+        }
+    }
+}
+
 // --- Setlist manager ---
 
 pub struct SetlistManager {
@@ -108,6 +119,7 @@ pub struct SetlistManager {
     pending:           VecDeque<Step>,
     last_sound_active: bool,
     next_style:        usize,
+    from_buf:          Frame,
     pub brightness:    f32,
     pub sound_mode:    SoundMode,
 }
@@ -123,6 +135,7 @@ impl SetlistManager {
             pending:           VecDeque::new(),
             last_sound_active: false,
             next_style:        0,
+            from_buf:          [[0u8; 3]; LED_COUNT],
             brightness:        1.0,
             sound_mode:        SoundMode::Off,
         }
@@ -183,9 +196,12 @@ impl SetlistManager {
         if let Some(tr) = self.transition {
             // max(1) guards against a zero-duration transition dividing by zero.
             let progress = t_ms.wrapping_sub(tr.start_ms) as f32 / tr.duration_ms.max(1) as f32;
-            let mut from_buf: Frame = [[0u8; 3]; LED_COUNT];
-            self.render_into(tr.from_kind, tr.from_idx, leds, t_ms, sound_level, &mut from_buf);
-            transition::blend(tr.style, leds, progress, &from_buf, out);
+            let from = match tr.from_kind {
+                SetlistKind::Ambient  => &mut self.ambient,
+                SetlistKind::Reactive => &mut self.reactive,
+            };
+            from.patterns[tr.from_idx].render(leds, t_ms, sound_level, &mut self.from_buf);
+            transition::blend(tr.style, leds, progress, &self.from_buf, out);
         }
     }
 
