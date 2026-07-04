@@ -10,7 +10,10 @@ pub struct ApexRipple {
 impl Pattern for ApexRipple {
     fn render(&mut self, leds: &[Led], t_ms: u32, _sound_level: f32, out: &mut Frame) {
         // Ripples emanate from the bottom apex of the point-down triangle.
-        let t_s = t_ms as f32 / 1000.0;
+        // Fold time to one wave period before the f32 cast (long-uptime precision);
+        // the phase jumps exactly one cycle at the wrap, so the sine is seamless.
+        let period_ms = (self.wavelength / self.speed * 1000.0) as u32;
+        let t_s = (t_ms % period_ms.max(1)) as f32 / 1000.0;
         for (i, led) in leds.iter().enumerate() {
             let dist = led.dist_to(WORLD_CX, WORLD_BOT);
             let phase = (dist - t_s * self.speed) / self.wavelength * PI * 2.0;

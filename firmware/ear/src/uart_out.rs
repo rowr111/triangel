@@ -18,7 +18,7 @@ use bao1x_hal::clocks::PERCLK_HZ;
 use bao1x_hal::udma::{Uart, UartChannel};
 use triangel_shared::mel::{EAR_UART_BAUD, FRAME_LEN, MelFrame};
 
-/// Owns the UART TX peripheral and serialises `MelFrame` packets onto the wire.
+/// Owns the UART TX peripheral; sends the level byte today, framed `MelFrame`s later.
 pub struct UartOut {
     uart: Uart,
 }

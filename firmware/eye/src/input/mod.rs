@@ -49,7 +49,7 @@ pub fn apply_events(queue: &EventQueue, setlist: &mut SetlistManager, now_ms: u3
             InputEvent::BrightnessDown    => setlist.adjust_brightness(-0.1),
             InputEvent::PatternNext       => setlist.step_next(now_ms, sound_active),
             InputEvent::PatternPrev       => setlist.step_prev(now_ms, sound_active),
-            InputEvent::ToggleHold        => setlist.toggle_hold(),
+            InputEvent::ToggleHold        => setlist.toggle_hold(now_ms),
             InputEvent::SetSoundMode(m)   => setlist.sound_mode = m,
             InputEvent::CycleSoundMode    => setlist.sound_mode = setlist.sound_mode.next(),
         }

@@ -12,7 +12,7 @@ pub const LED_BIO_PIN_2: u8 = 5;
 
 // Audio UART (ear -> eye)
 // UART2 on the DABAO - the only UART exposed on the board.
-// PB13 = UART2_RX (eye receives mel frames from ear chip)
+// PB13 = UART2_RX (eye receives the ear's audio level bytes)
 // PB14 = UART2_TX (eye transmits to ear chip - reserved, currently unused)
 #[allow(dead_code)]
 pub const AUDIO_UART_RX_PORT: IoxPort = IoxPort::PB;

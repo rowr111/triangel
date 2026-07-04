@@ -257,8 +257,12 @@ impl SetlistManager {
         self.begin_transition(kind, from_idx, now_ms, STEP_TRANSITION_MS, style);
     }
 
-    pub fn toggle_hold(&mut self) {
+    pub fn toggle_hold(&mut self, now_ms: u32) {
         self.held = !self.held;
+        // Restart the cycle countdown on release so unholding doesn't instantly auto-advance.
+        if !self.held {
+            self.last_cycle_ms = now_ms;
+        }
     }
 
     /// `delta` is positive (brighter) or negative (dimmer). Clamped to [0.05, 1.0].

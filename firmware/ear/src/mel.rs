@@ -1,5 +1,4 @@
 //! Mel-frequency filterbank and activity detection.
-#![allow(dead_code, unused)]
 //!
 //! # What this does
 //!
@@ -52,6 +51,9 @@
 //!   -> MelFrame { bands: [u16; 24], activity: bool }
 //! ```
 
+// Whole pipeline is staged ahead of the real I2S/mel path (see process()).
+#![allow(unused)]
+
 use rustfft::{num_complex::Complex, Fft, FftPlanner};
 use std::sync::Arc;
 use triangel_shared::mel::{MelFrame, MEL_BANDS};
@@ -76,12 +78,12 @@ const MEL_HIGH_HZ: f32 = 8_000.0;
 // but quiet enough to catch soft passages.
 const ACTIVITY_THRESHOLD: f32 = 0.02;
 
-// Asymmetric envelope: fast attack, slow decay.
-// Attack 0.3: the smoothed RMS jumps to a loud transient within ~3 frames.
-// Decay 0.05: it takes ~20 frames (~660 ms) to fall back below threshold after
-// the sound stops, preventing flickering on brief quiet gaps.
-const ACTIVITY_ATTACK: f32 = 0.8;  // very fast rise
-const ACTIVITY_DECAY: f32  = 0.4;  // fast decay - drops 90% in ~5 frames at 30fps
+// Asymmetric envelope: fast attack, fast-ish decay.
+// Attack 0.8: the smoothed RMS jumps to a loud transient within a frame or two.
+// Decay 0.4: it falls back ~90% within ~5 frames (~160 ms), clearing between
+// sounds without flickering inside a single beat.
+const ACTIVITY_ATTACK: f32 = 0.8;
+const ACTIVITY_DECAY: f32  = 0.4;
 
 /// Convert a frequency in Hz to the mel scale.
 ///
@@ -109,10 +111,10 @@ pub struct MelProcessor {
 
     /// Precomputed Hann window coefficients, one per sample.
     ///
-    /// A Hann window is a smooth bell curve (1 at the centre, 0 at both ends).
+    /// A Hann window is a smooth bell curve (1 at the center, 0 at both ends).
     /// Multiplying samples by it before the FFT tapers the frame to zero at
     /// its edges, preventing "spectral leakage" - the artificial smearing of
-    /// energy into neighbouring frequency bins that happens when a signal
+    /// energy into neighboring frequency bins that happens when a signal
     /// isn't an exact multiple of the frame length.
     hann: [f32; FFT_SIZE],
 
@@ -147,7 +149,7 @@ impl MelProcessor {
 
         // --- Hann window ---
         // w[n] = 0.5 * (1 - cos(2*pi*n / (N-1)))
-        // Ranges from 0.0 at the edges to 1.0 at the centre.
+        // Ranges from 0.0 at the edges to 1.0 at the center.
         let mut hann = [0f32; FFT_SIZE];
         for (i, w) in hann.iter_mut().enumerate() {
             *w = 0.5
@@ -158,7 +160,7 @@ impl MelProcessor {
         // --- Mel filter bank construction ---
         //
         // Step 1: place MEL_BANDS + 2 = 26 equally-spaced points on the mel
-        // axis between mel(200 Hz) and mel(8000 Hz). These become the left
+        // axis between mel(MEL_LOW_HZ) and mel(MEL_HIGH_HZ). These become the left
         // edge, centre, and right edge of each triangular filter.
         //
         // We work in "FFT bin" units throughout (integer indices 0..256),
@@ -223,12 +225,11 @@ impl MelProcessor {
 
     /// Process one 512-sample audio frame and return a `MelFrame`.
     ///
-    /// This is the hot path - called ~30 times per second. No allocation happens
-    /// here; everything uses the buffers and scratch space set up in `new()`.
+    /// This is the hot path - called ~30 times per second. The FFT itself runs on the
+    /// scratch from `new()`, but the input/power buffers still allocate per call.
     #[allow(unreachable_code)]
     pub fn process(&mut self, samples: &[i16; FFT_SIZE]) -> MelFrame {
-        // TEMPORARY: skip all FFT/mel processing, just send raw RMS * 10
-        // exactly matching the Python bar display value.
+        // TEMPORARY: skip all FFT/mel processing, just send raw RMS * 5 in every band.
         {
             let rms = (samples.iter().map(|&s| (s as f32 / 32768.0).powi(2)).sum::<f32>() / FFT_SIZE as f32).sqrt();
             let val = ((rms * 5.0).clamp(0.0, 1.0) * 65535.0) as u16;
@@ -242,7 +243,7 @@ impl MelProcessor {
         // frame. We do this before windowing because the Hann window would
         // artificially reduce the apparent energy.
         //
-        // Samples are i16 (-32768..32767); dividing by 32768.0 normalises to
+        // Samples are i16 (-32768..32767); dividing by 32768.0 normalizes to
         // the -1.0..1.0 float range so the threshold constant is portable.
         //
         // RMS = sqrt( mean(sample^2) )
@@ -265,7 +266,7 @@ impl MelProcessor {
 
         // --- Hann window + FFT ---
         //
-        // Multiply each sample by the precomputed Hann coefficient, normalise
+        // Multiply each sample by the precomputed Hann coefficient, normalize
         // to float, and pack as a complex number (imaginary part = 0). rustfft
         // works in-place on complex buffers.
         //
