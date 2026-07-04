@@ -108,7 +108,10 @@ fn poll_loop(queue: Arc<Mutex<VecDeque<InputEvent>>>) {
     let mut db_right  = Debouncer::new();
     let mut db_center = Debouncer::new();
 
+    // Sync the boot-time switch position: SetlistManager defaults to Off, and the loop
+    // below only fires on changes, so without this the switch is ignored until moved.
     let mut last_switch = read_switch_position(&iox);
+    super::lock_queue(&queue).push_back(InputEvent::SetSoundMode(last_switch));
 
     loop {
         let buttons: [(&mut Debouncer, InputEvent, IoxPort, u8); 5] = [
