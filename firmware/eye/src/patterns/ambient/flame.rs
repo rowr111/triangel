@@ -2,7 +2,7 @@ use std::sync::OnceLock;
 
 use crate::patterns::{Frame, Pattern, lerp};
 use crate::led::map::{Led, WORLD_BOT, WORLD_CX, WORLD_H};
-use core::f32::consts::TAU;
+use core::f32::consts::{PI, TAU};
 
 // Tunables - dial these in the previewer. Each scales one ingredient of the flame;
 // pushing one toward zero removes that ingredient.
@@ -10,8 +10,8 @@ const SECOND_WAVE_STRENGTH:    f32 = 0.5;  // interference wave amplitude vs the
 const SECOND_WAVELENGTH_RATIO: f32 = 1.7;  // second wave's wavelength vs primary (incommensurate)
 const SECOND_SPEED_RATIO:      f32 = 0.63; // second wave's speed vs primary
 const WAVE_FLOOR:   f32 = 0.2;  // wave troughs still glow - a fire's base never goes black
-const HEAT_BIAS:    f32 = 0.2;  // warms the whole flame so the base idles yellow, not orange
-const COOL_TILT:    f32 = 0.5;  // world tilt: heat subtracted by the top row - offsets each
+const HEAT_BIAS:    f32 = 0.3;  // warms the whole flame so the base idles white-hot
+const COOL_TILT:    f32 = 0.7;  // world tilt: heat subtracted by the top row - offsets each
                                 // row's range cooler without crushing its variance
 const TILE_TILT:    f32 = 0.25; // per-tile tilt: subtracted at each triangle's own top edge,
                                 // so every tile carries its own bottom-to-top fade
@@ -30,6 +30,17 @@ const SMOKE_EDGE0: f32 = 0.72; // field value where a wisp starts fading in...
 const SMOKE_EDGE1: f32 = 0.88; // ...and where its core is fully dark
 const SMOKE_RISE_PERIOD_MS:    u32 = 5_100; // wisps climb one band spacing per period
 const SMOKE_MEANDER_PERIOD_MS: u32 = 8_900;
+// Occasional events - hash-scheduled and deterministic, so previews are reproducible.
+const EMBER_COUNT: usize = 5;        // ember flights aloft at once
+const EMBER_PERIOD_MS:  u32 = 2_600; // base flight time; each slot staggers longer
+const EMBER_STAGGER_MS: u32 = 977;   // per-slot period offset (keeps respawns unsynced)
+const EMBER_RISE_MM:   f32 = 260.0;  // how far an ember climbs before fading out
+const EMBER_WOBBLE_MM: f32 = 25.0;   // sideways drift while rising
+const EMBER_RADIUS_MM: f32 = 28.0;   // glow blob radius
+const EMBER_HEAT:      f32 = 0.55;   // heat added at the blob center
+const FLARE_PERIOD_MS: u32 = 8_300;  // one hash-picked tile flares up per period
+const FLARE_LEN:  f32 = 0.25;        // flare duration as a fraction of its period
+const FLARE_HEAT: f32 = 0.3;         // heat added across the flaring tile
 
 pub struct ApexFlame {
     pub speed:      f32, // mm/s outward, primary wave
@@ -52,6 +63,33 @@ impl Pattern for ApexFlame {
         let smoke_rise    = (t_ms % SMOKE_RISE_PERIOD_MS) as f32 / SMOKE_RISE_PERIOD_MS as f32 * TAU;
         let smoke_meander = (t_ms % SMOKE_MEANDER_PERIOD_MS) as f32 / SMOKE_MEANDER_PERIOD_MS as f32 * TAU;
         let extents = board_y_extents(leds);
+
+        // Ember flights: each slot is a scheduled, deterministic arc - spawn inside the
+        // triangle's width low down, rise with a sideways wobble, fade out (sin envelope).
+        let mut embers = [(0.0f32, 0.0f32, 0.0f32); EMBER_COUNT]; // (x, y, strength)
+        for (k, ember) in embers.iter_mut().enumerate() {
+            let period = EMBER_PERIOD_MS + k as u32 * EMBER_STAGGER_MS;
+            let cycle = t_ms / period;
+            let phase = (t_ms % period) as f32 / period as f32;
+            let h = cycle.wrapping_mul(2654435761) ^ (k as u32).wrapping_mul(0x9E37_79B9);
+            let y0 = WORLD_BOT - 6.0 - ((h >> 8) % 130) as f32;
+            let half_w = (WORLD_BOT - y0) / WORLD_H * 250.0; // triangle half-width at y0
+            let x0 = WORLD_CX + ((h % 201) as f32 - 100.0) / 100.0 * half_w;
+            let x = x0 + (phase * TAU * 1.5 + (h >> 16) as f32).sin() * EMBER_WOBBLE_MM;
+            let y = y0 - phase * EMBER_RISE_MM;
+            *ember = (x, y, (phase * PI).sin());
+        }
+
+        // Tile flare-up: one hash-picked tile per period surges fast and settles slowly.
+        let flare_cycle = t_ms / FLARE_PERIOD_MS;
+        let flare_phase = (t_ms % FLARE_PERIOD_MS) as f32 / FLARE_PERIOD_MS as f32;
+        let flare_board = 1 + (flare_cycle.wrapping_mul(2654435761) >> 8) % 25;
+        let flare_env = if flare_phase < FLARE_LEN {
+            let fp = flare_phase / FLARE_LEN;
+            (fp * 6.0).min(1.0) * (1.0 - fp)
+        } else {
+            0.0
+        };
 
         for (i, led) in leds.iter().enumerate() {
             // Flames rise: the apex of the point-down triangle is the fire's base.
@@ -90,7 +128,18 @@ impl Pattern for ApexFlame {
             let flicker = 1.0 + FLICKER_DEPTH * 0.5
                 * ((flick_phase + p1).sin() + (flick2_phase + p2).sin());
 
-            out[i] = fire_ramp((wave * flicker * breathe + HEAT_BIAS - cooling) * smoke);
+            // Occasional events: any nearby ember blobs plus the flaring tile.
+            let mut event_heat = 0.0f32;
+            for &(ex, ey, strength) in &embers {
+                let d2 = (led.wx - ex).powi(2) + (led.wy - ey).powi(2);
+                event_heat += EMBER_HEAT * strength
+                    * (1.0 - d2 / (EMBER_RADIUS_MM * EMBER_RADIUS_MM)).max(0.0);
+            }
+            if led.board_id as u32 == flare_board {
+                event_heat += FLARE_HEAT * flare_env;
+            }
+
+            out[i] = fire_ramp((wave * flicker * breathe + HEAT_BIAS - cooling + event_heat) * smoke);
         }
     }
 }
