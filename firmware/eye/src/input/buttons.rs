@@ -2,7 +2,7 @@ use std::collections::VecDeque;
 use std::sync::{Arc, Mutex};
 
 use bao1x_api::iox::IoxHal;
-use bao1x_api::{IoxFunction, IoxPort, IoxValue};
+use bao1x_api::{IoxEnable, IoxFunction, IoxPort, IoxValue};
 
 use super::{EventQueue, InputEvent};
 use crate::pins;
@@ -66,26 +66,34 @@ fn read_switch_position(iox: &IoxHal) -> SoundMode {
     let b = read_pin(iox, pins::SW_B_PORT, pins::SW_B_PIN);
     match (a, b) {
         (false, true)  => SoundMode::Off,
-        (true,  true)  => SoundMode::Auto,
+        (false, false) => SoundMode::Auto, // center: neither throw connected
         (true,  false) => SoundMode::On,
-        (false, false) => SoundMode::Auto, // both grounded: shouldn't happen, default to center
+        (true,  true)  => SoundMode::Auto, // can't occur (common feeds one throw); default to center
     }
 }
 
 fn setup_pins(iox: &IoxHal) {
-    // Configure all button and switch pins: active-low inputs with pull-up + schmitt trigger.
-    // External pull-ups are on the button board; internal pull-ups add robustness.
+    // D-pad buttons: active-low with external pull-ups on the button board; the internal
+    // pull-up adds robustness.
     let btn_pins = [
         (pins::BTN_UP_PORT,     pins::BTN_UP_PIN),
         (pins::BTN_DOWN_PORT,   pins::BTN_DOWN_PIN),
         (pins::BTN_LEFT_PORT,   pins::BTN_LEFT_PIN),
         (pins::BTN_RIGHT_PORT,  pins::BTN_RIGHT_PIN),
         (pins::BTN_CENTER_PORT, pins::BTN_CENTER_PIN),
-        (pins::SW_A_PORT,       pins::SW_A_PIN),
-        (pins::SW_B_PORT,       pins::SW_B_PIN),
     ];
     for (port, pin) in btn_pins {
-        crate::pins::setup_input_pin(iox, port, pin, IoxFunction::Gpio);
+        crate::pins::setup_input_pin(iox, port, pin, IoxFunction::Gpio, IoxEnable::Enable);
+    }
+
+    // Switch lines: active-high with external 10k pull-downs, so the internal pull-up must
+    // stay off - against the pull-down it would form a divider that could misread as HIGH.
+    let sw_pins = [
+        (pins::SW_A_PORT, pins::SW_A_PIN),
+        (pins::SW_B_PORT, pins::SW_B_PIN),
+    ];
+    for (port, pin) in sw_pins {
+        crate::pins::setup_input_pin(iox, port, pin, IoxFunction::Gpio, IoxEnable::Disable);
     }
 }
 

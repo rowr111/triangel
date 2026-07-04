@@ -56,16 +56,17 @@ pub const SW_B_PIN:  u8      = 2;
 pub const IR_PORT: IoxPort = IoxPort::PC;
 pub const IR_PIN:  u8      = 8;
 
-/// Configure a pin as an input (schmitt trigger + pull-up) for the given function:
-/// `IoxFunction::Gpio` for buttons, an AFn for a peripheral like UART RX.
-pub fn setup_input_pin(iox: &IoxHal, port: IoxPort, pin: u8, function: IoxFunction) {
+/// Configure a pin as a schmitt-trigger input for the given function: `IoxFunction::Gpio`
+/// for buttons, an AFn for a peripheral like UART RX. `pull_up` sets the internal pull-up;
+/// disable it on lines with external pull-downs so the two don't form a voltage divider.
+pub fn setup_input_pin(iox: &IoxHal, port: IoxPort, pin: u8, function: IoxFunction, pull_up: IoxEnable) {
     iox.setup_pin(
         port,
         pin,
         Some(IoxDir::Input),
         Some(function),
         Some(IoxEnable::Enable), // schmitt trigger
-        Some(IoxEnable::Enable), // pull-up
+        Some(pull_up),
         None,
         None,
     );

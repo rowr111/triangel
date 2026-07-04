@@ -2,7 +2,7 @@ use std::pin::Pin;
 use std::sync::atomic::{AtomicU32, AtomicU8, AtomicUsize, Ordering};
 
 use bao1x_api::iox::IoxHal;
-use bao1x_api::{IoxFunction, PeriphId};
+use bao1x_api::{IoxEnable, IoxFunction, PeriphId};
 use bao1x_hal::clocks::PERCLK_HZ;
 use bao1x_hal::udma::{Uart, UartChannel, UartIrq};
 use bao1x_hal_service::UdmaGlobal;
@@ -132,7 +132,7 @@ fn audio_uart_handler(_irq_no: usize, _arg: *mut usize) {
 fn init_audio_uart() -> Option<Pin<Box<UartIrq>>> {
     let tt = ticktimer::Ticktimer::new().unwrap();
     let iox = IoxHal::new();
-    pins::setup_input_pin(&iox, pins::AUDIO_UART_RX_PORT, pins::AUDIO_UART_RX_PIN, IoxFunction::AF1);
+    pins::setup_input_pin(&iox, pins::AUDIO_UART_RX_PORT, pins::AUDIO_UART_RX_PIN, IoxFunction::AF1, IoxEnable::Enable);
     UdmaGlobal::new().udma_clock_config(PeriphId::Uart2, true);
 
     // UART2 may be transiently owned by another process at boot; retry with backoff for a
