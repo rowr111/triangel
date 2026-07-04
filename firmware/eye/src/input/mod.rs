@@ -40,10 +40,13 @@ pub(crate) fn lock_queue(queue: &EventQueue) -> MutexGuard<'_, VecDeque<InputEve
     })
 }
 
-/// Drain all pending events and apply them to the setlist manager.
-pub fn apply_events(queue: &EventQueue, setlist: &mut SetlistManager, now_ms: u32, sound_active: bool) {
+/// Drain all pending events and apply them to the setlist manager. `activity` is the
+/// audio activity flag; sound_active is derived per event so a mode change earlier in
+/// the batch redirects later steps to the setlist the user is now looking at.
+pub fn apply_events(queue: &EventQueue, setlist: &mut SetlistManager, now_ms: u32, activity: bool) {
     let mut q = lock_queue(queue);
     while let Some(event) = q.pop_front() {
+        let sound_active = setlist.sound_active(activity);
         match event {
             InputEvent::BrightnessUp      => setlist.adjust_brightness(0.1),
             InputEvent::BrightnessDown    => setlist.adjust_brightness(-0.1),

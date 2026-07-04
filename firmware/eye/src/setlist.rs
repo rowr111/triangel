@@ -231,6 +231,10 @@ impl SetlistManager {
     /// button can't back up more than one full loop.
     fn enqueue_step(&mut self, kind: SetlistKind, dir: Step, now_ms: u32) {
         self.last_cycle_ms = now_ms;
+        // A single-pattern setlist has nowhere to step; skip the pointless self-transition.
+        if self.setlist(kind).patterns.len() < 2 {
+            return;
+        }
         if self.pending.len() < self.setlist(kind).patterns.len() {
             self.pending.push_back(dir);
         }

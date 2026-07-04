@@ -65,14 +65,12 @@ fn main() -> ! {
         // Ingest the latest byte from the RX interrupt; decay toward zero when ear is silent
         audio.update(frame_start as u32);
 
-        // Determine sound-reactive mode
         let sound_level = audio.smoothed_level();
-        let sound_active = setlist.sound_active(audio.is_active());
 
-        // Drain input events and apply to setlist
-        input::apply_events(&event_queue, &mut setlist, frame_start as u32, sound_active);
+        // Drain input events and apply to setlist; it derives sound_active per event.
+        input::apply_events(&event_queue, &mut setlist, frame_start as u32, audio.is_active());
 
-        // Recompute after events: apply_events may have changed the sound mode this frame.
+        // Determine sound-reactive mode after events: they may have changed it this frame.
         let sound_active = setlist.sound_active(audio.is_active());
 
         // Advance cycling timer
