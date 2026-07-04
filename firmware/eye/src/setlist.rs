@@ -267,8 +267,8 @@ impl SetlistManager {
     }
 
     /// Returns whether sound-reactive setlist should be active.
-    /// `activity` is the flag from the ear chip - sustained absolute loudness above its
-    /// calibrated threshold. Used only in Auto mode; On/Off ignore it.
+    /// `activity` comes from AudioReceiver's slow arm/release accumulator over the ear's
+    /// level bytes, so Auto mode shifts deliberately, not per-beat. On/Off ignore it.
     pub fn sound_active(&self, activity: bool) -> bool {
         match self.sound_mode {
             SoundMode::Off  => false,

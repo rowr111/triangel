@@ -29,17 +29,38 @@ static UART_RX_SEQ:      AtomicU32  = AtomicU32::new(0);  // bumped per byte; re
 static UART_CSR_VIRT:    AtomicUsize = AtomicUsize::new(0); // handler rebuilds its Uart from these
 static UART_IFRAM_VIRT:  AtomicUsize = AtomicUsize::new(0);
 
+// --- Auto-mode activity detection - all three are tune-at-bringup placeholders ---
+// A level byte above this bar counts as "loud" (the ear currently sends RMS * 1.8).
+const ACTIVITY_LOUD_LEVEL: f32 = 0.15;
+// Net loud time before reactive mode engages, and unbroken quiet time before it
+// releases. Fill is 1:1 with loud time; drain is scaled by ARM/RELEASE, so brief
+// quiet gaps (beat spacing, EDM breakdowns) only pause progress, never reset it.
+const ACTIVITY_ARM_MS:     f32 = 30_000.0;
+const ACTIVITY_RELEASE_MS: f32 = 30_000.0;
+
 struct AudioState {
     mel:            [f32; MEL_BANDS],
     smoothed_level: f32,
     activity:       bool,
+    last_loud:      bool, // freshest byte's verdict; persists across byte-less frames
+    loud_ms:        f32,  // leaky accumulator of net loud time, 0..=ACTIVITY_ARM_MS
+    last_tick_ms:   u32,
     last_update_ms: u32,
     last_seq:       u32,
 }
 
 impl AudioState {
     fn new() -> Self {
-        AudioState { mel: [0.0; MEL_BANDS], smoothed_level: 0.0, activity: false, last_update_ms: 0, last_seq: 0 }
+        AudioState {
+            mel:            [0.0; MEL_BANDS],
+            smoothed_level: 0.0,
+            activity:       false,
+            last_loud:      false,
+            loud_ms:        0.0,
+            last_tick_ms:   0,
+            last_update_ms: 0,
+            last_seq:       0,
+        }
     }
 }
 
@@ -81,25 +102,46 @@ impl AudioReceiver {
     }
 
     /// Called once per frame from the render loop. Ingests the latest byte the RX
-    /// interrupt captured (EMA + activity), else decays toward silence when the ear
-    /// stops sending.
+    /// interrupt captured (EMA for the render level), decays toward silence when the
+    /// ear stops sending, and advances the slow arm/release activity accumulator.
     pub fn update(&mut self, now_ms: u32) {
+        // Frame delta for the accumulator, capped so boot delay or a frame overrun
+        // can't slam it forward in one step.
+        let dt_ms = (now_ms.wrapping_sub(self.state.last_tick_ms) as f32).min(100.0);
+        self.state.last_tick_ms = now_ms;
+
         // Acquire pairs with the handler's Release bump: a fresh seq guarantees a fresh byte.
         let seq = UART_RX_SEQ.load(Ordering::Acquire);
         if seq != self.state.last_seq {
             self.state.last_seq = seq;
             let level = UART_LATEST_BYTE.load(Ordering::Relaxed) as f32 / 255.0;
-            // Light EMA so single rogue bytes don't spike the fill
+            // Light EMA so single rogue bytes don't spike the fill. The accumulator judges
+            // the EMA, not the raw byte, so a lone transient counts as a few frames of loud.
             self.state.smoothed_level = self.state.smoothed_level * 0.6 + level * 0.4;
-            self.state.activity       = level > 0.02;
+            self.state.last_loud      = self.state.smoothed_level > ACTIVITY_LOUD_LEVEL;
             self.state.last_update_ms = now_ms;
             UART_STATUS.store(STATUS_RECEIVING, Ordering::Relaxed);
             UART_LAST_FRAME_MS.store(now_ms, Ordering::Relaxed);
         } else if now_ms.wrapping_sub(self.state.last_update_ms) >= 200 {
-            // ear stopped sending: drop activity so Auto mode falls back to ambient
+            // ear stopped sending: decay the render level and count the time as quiet
             self.state.smoothed_level = (self.state.smoothed_level - 0.05).max(0.0);
-            self.state.activity       = false;
+            self.state.last_loud      = false;
             self.state.last_update_ms = now_ms;
+        }
+
+        // Leaky accumulator: fill 1:1 while loud, drain at ARM/RELEASE while quiet.
+        // Activity flips only at the rails, so borderline sound holds the current mode.
+        if self.state.last_loud {
+            self.state.loud_ms = (self.state.loud_ms + dt_ms).min(ACTIVITY_ARM_MS);
+            if self.state.loud_ms >= ACTIVITY_ARM_MS {
+                self.state.activity = true;
+            }
+        } else {
+            let drain = dt_ms * (ACTIVITY_ARM_MS / ACTIVITY_RELEASE_MS);
+            self.state.loud_ms = (self.state.loud_ms - drain).max(0.0);
+            if self.state.loud_ms <= 0.0 {
+                self.state.activity = false;
+            }
         }
     }
 }
