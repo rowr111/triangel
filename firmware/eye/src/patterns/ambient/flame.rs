@@ -80,12 +80,15 @@ impl Pattern for ApexFlame {
             let wisp = wisp * wisp * (3.0 - 2.0 * wisp); // soft edges
             let smoke = 1.0 - SMOKE_DARKEN * wisp;
 
-            // Two decorrelated flicker sines per LED (CenterShimmer's hash-phase trick),
-            // bipolar around 1.0 so crests can overshoot into the white/blue ramp top.
-            let h1 = (led.board_id as u32 * 7 + led.local_idx as u32 * 13) % 97;
-            let h2 = (led.board_id as u32 * 31 + led.local_idx as u32 * 17) % 89;
+            // Two flicker sines per LED, bipolar around 1.0 so crests can overshoot into
+            // the white/blue ramp top. Phases come from an integer hash of the chain index
+            // (transition.rs's sparkle trick): a linear phase step along the chain would
+            // read as a coherent sweep across the fixture instead of random flicker.
+            let h = (led.chain_idx as u32).wrapping_mul(2654435761);
+            let p1 = (h % 628) as f32 / 100.0;         // 0..TAU
+            let p2 = ((h >> 16) % 628) as f32 / 100.0; // decorrelated second phase
             let flicker = 1.0 + FLICKER_DEPTH * 0.5
-                * ((flick_phase + h1 as f32).sin() + (flick2_phase + h2 as f32).sin());
+                * ((flick_phase + p1).sin() + (flick2_phase + p2).sin());
 
             out[i] = fire_ramp((wave * flicker * breathe + HEAT_BIAS - cooling) * smoke);
         }
@@ -108,8 +111,8 @@ fn board_y_extents(leds: &[Led]) -> &'static [(f32, f32); 26] {
 }
 
 /// Blackbody-ish heat ramp: black -> deep red -> orange -> bright yellow -> white ->
-/// blue-white. With the apex falloff this puts blue at the flame's base (bottom tip)
-/// and a red flameout at the top corners, like a real flame.
+/// blue-white. With the height cooling this puts blue-white at the flame's base and
+/// a red flameout at the top rows, like a real flame.
 fn fire_ramp(heat: f32) -> [u8; 3] {
     const STOPS: [(f32, [f32; 3]); 6] = [
         (0.00, [0.0, 0.0, 0.0]),
