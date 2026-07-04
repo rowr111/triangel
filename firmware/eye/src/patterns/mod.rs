@@ -54,5 +54,4 @@ pub fn hsv(h: f32, s: f32, v: f32) -> [u8; 3] {
     [(f(5.0) * 255.0) as u8, (f(3.0) * 255.0) as u8, (f(1.0) * 255.0) as u8]
 }
 
-#[allow(dead_code)]
 pub fn lerp(a: f32, b: f32, t: f32) -> f32 { a + (b - a) * t }
