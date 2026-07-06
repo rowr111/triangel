@@ -16,8 +16,8 @@ const WORLD_RIGHT:  f32 = WORLD_CX + WORLD_HALF_W;
 const WATER_FLOOR: f32 = 0.40;
 const BOIL_DEPTH:  f32 = 0.10;
 const BOIL_CELL_MM: f32 = 140.0;    // spatial scale of the churn
-const BOIL_PERIOD_MS:  u32 = 7_300; // two incommensurate phases so the churn
-const BOIL2_PERIOD_MS: u32 = 4_700; // reads as boiling, not a sweep
+const BOIL_PERIOD_MS:  u32 = 4_900; // two incommensurate phases so the churn
+const BOIL2_PERIOD_MS: u32 = 3_100; // reads as boiling, not a sweep
 
 // Upwellings: hash-scheduled blooms that swell out of the dark, spread, and dissolve,
 // peak brightness falling as the radius grows so the energy feels like it diffuses.
@@ -49,24 +49,35 @@ const CLOUD_BREATHE: f32 = 0.3;      // lobe radius swing while breathing
 const CLOUD_BRIGHT:  f32 = 0.7;      // cover opacity at full density
 const CLOUD_MARGIN_MM: f32 = 170.0;  // how far past an edge before re-entering elsewhere
 
-// Lightning: irregular gaps, then a strike anchored to a cloud - a sheet flash lighting
-// the cloud from within, sometimes carrying a crawler bolt arcing toward a sibling.
-const STRIKE_GAP_MIN_MS: u32 = 6_000;
-const STRIKE_GAP_MAX_MS: u32 = 20_000;
-const STRIKE_LEN_MS: u32 = 480;      // whole strike including return strokes
-const SUBFLASH_DECAY_MS: f32 = 70.0; // each sub-flash pops on and decays this fast
-const BOLT_CHANCE: f32 = 0.5;        // otherwise the strike is sheet-only
-const BOLT_SEGS: usize = 4;
-const BOLT_KINK_MM: f32 = 45.0;      // perpendicular jitter of the crawler's joints
-const BOLT_CORE_MM: f32 = 16.0;      // thin bright filament...
-const BOLT_HALO_MM: f32 = 55.0;      // ...inside a soft glow
-const BOLT_HALO_GAIN: f32 = 0.7;     // halo strength relative to the core
-const SHEET_RADIUS_MM: f32 = 330.0;
-const SHEET_GAIN: f32 = 1.5;
+// Lightning: pure white bolts streaking along the tile lattice - one tile side pops on
+// at a time and fades behind the advancing leader; on reaching its endpoint the whole
+// path relights in flickering return-stroke pulses, then dies to dark. A few
+// independent slots roll their own irregular gaps, so bolts occasionally overlap.
+const BOLT_SLOTS: usize = 2;
+const STRIKE_GAP_MIN_MS: u32 = 4_000;  // per slot; overall cadence scales with BOLT_SLOTS
+const STRIKE_GAP_MAX_MS: u32 = 14_000;
+const BOLT_SEGS_MIN: usize = 3;      // bolt length range, in tile edges walked
+const BOLT_SEGS_MAX: usize = 8;
+const BOLT_STEP_MS: u32 = 150;       // leader advances one tile side per step
+const BOLT_FADE_MS: f32 = 350.0;     // each lit side fades behind the advancing leader
+const FLICKER_FADE_MS: f32 = 180.0;  // decay of each full-path return-stroke pulse
+const BOLT_PULSES_MIN: usize = 2;    // return strokes per strike...
+const BOLT_PULSES_MAX: usize = 5;    // ...rolled fresh each time, irregularly spaced
+const BOLT_TAIL_MS: u32 = 1_400;     // fade-out allowance after the final pulse
+const BOLT_CORE_MM: f32 = 12.0;      // catches the two LED rows straddling a tile edge
+
+// Tile-corner lattice the bolts walk: vertex row r (0 = wide top edge, 5 = bottom apex)
+// holds 6-r vertices centered on WORLD_CX. Side and row height include the inter-tile
+// gap, matching the previewer's board grid to within a few mm.
+const LATTICE_TOP_Y: f32 = 1.0;
+const LATTICE_ROW_H: f32 = 89.0;
+const LATTICE_SIDE:  f32 = 103.5;
+// Six lattice neighbors as (row, index) deltas: left, right, and the four diagonals.
+const LATTICE_NEIGHBORS: [(i32, i32); 6] = [(0, -1), (0, 1), (-1, 0), (-1, 1), (1, -1), (1, 0)];
 
 const FOAM_COLOR:  [f32; 3] = [235.0, 245.0, 250.0];
 const CLOUD_COLOR: [f32; 3] = [168.0, 178.0, 196.0]; // pale blue-gray
-const FLASH_COLOR: [f32; 3] = [225.0, 232.0, 255.0];
+const FLASH_COLOR: [f32; 3] = [255.0, 255.0, 255.0]; // lightning is pure white
 
 struct Cloud {
     x:   f32,
@@ -80,24 +91,36 @@ struct Cloud {
     seed: u32, // decorrelates this cloud's lobe motion from its siblings
 }
 
+/// A bolt's path: a walk along the tile lattice, at most BOLT_SEGS_MAX edges long.
+struct Bolt {
+    pts: [(f32, f32); BOLT_SEGS_MAX + 1],
+    len: usize, // points in use (edges walked + 1)
+}
+
 struct Strike {
-    start_ms:    u32,
-    cx:          f32, // anchor cloud position, frozen at ignition
-    cy:          f32,
-    subflash_ms: [u32; 3], // return-stroke onsets; u32::MAX marks an unused slot
-    bolt:        Option<[(f32, f32); BOLT_SEGS + 1]>, // crawler polyline when present
+    start_ms: u32,
+    bolt:     Bolt,
+    // Return-stroke onsets relative to start_ms; the first is the moment the leader
+    // completes its walk. u32::MAX marks an unused slot.
+    pulse_ms: [u32; BOLT_PULSES_MAX],
+}
+
+/// One independent lightning scheduler: its own irregular gap countdown and at most
+/// one bolt in flight. Slots sometimes land close together - overlapping streaks.
+struct StrikeSlot {
+    strike:       Option<Strike>,
+    gap_start_ms: u32,
+    gap_len_ms:   u32,
 }
 
 /// Boiling sea under a storm: dark water bubbling with upwellings, pale clouds drifting
 /// on wandering headings, and sparse lightning. Stateful (cloud simulation plus a seeded
 /// PRNG) unlike the hash-scheduled ambients, so headings genuinely change over time.
 pub struct Squall {
-    clouds:       [Cloud; CLOUD_COUNT],
-    strike:       Option<Strike>,
-    gap_start_ms: u32, // countdown to the next strike
-    gap_len_ms:   u32,
-    rng:          u32,
-    last_ms:      Option<u32>, // previous frame time; None until the first render
+    clouds:  [Cloud; CLOUD_COUNT],
+    slots:   [StrikeSlot; BOLT_SLOTS],
+    rng:     u32,
+    last_ms: Option<u32>, // previous frame time; None until the first render
 }
 
 impl Squall {
@@ -116,7 +139,12 @@ impl Squall {
                 seed: xorshift(&mut rng),
             }
         });
-        Squall { clouds, strike: None, gap_start_ms: 0, gap_len_ms: 0, rng, last_ms: None }
+        let slots = core::array::from_fn(|_| StrikeSlot {
+            strike:       None,
+            gap_start_ms: 0,
+            gap_len_ms:   0,
+        });
+        Squall { clouds, slots, rng, last_ms: None }
     }
 
     /// Advance the drift simulation: ease each cloud toward its target velocity, pick a
@@ -145,51 +173,93 @@ impl Squall {
         }
     }
 
-    /// Retire a finished strike, then ignite the next once the irregular gap elapses.
-    fn update_strike(&mut self, t_ms: u32) {
-        let expired = self.strike.as_ref()
-            .is_some_and(|s| t_ms.wrapping_sub(s.start_ms) >= STRIKE_LEN_MS);
-        if expired {
-            self.strike = None;
-            self.gap_start_ms = t_ms;
-            self.gap_len_ms = roll_range(&mut self.rng, STRIKE_GAP_MIN_MS, STRIKE_GAP_MAX_MS);
-        }
-        if self.strike.is_none() && t_ms.wrapping_sub(self.gap_start_ms) >= self.gap_len_ms {
-            self.strike = Some(self.ignite(t_ms));
+    /// Per slot: retire a bolt whose last side has fully faded, then ignite the next
+    /// once that slot's irregular gap elapses.
+    fn update_strikes(&mut self, t_ms: u32) {
+        for k in 0..BOLT_SLOTS {
+            let expired = self.slots[k].strike.as_ref().is_some_and(|s| {
+                let last = s.pulse_ms.iter().rev().copied().find(|&p| p != u32::MAX).unwrap_or(0);
+                t_ms.wrapping_sub(s.start_ms) >= last + BOLT_TAIL_MS
+            });
+            if expired {
+                self.slots[k].strike = None;
+                self.slots[k].gap_start_ms = t_ms;
+                self.slots[k].gap_len_ms =
+                    roll_range(&mut self.rng, STRIKE_GAP_MIN_MS, STRIKE_GAP_MAX_MS);
+            }
+            if self.slots[k].strike.is_none()
+                && t_ms.wrapping_sub(self.slots[k].gap_start_ms) >= self.slots[k].gap_len_ms
+            {
+                let strike = self.ignite(t_ms);
+                self.slots[k].strike = Some(strike);
+            }
         }
     }
 
-    /// Build a strike anchored to a random cloud: 2-3 return strokes at ragged offsets,
-    /// sometimes carrying a crawler bolt - a jagged polyline toward a second cloud.
+    /// Anchor a new bolt to a random cloud, walk its lattice path, and roll its return
+    /// strokes: the whole path relights the moment the leader completes, then stutters
+    /// through up to four more irregularly spaced pulses.
     fn ignite(&mut self, t_ms: u32) -> Strike {
         let a = xorshift(&mut self.rng) as usize % CLOUD_COUNT;
         let (cx, cy) = (self.clouds[a].x, self.clouds[a].y);
-        let sub2 = 80 + xorshift(&mut self.rng) % 140;
-        let sub3 = if rand_f(&mut self.rng) < 0.6 {
-            230 + xorshift(&mut self.rng) % 160
-        } else {
-            u32::MAX
-        };
-        let bolt = if rand_f(&mut self.rng) < BOLT_CHANCE {
-            let b = (a + 1 + xorshift(&mut self.rng) as usize % (CLOUD_COUNT - 1)) % CLOUD_COUNT;
-            let (dx, dy) = (self.clouds[b].x - cx, self.clouds[b].y - cy);
-            let len = (dx * dx + dy * dy).sqrt().max(1.0);
-            let (px, py) = (-dy / len, dx / len); // unit perpendicular, for the kinks
-            let mut pts = [(0.0f32, 0.0f32); BOLT_SEGS + 1];
-            for (i, pt) in pts.iter_mut().enumerate() {
-                let f = i as f32 / BOLT_SEGS as f32;
-                let kink = if i == 0 || i == BOLT_SEGS {
-                    0.0 // endpoints sit on the clouds; only the joints jitter
-                } else {
-                    (rand_f(&mut self.rng) * 2.0 - 1.0) * BOLT_KINK_MM
-                };
-                *pt = (cx + dx * f + px * kink, cy + dy * f + py * kink);
+        let bolt = self.walk_bolt(cx, cy);
+        let complete = (bolt.len as u32 - 1) * BOLT_STEP_MS;
+        let n = BOLT_PULSES_MIN
+            + xorshift(&mut self.rng) as usize % (BOLT_PULSES_MAX - BOLT_PULSES_MIN + 1);
+        let mut pulse_ms = [u32::MAX; BOLT_PULSES_MAX];
+        let mut at = complete;
+        for p in pulse_ms.iter_mut().take(n) {
+            *p = at;
+            at += 60 + xorshift(&mut self.rng) % 360; // uneven stutter, new every strike
+        }
+        Strike { start_ms: t_ms, bolt, pulse_ms }
+    }
+
+    /// Random-walk a bolt along the tile lattice, starting at the vertex nearest the
+    /// flashing cloud. Each hop must keep moving forward (positive dot with the incoming
+    /// heading): straight ahead or a gentle 60-degree turn, never the backtrack or the
+    /// double-back alongside it. A cornered walk ends early - a streak out of sky.
+    fn walk_bolt(&mut self, cx: f32, cy: f32) -> Bolt {
+        let r0 = (((cy - LATTICE_TOP_Y) / LATTICE_ROW_H).round() as i32).clamp(0, 5);
+        let i0 = (((cx - WORLD_CX) / LATTICE_SIDE + (5 - r0) as f32 / 2.0).round() as i32)
+            .clamp(0, 5 - r0);
+        let segs = BOLT_SEGS_MIN
+            + xorshift(&mut self.rng) as usize % (BOLT_SEGS_MAX - BOLT_SEGS_MIN + 1);
+
+        let (mut r, mut i) = (r0, i0);
+        let mut pts = [(0.0f32, 0.0f32); BOLT_SEGS_MAX + 1];
+        pts[0] = lattice_pos(r, i);
+        let mut len = 1;
+        let (mut hx, mut hy) = (0.0f32, 0.0f32); // incoming unit heading; unset on first hop
+        for _ in 0..segs {
+            let mut cand = [(0i32, 0i32); 6];
+            let mut n = 0;
+            for &(dr, di) in &LATTICE_NEIGHBORS {
+                let (nr, ni) = (r + dr, i + di);
+                if !(0..=5).contains(&nr) || !(0..=5 - nr).contains(&ni) {
+                    continue;
+                }
+                let (nx, ny) = lattice_pos(nr, ni);
+                let (dx, dy) = (nx - pts[len - 1].0, ny - pts[len - 1].1);
+                let d = (dx * dx + dy * dy).sqrt();
+                if len == 1 || (hx * dx + hy * dy) / d > 0.0 {
+                    cand[n] = (nr, ni);
+                    n += 1;
+                }
             }
-            Some(pts)
-        } else {
-            None
-        };
-        Strike { start_ms: t_ms, cx, cy, subflash_ms: [0, sub2, sub3], bolt }
+            if n == 0 {
+                break; // cornered at the canvas edge - the bolt ends here
+            }
+            let (nr, ni) = cand[xorshift(&mut self.rng) as usize % n];
+            let (nx, ny) = lattice_pos(nr, ni);
+            let (dx, dy) = (nx - pts[len - 1].0, ny - pts[len - 1].1);
+            let d = (dx * dx + dy * dy).sqrt();
+            (hx, hy) = (dx / d, dy / d);
+            (r, i) = (nr, ni);
+            pts[len] = (nx, ny);
+            len += 1;
+        }
+        Bolt { pts, len }
     }
 }
 
@@ -206,7 +276,9 @@ impl Pattern for Squall {
             Some(last) => {
                 let dt_ms = t_ms.wrapping_sub(last);
                 if dt_ms > 1_000 {
-                    self.gap_start_ms = t_ms;
+                    for slot in &mut self.slots {
+                        slot.gap_start_ms = t_ms;
+                    }
                     for c in &mut self.clouds {
                         c.retarget_start_ms = t_ms;
                     }
@@ -214,15 +286,18 @@ impl Pattern for Squall {
                 (dt_ms as f32 / 1000.0).min(0.1)
             }
             None => {
-                // First frame: anchor the strike countdown so the storm opens quietly.
-                self.gap_start_ms = t_ms;
-                self.gap_len_ms = roll_range(&mut self.rng, STRIKE_GAP_MIN_MS, STRIKE_GAP_MAX_MS);
+                // First frame: anchor the strike countdowns so the storm opens quietly.
+                let Squall { slots, rng, .. } = self;
+                for slot in slots.iter_mut() {
+                    slot.gap_start_ms = t_ms;
+                    slot.gap_len_ms = roll_range(rng, STRIKE_GAP_MIN_MS, STRIKE_GAP_MAX_MS);
+                }
                 0.0
             }
         };
         self.last_ms = Some(t_ms);
         self.update_clouds(t_ms, dt_s);
-        self.update_strike(t_ms);
+        self.update_strikes(t_ms);
 
         // Bloom slots: each period, a slot hash-picks a spot near the triangle and lives
         // one bloom there - radius grows birth-to-death while a sin envelope swells and
@@ -257,18 +332,46 @@ impl Pattern for Squall {
             }
         }
 
-        // Strike envelope: each return stroke pops on and decays fast.
-        let strike = self.strike.as_ref();
-        let mut flash_env = 0.0f32;
-        if let Some(s) = strike {
+        // Active bolt segments with envelopes (a, b, envelope). While the leader crawls,
+        // each tile side pops on as it's reached and fades on its own clock - bright
+        // head, dying tail. Once the walk completes, the whole path shares the
+        // return-stroke envelope: full-white relights dipping between pulses, dying
+        // out after the last one.
+        let mut segs = [((0.0f32, 0.0f32), (0.0f32, 0.0f32), 0.0f32); BOLT_SLOTS * BOLT_SEGS_MAX];
+        let mut n_segs = 0;
+        for slot in &self.slots {
+            let Some(s) = &slot.strike else { continue };
             let el = t_ms.wrapping_sub(s.start_ms);
-            for &on in &s.subflash_ms {
-                if el >= on {
-                    flash_env += (-((el - on) as f32) / SUBFLASH_DECAY_MS).exp();
+            if el < s.pulse_ms[0] {
+                // Leader phase: sides light in step order, each fading independently.
+                for (k, w) in s.bolt.pts[..s.bolt.len].windows(2).enumerate() {
+                    let on = k as u32 * BOLT_STEP_MS;
+                    if el < on {
+                        break; // the leader hasn't reached this side yet
+                    }
+                    let env = (-((el - on) as f32) / BOLT_FADE_MS).exp();
+                    if env > 0.01 {
+                        segs[n_segs] = (w[0], w[1], env);
+                        n_segs += 1;
+                    }
+                }
+            } else {
+                // Flicker phase: every fired pulse decays; the loudest one wins.
+                let mut env = 0.0f32;
+                for &p in &s.pulse_ms {
+                    if el >= p {
+                        env = env.max((-((el - p) as f32) / FLICKER_FADE_MS).exp());
+                    }
+                }
+                if env > 0.01 {
+                    for w in s.bolt.pts[..s.bolt.len].windows(2) {
+                        segs[n_segs] = (w[0], w[1], env);
+                        n_segs += 1;
+                    }
                 }
             }
-            flash_env = flash_env.min(1.0);
         }
+        let segs = &segs[..n_segs];
 
         for (i, led) in leds.iter().enumerate() {
             // Boiling floor: two crossed nested sines churn in place - no travel direction.
@@ -309,20 +412,17 @@ impl Pattern for Squall {
             let density = density.min(1.0);
             c = mix(c, CLOUD_COLOR, density * CLOUD_BRIGHT);
 
-            // Lightning: sheet glow brightest inside the cloud mass (lit from within),
-            // plus the crawler's thin core and soft halo when this strike carries one.
-            if let Some(s) = strike {
-                if flash_env > 0.01 {
-                    let q = ((led.wx - s.cx).powi(2) + (led.wy - s.cy).powi(2))
-                        / (SHEET_RADIUS_MM * SHEET_RADIUS_MM);
-                    let mut flash = SHEET_GAIN * (1.0 - q).max(0.0) * (0.35 + 0.65 * density);
-                    if let Some(pts) = &s.bolt {
-                        let d2 = polyline_d2(pts, led.wx, led.wy);
-                        flash += (-d2 / (BOLT_CORE_MM * BOLT_CORE_MM)).exp()
-                            + BOLT_HALO_GAIN * (-d2 / (BOLT_HALO_MM * BOLT_HALO_MM)).exp();
-                    }
-                    c = mix(c, FLASH_COLOR, (flash_env * flash).clamp(0.0, 1.0));
+            // Lightning: pure white along the lit tile sides, brightest at each
+            // streak's head. The distance cutoff skips the exp for far-away LEDs.
+            let mut bolt = 0.0f32;
+            for &(a, b, env) in segs {
+                let d2 = seg_d2(a, b, led.wx, led.wy);
+                if d2 < BOLT_CORE_MM * BOLT_CORE_MM * 9.0 {
+                    bolt = bolt.max(env * (-d2 / (BOLT_CORE_MM * BOLT_CORE_MM)).exp());
                 }
+            }
+            if bolt > 0.0 {
+                c = mix(c, FLASH_COLOR, bolt.min(1.0));
             }
 
             out[i] = [c[0] as u8, c[1] as u8, c[2] as u8];
@@ -355,16 +455,17 @@ fn respawn(c: &mut Cloud, rng: &mut u32, t_ms: u32) {
     c.retarget_len_ms = roll_range(rng, CLOUD_RETARGET_MIN_MS, CLOUD_RETARGET_MAX_MS);
 }
 
-/// Storm-water ramp: abyssal black-blue up through navy and teal to foam white. The
-/// resting floor sits between navy and ocean blue; only crests and lightning reach the top.
+/// Storm-water ramp: deep blue up through turquoise to white. The darkest water is
+/// still a clear blue, and a swell crest falls off white -> pale aqua -> turquoise ->
+/// blue across most of its height; the resting floor sits in the rich-blue band.
 fn water_ramp(e: f32) -> [f32; 3] {
     const STOPS: [(f32, [f32; 3]); 6] = [
-        (0.00, [2.0, 6.0, 22.0]),      // abyssal black-blue
-        (0.35, [10.0, 34.0, 88.0]),    // deep navy
-        (0.60, [18.0, 72.0, 138.0]),   // ocean blue
-        (0.80, [26.0, 118.0, 148.0]),  // storm teal
-        (0.92, [150.0, 205.0, 215.0]), // pale seafoam
-        (1.00, [235.0, 245.0, 250.0]), // foam white
+        (0.00, [3.0, 10.0, 40.0]),     // deep blue - the darkest the water gets
+        (0.30, [8.0, 40.0, 105.0]),    // rich blue
+        (0.55, [16.0, 96.0, 160.0]),   // blue-turquoise
+        (0.75, [40.0, 170.0, 190.0]),  // turquoise
+        (0.90, [150.0, 225.0, 228.0]), // pale aqua
+        (1.00, [245.0, 252.0, 252.0]), // white crest
     ];
     let e = e.clamp(0.0, 1.0);
     for pair in STOPS.windows(2) {
@@ -382,18 +483,19 @@ fn mix(a: [f32; 3], b: [f32; 3], t: f32) -> [f32; 3] {
     [lerp(a[0], b[0], t), lerp(a[1], b[1], t), lerp(a[2], b[2], t)]
 }
 
-/// Squared distance from (x, y) to the nearest segment of a polyline.
-fn polyline_d2(pts: &[(f32, f32)], x: f32, y: f32) -> f32 {
-    let mut best = f32::MAX;
-    for seg in pts.windows(2) {
-        let (ax, ay) = seg[0];
-        let (bx, by) = seg[1];
-        let (ex, ey) = (bx - ax, by - ay);
-        let t = (((x - ax) * ex + (y - ay) * ey) / (ex * ex + ey * ey).max(1.0)).clamp(0.0, 1.0);
-        let (dx, dy) = (x - ax - ex * t, y - ay - ey * t);
-        best = best.min(dx * dx + dy * dy);
-    }
-    best
+/// World position of lattice vertex (row, index): row 0 is the wide top edge, row 5
+/// the bottom apex; row r holds 6-r vertices centered on WORLD_CX.
+fn lattice_pos(r: i32, i: i32) -> (f32, f32) {
+    let x = WORLD_CX + (i as f32 - (5 - r) as f32 / 2.0) * LATTICE_SIDE;
+    (x, LATTICE_TOP_Y + r as f32 * LATTICE_ROW_H)
+}
+
+/// Squared distance from (x, y) to the segment a-b.
+fn seg_d2(a: (f32, f32), b: (f32, f32), x: f32, y: f32) -> f32 {
+    let (ex, ey) = (b.0 - a.0, b.1 - a.1);
+    let t = (((x - a.0) * ex + (y - a.1) * ey) / (ex * ex + ey * ey).max(1.0)).clamp(0.0, 1.0);
+    let (dx, dy) = (x - a.0 - ex * t, y - a.1 - ey * t);
+    dx * dx + dy * dy
 }
 
 fn xorshift(state: &mut u32) -> u32 {
