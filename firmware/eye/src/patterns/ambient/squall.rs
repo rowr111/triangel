@@ -13,7 +13,7 @@ const WORLD_RIGHT:  f32 = WORLD_CX + WORLD_HALF_W;
 
 // Water floor: resting level on the ramp plus a slow in-place boil so the dark
 // stretches between blooms never sit static.
-const WATER_FLOOR: f32 = 0.32;
+const WATER_FLOOR: f32 = 0.40;
 const BOIL_DEPTH:  f32 = 0.10;
 const BOIL_CELL_MM: f32 = 140.0;    // spatial scale of the churn
 const BOIL_PERIOD_MS:  u32 = 7_300; // two incommensurate phases so the churn
@@ -55,16 +55,17 @@ const STRIKE_GAP_MIN_MS: u32 = 6_000;
 const STRIKE_GAP_MAX_MS: u32 = 20_000;
 const STRIKE_LEN_MS: u32 = 480;      // whole strike including return strokes
 const SUBFLASH_DECAY_MS: f32 = 70.0; // each sub-flash pops on and decays this fast
-const BOLT_CHANCE: f32 = 0.35;       // otherwise the strike is sheet-only
+const BOLT_CHANCE: f32 = 0.5;        // otherwise the strike is sheet-only
 const BOLT_SEGS: usize = 4;
 const BOLT_KINK_MM: f32 = 45.0;      // perpendicular jitter of the crawler's joints
-const BOLT_CORE_MM: f32 = 12.0;      // thin bright filament...
+const BOLT_CORE_MM: f32 = 16.0;      // thin bright filament...
 const BOLT_HALO_MM: f32 = 55.0;      // ...inside a soft glow
-const SHEET_RADIUS_MM: f32 = 240.0;
-const SHEET_GAIN: f32 = 0.9;
+const BOLT_HALO_GAIN: f32 = 0.7;     // halo strength relative to the core
+const SHEET_RADIUS_MM: f32 = 330.0;
+const SHEET_GAIN: f32 = 1.5;
 
 const FOAM_COLOR:  [f32; 3] = [235.0, 245.0, 250.0];
-const CLOUD_COLOR: [f32; 3] = [150.0, 160.0, 178.0]; // pale blue-gray
+const CLOUD_COLOR: [f32; 3] = [168.0, 178.0, 196.0]; // pale blue-gray
 const FLASH_COLOR: [f32; 3] = [225.0, 232.0, 255.0];
 
 struct Cloud {
@@ -318,7 +319,7 @@ impl Pattern for Squall {
                     if let Some(pts) = &s.bolt {
                         let d2 = polyline_d2(pts, led.wx, led.wy);
                         flash += (-d2 / (BOLT_CORE_MM * BOLT_CORE_MM)).exp()
-                            + 0.4 * (-d2 / (BOLT_HALO_MM * BOLT_HALO_MM)).exp();
+                            + BOLT_HALO_GAIN * (-d2 / (BOLT_HALO_MM * BOLT_HALO_MM)).exp();
                     }
                     c = mix(c, FLASH_COLOR, (flash_env * flash).clamp(0.0, 1.0));
                 }
@@ -355,12 +356,12 @@ fn respawn(c: &mut Cloud, rng: &mut u32, t_ms: u32) {
 }
 
 /// Storm-water ramp: abyssal black-blue up through navy and teal to foam white. The
-/// resting floor sits in the navy band; only crests and lightning reach the top.
+/// resting floor sits between navy and ocean blue; only crests and lightning reach the top.
 fn water_ramp(e: f32) -> [f32; 3] {
     const STOPS: [(f32, [f32; 3]); 6] = [
-        (0.00, [0.0, 2.0, 10.0]),      // abyssal black-blue
-        (0.35, [6.0, 22.0, 64.0]),     // deep navy
-        (0.60, [12.0, 60.0, 120.0]),   // ocean blue
+        (0.00, [2.0, 6.0, 22.0]),      // abyssal black-blue
+        (0.35, [10.0, 34.0, 88.0]),    // deep navy
+        (0.60, [18.0, 72.0, 138.0]),   // ocean blue
         (0.80, [26.0, 118.0, 148.0]),  // storm teal
         (0.92, [150.0, 205.0, 215.0]), // pale seafoam
         (1.00, [235.0, 245.0, 250.0]), // foam white
