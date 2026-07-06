@@ -49,22 +49,22 @@ const CLOUD_BREATHE: f32 = 0.3;      // lobe radius swing while breathing
 const CLOUD_BRIGHT:  f32 = 0.7;      // cover opacity at full density
 const CLOUD_MARGIN_MM: f32 = 170.0;  // how far past an edge before re-entering elsewhere
 
-// Lightning: pure white bolts streaking along the tile lattice - one tile side pops on
-// at a time and fades behind the advancing leader; on reaching its endpoint the whole
-// path relights in flickering return-stroke pulses, then dies to dark. A few
-// independent slots roll their own irregular gaps, so bolts occasionally overlap.
+// Lightning: pure white bolts streaking along the tile lattice - the path builds one
+// tile side at a time and stays fully lit; on reaching its endpoint it stutters
+// through flickering return-stroke pulses, then dies to dark. A few independent
+// slots roll their own irregular gaps, so bolts occasionally overlap.
 const BOLT_SLOTS: usize = 2;
 const STRIKE_GAP_MIN_MS: u32 = 4_000;  // per slot; overall cadence scales with BOLT_SLOTS
 const STRIKE_GAP_MAX_MS: u32 = 14_000;
 const BOLT_SEGS_MIN: usize = 3;      // bolt length range, in tile edges walked
 const BOLT_SEGS_MAX: usize = 8;
 const BOLT_STEP_MS: u32 = 150;       // leader advances one tile side per step
-const BOLT_FADE_MS: f32 = 350.0;     // each lit side fades behind the advancing leader
 const FLICKER_FADE_MS: f32 = 180.0;  // decay of each full-path return-stroke pulse
 const BOLT_PULSES_MIN: usize = 2;    // return strokes per strike...
 const BOLT_PULSES_MAX: usize = 5;    // ...rolled fresh each time, irregularly spaced
 const BOLT_TAIL_MS: u32 = 1_400;     // fade-out allowance after the final pulse
 const BOLT_CORE_MM: f32 = 12.0;      // catches the two LED rows straddling a tile edge
+const BOLT_GAIN: f32 = 1.6;          // spatial overdrive: near-line LEDs saturate to full white
 
 // Tile-corner lattice the bolts walk: vertex row r (0 = wide top edge, 5 = bottom apex)
 // holds 6-r vertices centered on WORLD_CX. Side and row height include the inter-tile
@@ -197,8 +197,8 @@ impl Squall {
     }
 
     /// Anchor a new bolt to a random cloud, walk its lattice path, and roll its return
-    /// strokes: the whole path relights the moment the leader completes, then stutters
-    /// through up to four more irregularly spaced pulses.
+    /// strokes: the first lands the moment the leader completes, then the lit path
+    /// stutters through up to four more irregularly spaced pulses.
     fn ignite(&mut self, t_ms: u32) -> Strike {
         let a = xorshift(&mut self.rng) as usize % CLOUD_COUNT;
         let (cx, cy) = (self.clouds[a].x, self.clouds[a].y);
@@ -333,27 +333,20 @@ impl Pattern for Squall {
         }
 
         // Active bolt segments with envelopes (a, b, envelope). While the leader crawls,
-        // each tile side pops on as it's reached and fades on its own clock - bright
-        // head, dying tail. Once the walk completes, the whole path shares the
-        // return-stroke envelope: full-white relights dipping between pulses, dying
-        // out after the last one.
+        // every side it has reached stays fully lit, so the bolt visibly builds. Once
+        // the walk completes, the whole path shares the return-stroke envelope:
+        // full-white pops dipping between pulses, dying out after the last one.
         let mut segs = [((0.0f32, 0.0f32), (0.0f32, 0.0f32), 0.0f32); BOLT_SLOTS * BOLT_SEGS_MAX];
         let mut n_segs = 0;
         for slot in &self.slots {
             let Some(s) = &slot.strike else { continue };
             let el = t_ms.wrapping_sub(s.start_ms);
             if el < s.pulse_ms[0] {
-                // Leader phase: sides light in step order, each fading independently.
-                for (k, w) in s.bolt.pts[..s.bolt.len].windows(2).enumerate() {
-                    let on = k as u32 * BOLT_STEP_MS;
-                    if el < on {
-                        break; // the leader hasn't reached this side yet
-                    }
-                    let env = (-((el - on) as f32) / BOLT_FADE_MS).exp();
-                    if env > 0.01 {
-                        segs[n_segs] = (w[0], w[1], env);
-                        n_segs += 1;
-                    }
+                // Leader phase: every side reached so far holds at full strength.
+                let reached = (el / BOLT_STEP_MS) as usize + 1;
+                for w in s.bolt.pts[..(reached + 1).min(s.bolt.len)].windows(2) {
+                    segs[n_segs] = (w[0], w[1], 1.0);
+                    n_segs += 1;
                 }
             } else {
                 // Flicker phase: every fired pulse decays; the loudest one wins.
@@ -412,17 +405,20 @@ impl Pattern for Squall {
             let density = density.min(1.0);
             c = mix(c, CLOUD_COLOR, density * CLOUD_BRIGHT);
 
-            // Lightning: pure white along the lit tile sides, brightest at each
-            // streak's head. The distance cutoff skips the exp for far-away LEDs.
+            // Lightning: pure white along the lit tile sides. The overdrive saturates
+            // the spatial falloff, so the LED rows straddling the line hit true full
+            // white while the pulse envelope keeps its whole flicker depth. The
+            // distance cutoff skips the exp for far-away LEDs.
             let mut bolt = 0.0f32;
             for &(a, b, env) in segs {
                 let d2 = seg_d2(a, b, led.wx, led.wy);
                 if d2 < BOLT_CORE_MM * BOLT_CORE_MM * 9.0 {
-                    bolt = bolt.max(env * (-d2 / (BOLT_CORE_MM * BOLT_CORE_MM)).exp());
+                    let core = (BOLT_GAIN * (-d2 / (BOLT_CORE_MM * BOLT_CORE_MM)).exp()).min(1.0);
+                    bolt = bolt.max(env * core);
                 }
             }
             if bolt > 0.0 {
-                c = mix(c, FLASH_COLOR, bolt.min(1.0));
+                c = mix(c, FLASH_COLOR, bolt);
             }
 
             out[i] = [c[0] as u8, c[1] as u8, c[2] as u8];
@@ -455,17 +451,17 @@ fn respawn(c: &mut Cloud, rng: &mut u32, t_ms: u32) {
     c.retarget_len_ms = roll_range(rng, CLOUD_RETARGET_MIN_MS, CLOUD_RETARGET_MAX_MS);
 }
 
-/// Storm-water ramp: deep blue up through turquoise to white. The darkest water is
-/// still a clear blue, and a swell crest falls off white -> pale aqua -> turquoise ->
-/// blue across most of its height; the resting floor sits in the rich-blue band.
+/// Storm-water ramp: deep blue-black up through turquoise to foam white. A swell
+/// crest falls off white -> aqua -> turquoise -> blue over its upper half, while
+/// the resting floor keeps a moody navy-blue depth.
 fn water_ramp(e: f32) -> [f32; 3] {
     const STOPS: [(f32, [f32; 3]); 6] = [
-        (0.00, [3.0, 10.0, 40.0]),     // deep blue - the darkest the water gets
-        (0.30, [8.0, 40.0, 105.0]),    // rich blue
-        (0.55, [16.0, 96.0, 160.0]),   // blue-turquoise
-        (0.75, [40.0, 170.0, 190.0]),  // turquoise
-        (0.90, [150.0, 225.0, 228.0]), // pale aqua
-        (1.00, [245.0, 252.0, 252.0]), // white crest
+        (0.00, [2.0, 8.0, 31.0]),      // deep blue-black
+        (0.32, [9.0, 37.0, 97.0]),     // navy-blue
+        (0.58, [17.0, 84.0, 149.0]),   // ocean blue
+        (0.78, [33.0, 144.0, 169.0]),  // teal-turquoise
+        (0.91, [150.0, 215.0, 222.0]), // pale aqua
+        (1.00, [240.0, 249.0, 251.0]), // foam white
     ];
     let e = e.clamp(0.0, 1.0);
     for pair in STOPS.windows(2) {
