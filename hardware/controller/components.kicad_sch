@@ -1752,6 +1752,28 @@
 		)
 		(uuid "18e94c81-94f4-4fd7-a375-adb2422695aa")
 	)
+	(text "I think this is a 3-position switch, and I think you've\nmade it so that in the middle position shorts 3.3V to GND?"
+		(exclude_from_sim no)
+		(at 148.844 143.256 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+				(color 238 0 0 1)
+			)
+		)
+		(uuid "45563a4b-419a-4d2e-bdd2-38d3fa7968db")
+	)
+	(text "Where did this 100-ohm resistor come from?\nIs that from a reference design? it seems\nrather high."
+		(exclude_from_sim no)
+		(at 98.044 100.076 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+				(color 238 0 0 1)
+			)
+		)
+		(uuid "b8b8c959-c082-4fe2-b66d-5b474fa41999")
+	)
 	(junction
 		(at 34.925 29.21)
 		(diameter 0)
