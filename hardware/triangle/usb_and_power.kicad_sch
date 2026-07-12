@@ -1885,12 +1885,6 @@
 		)
 	)
 	(junction
-		(at 57.15 170.18)
-		(diameter 0)
-		(color 0 0 0 0)
-		(uuid "019b9ee8-d3fb-48fb-81a3-e2d532f41f4f")
-	)
-	(junction
 		(at 198.12 44.45)
 		(diameter 0)
 		(color 0 0 0 0)
@@ -1987,16 +1981,42 @@
 		(uuid "ca29a7ee-dc25-4044-807f-36c8097b45b7")
 	)
 	(junction
-		(at 63.5 154.94)
-		(diameter 0)
-		(color 0 0 0 0)
-		(uuid "cfa287c5-f5bb-46e7-8514-3ee87e83619f")
-	)
-	(junction
 		(at 162.56 62.23)
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "ebf60240-f8a8-44e3-97ae-076ce8048a3b")
+	)
+	(no_connect
+		(at 71.12 48.26)
+		(uuid "23381722-d29f-4274-8252-2a5abce2ae5d")
+	)
+	(no_connect
+		(at 71.12 73.66)
+		(uuid "3bc5c83f-5c54-4ef3-a316-c430fbeb7865")
+	)
+	(no_connect
+		(at 162.56 72.39)
+		(uuid "4764e25e-d261-46cd-abcf-5af84ce81b7a")
+	)
+	(no_connect
+		(at 71.12 71.12)
+		(uuid "4f016728-3ed6-405a-9556-470192d91609")
+	)
+	(no_connect
+		(at 162.56 74.93)
+		(uuid "88eb6dea-9c82-4923-9dad-a3b9b44fa716")
+	)
+	(no_connect
+		(at 71.12 50.8)
+		(uuid "9fc552d9-14c6-4621-896b-d55e35ffc5fa")
+	)
+	(no_connect
+		(at 162.56 49.53)
+		(uuid "a4b382c5-751c-4adf-b84e-497903dcee5a")
+	)
+	(no_connect
+		(at 162.56 52.07)
+		(uuid "d6aed0f8-db23-4caf-8b09-c4d3f19860e8")
 	)
 	(wire
 		(pts
@@ -2160,23 +2180,13 @@
 	)
 	(wire
 		(pts
-			(xy 57.15 170.18) (xy 63.5 170.18)
+			(xy 48.26 170.18) (xy 63.5 170.18)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
 		(uuid "69ab68a9-e904-46d6-baf3-a30a40735232")
-	)
-	(wire
-		(pts
-			(xy 48.26 170.18) (xy 57.15 170.18)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "6c3bf0fc-cd84-4c1f-adab-44324fe9844c")
 	)
 	(wire
 		(pts
@@ -2270,16 +2280,6 @@
 	)
 	(wire
 		(pts
-			(xy 63.5 128.905) (xy 63.5 154.94)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "a583535e-a878-48ff-a672-244bcca1cd85")
-	)
-	(wire
-		(pts
 			(xy 162.56 60.96) (xy 162.56 62.23)
 		)
 		(stroke
@@ -2360,16 +2360,6 @@
 	)
 	(wire
 		(pts
-			(xy 57.15 162.56) (xy 57.15 170.18)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "c3b7e9a8-ed0b-4383-873a-25dd4cf5cfe7")
-	)
-	(wire
-		(pts
 			(xy 127 128.27) (xy 127 133.35)
 		)
 		(stroke
@@ -2397,16 +2387,6 @@
 			(type default)
 		)
 		(uuid "d09b7822-562b-42bd-aca0-2c2e56458e09")
-	)
-	(wire
-		(pts
-			(xy 57.15 154.94) (xy 63.5 154.94)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "d4ba8051-349f-4f62-8586-454ff7b2ebc1")
 	)
 	(wire
 		(pts
@@ -2460,7 +2440,7 @@
 	)
 	(wire
 		(pts
-			(xy 63.5 154.94) (xy 63.5 162.56)
+			(xy 63.5 128.905) (xy 63.5 162.56)
 		)
 		(stroke
 			(width 0)
@@ -5129,98 +5109,6 @@
 			(project "triangle"
 				(path "/955e9dc0-fcd6-4d32-9a7f-93a0bda4c269"
 					(reference "C26")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Device:C")
-		(at 57.15 158.75 180)
-		(unit 1)
-		(body_style 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(in_pos_files yes)
-		(dnp yes)
-		(uuid "fdb1e8f8-a30c-41a8-a7c9-81d879beecde")
-		(property "Reference" "C32"
-			(at 52.07 160.02 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Value" "33nF"
-			(at 53.34 158.115 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
-			(at 56.1848 154.94 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Datasheet" "https://www.lcsc.com/datasheet/lcsc_datasheet_2304140030_Samsung-Electro-Mechanics-CL05B104KO5NNNC_C1525.pdf"
-			(at 57.15 158.75 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description" "Unpolarized capacitor"
-			(at 57.15 158.75 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "LCSC Part #" "C507072"
-			(at 57.15 158.75 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "2"
-			(uuid "9b34e0eb-11f8-4f54-9818-eaa024778a47")
-		)
-		(pin "1"
-			(uuid "da0bd616-8525-4b7d-9481-c7f0cdc896c0")
-		)
-		(instances
-			(project "triangle"
-				(path "/955e9dc0-fcd6-4d32-9a7f-93a0bda4c269"
-					(reference "C32")
 					(unit 1)
 				)
 			)
