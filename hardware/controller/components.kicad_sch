@@ -1752,39 +1752,11 @@
 		)
 		(uuid "18e94c81-94f4-4fd7-a375-adb2422695aa")
 	)
-	(text "I think this is a 3-position switch, and I think you've\nmade it so that in the middle position shorts 3.3V to GND?"
-		(exclude_from_sim no)
-		(at 148.844 143.256 0)
-		(effects
-			(font
-				(size 1.27 1.27)
-				(color 238 0 0 1)
-			)
-		)
-		(uuid "45563a4b-419a-4d2e-bdd2-38d3fa7968db")
-	)
-	(text "Where did this 100-ohm resistor come from?\nIs that from a reference design? it seems\nrather high."
-		(exclude_from_sim no)
-		(at 98.044 100.076 0)
-		(effects
-			(font
-				(size 1.27 1.27)
-				(color 238 0 0 1)
-			)
-		)
-		(uuid "b8b8c959-c082-4fe2-b66d-5b474fa41999")
-	)
 	(junction
 		(at 34.925 29.21)
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "45ced8c8-9c9f-4189-bd98-d268df322d12")
-	)
-	(junction
-		(at 73.66 111.76)
-		(diameter 0)
-		(color 0 0 0 0)
-		(uuid "82795206-b2ef-4a46-b861-9b7c8e35e534")
 	)
 	(junction
 		(at 142.875 126.365)
@@ -1845,6 +1817,12 @@
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "ee2b740f-9542-4320-92e9-e8bc612cb543")
+	)
+	(junction
+		(at 73.66 111.76)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "f9d526ca-5efa-4078-85aa-0f36f4627340")
 	)
 	(junction
 		(at 216.535 33.655)
@@ -2284,13 +2262,23 @@
 	)
 	(wire
 		(pts
-			(xy 156.845 121.92) (xy 156.845 133.985)
+			(xy 156.845 121.92) (xy 156.845 125.73)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
 		(uuid "a6c9b15f-5a15-4be1-8c4a-2fc5cec0f5e5")
+	)
+	(wire
+		(pts
+			(xy 156.845 133.35) (xy 156.845 133.985)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "a9b0e770-1544-4783-a6fa-58be7042f646")
 	)
 	(wire
 		(pts
@@ -2776,6 +2764,96 @@
 	)
 	(symbol
 		(lib_id "Device:R_US")
+		(at 156.845 129.54 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp yes)
+		(uuid "0701ec32-99e0-470f-bd72-8897475161da")
+		(property "Reference" "R11"
+			(at 152.4 130.81 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" ""
+			(at 152.4 128.27 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "Resistor_SMD:R_0603_1608Metric"
+			(at 157.861 129.794 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 156.845 129.54 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Resistor, US symbol"
+			(at 156.845 129.54 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "LCSC Part #" ""
+			(at 156.845 129.54 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "56820782-c022-439b-8852-ce0156eff3e7")
+		)
+		(pin "2"
+			(uuid "d864c339-5022-47a3-9de8-1dfec545e1ca")
+		)
+		(instances
+			(project "controller"
+				(path "/ed43b915-8637-4fab-a1d1-340d9f2c05b8"
+					(reference "R11")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:R_US")
 		(at 73.66 104.14 180)
 		(unit 1)
 		(body_style 1)
@@ -3036,96 +3114,6 @@
 		)
 	)
 	(symbol
-		(lib_id "Device:C")
-		(at 73.66 115.57 0)
-		(unit 1)
-		(body_style 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(in_pos_files yes)
-		(dnp no)
-		(uuid "1bfec51c-3ffc-42ff-a9a5-9887216e8bcf")
-		(property "Reference" "C4"
-			(at 80.01 114.3 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Value" "1µF"
-			(at 80.01 116.84 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" "Capacitor_SMD:C_0603_1608Metric"
-			(at 74.6252 119.38 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Datasheet" "https://jlcpcb.com/api/file/downloadByFileSystemAccessId/8556213788459761664"
-			(at 73.66 115.57 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description" "Unpolarized capacitor"
-			(at 73.66 115.57 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "LCSC Part #" "C15849"
-			(at 73.66 115.57 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "1"
-			(uuid "058c8f48-4e91-438f-9930-29246cfa5aa0")
-		)
-		(pin "2"
-			(uuid "c6ceb30b-19c6-4d90-ae91-7c168e7f60df")
-		)
-		(instances
-			(project "controller"
-				(path "/ed43b915-8637-4fab-a1d1-340d9f2c05b8"
-					(reference "C4")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
 		(lib_id "power:+3.3V")
 		(at 174.625 101.6 0)
 		(unit 1)
@@ -3198,6 +3186,99 @@
 			(project "controller"
 				(path "/ed43b915-8637-4fab-a1d1-340d9f2c05b8"
 					(reference "#PWR022")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:C")
+		(at 73.66 115.57 180)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "208b2258-c7dd-4522-b761-36fb215d3fc2")
+		(property "Reference" "C30"
+			(at 76.835 114.2999 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(property "Value" "4.7µF"
+			(at 76.835 116.8399 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(property "Footprint" "Capacitor_SMD:C_0603_1608Metric"
+			(at 72.6948 111.76 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" "https://jlcpcb.com/api/file/downloadByFileSystemAccessId/8579707103462166528"
+			(at 73.66 115.57 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Unpolarized capacitor"
+			(at 73.66 115.57 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "JLCPCB Part #" "C19666"
+			(at 73.66 115.57 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "25ed9668-fadd-4184-9308-411319a3c7e4")
+		)
+		(pin "2"
+			(uuid "674592ed-47e8-4131-ae1b-04e255337e22")
+		)
+		(instances
+			(project "controller"
+				(path "/ed43b915-8637-4fab-a1d1-340d9f2c05b8"
+					(reference "C30")
 					(unit 1)
 				)
 			)
