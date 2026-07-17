@@ -609,24 +609,6 @@
         },
         {
           "group_by": false,
-          "label": "JLCPCB Part #",
-          "name": "JLCPCB Part #",
-          "show": false
-        },
-        {
-          "group_by": false,
-          "label": "LCSC Part",
-          "name": "LCSC Part",
-          "show": false
-        },
-        {
-          "group_by": false,
-          "label": "LCSC Part Number",
-          "name": "LCSC Part Number",
-          "show": false
-        },
-        {
-          "group_by": false,
           "label": "MPN",
           "name": "MPN",
           "show": false
@@ -635,12 +617,6 @@
           "group_by": false,
           "label": "Manufacturer",
           "name": "Manufacturer",
-          "show": false
-        },
-        {
-          "group_by": false,
-          "label": "JLCPCB #",
-          "name": "JLCPCB #",
           "show": false
         },
         {
@@ -654,6 +630,12 @@
           "label": "#",
           "name": "${ITEM_NUMBER}",
           "show": false
+        },
+        {
+          "group_by": false,
+          "label": "LCSC Part #",
+          "name": "LCSC Part #",
+          "show": true
         }
       ],
       "filter_string": "",
@@ -661,7 +643,7 @@
       "include_excluded_from_bom": true,
       "name": "",
       "sort_asc": true,
-      "sort_field": "Reference"
+      "sort_field": "MPN"
     },
     "bus_aliases": {},
     "connection_grid_size": 25.0,

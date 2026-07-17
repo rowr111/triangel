@@ -2768,7 +2768,7 @@
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
-		(in_bom yes)
+		(in_bom no)
 		(on_board yes)
 		(in_pos_files yes)
 		(dnp yes)
@@ -3258,8 +3258,8 @@
 				)
 			)
 		)
-		(property "JLCPCB Part #" "C19666"
-			(at 73.66 115.57 90)
+		(property "LCSC Part #" "C19666"
+			(at 73.66 115.57 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
