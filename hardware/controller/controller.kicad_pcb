@@ -176,7 +176,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.lcsc.com/datasheet/C4365033.pdf"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -198,14 +198,41 @@
 				)
 			)
 		)
-		(property "LCSC Part" "C4365033"
+		(property "Manufacturer" "PANASONIC(松下)"
 			(at 0 0 0)
+			(unlocked yes)
 			(layer "F.Fab")
 			(hide yes)
-			(uuid "cca129cf-1453-4bd9-b72d-a6f32c6adc65")
+			(uuid "99ceae83-ed08-416b-ae87-c552bc179fb7")
 			(effects
 				(font
-					(size 1.27 1.27)
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "EVP-ASAC1A"
+			(at 0 0 0)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "f1e60b14-1cd3-451d-bf3f-58226d2866e8")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "LCSC Part #" "C4365033"
+			(at 0 0 0)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "c76c7674-dd1e-4a25-a0c3-f60b808b2f70")
+			(effects
+				(font
+					(size 1 1)
 					(thickness 0.15)
 				)
 			)
@@ -503,7 +530,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://lcsc.com/product-detail/Infrared-Sensors_IRM-H638T-TR2_C91447.html"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -514,7 +541,7 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "IRM-H638T/TR2"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -525,14 +552,41 @@
 				)
 			)
 		)
-		(property "LCSC Part" "C91447"
-			(at 0 0 0)
+		(property "Manufacturer" "EVERLIGHT(亿光)"
+			(at 0 0 180)
+			(unlocked yes)
 			(layer "F.Fab")
 			(hide yes)
-			(uuid "b912ed6e-e79f-4259-9b67-dbb1883b0e63")
+			(uuid "dde3deec-ca01-4c50-b282-94b1c370f7a7")
 			(effects
 				(font
-					(size 1.27 1.27)
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "IRM-H638T/TR2"
+			(at 0 0 180)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "118dc457-da56-49e8-9987-5e3c0017e724")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "LCSC Part #" "C91447"
+			(at 0 0 180)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "f447e35d-ee05-4c9b-85e7-611e89d55cfd")
+			(effects
+				(font
+					(size 1 1)
 					(thickness 0.15)
 				)
 			)
@@ -758,7 +812,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.lcsc.com/datasheet/C7499334.pdf"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -780,14 +834,41 @@
 				)
 			)
 		)
-		(property "LCSC Part" "C7499334"
-			(at 0 0 90)
+		(property "Manufacturer" "Megastar(兆星)"
+			(at 0 0 270)
+			(unlocked yes)
 			(layer "F.Fab")
 			(hide yes)
-			(uuid "156843f8-3267-4f86-b055-3707e84287ed")
+			(uuid "8d680c92-7002-4027-81bf-349c5dd71481")
 			(effects
 				(font
-					(size 1.27 1.27)
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "ZX-PM2.54-1-16PY"
+			(at 0 0 270)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "3ffe7eae-b58e-4358-9211-841fbb4e6127")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "LCSC Part #" "C7499334"
+			(at 0 0 270)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "685ab6e0-07d1-402a-b260-4b770cd31127")
+			(effects
+				(font
+					(size 1 1)
 					(thickness 0.15)
 				)
 			)
@@ -1144,7 +1225,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://jlcpcb.com/api/file/downloadByFileSystemAccessId/8568525238768373760"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -1155,7 +1236,7 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Unpolarized capacitor"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -1166,11 +1247,12 @@
 				)
 			)
 		)
-		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
-			(at 0 0 90)
-			(layer "F.SilkS")
+		(property "LCSC Part #" "C96446"
+			(at 0 0 270)
+			(unlocked yes)
+			(layer "F.Fab")
 			(hide yes)
-			(uuid "3bb71203-bfda-4609-bedb-54e505017e08")
+			(uuid "f6c99844-0d55-426d-8703-4a3493c500fa")
 			(effects
 				(font
 					(size 1 1)
@@ -1302,7 +1384,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.lcsc.com/datasheet/lcsc_datasheet_2304140030_Samsung-Electro-Mechanics-CL05B104KO5NNNC_C1525.pdf"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -1313,7 +1395,7 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Unpolarized capacitor"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -1324,11 +1406,12 @@
 				)
 			)
 		)
-		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
-			(at 0 0 90)
-			(layer "F.SilkS")
+		(property "LCSC Part #" "C1525"
+			(at 0 0 270)
+			(unlocked yes)
+			(layer "F.Fab")
 			(hide yes)
-			(uuid "98ce56b1-0bd4-4a81-ab13-a85bde088b8f")
+			(uuid "ebbeafae-7d26-4d72-8bdb-4a17e4e35ca3")
 			(effects
 				(font
 					(size 1 1)
@@ -1471,7 +1554,7 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Mounting Hole without connection"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -1479,18 +1562,6 @@
 			(effects
 				(font
 					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KiLib_Generator" "mounting_hardware/mounting_hole"
-			(at 0 0 0)
-			(layer "F.SilkS")
-			(hide yes)
-			(uuid "38faf75c-6d61-457f-aff3-2125b8d96fc0")
-			(effects
-				(font
-					(size 1 1)
-					(thickness 0.15)
 				)
 			)
 		)
@@ -1576,7 +1647,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.lcsc.com/datasheet/C4365033.pdf"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -1598,14 +1669,41 @@
 				)
 			)
 		)
-		(property "LCSC Part" "C4365033"
+		(property "Manufacturer" "PANASONIC(松下)"
 			(at 0 0 0)
+			(unlocked yes)
 			(layer "F.Fab")
 			(hide yes)
-			(uuid "eca9b378-1c4a-47f1-9973-f35b4cf56c08")
+			(uuid "a65a2bc8-8199-4fee-ae3d-b5d104d20169")
 			(effects
 				(font
-					(size 1.27 1.27)
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "EVP-ASAC1A"
+			(at 0 0 0)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "9d1ec27d-4b5a-48e6-939c-5bbb391667f1")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "LCSC Part #" "C4365033"
+			(at 0 0 0)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "38e38c5c-6415-4c46-a315-ce9851e0920d")
+			(effects
+				(font
+					(size 1 1)
 					(thickness 0.15)
 				)
 			)
@@ -1904,7 +2002,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://jlcpcb.com/api/file/downloadByFileSystemAccessId/8579707103462166528"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -1915,7 +2013,7 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Unpolarized capacitor"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -1926,11 +2024,12 @@
 				)
 			)
 		)
-		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
-			(at 0 0 90)
-			(layer "F.SilkS")
+		(property "LCSC Part #" "C19666"
+			(at 0 0 270)
+			(unlocked yes)
+			(layer "F.Fab")
 			(hide yes)
-			(uuid "a815f6d4-b986-4c52-9d24-59b9153bbca6")
+			(uuid "6c503f13-217d-44e7-9e2e-703f045e32c1")
 			(effects
 				(font
 					(size 1 1)
@@ -2062,7 +2161,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://jlcpcb.com/api/file/downloadByFileSystemAccessId/8579706350726930432"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -2073,7 +2172,7 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Resistor, US symbol"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -2084,11 +2183,12 @@
 				)
 			)
 		)
-		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
-			(at 0 0 90)
-			(layer "F.SilkS")
+		(property "LCSC Part #" "C25803"
+			(at 0 0 270)
+			(unlocked yes)
+			(layer "F.Fab")
 			(hide yes)
-			(uuid "dc4f36cc-5a64-462e-8690-2471661fe301")
+			(uuid "754300b1-bb2e-4420-963f-43e4774613f6")
 			(effects
 				(font
 					(size 1 1)
@@ -2218,7 +2318,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://lcsc.com/product-detail/DC-DC-Converters_Everanalog-IC-design-EA8212HT6R_C609568.html"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -2240,14 +2340,41 @@
 				)
 			)
 		)
-		(property "LCSC Part" "C609568"
-			(at 0 0 0)
+		(property "Manufacturer" "everanalog(申风)"
+			(at 0 0 180)
+			(unlocked yes)
 			(layer "F.Fab")
 			(hide yes)
-			(uuid "cea5111c-0d25-444a-a2d5-1972caf94168")
+			(uuid "3a6dd746-3e96-46a7-beb4-d297857c0310")
 			(effects
 				(font
-					(size 1.27 1.27)
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "EA8212HT6R"
+			(at 0 0 180)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "7878baf1-f56d-4b00-8db3-a0b67748c1ba")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "LCSC Part #" "C609568"
+			(at 0 0 180)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "288bd62d-67d6-4595-bb58-6babe0a2a975")
+			(effects
+				(font
+					(size 1 1)
 					(thickness 0.15)
 				)
 			)
@@ -2462,7 +2589,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://jlcpcb.com/api/file/downloadByFileSystemAccessId/8579706114222985216"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -2473,7 +2600,7 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Resistor, US symbol"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -2484,11 +2611,12 @@
 				)
 			)
 		)
-		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
-			(at 0 0 90)
-			(layer "F.SilkS")
+		(property "LCSC Part #" "C22775"
+			(at 0 0 270)
+			(unlocked yes)
+			(layer "F.Fab")
 			(hide yes)
-			(uuid "b006df2d-a1f6-4357-8bf3-bed9fda23a54")
+			(uuid "b01e2a91-7eb5-41c3-9710-6bd5d3c0658c")
 			(effects
 				(font
 					(size 1 1)
@@ -2622,7 +2750,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.invensense.com/wp-content/uploads/2016/02/DS-000069-ICS-43434-v1.2.pdf"
 			(at 0 0 0)
 			(unlocked yes)
 			(layer "F.Fab")
@@ -2635,7 +2763,7 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "TDK InvenSense MEMS Microphone, 24-bit I2S, 65 dBA SNR, LGA-6"
 			(at 0 0 0)
 			(unlocked yes)
 			(layer "F.Fab")
@@ -2644,6 +2772,19 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "LCSC Part #" "C5656610"
+			(at 0 0 0)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "7c8c5413-1569-41e3-b134-6d83eca9ae74")
+			(effects
+				(font
+					(size 1 1)
 					(thickness 0.15)
 				)
 			)
@@ -3011,7 +3152,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://jlcpcb.com/api/file/downloadByFileSystemAccessId/8568525238768373760"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -3022,7 +3163,7 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Unpolarized capacitor"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -3033,11 +3174,12 @@
 				)
 			)
 		)
-		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
-			(at 0 0 90)
-			(layer "F.SilkS")
+		(property "LCSC Part #" "C96446"
+			(at 0 0 270)
+			(unlocked yes)
+			(layer "F.Fab")
 			(hide yes)
-			(uuid "fac3e5a4-f860-41b1-946b-88dfb8690614")
+			(uuid "f610855e-b931-4298-a8d6-dccef0d207b7")
 			(effects
 				(font
 					(size 1 1)
@@ -3169,7 +3311,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "http://www.ti.com/lit/ds/symlink/sn74lvc1t45.pdf"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -3180,7 +3322,7 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Single-Bit Dual-Supply Bus Transceiver With Configurable Voltage Translation and 3-State Outputs, SOT-23-6"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -3191,11 +3333,12 @@
 				)
 			)
 		)
-		(property "KiLib_Generator" "package/gullwing"
-			(at 0 0 0)
-			(layer "F.SilkS")
+		(property "LCSC Part #" "C7843"
+			(at 0 0 180)
+			(unlocked yes)
+			(layer "F.Fab")
 			(hide yes)
-			(uuid "3a793799-072c-4d37-ad49-c9d318231280")
+			(uuid "ff303e2e-e815-4513-bbe7-d91783ccd8c4")
 			(effects
 				(font
 					(size 1 1)
@@ -3531,7 +3674,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://jlc-prod-smt.oss-eu-central-1.aliyuncs.com/smtDataManualFile/8720402844366684160-C98220.pdf?response-content-disposition=attachment%3B%20filename%3DC98220.pdf%3B%20filename%2A%3DUTF-8%27%27C98220.pdf&x-oss-date=20260718T053237Z&x-oss-expires=1800&x-oss-security-token=CAISgAN1q6Ft5B2yfSjIr5vUAcyHvppnwLCgaFTUjmE4eMF7h6KTmjz2IHhMdHJsAOodtv0%2FmmhT6PkclqRLcbhpcmfjV%2BZHzLB8qblf%2BkJe4J7b16cNrbH4M4H6aXeirtuwDsz9SNTCALjPD3nPii50x5bjaDymRCbLGJaViJlhHLN1Ow6jdmhpCctxLAlvo9NgFxm3D%2Fu2NQPwiWf9FVdhvhEG6Vly8qOi2MaRmFy8yFTx0b0SvJ%2BjYMrmPctoN9JnSdC5mfdzau3a1TJ84gRD0a5wkaVA1zbDs5bfISEIuUzebreLqY03dV4mOvdqIcMe8qigz88fk%2FfIioH6xyxKOexoSCnFTOiiupCcQLPyao9jLu6iayqViY7QaIOTqQohZmkAMwVOasAsI3Ngh4zF97Qt0cVNkXO9gWfLI8DtuMleWkppwNpcenSgc5lCkRRYwGs1287ugXlSQzo890KPDAEovaKCnZ2ZSfh7Y4sNknI6i%2Bfc2Se2MIkI4zOcIqKWD5sagAFwlyFWRoTovvrgFT6jIvy3RQnbd%2BrFLYo5Ld8QmKHlK3kKKckSmaCl0sfABvCwe4o3e5FS3nolBz73mmeXdIrpiyyYNK6dxaToXe6jDFtRO4O1V3g6sSVQLXWkvy7lcucJdH8202hIF3jVvw%2Fdbx8rzoA8IpaW6pd8Uw%2BoUd2kbiAA&x-oss-signature-version=OSS4-HMAC-SHA256&x-oss-credential=STS.NXaJv3SEFwrKjrejamtNWhg8x%2F20260718%2Feu-central-1%2Foss%2Faliyun_v4_request&x-oss-signature=5e7185703ac8213dfac0435adfdf0e4784e1272cfb98f3dd75e54f0d59b0aa0d"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -3542,7 +3685,7 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Resistor, US symbol"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -3553,11 +3696,12 @@
 				)
 			)
 		)
-		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+		(property "LCSC Part #" "C98220"
 			(at 0 0 90)
-			(layer "F.SilkS")
+			(unlocked yes)
+			(layer "F.Fab")
 			(hide yes)
-			(uuid "c2652521-e118-4ffa-bab9-99e1d60dd26b")
+			(uuid "da70f7b2-2fa2-496a-906b-c3c2401258e7")
 			(effects
 				(font
 					(size 1 1)
@@ -3687,7 +3831,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.lcsc.com/datasheet/C7499334.pdf"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -3709,14 +3853,41 @@
 				)
 			)
 		)
-		(property "LCSC Part" "C7499334"
-			(at 0 0 90)
+		(property "Manufacturer" "Megastar(兆星)"
+			(at 0 0 270)
+			(unlocked yes)
 			(layer "F.Fab")
 			(hide yes)
-			(uuid "79d4ca30-137e-49e8-945c-baf4ea2193c5")
+			(uuid "9f36936b-5338-4095-96ab-ec3db87fd3a6")
 			(effects
 				(font
-					(size 1.27 1.27)
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "ZX-PM2.54-1-16PY"
+			(at 0 0 270)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "2b9ca80e-9db6-421e-b26e-26958eb8f760")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "LCSC Part #" "C7499334"
+			(at 0 0 270)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "8297e800-9851-43ec-a59b-e48fb09c0478")
+			(effects
+				(font
+					(size 1 1)
 					(thickness 0.15)
 				)
 			)
@@ -4084,7 +4255,7 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Mounting Hole without connection"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -4092,18 +4263,6 @@
 			(effects
 				(font
 					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KiLib_Generator" "mounting_hardware/mounting_hole"
-			(at 0 0 0)
-			(layer "F.SilkS")
-			(hide yes)
-			(uuid "1a1dba3a-77de-4d4b-a68b-5b699ba1cc5e")
-			(effects
-				(font
-					(size 1 1)
-					(thickness 0.15)
 				)
 			)
 		)
@@ -4191,7 +4350,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://lcsc.com/product-detail/Inductors-SMD_microgate-MGFL2012F2R2MT-LF_C281115.html"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -4213,11 +4372,38 @@
 				)
 			)
 		)
-		(property "KiLib_Generator" "inductor/SMD"
+		(property "Manufacturer" "changjiang"
 			(at 0 0 90)
-			(layer "F.SilkS")
+			(unlocked yes)
+			(layer "F.Fab")
 			(hide yes)
-			(uuid "c9527c2b-d11e-4021-9492-483eeb2cbd65")
+			(uuid "eb94773f-c21e-4778-90ae-ee64684f4c76")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "FNR4030S4R7MT"
+			(at 0 0 90)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "d2c1561f-2296-4d75-be24-90d246a15845")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "LCSC Part #" "C167874"
+			(at 0 0 90)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "069865ca-f9af-4095-afba-e2f9fcea6c1a")
 			(effects
 				(font
 					(size 1 1)
@@ -4459,7 +4645,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "http://www.ti.com/lit/ds/symlink/sn74lvc1t45.pdf"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -4470,7 +4656,7 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Single-Bit Dual-Supply Bus Transceiver With Configurable Voltage Translation and 3-State Outputs, SOT-23-6"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -4481,11 +4667,12 @@
 				)
 			)
 		)
-		(property "KiLib_Generator" "package/gullwing"
-			(at 0 0 0)
-			(layer "F.SilkS")
+		(property "LCSC Part #" "C7843"
+			(at 0 0 180)
+			(unlocked yes)
+			(layer "F.Fab")
 			(hide yes)
-			(uuid "9dd284ee-10e0-4ed6-b319-c01ffa1b6401")
+			(uuid "c3eb7e46-4d8b-4ea6-b883-6a3f73c845b5")
 			(effects
 				(font
 					(size 1 1)
@@ -4821,7 +5008,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.lcsc.com/datasheet/lcsc_datasheet_2304140030_Samsung-Electro-Mechanics-CL05B104KO5NNNC_C1525.pdf"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -4832,7 +5019,7 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Unpolarized capacitor"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -4843,11 +5030,12 @@
 				)
 			)
 		)
-		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
-			(at 0 0 90)
-			(layer "F.SilkS")
+		(property "LCSC Part #" "C1525"
+			(at 0 0 270)
+			(unlocked yes)
+			(layer "F.Fab")
 			(hide yes)
-			(uuid "989de526-025e-49b9-a38e-c82cdc1f1e20")
+			(uuid "e2d2cf1d-bfcb-4560-9884-62d8dc90659d")
 			(effects
 				(font
 					(size 1 1)
@@ -4979,7 +5167,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.lcsc.com/datasheet/lcsc_datasheet_2304140030_Samsung-Electro-Mechanics-CL05B104KO5NNNC_C1525.pdf"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -4990,7 +5178,7 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Unpolarized capacitor"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -5001,11 +5189,12 @@
 				)
 			)
 		)
-		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
-			(at 0 0 90)
-			(layer "F.SilkS")
+		(property "LCSC Part #" "C1525"
+			(at 0 0 270)
+			(unlocked yes)
+			(layer "F.Fab")
 			(hide yes)
-			(uuid "f4d131ce-9a78-484f-8d9a-fc3c62b19f09")
+			(uuid "b0b3d281-7ff3-420f-971f-308d023810e0")
 			(effects
 				(font
 					(size 1 1)
@@ -5135,7 +5324,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.lcsc.com/datasheet/C4365033.pdf"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -5157,14 +5346,41 @@
 				)
 			)
 		)
-		(property "LCSC Part" "C4365033"
+		(property "Manufacturer" "PANASONIC(松下)"
 			(at 0 0 0)
+			(unlocked yes)
 			(layer "F.Fab")
 			(hide yes)
-			(uuid "3da50ded-3f4d-41b8-9cac-139e846072a4")
+			(uuid "a9258d69-9de9-47bb-a8ec-0f5bb7defb02")
 			(effects
 				(font
-					(size 1.27 1.27)
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "EVP-ASAC1A"
+			(at 0 0 0)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "9e71a6e4-f1a2-4957-ac6e-b874032fede7")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "LCSC Part #" "C4365033"
+			(at 0 0 0)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "056a6365-4197-4de2-bb6b-5bb71b673761")
+			(effects
+				(font
+					(size 1 1)
 					(thickness 0.15)
 				)
 			)
@@ -5463,7 +5679,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://jlc-prod-smt.oss-eu-central-1.aliyuncs.com/smtDataManualFile/8720402844366684160-C98220.pdf?response-content-disposition=attachment%3B%20filename%3DC98220.pdf%3B%20filename%2A%3DUTF-8%27%27C98220.pdf&x-oss-date=20260718T053237Z&x-oss-expires=1800&x-oss-security-token=CAISgAN1q6Ft5B2yfSjIr5vUAcyHvppnwLCgaFTUjmE4eMF7h6KTmjz2IHhMdHJsAOodtv0%2FmmhT6PkclqRLcbhpcmfjV%2BZHzLB8qblf%2BkJe4J7b16cNrbH4M4H6aXeirtuwDsz9SNTCALjPD3nPii50x5bjaDymRCbLGJaViJlhHLN1Ow6jdmhpCctxLAlvo9NgFxm3D%2Fu2NQPwiWf9FVdhvhEG6Vly8qOi2MaRmFy8yFTx0b0SvJ%2BjYMrmPctoN9JnSdC5mfdzau3a1TJ84gRD0a5wkaVA1zbDs5bfISEIuUzebreLqY03dV4mOvdqIcMe8qigz88fk%2FfIioH6xyxKOexoSCnFTOiiupCcQLPyao9jLu6iayqViY7QaIOTqQohZmkAMwVOasAsI3Ngh4zF97Qt0cVNkXO9gWfLI8DtuMleWkppwNpcenSgc5lCkRRYwGs1287ugXlSQzo890KPDAEovaKCnZ2ZSfh7Y4sNknI6i%2Bfc2Se2MIkI4zOcIqKWD5sagAFwlyFWRoTovvrgFT6jIvy3RQnbd%2BrFLYo5Ld8QmKHlK3kKKckSmaCl0sfABvCwe4o3e5FS3nolBz73mmeXdIrpiyyYNK6dxaToXe6jDFtRO4O1V3g6sSVQLXWkvy7lcucJdH8202hIF3jVvw%2Fdbx8rzoA8IpaW6pd8Uw%2BoUd2kbiAA&x-oss-signature-version=OSS4-HMAC-SHA256&x-oss-credential=STS.NXaJv3SEFwrKjrejamtNWhg8x%2F20260718%2Feu-central-1%2Foss%2Faliyun_v4_request&x-oss-signature=5e7185703ac8213dfac0435adfdf0e4784e1272cfb98f3dd75e54f0d59b0aa0d"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -5474,7 +5690,7 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Resistor, US symbol"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -5485,11 +5701,12 @@
 				)
 			)
 		)
-		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+		(property "LCSC Part #" "C98220"
 			(at 0 0 90)
-			(layer "F.SilkS")
+			(unlocked yes)
+			(layer "F.Fab")
 			(hide yes)
-			(uuid "c7d64b43-c4c5-479c-b0ad-11c90c222f97")
+			(uuid "3cc78a86-c9c2-4132-89f3-fc7f3e8b5592")
 			(effects
 				(font
 					(size 1 1)
@@ -5621,7 +5838,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://jlcpcb.com/api/file/downloadByFileSystemAccessId/8556213788459761664"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -5632,7 +5849,7 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Unpolarized capacitor"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -5643,11 +5860,12 @@
 				)
 			)
 		)
-		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+		(property "LCSC Part #" "C15849"
 			(at 0 0 0)
-			(layer "F.SilkS")
+			(unlocked yes)
+			(layer "F.Fab")
 			(hide yes)
-			(uuid "8c056499-7aaf-46a1-a7f7-803eadc23520")
+			(uuid "8047cd53-06b0-4f94-b70f-2ffb7c586950")
 			(effects
 				(font
 					(size 1 1)
@@ -5790,7 +6008,7 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Resistor, US symbol"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -5801,11 +6019,12 @@
 				)
 			)
 		)
-		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+		(property "LCSC Part #" ""
 			(at 0 0 0)
-			(layer "F.SilkS")
+			(unlocked yes)
+			(layer "F.Fab")
 			(hide yes)
-			(uuid "e7a6f022-fb93-440d-8fda-845d35ee1c14")
+			(uuid "ed8f5854-2601-4e8e-962c-f801df1a4f92")
 			(effects
 				(font
 					(size 1 1)
@@ -5937,7 +6156,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://jlc-prod-smt.oss-eu-central-1.aliyuncs.com/smtDataManualFile/8738158350643609600-C60491.pdf?response-content-disposition=attachment%3B%20filename%3DC60491.pdf%3B%20filename%2A%3DUTF-8%27%27C60491.pdf&x-oss-date=20260606T132855Z&x-oss-expires=1800&x-oss-security-token=CAISgAN1q6Ft5B2yfSjIr5mNLtLCv4lLgoGDNUv3knJif%2B5gh5%2FPjDz2IHhMdHJsAOodtv0%2FmmhT6PkclqRLcbhpcmfjV%2BZHzLB8qdQLjAlA4J7b16cNrbH4M4H6aXeirtuwDsz9SNTCALjPD3nPii50x5bjaDymRCbLGJaViJlhHLN1Ow6jdmhpCctxLAlvo9NgFxm3D%2Fu2NQPwiWf9FVdhvhEG6Vly8qOi2MaRmFy8yFTx0b0SvJ%2BjYMrmPctoN9JnSdC5mfdzau3a1TJ84gRD0a5wkaVA1zbDs5bfISEIuUzebreLqY03dV4mOvdqIcMe8qigz88fk%2FfIioH6xyxKOexoSCnFTOiiupCcQLPyao9jLu6iayqViY7QaIOTqQohZmkAMwVOasAsI3Ngh4zF97Qt0cVNkXO9gWfLI8DtuMleWirC1tx53tHD0eS19jklBdzSlusJRAJJUVBflCeKEaRNSAd3WGhEfM2%2BBt4QT30w5N2u00S8OSMIigi9bqKWD5sagAFTQZvCy5bfwFq9V%2FXs8QME5APVd%2FL2yqfb7dLyID5Qa9nQ8kZviJUPKUspxYRqxjqvOLIMhOXqFaLhHJJU6VxrIe8HRud7NRNGr4KNdIDRKGuBd2qcSEOdljZnoD1RtrRU1xDKqMPmRjAlSeOqgnnxXzJhR2mGbLMawxGBvzK66SAA&x-oss-signature-version=OSS4-HMAC-SHA256&x-oss-credential=STS.NZ8ehvRVj5Ch7mFvr7saLhZdn%2F20260606%2Feu-central-1%2Foss%2Faliyun_v4_request&x-oss-signature=e5f04c9d74b3f5fa304590ea5e8ff035ef2ba81ffe3cf2acb39479798370fb9c"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -5948,7 +6167,7 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Resistor"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -5959,11 +6178,12 @@
 				)
 			)
 		)
-		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
-			(at 0 0 0)
-			(layer "F.SilkS")
+		(property "LCSC Part #" "C60491"
+			(at 0 0 180)
+			(unlocked yes)
+			(layer "F.Fab")
 			(hide yes)
-			(uuid "ddb60015-c929-4610-9c48-659022252a62")
+			(uuid "8c706880-7e5c-4a22-81dc-f0b597bbc422")
 			(effects
 				(font
 					(size 1 1)
@@ -6095,7 +6315,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://jlcpcb.com/api/file/downloadByFileSystemAccessId/8568525238768373760"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -6106,7 +6326,7 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Unpolarized capacitor"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -6117,11 +6337,12 @@
 				)
 			)
 		)
-		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+		(property "LCSC Part #" "C96446"
 			(at 0 0 0)
-			(layer "F.SilkS")
+			(unlocked yes)
+			(layer "F.Fab")
 			(hide yes)
-			(uuid "808e33fa-837e-43f3-a35f-60b1c4fdc8ea")
+			(uuid "3e10a86b-2f7c-45c2-8add-c903628f339f")
 			(effects
 				(font
 					(size 1 1)
@@ -6253,7 +6474,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.lcsc.com/datasheet/lcsc_datasheet_2304140030_Samsung-Electro-Mechanics-CL05B104KO5NNNC_C1525.pdf"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -6264,7 +6485,7 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Unpolarized capacitor"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -6275,11 +6496,12 @@
 				)
 			)
 		)
-		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+		(property "LCSC Part #" "C1525"
 			(at 0 0 90)
-			(layer "F.SilkS")
+			(unlocked yes)
+			(layer "F.Fab")
 			(hide yes)
-			(uuid "ac7c9331-a7e4-48c8-b3f8-70a67fb9edaa")
+			(uuid "58fafd44-8dcf-46ce-b98e-bb95446a31db")
 			(effects
 				(font
 					(size 1 1)
@@ -6411,7 +6633,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://jlc-prod-smt.oss-eu-central-1.aliyuncs.com/smtDataManualFile/8720402844366684160-C98220.pdf?response-content-disposition=attachment%3B%20filename%3DC98220.pdf%3B%20filename%2A%3DUTF-8%27%27C98220.pdf&x-oss-date=20260718T053237Z&x-oss-expires=1800&x-oss-security-token=CAISgAN1q6Ft5B2yfSjIr5vUAcyHvppnwLCgaFTUjmE4eMF7h6KTmjz2IHhMdHJsAOodtv0%2FmmhT6PkclqRLcbhpcmfjV%2BZHzLB8qblf%2BkJe4J7b16cNrbH4M4H6aXeirtuwDsz9SNTCALjPD3nPii50x5bjaDymRCbLGJaViJlhHLN1Ow6jdmhpCctxLAlvo9NgFxm3D%2Fu2NQPwiWf9FVdhvhEG6Vly8qOi2MaRmFy8yFTx0b0SvJ%2BjYMrmPctoN9JnSdC5mfdzau3a1TJ84gRD0a5wkaVA1zbDs5bfISEIuUzebreLqY03dV4mOvdqIcMe8qigz88fk%2FfIioH6xyxKOexoSCnFTOiiupCcQLPyao9jLu6iayqViY7QaIOTqQohZmkAMwVOasAsI3Ngh4zF97Qt0cVNkXO9gWfLI8DtuMleWkppwNpcenSgc5lCkRRYwGs1287ugXlSQzo890KPDAEovaKCnZ2ZSfh7Y4sNknI6i%2Bfc2Se2MIkI4zOcIqKWD5sagAFwlyFWRoTovvrgFT6jIvy3RQnbd%2BrFLYo5Ld8QmKHlK3kKKckSmaCl0sfABvCwe4o3e5FS3nolBz73mmeXdIrpiyyYNK6dxaToXe6jDFtRO4O1V3g6sSVQLXWkvy7lcucJdH8202hIF3jVvw%2Fdbx8rzoA8IpaW6pd8Uw%2BoUd2kbiAA&x-oss-signature-version=OSS4-HMAC-SHA256&x-oss-credential=STS.NXaJv3SEFwrKjrejamtNWhg8x%2F20260718%2Feu-central-1%2Foss%2Faliyun_v4_request&x-oss-signature=5e7185703ac8213dfac0435adfdf0e4784e1272cfb98f3dd75e54f0d59b0aa0d"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -6422,7 +6644,7 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Resistor, US symbol"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -6433,11 +6655,12 @@
 				)
 			)
 		)
-		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+		(property "LCSC Part #" "C98220"
 			(at 0 0 90)
-			(layer "F.SilkS")
+			(unlocked yes)
+			(layer "F.Fab")
 			(hide yes)
-			(uuid "2fc15ee1-2577-4897-88ce-fe0711624eff")
+			(uuid "b19ca4c2-fd40-484a-8c51-3745a8583fc8")
 			(effects
 				(font
 					(size 1 1)
@@ -6569,7 +6792,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.lcsc.com/datasheet/lcsc_datasheet_2304140030_Samsung-Electro-Mechanics-CL05B104KO5NNNC_C1525.pdf"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -6580,7 +6803,7 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Unpolarized capacitor"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -6591,11 +6814,12 @@
 				)
 			)
 		)
-		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+		(property "LCSC Part #" "C507072"
 			(at 0 0 0)
-			(layer "F.SilkS")
+			(unlocked yes)
+			(layer "F.Fab")
 			(hide yes)
-			(uuid "44991685-9d5a-45a4-a05c-02fc2663ee44")
+			(uuid "89acfb63-543b-499f-9b56-dcbc46e3fc4c")
 			(effects
 				(font
 					(size 1 1)
@@ -6727,7 +6951,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://jlc-prod-smt.oss-eu-central-1.aliyuncs.com/smtDataManualFile/8720402844366684160-C98220.pdf?response-content-disposition=attachment%3B%20filename%3DC98220.pdf%3B%20filename%2A%3DUTF-8%27%27C98220.pdf&x-oss-date=20260718T053237Z&x-oss-expires=1800&x-oss-security-token=CAISgAN1q6Ft5B2yfSjIr5vUAcyHvppnwLCgaFTUjmE4eMF7h6KTmjz2IHhMdHJsAOodtv0%2FmmhT6PkclqRLcbhpcmfjV%2BZHzLB8qblf%2BkJe4J7b16cNrbH4M4H6aXeirtuwDsz9SNTCALjPD3nPii50x5bjaDymRCbLGJaViJlhHLN1Ow6jdmhpCctxLAlvo9NgFxm3D%2Fu2NQPwiWf9FVdhvhEG6Vly8qOi2MaRmFy8yFTx0b0SvJ%2BjYMrmPctoN9JnSdC5mfdzau3a1TJ84gRD0a5wkaVA1zbDs5bfISEIuUzebreLqY03dV4mOvdqIcMe8qigz88fk%2FfIioH6xyxKOexoSCnFTOiiupCcQLPyao9jLu6iayqViY7QaIOTqQohZmkAMwVOasAsI3Ngh4zF97Qt0cVNkXO9gWfLI8DtuMleWkppwNpcenSgc5lCkRRYwGs1287ugXlSQzo890KPDAEovaKCnZ2ZSfh7Y4sNknI6i%2Bfc2Se2MIkI4zOcIqKWD5sagAFwlyFWRoTovvrgFT6jIvy3RQnbd%2BrFLYo5Ld8QmKHlK3kKKckSmaCl0sfABvCwe4o3e5FS3nolBz73mmeXdIrpiyyYNK6dxaToXe6jDFtRO4O1V3g6sSVQLXWkvy7lcucJdH8202hIF3jVvw%2Fdbx8rzoA8IpaW6pd8Uw%2BoUd2kbiAA&x-oss-signature-version=OSS4-HMAC-SHA256&x-oss-credential=STS.NXaJv3SEFwrKjrejamtNWhg8x%2F20260718%2Feu-central-1%2Foss%2Faliyun_v4_request&x-oss-signature=5e7185703ac8213dfac0435adfdf0e4784e1272cfb98f3dd75e54f0d59b0aa0d"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -6738,7 +6962,7 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Resistor, US symbol"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -6749,11 +6973,12 @@
 				)
 			)
 		)
-		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
-			(at 0 0 0)
-			(layer "F.SilkS")
+		(property "LCSC Part #" "C98220"
+			(at 0 0 180)
+			(unlocked yes)
+			(layer "F.Fab")
 			(hide yes)
-			(uuid "236d20cf-112d-4fe6-8a01-baf719b32f51")
+			(uuid "2aead348-c535-488d-819f-cbddd1d2a7e6")
 			(effects
 				(font
 					(size 1 1)
@@ -6896,7 +7121,7 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Mounting Hole without connection"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -6904,18 +7129,6 @@
 			(effects
 				(font
 					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KiLib_Generator" "mounting_hardware/mounting_hole"
-			(at 0 0 0)
-			(layer "F.SilkS")
-			(hide yes)
-			(uuid "4d46c6f9-5fe5-460a-aa76-1de3623f4723")
-			(effects
-				(font
-					(size 1 1)
-					(thickness 0.15)
 				)
 			)
 		)
@@ -7001,7 +7214,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.usb.org/sites/default/files/documents/usb_type-c.zip"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -7012,7 +7225,7 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "USB 2.0-only 16P Type-C Receptacle connector"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -7023,14 +7236,15 @@
 				)
 			)
 		)
-		(property "LCSC Part" "C3151749"
-			(at 0 0 0)
+		(property "LCSC Part #" "C3151749"
+			(at 0 0 180)
+			(unlocked yes)
 			(layer "F.Fab")
 			(hide yes)
-			(uuid "8b3702fe-e242-4444-a92b-55c4a0369f19")
+			(uuid "5b7a694b-a6ba-4c61-b85a-886ca2eb0a8e")
 			(effects
 				(font
-					(size 1.27 1.27)
+					(size 1 1)
 					(thickness 0.15)
 				)
 			)
@@ -7468,7 +7682,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://jlc-prod-smt.oss-eu-central-1.aliyuncs.com/smtDataManualFile/8738158350643609600-C60491.pdf?response-content-disposition=attachment%3B%20filename%3DC60491.pdf%3B%20filename%2A%3DUTF-8%27%27C60491.pdf&x-oss-date=20260606T132855Z&x-oss-expires=1800&x-oss-security-token=CAISgAN1q6Ft5B2yfSjIr5mNLtLCv4lLgoGDNUv3knJif%2B5gh5%2FPjDz2IHhMdHJsAOodtv0%2FmmhT6PkclqRLcbhpcmfjV%2BZHzLB8qdQLjAlA4J7b16cNrbH4M4H6aXeirtuwDsz9SNTCALjPD3nPii50x5bjaDymRCbLGJaViJlhHLN1Ow6jdmhpCctxLAlvo9NgFxm3D%2Fu2NQPwiWf9FVdhvhEG6Vly8qOi2MaRmFy8yFTx0b0SvJ%2BjYMrmPctoN9JnSdC5mfdzau3a1TJ84gRD0a5wkaVA1zbDs5bfISEIuUzebreLqY03dV4mOvdqIcMe8qigz88fk%2FfIioH6xyxKOexoSCnFTOiiupCcQLPyao9jLu6iayqViY7QaIOTqQohZmkAMwVOasAsI3Ngh4zF97Qt0cVNkXO9gWfLI8DtuMleWirC1tx53tHD0eS19jklBdzSlusJRAJJUVBflCeKEaRNSAd3WGhEfM2%2BBt4QT30w5N2u00S8OSMIigi9bqKWD5sagAFTQZvCy5bfwFq9V%2FXs8QME5APVd%2FL2yqfb7dLyID5Qa9nQ8kZviJUPKUspxYRqxjqvOLIMhOXqFaLhHJJU6VxrIe8HRud7NRNGr4KNdIDRKGuBd2qcSEOdljZnoD1RtrRU1xDKqMPmRjAlSeOqgnnxXzJhR2mGbLMawxGBvzK66SAA&x-oss-signature-version=OSS4-HMAC-SHA256&x-oss-credential=STS.NZ8ehvRVj5Ch7mFvr7saLhZdn%2F20260606%2Feu-central-1%2Foss%2Faliyun_v4_request&x-oss-signature=e5f04c9d74b3f5fa304590ea5e8ff035ef2ba81ffe3cf2acb39479798370fb9c"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -7479,7 +7693,7 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Resistor"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -7490,11 +7704,12 @@
 				)
 			)
 		)
-		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
-			(at 0 0 90)
-			(layer "F.SilkS")
+		(property "LCSC Part #" "C60491"
+			(at 0 0 270)
+			(unlocked yes)
+			(layer "F.Fab")
 			(hide yes)
-			(uuid "2ead1acd-561c-49d2-ac1b-6062244efe13")
+			(uuid "9bd05731-9984-49de-b3ab-690299380c47")
 			(effects
 				(font
 					(size 1 1)
@@ -7626,7 +7841,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://jlc-prod-smt.oss-eu-central-1.aliyuncs.com/smtDataManualFile/8720402844366684160-C98220.pdf?response-content-disposition=attachment%3B%20filename%3DC98220.pdf%3B%20filename%2A%3DUTF-8%27%27C98220.pdf&x-oss-date=20260718T053237Z&x-oss-expires=1800&x-oss-security-token=CAISgAN1q6Ft5B2yfSjIr5vUAcyHvppnwLCgaFTUjmE4eMF7h6KTmjz2IHhMdHJsAOodtv0%2FmmhT6PkclqRLcbhpcmfjV%2BZHzLB8qblf%2BkJe4J7b16cNrbH4M4H6aXeirtuwDsz9SNTCALjPD3nPii50x5bjaDymRCbLGJaViJlhHLN1Ow6jdmhpCctxLAlvo9NgFxm3D%2Fu2NQPwiWf9FVdhvhEG6Vly8qOi2MaRmFy8yFTx0b0SvJ%2BjYMrmPctoN9JnSdC5mfdzau3a1TJ84gRD0a5wkaVA1zbDs5bfISEIuUzebreLqY03dV4mOvdqIcMe8qigz88fk%2FfIioH6xyxKOexoSCnFTOiiupCcQLPyao9jLu6iayqViY7QaIOTqQohZmkAMwVOasAsI3Ngh4zF97Qt0cVNkXO9gWfLI8DtuMleWkppwNpcenSgc5lCkRRYwGs1287ugXlSQzo890KPDAEovaKCnZ2ZSfh7Y4sNknI6i%2Bfc2Se2MIkI4zOcIqKWD5sagAFwlyFWRoTovvrgFT6jIvy3RQnbd%2BrFLYo5Ld8QmKHlK3kKKckSmaCl0sfABvCwe4o3e5FS3nolBz73mmeXdIrpiyyYNK6dxaToXe6jDFtRO4O1V3g6sSVQLXWkvy7lcucJdH8202hIF3jVvw%2Fdbx8rzoA8IpaW6pd8Uw%2BoUd2kbiAA&x-oss-signature-version=OSS4-HMAC-SHA256&x-oss-credential=STS.NXaJv3SEFwrKjrejamtNWhg8x%2F20260718%2Feu-central-1%2Foss%2Faliyun_v4_request&x-oss-signature=5e7185703ac8213dfac0435adfdf0e4784e1272cfb98f3dd75e54f0d59b0aa0d"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -7637,7 +7852,7 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Resistor, US symbol"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -7648,11 +7863,12 @@
 				)
 			)
 		)
-		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+		(property "LCSC Part #" "C98220"
 			(at 0 0 0)
-			(layer "F.SilkS")
+			(unlocked yes)
+			(layer "F.Fab")
 			(hide yes)
-			(uuid "b3d26f72-a94f-4ce5-8453-f637f2753c6e")
+			(uuid "15cc07cb-4da1-4e05-8ccf-5df5fd6e3839")
 			(effects
 				(font
 					(size 1 1)
@@ -7782,7 +7998,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.usb.org/sites/default/files/documents/usb_type-c.zip"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -7793,7 +8009,7 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "USB 2.0-only 16P Type-C Receptacle connector"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -7804,14 +8020,15 @@
 				)
 			)
 		)
-		(property "LCSC Part" "C3151749"
-			(at 0 0 0)
+		(property "LCSC Part #" "C3151749"
+			(at 0 0 180)
+			(unlocked yes)
 			(layer "F.Fab")
 			(hide yes)
-			(uuid "4c64da78-59ef-465b-8802-96825fc4c511")
+			(uuid "463c3c2e-8f90-43d2-95a6-c6ce7a66bf64")
 			(effects
 				(font
-					(size 1.27 1.27)
+					(size 1 1)
 					(thickness 0.15)
 				)
 			)
@@ -8247,7 +8464,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.lcsc.com/datasheet/C7499334.pdf"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -8269,14 +8486,41 @@
 				)
 			)
 		)
-		(property "LCSC Part" "C7499334"
-			(at 0 0 90)
+		(property "Manufacturer" "Megastar(兆星)"
+			(at 0 0 270)
+			(unlocked yes)
 			(layer "F.Fab")
 			(hide yes)
-			(uuid "2196d16b-6ca2-4b76-ab26-c0f8cc8f2d50")
+			(uuid "26fb998b-159b-4e1c-b00a-7dad8ab94785")
 			(effects
 				(font
-					(size 1.27 1.27)
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "ZX-PM2.54-1-16PY"
+			(at 0 0 270)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "400d7321-0724-4f53-b943-6e33748f762f")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "LCSC Part #" "C7499334"
+			(at 0 0 270)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "b48d3d0f-f7fe-476f-ad95-dcc2c83f37cc")
+			(effects
+				(font
+					(size 1 1)
 					(thickness 0.15)
 				)
 			)
@@ -8631,7 +8875,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.lcsc.com/datasheet/C4365033.pdf"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -8653,14 +8897,41 @@
 				)
 			)
 		)
-		(property "LCSC Part" "C4365033"
+		(property "Manufacturer" "PANASONIC(松下)"
 			(at 0 0 0)
+			(unlocked yes)
 			(layer "F.Fab")
 			(hide yes)
-			(uuid "5f111d00-019f-4db4-adba-cfc26d14753d")
+			(uuid "995dac62-5240-479d-86b5-1297f581b9a9")
 			(effects
 				(font
-					(size 1.27 1.27)
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "EVP-ASAC1A"
+			(at 0 0 0)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "81e7e855-9d52-4eec-b209-16830f1df9ea")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "LCSC Part #" "C4365033"
+			(at 0 0 0)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "b7794799-2fae-48b3-8370-f9f6d89b10e2")
+			(effects
+				(font
+					(size 1 1)
 					(thickness 0.15)
 				)
 			)
@@ -8959,7 +9230,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://jlc-prod-smt.oss-eu-central-1.aliyuncs.com/smtDataManualFile/8720402844366684160-C98220.pdf?response-content-disposition=attachment%3B%20filename%3DC98220.pdf%3B%20filename%2A%3DUTF-8%27%27C98220.pdf&x-oss-date=20260718T053237Z&x-oss-expires=1800&x-oss-security-token=CAISgAN1q6Ft5B2yfSjIr5vUAcyHvppnwLCgaFTUjmE4eMF7h6KTmjz2IHhMdHJsAOodtv0%2FmmhT6PkclqRLcbhpcmfjV%2BZHzLB8qblf%2BkJe4J7b16cNrbH4M4H6aXeirtuwDsz9SNTCALjPD3nPii50x5bjaDymRCbLGJaViJlhHLN1Ow6jdmhpCctxLAlvo9NgFxm3D%2Fu2NQPwiWf9FVdhvhEG6Vly8qOi2MaRmFy8yFTx0b0SvJ%2BjYMrmPctoN9JnSdC5mfdzau3a1TJ84gRD0a5wkaVA1zbDs5bfISEIuUzebreLqY03dV4mOvdqIcMe8qigz88fk%2FfIioH6xyxKOexoSCnFTOiiupCcQLPyao9jLu6iayqViY7QaIOTqQohZmkAMwVOasAsI3Ngh4zF97Qt0cVNkXO9gWfLI8DtuMleWkppwNpcenSgc5lCkRRYwGs1287ugXlSQzo890KPDAEovaKCnZ2ZSfh7Y4sNknI6i%2Bfc2Se2MIkI4zOcIqKWD5sagAFwlyFWRoTovvrgFT6jIvy3RQnbd%2BrFLYo5Ld8QmKHlK3kKKckSmaCl0sfABvCwe4o3e5FS3nolBz73mmeXdIrpiyyYNK6dxaToXe6jDFtRO4O1V3g6sSVQLXWkvy7lcucJdH8202hIF3jVvw%2Fdbx8rzoA8IpaW6pd8Uw%2BoUd2kbiAA&x-oss-signature-version=OSS4-HMAC-SHA256&x-oss-credential=STS.NXaJv3SEFwrKjrejamtNWhg8x%2F20260718%2Feu-central-1%2Foss%2Faliyun_v4_request&x-oss-signature=5e7185703ac8213dfac0435adfdf0e4784e1272cfb98f3dd75e54f0d59b0aa0d"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -8970,7 +9241,7 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Resistor, US symbol"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -8981,11 +9252,12 @@
 				)
 			)
 		)
-		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+		(property "LCSC Part #" "C98220"
 			(at 0 0 90)
-			(layer "F.SilkS")
+			(unlocked yes)
+			(layer "F.Fab")
 			(hide yes)
-			(uuid "ccc553b4-95b4-41b6-828a-0879b5770087")
+			(uuid "e4fc39cf-0dfd-4bbe-804d-7537d472eff6")
 			(effects
 				(font
 					(size 1 1)
@@ -9117,7 +9389,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://jlc-prod-smt.oss-eu-central-1.aliyuncs.com/smtDataManualFile/8720402844366684160-C98220.pdf?response-content-disposition=attachment%3B%20filename%3DC98220.pdf%3B%20filename%2A%3DUTF-8%27%27C98220.pdf&x-oss-date=20260718T053237Z&x-oss-expires=1800&x-oss-security-token=CAISgAN1q6Ft5B2yfSjIr5vUAcyHvppnwLCgaFTUjmE4eMF7h6KTmjz2IHhMdHJsAOodtv0%2FmmhT6PkclqRLcbhpcmfjV%2BZHzLB8qblf%2BkJe4J7b16cNrbH4M4H6aXeirtuwDsz9SNTCALjPD3nPii50x5bjaDymRCbLGJaViJlhHLN1Ow6jdmhpCctxLAlvo9NgFxm3D%2Fu2NQPwiWf9FVdhvhEG6Vly8qOi2MaRmFy8yFTx0b0SvJ%2BjYMrmPctoN9JnSdC5mfdzau3a1TJ84gRD0a5wkaVA1zbDs5bfISEIuUzebreLqY03dV4mOvdqIcMe8qigz88fk%2FfIioH6xyxKOexoSCnFTOiiupCcQLPyao9jLu6iayqViY7QaIOTqQohZmkAMwVOasAsI3Ngh4zF97Qt0cVNkXO9gWfLI8DtuMleWkppwNpcenSgc5lCkRRYwGs1287ugXlSQzo890KPDAEovaKCnZ2ZSfh7Y4sNknI6i%2Bfc2Se2MIkI4zOcIqKWD5sagAFwlyFWRoTovvrgFT6jIvy3RQnbd%2BrFLYo5Ld8QmKHlK3kKKckSmaCl0sfABvCwe4o3e5FS3nolBz73mmeXdIrpiyyYNK6dxaToXe6jDFtRO4O1V3g6sSVQLXWkvy7lcucJdH8202hIF3jVvw%2Fdbx8rzoA8IpaW6pd8Uw%2BoUd2kbiAA&x-oss-signature-version=OSS4-HMAC-SHA256&x-oss-credential=STS.NXaJv3SEFwrKjrejamtNWhg8x%2F20260718%2Feu-central-1%2Foss%2Faliyun_v4_request&x-oss-signature=5e7185703ac8213dfac0435adfdf0e4784e1272cfb98f3dd75e54f0d59b0aa0d"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -9128,7 +9400,7 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Resistor, US symbol"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -9139,11 +9411,12 @@
 				)
 			)
 		)
-		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+		(property "LCSC Part #" "C98220"
 			(at 0 0 90)
-			(layer "F.SilkS")
+			(unlocked yes)
+			(layer "F.Fab")
 			(hide yes)
-			(uuid "5c47df6e-f558-4c61-adba-148f3476ec69")
+			(uuid "a8caa959-5024-4fd3-893e-05abc744ef8d")
 			(effects
 				(font
 					(size 1 1)
@@ -9273,7 +9546,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.lcsc.com/datasheet/C4365033.pdf"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -9295,14 +9568,41 @@
 				)
 			)
 		)
-		(property "LCSC Part" "C4365033"
+		(property "Manufacturer" "PANASONIC(松下)"
 			(at 0 0 0)
+			(unlocked yes)
 			(layer "F.Fab")
 			(hide yes)
-			(uuid "c7f72853-9157-4fa2-bf81-d8b046da684d")
+			(uuid "0894762f-2bf9-4cc2-a98a-8f346bcfba45")
 			(effects
 				(font
-					(size 1.27 1.27)
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "EVP-ASAC1A"
+			(at 0 0 0)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "02e1a529-5409-4e9e-8e54-f19740f9dae4")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "LCSC Part #" "C4365033"
+			(at 0 0 0)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "7b96ffcf-6f70-4151-ac9e-fc1671f551f8")
+			(effects
+				(font
+					(size 1 1)
 					(thickness 0.15)
 				)
 			)
@@ -9612,7 +9912,7 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Mounting Hole without connection"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -9620,18 +9920,6 @@
 			(effects
 				(font
 					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KiLib_Generator" "mounting_hardware/mounting_hole"
-			(at 0 0 0)
-			(layer "F.SilkS")
-			(hide yes)
-			(uuid "167b48c0-740b-4663-9803-fc53b988ac79")
-			(effects
-				(font
-					(size 1 1)
-					(thickness 0.15)
 				)
 			)
 		)
@@ -9719,7 +10007,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.lcsc.com/datasheet/lcsc_datasheet_2304140030_Samsung-Electro-Mechanics-CL05B104KO5NNNC_C1525.pdf"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -9730,7 +10018,7 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Unpolarized capacitor"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -9741,11 +10029,12 @@
 				)
 			)
 		)
-		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+		(property "LCSC Part #" "C1525"
 			(at 0 0 0)
-			(layer "F.SilkS")
+			(unlocked yes)
+			(layer "F.Fab")
 			(hide yes)
-			(uuid "4bfba82f-ac19-414d-af51-18add38a6603")
+			(uuid "4f989dfc-b96b-4bd4-a746-cb04fc13c6f2")
 			(effects
 				(font
 					(size 1 1)
@@ -9877,7 +10166,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://jlc-prod-smt.oss-eu-central-1.aliyuncs.com/smtDataManualFile/8586178827076296704-C132339.pdf?response-content-disposition=attachment%3B%20filename%3DC132339.pdf%3B%20filename%2A%3DUTF-8%27%27C132339.pdf&x-oss-date=20260614T172827Z&x-oss-expires=1800&x-oss-security-token=CAISgAN1q6Ft5B2yfSjIr5rGAdDmhZdigKPYeHTU01NnPdtdhbOfoDz2IHhMdHJsAOodtv0%2FmmhT6PkclqRLcbhpcmfjV%2BZHzLB8qeMCjF5F4J7b16cNrbH4M4H6aXeirtuwDsz9SNTCALjPD3nPii50x5bjaDymRCbLGJaViJlhHLN1Ow6jdmhpCctxLAlvo9NgFxm3D%2Fu2NQPwiWf9FVdhvhEG6Vly8qOi2MaRmFy8yFTx0b0SvJ%2BjYMrmPctoN9JnSdC5mfdzau3a1TJ84gRD0a5wkaVA1zbDs5bfISEIuUzebreLqY03dV4mOvdqIcMe8qigz88fk%2FfIioH6xyxKOexoSCnFTOiiupCcQLPyao9jLu6iayqViY7QaIOTqQohZmkAMwVOasAsI3Ngh4zF97Qt0cVNkXO9gWfLI8DtuMleWhqF31xHjtHD0eS19jklBdzSlusJRAJJUVBflCeKEaRNSAd3WGhEfM2%2BBt4QT30w5N2u00S8OSMI8fuxvaKWD5sagAFq47QarHNGYgx4B%2BvMZZIEXTIHWtMNxcQKEHkgCWdQdB8CA%2Bwx3YoJ3Ak0iSsoG3jQYwPibUPuuASo8dH1X2wKmbyM9K3TzwQJkoEdfUzyqNhysneZ%2FK0%2FuPYtKh2XSWaQcBMNgPvLsI%2B4UCJjkE9PkuMfhFpTKmnP0TGHhEzP0SAA&x-oss-signature-version=OSS4-HMAC-SHA256&x-oss-credential=STS.NYsJjRhHC7a3zRe7S21Tqjv4B%2F20260614%2Feu-central-1%2Foss%2Faliyun_v4_request&x-oss-signature=ba36f8446e1846b2f278f937a26f8ad61a3522a26874894961ab626f0abe1c3c"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -9888,7 +10177,7 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Resistor"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -9899,11 +10188,12 @@
 				)
 			)
 		)
-		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+		(property "LCSC Part #" "C132339"
 			(at 0 0 90)
-			(layer "F.SilkS")
+			(unlocked yes)
+			(layer "F.Fab")
 			(hide yes)
-			(uuid "74d0090d-47d7-47e7-b194-eebeca7b34f1")
+			(uuid "fa56d6ea-ec41-4b0b-ad1f-a4dc41a9ed6b")
 			(effects
 				(font
 					(size 1 1)
@@ -10035,7 +10325,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://jlcpcb.com/api/file/downloadByFileSystemAccessId/8568525238768373760"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -10046,7 +10336,7 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Unpolarized capacitor"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -10057,11 +10347,12 @@
 				)
 			)
 		)
-		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+		(property "LCSC Part #" "C96446"
 			(at 0 0 0)
-			(layer "F.SilkS")
+			(unlocked yes)
+			(layer "F.Fab")
 			(hide yes)
-			(uuid "39b03b44-e340-4771-b98f-3f9aa0a399cf")
+			(uuid "43fce8da-2ac5-426c-93e7-1999d8e6c5d3")
 			(effects
 				(font
 					(size 1 1)
@@ -10193,7 +10484,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://jlc-prod-smt.oss-eu-central-1.aliyuncs.com/smtDataManualFile/8720402844366684160-C98220.pdf?response-content-disposition=attachment%3B%20filename%3DC98220.pdf%3B%20filename%2A%3DUTF-8%27%27C98220.pdf&x-oss-date=20260718T053237Z&x-oss-expires=1800&x-oss-security-token=CAISgAN1q6Ft5B2yfSjIr5vUAcyHvppnwLCgaFTUjmE4eMF7h6KTmjz2IHhMdHJsAOodtv0%2FmmhT6PkclqRLcbhpcmfjV%2BZHzLB8qblf%2BkJe4J7b16cNrbH4M4H6aXeirtuwDsz9SNTCALjPD3nPii50x5bjaDymRCbLGJaViJlhHLN1Ow6jdmhpCctxLAlvo9NgFxm3D%2Fu2NQPwiWf9FVdhvhEG6Vly8qOi2MaRmFy8yFTx0b0SvJ%2BjYMrmPctoN9JnSdC5mfdzau3a1TJ84gRD0a5wkaVA1zbDs5bfISEIuUzebreLqY03dV4mOvdqIcMe8qigz88fk%2FfIioH6xyxKOexoSCnFTOiiupCcQLPyao9jLu6iayqViY7QaIOTqQohZmkAMwVOasAsI3Ngh4zF97Qt0cVNkXO9gWfLI8DtuMleWkppwNpcenSgc5lCkRRYwGs1287ugXlSQzo890KPDAEovaKCnZ2ZSfh7Y4sNknI6i%2Bfc2Se2MIkI4zOcIqKWD5sagAFwlyFWRoTovvrgFT6jIvy3RQnbd%2BrFLYo5Ld8QmKHlK3kKKckSmaCl0sfABvCwe4o3e5FS3nolBz73mmeXdIrpiyyYNK6dxaToXe6jDFtRO4O1V3g6sSVQLXWkvy7lcucJdH8202hIF3jVvw%2Fdbx8rzoA8IpaW6pd8Uw%2BoUd2kbiAA&x-oss-signature-version=OSS4-HMAC-SHA256&x-oss-credential=STS.NXaJv3SEFwrKjrejamtNWhg8x%2F20260718%2Feu-central-1%2Foss%2Faliyun_v4_request&x-oss-signature=5e7185703ac8213dfac0435adfdf0e4784e1272cfb98f3dd75e54f0d59b0aa0d"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -10204,7 +10495,7 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Resistor, US symbol"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -10215,11 +10506,12 @@
 				)
 			)
 		)
-		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+		(property "LCSC Part #" "C98220"
 			(at 0 0 90)
-			(layer "F.SilkS")
+			(unlocked yes)
+			(layer "F.Fab")
 			(hide yes)
-			(uuid "d418bc3d-f65a-4476-9ac4-f7b9b844a0d8")
+			(uuid "d64a2142-a3c9-4bb1-bbae-4a011e1cc23b")
 			(effects
 				(font
 					(size 1 1)
@@ -10349,7 +10641,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.lcsc.com/datasheet/C2921655.pdf"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -10371,14 +10663,41 @@
 				)
 			)
 		)
-		(property "LCSC Part" "C2921655"
+		(property "Manufacturer" "NIDEC(尼得科)"
 			(at 0 0 0)
+			(unlocked yes)
 			(layer "F.Fab")
 			(hide yes)
-			(uuid "fef45ca6-ecb1-4573-819b-e0aca766b8e1")
+			(uuid "96e53e96-5467-46b2-ba26-142cbe1f8af5")
 			(effects
 				(font
-					(size 1.27 1.27)
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "CL-SB-13A-02T"
+			(at 0 0 0)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "18b4dbc8-f592-4c00-a584-43ffc0732b74")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "LCSC Part #" "C2921655"
+			(at 0 0 0)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "4da9fc1e-3e03-4e25-8c18-64a7a21b2fe8")
+			(effects
+				(font
+					(size 1 1)
 					(thickness 0.15)
 				)
 			)
@@ -10691,7 +11010,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.lcsc.com/datasheet/lcsc_datasheet_2304140030_Samsung-Electro-Mechanics-CL05B104KO5NNNC_C1525.pdf"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -10702,7 +11021,7 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Unpolarized capacitor"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -10713,11 +11032,12 @@
 				)
 			)
 		)
-		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
-			(at 0 0 90)
-			(layer "F.SilkS")
+		(property "LCSC Part #" "C1525"
+			(at 0 0 270)
+			(unlocked yes)
+			(layer "F.Fab")
 			(hide yes)
-			(uuid "2c549025-ec9f-42c2-840b-966e7c4f15a6")
+			(uuid "1aeceb51-ad4b-4316-ae27-727196cf9469")
 			(effects
 				(font
 					(size 1 1)
@@ -10849,7 +11169,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://jlcpcb.com/api/file/downloadByFileSystemAccessId/8568525238768373760"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -10860,7 +11180,7 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Unpolarized capacitor"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -10871,11 +11191,12 @@
 				)
 			)
 		)
-		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
-			(at 0 0 90)
-			(layer "F.SilkS")
+		(property "LCSC Part #" "C96446"
+			(at 0 0 270)
+			(unlocked yes)
+			(layer "F.Fab")
 			(hide yes)
-			(uuid "112b75bc-6afe-4b90-b3d1-5cb091d28776")
+			(uuid "99328262-f6f0-4300-928f-86d6292516af")
 			(effects
 				(font
 					(size 1 1)
@@ -11005,7 +11326,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.lcsc.com/datasheet/C7498153.pdf"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -11027,14 +11348,41 @@
 				)
 			)
 		)
-		(property "LCSC Part" "C7498153"
+		(property "Manufacturer" "LX(连欣科技)"
 			(at 0 0 90)
+			(unlocked yes)
 			(layer "F.Fab")
 			(hide yes)
-			(uuid "0799b417-6869-4e14-8615-d5ffaa8fccad")
+			(uuid "d7962e4c-5703-4487-8cc2-67e380bf493a")
 			(effects
 				(font
-					(size 1.27 1.27)
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "XDJK-0051-025"
+			(at 0 0 90)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "d9d6e696-5da3-422e-a7fc-8a6711ada047")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "LCSC Part #" "C7498153"
+			(at 0 0 90)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "e3897564-7f30-429e-a279-517cf89a5679")
+			(effects
+				(font
+					(size 1 1)
 					(thickness 0.15)
 				)
 			)
@@ -11246,7 +11594,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://jlcpcb.com/api/file/downloadByFileSystemAccessId/8568525238768373760"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -11257,7 +11605,7 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Unpolarized capacitor"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -11268,11 +11616,12 @@
 				)
 			)
 		)
-		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
-			(at 0 0 0)
-			(layer "F.SilkS")
+		(property "LCSC Part #" "C96446"
+			(at 0 0 180)
+			(unlocked yes)
+			(layer "F.Fab")
 			(hide yes)
-			(uuid "a3eeda0a-32af-4d5f-b601-9442d1b2b532")
+			(uuid "309eadf2-1470-426c-8bed-00b152d2a83b")
 			(effects
 				(font
 					(size 1 1)
@@ -11404,7 +11753,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://jlcpcb.com/api/file/downloadByFileSystemAccessId/8568525238768373760"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -11415,7 +11764,7 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Unpolarized capacitor"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -11426,11 +11775,12 @@
 				)
 			)
 		)
-		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
-			(at 0 0 0)
-			(layer "F.SilkS")
+		(property "LCSC Part #" "C96446"
+			(at 0 0 180)
+			(unlocked yes)
+			(layer "F.Fab")
 			(hide yes)
-			(uuid "330cfed2-7386-4184-8cf0-1d0e530e01fe")
+			(uuid "ec432157-1dd1-40f6-b567-1868027cacd3")
 			(effects
 				(font
 					(size 1 1)
@@ -11560,7 +11910,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.lcsc.com/datasheet/C7499334.pdf"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -11582,14 +11932,41 @@
 				)
 			)
 		)
-		(property "LCSC Part" "C7499334"
-			(at 0 0 90)
+		(property "Manufacturer" "Megastar(兆星)"
+			(at 0 0 270)
+			(unlocked yes)
 			(layer "F.Fab")
 			(hide yes)
-			(uuid "7ad548a1-a244-457d-ae62-f7c48fb89b7b")
+			(uuid "748270f0-1941-4150-b51a-a5f443ce9ff9")
 			(effects
 				(font
-					(size 1.27 1.27)
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "ZX-PM2.54-1-16PY"
+			(at 0 0 270)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "6d091cbb-37b3-45b7-b7e3-aea171b19837")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "LCSC Part #" "C7499334"
+			(at 0 0 270)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "976ebf2f-265a-40e5-9ea9-602e395628d6")
+			(effects
+				(font
+					(size 1 1)
 					(thickness 0.15)
 				)
 			)
@@ -14573,6 +14950,22 @@
 		(uuid "d272e458-ec8d-4c38-a89b-1845b29314ec")
 	)
 	(segment
+		(start 132.5 112.175)
+		(end 132.425 112.25)
+		(width 0.6)
+		(layer "F.Cu")
+		(net "Net-(R11-Pad1)")
+		(uuid "5cabe48b-8d3d-49ae-8536-9a5511a3a5e7")
+	)
+	(segment
+		(start 132.5 110.02)
+		(end 132.5 112.175)
+		(width 0.6)
+		(layer "F.Cu")
+		(net "Net-(R11-Pad1)")
+		(uuid "6db44f45-9df3-4af5-9a70-a3f79dadbc96")
+	)
+	(segment
 		(start 138.468293 105.658809)
 		(end 138.5 107.48)
 		(width 0.6)
@@ -14619,22 +15012,6 @@
 		(layer "F.Cu")
 		(net "SOUND REACTIVE ON")
 		(uuid "dd33dffe-3388-4afc-87d0-fc5083422319")
-	)
-	(segment
-		(start 132.5 112.175)
-		(end 132.425 112.25)
-		(width 0.6)
-		(layer "F.Cu")
-		(net "Net-(R11-Pad1)")
-		(uuid "5cabe48b-8d3d-49ae-8536-9a5511a3a5e7")
-	)
-	(segment
-		(start 132.5 110.02)
-		(end 132.5 112.175)
-		(width 0.6)
-		(layer "F.Cu")
-		(net "Net-(R11-Pad1)")
-		(uuid "6db44f45-9df3-4af5-9a70-a3f79dadbc96")
 	)
 	(zone
 		(net "GND")
