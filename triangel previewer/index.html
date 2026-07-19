@@ -177,7 +177,7 @@
       const colors = liveColors;
       if (!colors) { requestAnimationFrame(draw); return; }
 
-      const radius = Math.max(2, scale * 1.2);
+      const radius = Math.max(2, scale * 3.0);
       for (let i = 0; i < LED_MAP.length; i++) {
         const { wx, wy } = LED_MAP[i];
         const [r, g, b] = colors[i] || [0, 0, 0];
