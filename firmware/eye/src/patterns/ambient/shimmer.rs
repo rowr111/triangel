@@ -10,6 +10,8 @@ const RADIAL_SPAN_MM:  f32 = 100.0;  // distance over which the hue sweeps the a
                                      // (lower = more color bands across the fixture at once)
 const HASH_JITTER:     f32 = 0.06;   // per-LED hue scatter, for a jeweled twinkle
 const SHIMMER_FLOOR:   f32 = 0.10;   // brightness the wave troughs settle at, so it never goes dark
+const WAVE_FALLOFF:    f32 = 0.7;    // shapes the crest->trough falloff: <1 broadens the bright crests
+                                     // (brighter overall, thin dark troughs); >1 sharpens to punchy peaks
 
 // Vibrant cool hue arc, in degrees. Saturation is full (rainbow-level); the hue ping-pongs
 // across [HUE_START, HUE_START + HUE_SPAN] so the bands stay in the cool range and never seam.
@@ -46,9 +48,10 @@ impl Pattern for CenterShimmer {
         for (i, led) in leds.iter().enumerate() {
             let dist = led.dist_to(WORLD_CENTROID_X, WORLD_CENTROID_Y);
 
-            // Radial wave (the motion).
+            // Radial wave (the motion), reshaped by WAVE_FALLOFF so the crest-to-trough
+            // falloff broadens the bright band and keeps the dark troughs thin.
             let arg = dist / self.wavelength - t_s * self.speed / self.wavelength;
-            let wave = ((arg * PI * 2.0).sin() + 1.0) / 2.0;
+            let wave = (((arg * PI * 2.0).sin() + 1.0) / 2.0).powf(WAVE_FALLOFF);
 
             // Per-LED sparkle: deterministic phase offset from board/local index hash.
             let hash = (led.board_id as u32 * 7 + led.local_idx as u32 * 13) % 97;
