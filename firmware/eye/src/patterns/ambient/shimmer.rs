@@ -1,6 +1,21 @@
-use crate::patterns::{Frame, Pattern};
+use crate::patterns::{Frame, Pattern, hsv};
 use crate::led::map::{Led, WORLD_CENTROID_X, WORLD_CENTROID_Y};
 use core::f32::consts::PI;
+
+// Radial shimmer: a wave ripples out from the center while each LED twinkles on its own
+// phase, giving a per-LED brightness field. Color is a vibrant (fully-saturated) hue swept
+// across a cool arc by that same field, so the motion and the color share one source.
+const DRIFT_PERIOD_MS: u32 = 24_000; // one full hue drift - rotates the bands visibly
+const RADIAL_SPAN_MM:  f32 = 100.0;  // distance over which the hue sweeps the arc once
+                                     // (lower = more color bands across the fixture at once)
+const HASH_JITTER:     f32 = 0.06;   // per-LED hue scatter, for a jeweled twinkle
+const SHIMMER_FLOOR:   f32 = 0.10;   // brightness the wave troughs settle at, so it never goes dark
+
+// Vibrant cool hue arc, in degrees. Saturation is full (rainbow-level); the hue ping-pongs
+// across [HUE_START, HUE_START + HUE_SPAN] so the bands stay in the cool range and never seam.
+const HUE_START:  f32 = 180.0; // cyan
+const HUE_SPAN:   f32 = 140.0; // up through blue/violet toward magenta, then back
+const SATURATION: f32 = 1.0;   // 1.0 = max vibrance; lower for a softer, brighter look
 
 pub struct CenterShimmer {
     pub speed:      f32, // mm/s outward wave propagation
@@ -16,19 +31,32 @@ impl Pattern for CenterShimmer {
         let wave_period_ms = (self.wavelength / self.speed * 1000.0) as u32;
         let t_s = (t_ms % wave_period_ms.max(1)) as f32 / 1000.0;
         let sparkle_t = (t_ms % SPARKLE_PERIOD_MS) as f32;
+        // Slow hue drift, folded to its own period for the same long-uptime reason.
+        let drift = (t_ms % DRIFT_PERIOD_MS) as f32 / DRIFT_PERIOD_MS as f32;
 
         for (i, led) in leds.iter().enumerate() {
             let dist = led.dist_to(WORLD_CENTROID_X, WORLD_CENTROID_Y);
-            let wave = ((dist / self.wavelength - t_s * self.speed / self.wavelength) * PI * 2.0)
-                .sin();
-            let wave = (wave + 1.0) / 2.0;
 
-            // Per-LED sparkle: deterministic phase offset from board/local index hash
+            // Radial wave (the motion).
+            let arg = dist / self.wavelength - t_s * self.speed / self.wavelength;
+            let wave = ((arg * PI * 2.0).sin() + 1.0) / 2.0;
+
+            // Per-LED sparkle: deterministic phase offset from board/local index hash.
             let hash = (led.board_id as u32 * 7 + led.local_idx as u32 * 13) % 97;
             let shimmer = 0.6 + 0.4 * (sparkle_t * 0.0025 + hash as f32).sin();
 
-            let b = wave * shimmer;
-            out[i] = [(b * 160.0) as u8, (b * 210.0) as u8, (b * 255.0) as u8];
+            // Brightness field, lifted off zero so the wave troughs still glow (SHIMMER_FLOOR..1).
+            let b = SHIMMER_FLOOR + (1.0 - SHIMMER_FLOOR) * wave * shimmer;
+
+            // Hue position: radial gradient + slow drift + a touch of per-LED scatter.
+            let hn = hash as f32 / 97.0; // 0..1 per-LED
+            let p = dist / RADIAL_SPAN_MM + drift + (hn - 0.5) * HASH_JITTER;
+
+            // Ping-pong p into a triangle 0->1->0 so the hue sweeps up the cool arc and
+            // back down - concentric bands with no seam where p wraps.
+            let tri = 1.0 - (2.0 * p.rem_euclid(1.0) - 1.0).abs();
+            let hue = HUE_START + HUE_SPAN * tri;
+            out[i] = hsv(hue, SATURATION, b);
         }
     }
 }
