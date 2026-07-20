@@ -9,9 +9,9 @@ use core::f32::consts::{PI, TAU};
 const SECOND_WAVE_STRENGTH:    f32 = 0.5;  // interference wave amplitude vs the primary
 const SECOND_WAVELENGTH_RATIO: f32 = 1.7;  // second wave's wavelength vs primary (incommensurate)
 const SECOND_SPEED_RATIO:      f32 = 0.63; // second wave's speed vs primary
-const WAVE_FLOOR:   f32 = 0.2;  // wave troughs still glow - a fire's base never goes black
-const HEAT_BIAS:    f32 = 0.3;  // warms the whole flame so the base idles white-hot
-const COOL_TILT:    f32 = 0.7;  // world tilt: heat subtracted by the top row - offsets each
+const WAVE_FLOOR:   f32 = 0.35; // wave troughs still glow - a fire's base never goes black
+const HEAT_BIAS:    f32 = 0.45; // warms the whole flame so the base idles white-hot
+const COOL_TILT:    f32 = 0.35;  // world tilt: heat subtracted by the top row - offsets each
                                 // row's range cooler without crushing its variance
 const TILE_TILT:    f32 = 0.25; // per-tile tilt: subtracted at each triangle's own top edge,
                                 // so every tile carries its own bottom-to-top fade
@@ -159,12 +159,13 @@ fn board_y_extents(leds: &[Led]) -> &'static [(f32, f32); 26] {
     })
 }
 
-/// Blackbody-ish heat ramp: black -> deep red -> orange -> bright yellow -> white ->
-/// blue-white. With the height cooling this puts blue-white at the flame's base and
-/// a red flameout at the top rows, like a real flame.
+/// Blackbody-ish heat ramp: coal-ember -> deep red -> orange -> bright yellow -> white ->
+/// blue-white. The floor is a dim ember rather than pure black, so cooled tops and smoke
+/// wisps glow as dark coals instead of switching fully off. With the height cooling this
+/// puts blue-white at the flame's base and a red flameout at the top rows, like a real flame.
 fn fire_ramp(heat: f32) -> [u8; 3] {
     const STOPS: [(f32, [f32; 3]); 6] = [
-        (0.00, [0.0, 0.0, 0.0]),
+        (0.00, [25.0, 3.0, 0.0]),      // dim coal-ember floor (never fully off)
         (0.30, [180.0, 10.0, 0.0]),    // deep red
         (0.55, [255.0, 110.0, 0.0]),   // orange
         (0.75, [255.0, 230.0, 40.0]),  // bright yellow
