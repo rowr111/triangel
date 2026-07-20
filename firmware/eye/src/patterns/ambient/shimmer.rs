@@ -1,6 +1,6 @@
 use crate::patterns::{Frame, Pattern, hsv};
 use crate::led::map::{Led, WORLD_CENTROID_X, WORLD_CENTROID_Y};
-use core::f32::consts::PI;
+use core::f32::consts::{PI, TAU};
 
 // Radial shimmer: a wave ripples out from the center while each LED twinkles on its own
 // phase, giving a per-LED brightness field. Color is a vibrant (fully-saturated) hue swept
@@ -16,6 +16,13 @@ const SHIMMER_FLOOR:   f32 = 0.10;   // brightness the wave troughs settle at, s
 const HUE_START:  f32 = 180.0; // cyan
 const HUE_SPAN:   f32 = 140.0; // up through blue/violet toward magenta, then back
 const SATURATION: f32 = 1.0;   // 1.0 = max vibrance; lower for a softer, brighter look
+
+// Spiral: SPIRAL_ARMS sectors of hue, twisted by radius and spun over time, so they curl
+// into arms that pinwheel outward - echoing the triangle's 3-fold shape. Layered on top of
+// the radial field. Flip the sign of SPIRAL_TWIST to reverse the winding direction.
+const SPIRAL_ARMS:      f32 = 3.0;    // arms around the wheel (3 matches the triangle)
+const SPIRAL_TWIST:     f32 = 0.004;  // hue cycles added per mm of radius - how tightly arms wind
+const SPIRAL_PERIOD_MS: u32 = 12_000; // one full rotation of the pinwheel
 
 pub struct CenterShimmer {
     pub speed:      f32, // mm/s outward wave propagation
@@ -33,6 +40,8 @@ impl Pattern for CenterShimmer {
         let sparkle_t = (t_ms % SPARKLE_PERIOD_MS) as f32;
         // Slow hue drift, folded to its own period for the same long-uptime reason.
         let drift = (t_ms % DRIFT_PERIOD_MS) as f32 / DRIFT_PERIOD_MS as f32;
+        // Pinwheel rotation phase (0..1), advancing the spiral arms over time.
+        let spin = (t_ms % SPIRAL_PERIOD_MS) as f32 / SPIRAL_PERIOD_MS as f32;
 
         for (i, led) in leds.iter().enumerate() {
             let dist = led.dist_to(WORLD_CENTROID_X, WORLD_CENTROID_Y);
@@ -48,9 +57,12 @@ impl Pattern for CenterShimmer {
             // Brightness field, lifted off zero so the wave troughs still glow (SHIMMER_FLOOR..1).
             let b = SHIMMER_FLOOR + (1.0 - SHIMMER_FLOOR) * wave * shimmer;
 
-            // Hue position: radial gradient + slow drift + a touch of per-LED scatter.
+            // Hue position: radial gradient + drift + per-LED scatter, plus a spiral of
+            // SPIRAL_ARMS sectors twisted by radius and spun over time (pinwheels outward).
             let hn = hash as f32 / 97.0; // 0..1 per-LED
-            let p = dist / RADIAL_SPAN_MM + drift + (hn - 0.5) * HASH_JITTER;
+            let theta = (led.wy - WORLD_CENTROID_Y).atan2(led.wx - WORLD_CENTROID_X);
+            let spiral = SPIRAL_ARMS * theta / TAU + SPIRAL_TWIST * dist - spin;
+            let p = dist / RADIAL_SPAN_MM + drift + (hn - 0.5) * HASH_JITTER + spiral;
 
             // Ping-pong p into a triangle 0->1->0 so the hue sweeps up the cool arc and
             // back down - concentric bands with no seam where p wraps.
