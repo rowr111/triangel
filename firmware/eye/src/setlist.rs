@@ -13,6 +13,15 @@ const CYCLE_MS: u32 = 3 * 60 * 1_000; // 3 minutes
 const STEP_TRANSITION_MS:  u32 = 3000;
 const SOUND_TRANSITION_MS: u32 = 200;
 
+// Global brightness ladder: geometric steps (~1.7x each) so a d-pad press feels like an
+// even perceived change instead of lurching at the low end. Applied as a flat multiply
+// over the finished frame; the top level is 1.0 (full brightness, a no-op).
+const BRIGHTNESS_LEVELS: [f32; 7] = [0.06, 0.10, 0.17, 0.29, 0.49, 0.83, 1.0];
+#[cfg(not(feature = "previewer"))]
+const DEFAULT_BRIGHTNESS_INDEX: usize = 3; // middle -> perceptual medium, room to go both ways
+#[cfg(feature = "previewer")]
+const DEFAULT_BRIGHTNESS_INDEX: usize = BRIGHTNESS_LEVELS.len() - 1; // full - the web view is dim otherwise
+
 // Audition order for pick_style - cycled so each step shows a different transition.
 const STYLES: [TransitionStyle; 7] = [
     TransitionStyle::Crossfade,
@@ -26,11 +35,11 @@ const STYLES: [TransitionStyle; 7] = [
 
 fn ambient_patterns() -> Vec<Box<dyn Pattern>> {
     vec![
+        Box::new(Squall::new()),
+        Box::new(ApexFlame      { speed: 100.0, wavelength: 80.0 }),
         Box::new(CenterShimmer  { speed: 60.0,  wavelength: 120.0 }),
         Box::new(RainbowX       { speed: 60.0 }),
-        Box::new(ApexFlame      { speed: 100.0, wavelength: 80.0 }),
         Box::new(HorizontalScan { period_ms: 2_000, bandwidth: 30.0 }),
-        Box::new(Squall::new()),
     ]
 }
 
@@ -121,7 +130,7 @@ pub struct SetlistManager {
     last_sound_active: bool,
     next_style:        usize,
     from_buf:          Frame,
-    pub brightness:    f32,
+    brightness_index:  usize,
     pub sound_mode:    SoundMode,
 }
 
@@ -137,7 +146,7 @@ impl SetlistManager {
             last_sound_active: false,
             next_style:        0,
             from_buf:          [[0u8; 3]; LED_COUNT],
-            brightness:        1.0,
+            brightness_index:  DEFAULT_BRIGHTNESS_INDEX,
             sound_mode:        SoundMode::Off,
         }
     }
@@ -270,9 +279,16 @@ impl SetlistManager {
         }
     }
 
-    /// `delta` is positive (brighter) or negative (dimmer). Clamped to [0.05, 1.0].
-    pub fn adjust_brightness(&mut self, delta: f32) {
-        self.brightness = (self.brightness + delta).clamp(0.05, 1.0);
+    /// Step global brightness one notch along BRIGHTNESS_LEVELS. `delta` is +1 (brighter)
+    /// or -1 (dimmer); the index saturates at the ends (no wraparound).
+    pub fn adjust_brightness(&mut self, delta: i32) {
+        let last = (BRIGHTNESS_LEVELS.len() - 1) as i32;
+        self.brightness_index = (self.brightness_index as i32 + delta).clamp(0, last) as usize;
+    }
+
+    /// Current global brightness multiplier (0.0-1.0), applied over the whole frame.
+    pub fn brightness(&self) -> f32 {
+        BRIGHTNESS_LEVELS[self.brightness_index]
     }
 
     /// Returns whether sound-reactive setlist should be active.

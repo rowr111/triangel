@@ -48,8 +48,8 @@ pub fn apply_events(queue: &EventQueue, setlist: &mut SetlistManager, now_ms: u3
     while let Some(event) = q.pop_front() {
         let sound_active = setlist.sound_active(activity);
         match event {
-            InputEvent::BrightnessUp      => setlist.adjust_brightness(0.1),
-            InputEvent::BrightnessDown    => setlist.adjust_brightness(-0.1),
+            InputEvent::BrightnessUp      => setlist.adjust_brightness(1),
+            InputEvent::BrightnessDown    => setlist.adjust_brightness(-1),
             InputEvent::PatternNext       => setlist.step_next(now_ms, sound_active),
             InputEvent::PatternPrev       => setlist.step_prev(now_ms, sound_active),
             InputEvent::ToggleHold        => setlist.toggle_hold(now_ms),

@@ -80,7 +80,7 @@ fn main() -> ! {
         setlist.render(&LED_MAP, frame_start as u32, sound_level, sound_active, &mut frame);
 
         // Apply global brightness
-        let brightness = setlist.brightness;
+        let brightness = setlist.brightness();
         if brightness < 1.0 {
             for led in frame.iter_mut() {
                 led[0] = (led[0] as f32 * brightness) as u8;
