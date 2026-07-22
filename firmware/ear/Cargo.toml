@@ -44,5 +44,10 @@ uart-audio = ["usb"]
 # Off = the temporary broadband RMS level byte. Must match the eye's `mel` feature -
 # the two chips share a wire format, so a mismatch garbles the link.
 mel = []
+# I2S mic drain strategy. Default (neither set) = poll FIFO0 in read_frame.
+# `drain-dma` = the BIO writes samples into an IFRAM ring the CPU reads, so the
+# mic clock never pauses between frames (needs the i2s_dma BIO program). Only one
+# BIO program is used at a time; the two are mutually exclusive.
+drain-dma = []
 aestests = ["aes"]
 default = ["bao1x", "board-dabao"]
