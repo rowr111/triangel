@@ -11,6 +11,9 @@ mod uart_out;
 
 use audio::{ActiveAudio, AudioSource};
 use uart_out::UartOut;
+// Without `mel`, main builds a level-only frame directly (the mel module isn't compiled).
+#[cfg(not(feature = "mel"))]
+use triangel_shared::mel::MelFrame;
 
 fn main() -> ! {
     log_server::init_wait().unwrap();
@@ -37,9 +40,12 @@ fn main() -> ! {
         uart_out.send(&processor.process(&frame));
         #[cfg(not(feature = "mel"))]
         {
+            // Level-only frame from a simple RMS - same 53-byte wire format as the mel
+            // path, just with the bands zeroed. 1.8 = sensitivity; higher = more.
             let rms = (frame.iter().map(|&s| (s as f32 / 32768.0).powi(2)).sum::<f32>()
                 / frame.len() as f32).sqrt();
-            uart_out.send_level(rms * 1.8); // tune: higher = more sensitive
+            let level = ((rms * 1.8).clamp(0.0, 1.0) * 65535.0) as u16;
+            uart_out.send(&MelFrame::level_only(level, rms > 0.02));
         }
     }
 }

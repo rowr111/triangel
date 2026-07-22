@@ -1,24 +1,19 @@
-//! Sends the ear's audio level to the eye chip over a hardware UART.
+//! Sends the ear's audio to the eye chip over a hardware UART, always as a framed
+//! `MelFrame` (see `triangel-shared`): 53 bytes total - a sync byte, the 24 bands,
+//! the level, an activity flag, and an XOR checksum. The frame format is constant
+//! regardless of the `mel` feature, so the two chips never disagree on the wire
+//! layout; `mel` only decides whether the bands carry real FFT data (`main.rs` with
+//! mel) or are zero with just the level filled in (without mel, via
+//! `MelFrame::level_only`).
 //!
-//! CURRENT (temporary, bringup): a single raw byte per audio frame = the level scaled to
-//! 0-255 (see `send_level`). No sync byte, no checksum, no framing - the eye's `audio.rs`
-//! reads bare bytes and treats `byte / 255` as the level. This is a placeholder while the
-//! I2S mic and mel pipeline aren't wired up; the ear derives the level from a simple RMS in
-//! `main.rs` for now.
-//!
-//! FUTURE: the real framed protocol is `MelFrame` in `triangel-shared` - 51 bytes per frame
-//! (sync + 48 mel bands + 1 activity byte + 1 XOR checksum), sent via `send()` below. It is
-//! dead until the mel path lands; at that point decide whether to give the level byte a real
-//! framed variant or drop `MelFrame`.
-//!
-//! Physical connection: ear pin 15 (PB14, UART2 TX) -> eye pin 16 (PB13, UART2 RX) + GND.
-//! Baud rate must match `EAR_UART_BAUD` in eye's `audio.rs`.
+//! Physical connection: ear pin 15 (PB14, UART2 TX) wires to eye pin 16 (PB13,
+//! UART2 RX), plus GND. Baud rate must match `EAR_UART_BAUD` in eye's `audio.rs`.
 
 use bao1x_hal::clocks::PERCLK_HZ;
 use bao1x_hal::udma::{Uart, UartChannel};
 use triangel_shared::mel::{EAR_UART_BAUD, FRAME_LEN, MelFrame};
 
-/// Owns the UART TX peripheral; sends the level byte today, framed `MelFrame`s later.
+/// Owns the UART TX peripheral and sends framed `MelFrame`s to the eye.
 pub struct UartOut {
     uart: Uart,
 }
@@ -34,17 +29,7 @@ impl UartOut {
         Self { uart }
     }
 
-    /// Send the current audio level (0.0-1.0) as a single raw byte (`level * 255`, clamped).
-    /// Temporary placeholder: no framing/sync/checksum - the eye reads bare bytes.
-    /// Unused when the `mel` feature is on (which sends framed `MelFrame`s instead).
-    #[allow(dead_code)]
-    pub fn send_level(&mut self, level: f32) {
-        let v = (level.clamp(0.0, 1.0) * 255.0) as u8;
-        self.uart.write(&[v]);
-    }
-
-    /// Full mel frame send (kept for future use).
-    #[allow(dead_code)]
+    /// Encode and send one `MelFrame` (53 bytes) to the eye.
     pub fn send(&mut self, frame: &MelFrame) {
         let mut buf = [0u8; FRAME_LEN];
         frame.encode(&mut buf);

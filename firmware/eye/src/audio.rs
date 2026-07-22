@@ -8,7 +8,7 @@ use bao1x_hal::udma::{Uart, UartChannel, UartIrq};
 use bao1x_hal_service::UdmaGlobal;
 
 pub use triangel_shared::mel::MEL_BANDS;
-use triangel_shared::mel::EAR_UART_BAUD;
+use triangel_shared::mel::{EAR_UART_BAUD, FRAME_LEN, MelFrame, SYNC_BYTE};
 
 use crate::pins;
 
@@ -23,9 +23,14 @@ pub static UART_STATUS:        AtomicU8  = AtomicU8::new(STATUS_PENDING);
 pub static UART_FIRST_BYTE:    AtomicU8  = AtomicU8::new(0);
 pub static UART_LAST_FRAME_MS: AtomicU32 = AtomicU32::new(0);
 
-// --- Lock-free slots between the RX interrupt handler and the render loop ---
-static UART_LATEST_BYTE: AtomicU8   = AtomicU8::new(0);   // most recent level byte
-static UART_RX_SEQ:      AtomicU32  = AtomicU32::new(0);  // bumped per byte; render loop diffs it
+// --- Lock-free byte ring between the RX interrupt (producer) and the render loop
+// (consumer): the handler pushes raw bytes, update() drains them through the frame
+// state machine. A ring, not a single latest-byte slot, so a 53-byte frame that
+// spans several render frames isn't lost. ---
+const RX_RING_SZ: usize = 512; // power of two; several frames of headroom
+static RX_RING: [AtomicU8; RX_RING_SZ] = [const { AtomicU8::new(0) }; RX_RING_SZ];
+static RX_WR: AtomicUsize = AtomicUsize::new(0); // producer index (interrupt)
+static RX_RD: AtomicUsize = AtomicUsize::new(0); // consumer index (render loop)
 static UART_CSR_VIRT:    AtomicUsize = AtomicUsize::new(0); // handler rebuilds its Uart from these
 static UART_IFRAM_VIRT:  AtomicUsize = AtomicUsize::new(0);
 
@@ -46,7 +51,9 @@ struct AudioState {
     loud_ms:        f32,  // leaky accumulator of net loud time, 0..=ACTIVITY_ARM_MS
     last_tick_ms:   u32,
     last_update_ms: u32,
-    last_seq:       u32,
+    // Frame assembler (owned by the render loop): the partial frame and fill position.
+    frame_buf:      [u8; FRAME_LEN],
+    frame_pos:      usize,
 }
 
 impl AudioState {
@@ -59,7 +66,8 @@ impl AudioState {
             loud_ms:        0.0,
             last_tick_ms:   0,
             last_update_ms: 0,
-            last_seq:       0,
+            frame_buf:      [0u8; FRAME_LEN],
+            frame_pos:      0,
         }
     }
 }
@@ -101,31 +109,36 @@ impl AudioReceiver {
         self.state.activity
     }
 
-    /// Called once per frame from the render loop. Ingests the latest byte the RX
-    /// interrupt captured (EMA for the render level), decays toward silence when the
-    /// ear stops sending, and advances the slow arm/release activity accumulator.
+    /// Called once per frame from the render loop. Drains the bytes the RX interrupt
+    /// buffered through the frame assembler, applies any complete frame, decays toward
+    /// silence when the ear stops sending, and advances the slow arm/release accumulator.
     pub fn update(&mut self, now_ms: u32) {
         // Frame delta for the accumulator, capped so boot delay or a frame overrun
         // can't slam it forward in one step.
         let dt_ms = (now_ms.wrapping_sub(self.state.last_tick_ms) as f32).min(100.0);
         self.state.last_tick_ms = now_ms;
 
-        // Acquire pairs with the handler's Release bump: a fresh seq guarantees a fresh byte.
-        let seq = UART_RX_SEQ.load(Ordering::Acquire);
-        if seq != self.state.last_seq {
-            self.state.last_seq = seq;
-            let level = UART_LATEST_BYTE.load(Ordering::Relaxed) as f32 / 255.0;
-            // Light EMA so single rogue bytes don't spike the fill. The accumulator judges
-            // the EMA, not the raw byte, so a lone transient counts as a few frames of loud.
-            self.state.smoothed_level = self.state.smoothed_level * 0.6 + level * 0.4;
-            self.state.last_loud      = self.state.smoothed_level > ACTIVITY_LOUD_LEVEL;
-            self.state.last_update_ms = now_ms;
-            UART_STATUS.store(STATUS_RECEIVING, Ordering::Relaxed);
-            UART_LAST_FRAME_MS.store(now_ms, Ordering::Relaxed);
-        } else if now_ms.wrapping_sub(self.state.last_update_ms) >= 200 {
-            // ear stopped sending: decay the render level and count the time as quiet
+        // Drain every byte the interrupt buffered through the frame state machine.
+        let mut got_frame = false;
+        loop {
+            let rd = RX_RD.load(Ordering::Relaxed);
+            // Acquire pairs with the handler's Release store of the write index.
+            let wr = RX_WR.load(Ordering::Acquire);
+            if rd == wr {
+                break;
+            }
+            let byte = RX_RING[rd & (RX_RING_SZ - 1)].load(Ordering::Relaxed);
+            RX_RD.store(rd.wrapping_add(1), Ordering::Release);
+            if self.feed_byte(byte, now_ms) {
+                got_frame = true;
+            }
+        }
+
+        // No fresh frame for a while: the ear stopped sending - decay toward silence
+        // and count the time as quiet.
+        if !got_frame && now_ms.wrapping_sub(self.state.last_update_ms) >= 200 {
             self.state.smoothed_level = (self.state.smoothed_level - 0.05).max(0.0);
-            self.state.last_loud      = false;
+            self.state.last_loud = false;
             self.state.last_update_ms = now_ms;
         }
 
@@ -144,6 +157,52 @@ impl AudioReceiver {
             }
         }
     }
+
+    /// Feed one received byte into the frame assembler. Returns true when a complete,
+    /// checksum-valid `MelFrame` was decoded and applied.
+    fn feed_byte(&mut self, byte: u8, now_ms: u32) -> bool {
+        if self.state.frame_pos == 0 {
+            // Hunt for the sync byte; ignore anything else.
+            if byte == SYNC_BYTE {
+                self.state.frame_buf[0] = byte;
+                self.state.frame_pos = 1;
+            }
+            return false;
+        }
+        self.state.frame_buf[self.state.frame_pos] = byte;
+        self.state.frame_pos += 1;
+        if self.state.frame_pos < FRAME_LEN {
+            return false;
+        }
+        // Full frame collected. Reset for the next one, then validate.
+        self.state.frame_pos = 0;
+        // Copy out of the state buffer so the borrow ends before apply_frame's &mut self.
+        let buf = self.state.frame_buf;
+        if let Some(frame) = MelFrame::decode(&buf) {
+            self.apply_frame(&frame, now_ms);
+            true
+        } else {
+            // Bad checksum (we locked onto a 0xAA inside the data). Drop it; the
+            // stream self-resyncs on the next real sync byte.
+            false
+        }
+    }
+
+    /// Apply a decoded frame: the 24 bands, the render level (light EMA), and the loud
+    /// flag. The frame's own activity flag is available but not consumed yet - the
+    /// eye's slow arm/release accumulator judges the level, unchanged from before.
+    fn apply_frame(&mut self, frame: &MelFrame, now_ms: u32) {
+        for (m, &b) in self.state.mel.iter_mut().zip(frame.bands.iter()) {
+            *m = b as f32 / 65535.0;
+        }
+        let level = frame.level as f32 / 65535.0;
+        // Light EMA so a single rogue frame doesn't spike the fill.
+        self.state.smoothed_level = self.state.smoothed_level * 0.6 + level * 0.4;
+        self.state.last_loud = self.state.smoothed_level > ACTIVITY_LOUD_LEVEL;
+        self.state.last_update_ms = now_ms;
+        UART_STATUS.store(STATUS_RECEIVING, Ordering::Relaxed);
+        UART_LAST_FRAME_MS.store(now_ms, Ordering::Relaxed);
+    }
 }
 
 /// Bare RX interrupt handler. Runs in restricted context - no allocation, no locks.
@@ -161,10 +220,16 @@ fn audio_uart_handler(_irq_no: usize, _arg: *mut usize) {
     let mut byte: u8 = 0;
     // Drain so a byte never strands if two arrive between interrupts.
     while uart.read_async(&mut byte) != 0 {
-        UART_LATEST_BYTE.store(byte, Ordering::Relaxed);
         UART_FIRST_BYTE.store(byte, Ordering::Relaxed);
-        // Release so the reader's Acquire load of the seq sees the byte stores above.
-        UART_RX_SEQ.fetch_add(1, Ordering::Release);
+        // Push into the lock-free ring for update() to frame. Drop on overflow (the
+        // render loop fell more than RX_RING_SZ bytes behind - a lost frame, recovers).
+        let wr = RX_WR.load(Ordering::Relaxed);
+        let rd = RX_RD.load(Ordering::Acquire);
+        if wr.wrapping_sub(rd) < RX_RING_SZ {
+            RX_RING[wr & (RX_RING_SZ - 1)].store(byte, Ordering::Relaxed);
+            // Release so the reader's Acquire load of the write index sees the byte.
+            RX_WR.store(wr.wrapping_add(1), Ordering::Release);
+        }
     }
 }
 

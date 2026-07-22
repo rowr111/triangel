@@ -45,6 +45,13 @@ pub struct MelFrame {
 }
 
 impl MelFrame {
+    /// Build a frame that carries only an overall level + activity, with the bands
+    /// zeroed. Used before the mel FFT is enabled (or anywhere a level is all that's
+    /// available), so the wire format stays the same 53-byte frame either way.
+    pub fn level_only(level: u16, activity: bool) -> Self {
+        MelFrame { bands: [0; MEL_BANDS], level, activity }
+    }
+
     /// Serialise into a 53-byte wire buffer.
     pub fn encode(&self, buf: &mut [u8; FRAME_LEN]) {
         buf[0] = SYNC_BYTE;
