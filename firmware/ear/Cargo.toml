@@ -40,5 +40,9 @@ board-dabao = [
 ]
 usb = []
 uart-audio = ["usb"]
+# Compute the 24-band mel filterbank on the ear and send framed MelFrames to the eye.
+# Off = the temporary broadband RMS level byte. Must match the eye's `mel` feature -
+# the two chips share a wire format, so a mismatch garbles the link.
+mel = []
 aestests = ["aes"]
 default = ["bao1x", "board-dabao"]

@@ -7,13 +7,13 @@
 //! that describes how much energy is in each frequency region of the sound,
 //! shaped to match how human hearing actually works.
 //!
-//! The result is a `MelFrame` containing 24 band values (u16 each) and an
-//! activity flag, which is then sent over UART to the eye chip.
+//! The result is a `MelFrame` containing 24 band values (u16 each), one overall
+//! level, and an activity flag, which is then sent over UART to the eye chip.
 //!
 //! # Relation to a spectrum analyzer
 //!
-//! This is doing exactly what a spectrum analyzer does: FFT the audio, group 
-//! the frequency bins into bands, display each band's energy level. Our 24 band 
+//! This is doing exactly what a spectrum analyzer does: FFT the audio, group
+//! the frequency bins into bands, display each band's energy level. Our 24 band
 //! values are those energy levels; the LED patterns on the eye chip are the "display".
 //!
 //! The one difference from a simple spectrum analyzer is the mel scale. Most
@@ -41,18 +41,17 @@
 //!
 //! ```text
 //! raw i16 samples
-//!   -> RMS for activity detection
+//!   -> RMS for activity detection + overall level
 //!   -> Hann window (reduces edge artifacts)
 //!   -> 512-point FFT
 //!   -> power spectrum (|X[k]|^2 for each bin)
 //!   -> 24 triangular mel filters (weighted sum of power bins per band)
 //!   -> log compression (matches perceived loudness)
-//!   -> per-frame min-max normalize to u16
-//!   -> MelFrame { bands: [u16; 24], activity: bool }
+//!   -> adaptive-gain normalize (fast-attack/slow-decay ceiling) so it stays
+//!      interesting at any volume, preserving relative band loudness
+//!   -> power-law shaping + per-band fast-rise/slow-fall smoothing -> u16
+//!   -> MelFrame { bands: [u16; 24], level, activity }
 //! ```
-
-// Whole pipeline is staged ahead of the real I2S/mel path (see process()).
-#![allow(unused)]
 
 use rustfft::{num_complex::Complex, Fft, FftPlanner};
 use std::sync::Arc;
@@ -84,6 +83,25 @@ const ACTIVITY_THRESHOLD: f32 = 0.02;
 // sounds without flickering inside a single beat.
 const ACTIVITY_ATTACK: f32 = 0.8;
 const ACTIVITY_DECAY: f32  = 0.4;
+
+// --- Normalization / shaping constants ---
+// These are a FIRST PASS, modeled on the blinky-badge (log domain, adaptive
+// floor/ceiling, pow 1.4) and audio-reactive-led-strip (fast-attack/slow-decay
+// gain follower). Expect to tune them once real mic audio is flowing.
+
+/// Adaptive-gain ceiling follower: rises fast toward a louder spectrum peak,
+/// drifts down slowly so quiet passages still fill the display.
+const CEIL_ATTACK: f32 = 0.5;
+const CEIL_DECAY: f32  = 0.01;
+/// Log-energy span below the ceiling that maps to 0 (the visible dynamic range).
+const DYNAMIC_RANGE: f32 = 8.0;
+/// Power-law shaping (from the blinky-badge: expands the top, compresses the bottom).
+const POWER_LAW: f32 = 1.4;
+/// Per-band smoothing envelope: fast rise, slower fall.
+const BAND_ATTACK: f32 = 0.6;
+const BAND_DECAY: f32  = 0.25;
+/// Maps the smoothed broadband RMS to the 0..1 overall level.
+const LEVEL_GAIN: f32 = 10.0;
 
 /// Convert a frequency in Hz to the mel scale.
 ///
@@ -131,10 +149,16 @@ pub struct MelProcessor {
     /// Pre-allocated once so the FFT itself makes no heap allocations per frame.
     scratch: Vec<Complex<f32>>,
 
-    /// Exponentially-smoothed RMS level used for activity detection.
-    /// Updated every frame with asymmetric attack/decay (see constants above).
+    /// Exponentially-smoothed RMS level used for activity detection and the
+    /// overall level. Updated every frame with asymmetric attack/decay.
     smoothed_rms: f32,
 
+    /// Adaptive-gain ceiling: follows the spectrum peak (fast up, slow down).
+    /// The normalization maps [ceiling - DYNAMIC_RANGE, ceiling] -> 0..1.
+    ceiling: f32,
+
+    /// Per-band smoothed output (0..1), updated with asymmetric attack/decay.
+    band_smooth: [f32; MEL_BANDS],
 }
 
 impl MelProcessor {
@@ -220,102 +244,98 @@ impl MelProcessor {
         let scratch_len = fft.get_inplace_scratch_len();
         let scratch = vec![Complex::default(); scratch_len];
 
-        Self { fft, hann, filters, scratch, smoothed_rms: 0.0 }
+        Self {
+            fft,
+            hann,
+            filters,
+            scratch,
+            smoothed_rms: 0.0,
+            // Start low so the ceiling adapts upward over the first few frames.
+            ceiling: -20.0,
+            band_smooth: [0.0; MEL_BANDS],
+        }
     }
 
     /// Process one 512-sample audio frame and return a `MelFrame`.
     ///
-    /// This is the hot path - called ~30 times per second. The FFT itself runs on the
-    /// scratch from `new()`, but the input/power buffers still allocate per call.
-    #[allow(unreachable_code)]
+    /// Hot path (~30x/second). The FFT runs on the pre-allocated scratch, but the
+    /// input/power buffers still allocate per call. Steps: broadband RMS for level
+    /// and activity, Hann window, 512-point FFT, power spectrum, 24 triangular mel
+    /// filters, log compression, a single adaptive-gain normalize (fast-attack/
+    /// slow-decay ceiling), power-law shaping, and per-band fast-rise/slow-fall
+    /// smoothing. The gain/shaping/smoothing constants are a first pass (see above).
     pub fn process(&mut self, samples: &[i16; FFT_SIZE]) -> MelFrame {
-        // TEMPORARY: skip all FFT/mel processing, just send raw RMS * 5 in every band.
-        {
-            let rms = (samples.iter().map(|&s| (s as f32 / 32768.0).powi(2)).sum::<f32>() / FFT_SIZE as f32).sqrt();
-            let val = ((rms * 5.0).clamp(0.0, 1.0) * 65535.0) as u16;
-            return MelFrame { bands: [val; MEL_BANDS], activity: rms > 0.02 };
-        }
-
-        // --- Activity detection ---
-        //
-        // Compute the Root Mean Square (RMS) of the raw samples. RMS is the
-        // standard measure of signal power - it's the "average loudness" of the
-        // frame. We do this before windowing because the Hann window would
-        // artificially reduce the apparent energy.
-        //
-        // Samples are i16 (-32768..32767); dividing by 32768.0 normalizes to
-        // the -1.0..1.0 float range so the threshold constant is portable.
-        //
-        // RMS = sqrt( mean(sample^2) )
+        // --- Activity + overall level (broadband RMS, before windowing) ---
+        // RMS = sqrt(mean(sample^2)); i16 normalized to -1.0..1.0 by /32768.
         let rms = (samples
             .iter()
             .map(|&s| (s as f32 / 32768.0).powi(2))
             .sum::<f32>()
             / FFT_SIZE as f32)
             .sqrt();
-
         // Asymmetric smoothing: jump up fast on transients (attack), fall back
-        // slowly after the sound stops (decay). This prevents the activity flag
-        // from flickering off on brief quiet gaps between beats.
+        // slowly (decay) so activity and level don't flicker between beats.
         if rms > self.smoothed_rms {
             self.smoothed_rms += ACTIVITY_ATTACK * (rms - self.smoothed_rms);
         } else {
             self.smoothed_rms += ACTIVITY_DECAY * (rms - self.smoothed_rms);
         }
         let activity = self.smoothed_rms > ACTIVITY_THRESHOLD;
+        let level = ((self.smoothed_rms * LEVEL_GAIN).clamp(0.0, 1.0) * 65535.0) as u16;
 
         // --- Hann window + FFT ---
-        //
-        // Multiply each sample by the precomputed Hann coefficient, normalize
-        // to float, and pack as a complex number (imaginary part = 0). rustfft
-        // works in-place on complex buffers.
-        //
-        // Apply Hann window and convert to complex input for FFT
+        // Multiply each sample by its Hann coefficient, normalize to float, pack as
+        // a complex number (imag = 0). rustfft works in-place on complex buffers.
         let mut buf: Vec<Complex<f32>> = samples
             .iter()
             .zip(self.hann.iter())
             .map(|(&s, &w)| Complex { re: (s as f32 / 32768.0) * w, im: 0.0 })
             .collect();
-
-        // Forward FFT: converts 512 time-domain samples into 512 complex
-        // frequency-domain values. The result is symmetric for real inputs, so
-        // only the first 257 bins (0..=256) carry unique information.
-        // process_with_scratch uses our pre-allocated buffer and makes no heap
-        // allocations.
         self.fft.process_with_scratch(&mut buf, &mut self.scratch);
 
-        // Power spectrum: |X[k]|^2 = re^2 + im^2 for each positive-frequency
-        // bin. Power (squared magnitude) is proportional to energy, which is
-        // what the mel filters should sum.
-        // Power spectrum (positive frequencies only)
-        let power: Vec<f32> =
-            buf[..FFT_SIZE / 2 + 1].iter().map(|c| c.norm_sqr()).collect();
+        // Power spectrum |X[k]|^2, positive frequencies only (257 unique bins).
+        let power: Vec<f32> = buf[..FFT_SIZE / 2 + 1].iter().map(|c| c.norm_sqr()).collect();
 
-        // --- Mel filterbank ---
-        //
-        // For each of the 24 bands, do a weighted sum of the power bins that
-        // fall inside that band's triangular filter.
-        //
-        // Then take the natural log. This is important: perceived loudness is
-        // roughly logarithmic (doubling the energy sounds like a fixed increase,
-        // not a doubling). The log also compresses the huge dynamic range of
-        // audio (a whisper vs. a shout span many orders of magnitude) into a
-        // range the LED patterns can work with.
-        //
-        // The small constant 1e-10 prevents log(0) on silent frames.
-        //
-        // Apply mel filters and take log
-        let mut mel = [0f32; MEL_BANDS];
+        // --- Mel filterbank -> log energy per band ---
+        // Weighted sum of power bins per triangular filter, then natural log
+        // (perceived loudness is ~logarithmic; 1e-10 guards log(0) on silence).
+        let mut logmel = [0f32; MEL_BANDS];
         for (m, filter) in self.filters.iter().enumerate() {
             let energy: f32 = filter.iter().map(|&(k, w)| power[k] * w).sum();
-            mel[m] = (energy + 1e-10).ln();
+            logmel[m] = (energy + 1e-10).ln();
         }
 
-        // smoothed_rms has fast attack (0.8) and fast decay (0.4) so it
-        // rises on beats and clears between them at 128 BPM.
-        let val = ((self.smoothed_rms * 10.0).clamp(0.0, 1.0) * 65535.0) as u16;
-        let bands = [val; MEL_BANDS];
+        // --- Adaptive normalization ---
+        // Track one ceiling across the whole spectrum (so relative band loudness is
+        // preserved): it follows the peak quickly up and drifts down slowly. The
+        // floor sits a fixed log span below it. This is what keeps the display
+        // interesting at any volume instead of dark-when-quiet / full-when-loud.
+        let peak = logmel.iter().copied().fold(f32::MIN, f32::max);
+        if peak > self.ceiling {
+            self.ceiling += CEIL_ATTACK * (peak - self.ceiling);
+        } else {
+            self.ceiling += CEIL_DECAY * (peak - self.ceiling);
+        }
+        let floor = self.ceiling - DYNAMIC_RANGE;
+        let span = (self.ceiling - floor).max(1e-3);
 
-        MelFrame { bands, activity }
+        // --- Normalize -> power-law -> per-band smoothing -> u16 ---
+        let mut bands = [0u16; MEL_BANDS];
+        for (m, &lm) in logmel.iter().enumerate() {
+            let norm = ((lm - floor) / span).clamp(0.0, 1.0);
+            let shaped = norm.powf(POWER_LAW);
+            let sm = &mut self.band_smooth[m];
+            if shaped > *sm {
+                *sm += BAND_ATTACK * (shaped - *sm);
+            } else {
+                *sm += BAND_DECAY * (shaped - *sm);
+            }
+            bands[m] = (*sm * 65535.0) as u16;
+        }
+
+        // FUTURE (2b): also compute the raw (non-normalized) bands and reductions
+        // (bass/mid/treble sums, onset/beat) here and add them to the MelFrame.
+
+        MelFrame { bands, level, activity }
     }
 }

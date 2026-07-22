@@ -36,6 +36,8 @@ impl UartOut {
 
     /// Send the current audio level (0.0-1.0) as a single raw byte (`level * 255`, clamped).
     /// Temporary placeholder: no framing/sync/checksum - the eye reads bare bytes.
+    /// Unused when the `mel` feature is on (which sends framed `MelFrame`s instead).
+    #[allow(dead_code)]
     pub fn send_level(&mut self, level: f32) {
         let v = (level.clamp(0.0, 1.0) * 255.0) as u8;
         self.uart.write(&[v]);

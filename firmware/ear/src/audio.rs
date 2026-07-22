@@ -93,6 +93,9 @@ mod i2s {
     const BIO_QUANTUM_HZ: u32 = 6_144_000;
     /// Decimation factor from the 48 kHz mic to the 16 kHz pipeline.
     const DECIMATE: usize = 3;
+    /// Raw 48 kHz samples discarded at startup while the mic's decimation filter
+    /// settles (~100 ms). Conservative; tighten to the ICS43434 spec if wanted.
+    const STARTUP_DISCARD: usize = 4800;
 
     pub struct I2sAudio {
         bio_ss: Bio,
@@ -169,8 +172,14 @@ mod i2s {
                 .expect("FIFO0 handle error")
                 .expect("no FIFO0 handle");
             let rx = CoreCsr::from_handle(&rx_handle);
+            let mut this = Self { bio_ss, rx, _rx_handle: rx_handle, resource_grant };
 
-            Self { bio_ss, rx, _rx_handle: rx_handle, resource_grant }
+            // The mic outputs garbage until its filter settles after the clock starts,
+            // so drop the first ~100 ms of samples before any frame is read.
+            for _ in 0..STARTUP_DISCARD {
+                this.read_sample();
+            }
+            this
         }
 
         // Pop one 24-bit sample, blocking until FIFO0 is non-empty. The BIO pushes one
@@ -183,10 +192,24 @@ mod i2s {
             // bit 31, then arithmetic-shift back down to sign-extend into i32.
             (raw << 8) as i32 >> 8
         }
+
+        /// Discard everything currently queued in FIFO0, without blocking.
+        fn flush(&mut self) {
+            while self.rx.csr.rf(bio_bdma::SFR_FLEVEL_PCLK_REGFIFO_LEVEL0) != 0 {
+                let _ = self.rx.csr.r(bio_bdma::SFR_RXF0);
+            }
+        }
     }
 
     impl AudioSource for I2sAudio {
         fn read_frame(&mut self) -> [i16; FFT_SIZE] {
+            // Drop whatever queued while the caller processed the previous frame. The
+            // BIO stalls its clock on a full 8-deep FIFO, so those stale samples sit on
+            // the far side of a clock gap; flushing keeps each returned frame contiguous.
+            // If the mic proves intolerant of that between-frame pause on real hardware,
+            // this polled drain becomes an interrupt- or DMA-driven one.
+            self.flush();
+
             let mut out = [0i16; FFT_SIZE];
             for slot in out.iter_mut() {
                 // Downsample 48 kHz -> 16 kHz by averaging each group of DECIMATE
