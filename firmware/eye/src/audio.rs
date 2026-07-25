@@ -1,10 +1,9 @@
-use std::pin::Pin;
-use std::sync::atomic::{AtomicU32, AtomicU8, AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicU32, AtomicU8, Ordering};
 
 use bao1x_api::iox::IoxHal;
 use bao1x_api::{IoxEnable, IoxFunction, PeriphId};
 use bao1x_hal::clocks::PERCLK_HZ;
-use bao1x_hal::udma::{Uart, UartChannel, UartIrq};
+use bao1x_hal::udma::{Bank, DmaReg, Udma, Uart, UartReg};
 use bao1x_hal_service::UdmaGlobal;
 
 pub use triangel_shared::mel::MEL_BANDS;
@@ -23,16 +22,14 @@ pub static UART_STATUS:        AtomicU8  = AtomicU8::new(STATUS_PENDING);
 pub static UART_FIRST_BYTE:    AtomicU8  = AtomicU8::new(0);
 pub static UART_LAST_FRAME_MS: AtomicU32 = AtomicU32::new(0);
 
-// --- Lock-free byte ring between the RX interrupt (producer) and the render loop
-// (consumer): the handler pushes raw bytes, update() drains them through the frame
-// state machine. A ring, not a single latest-byte slot, so a 53-byte frame that
-// spans several render frames isn't lost. ---
-const RX_RING_SZ: usize = 512; // power of two; several frames of headroom
-static RX_RING: [AtomicU8; RX_RING_SZ] = [const { AtomicU8::new(0) }; RX_RING_SZ];
-static RX_WR: AtomicUsize = AtomicUsize::new(0); // producer index (interrupt)
-static RX_RD: AtomicUsize = AtomicUsize::new(0); // consumer index (render loop)
-static UART_CSR_VIRT:    AtomicUsize = AtomicUsize::new(0); // handler rebuilds its Uart from these
-static UART_IFRAM_VIRT:  AtomicUsize = AtomicUsize::new(0);
+// The UART's IFRAM block is split 2048 TX + 2048 RX by the HAL (UART_RX_BUF_START /
+// UART_RX_BUF_SIZE in bao1x-hal's uart.rs - private there, so mirrored here). The RX
+// half is our DMA ring: the UDMA engine writes incoming bytes into it continuously
+// (CFG_CONT wraps forever) and update() chases its write pointer once per render
+// frame. Reception is entirely hardware-side: a CPU-serviced byte interface cannot
+// keep up with 53-byte bursts at 1 Mbaud (10 us/byte) under a multitasking OS.
+const RX_DMA_BUF_START: usize = 2048;
+const RX_DMA_BUF_LEN:   usize = 2048;
 
 // --- Auto-mode activity detection - all three are tune-at-bringup placeholders ---
 // A level byte above this bar counts as "loud" (the ear currently sends RMS * 1.8).
@@ -42,6 +39,16 @@ const ACTIVITY_LOUD_LEVEL: f32 = 0.15;
 // quiet gaps (beat spacing, EDM breakdowns) only pause progress, never reset it.
 const ACTIVITY_ARM_MS:     f32 = 30_000.0;
 const ACTIVITY_RELEASE_MS: f32 = 30_000.0;
+
+/// Custom cache-flush instruction (from the baochip dma_basic2 test) so the CPU
+/// re-reads the DMA engine's writes instead of a stale cached copy.
+#[inline(always)]
+fn cache_flush() {
+    // Safety: a hint instruction with no memory operands of its own.
+    unsafe {
+        core::arch::asm!(".word 0x500F", "nop", "nop", "nop", "nop", "nop");
+    }
+}
 
 struct AudioState {
     mel:            [f32; MEL_BANDS],
@@ -72,14 +79,20 @@ impl AudioState {
     }
 }
 
+/// The mapped UART2 CSR + IFRAM addresses and our read position in the RX DMA ring.
+struct DmaRx {
+    csr_virt:   usize,
+    ifram_virt: usize,
+    tail:       usize, // next unread index within the 2048-byte RX ring
+}
+
 pub struct AudioReceiver {
-    // Owned and mutated only by the render thread. The RX interrupt hands bytes over through
-    // the lock-free atomics above, not through this struct.
+    // Owned and mutated only by the render thread; the DMA engine is the only other
+    // writer, and it touches nothing but the IFRAM ring.
     state: AudioState,
-    // Parks the IRQ handler registration for the life of the program: the handler
-    // dereferences this object's heap location, so it must never move or drop.
-    #[allow(dead_code)]
-    _uart_irq: Option<Pin<Box<UartIrq>>>,
+    // None if the UART never came up (sound-reactive then stays disabled; the LED loop
+    // is unaffected).
+    dma: Option<DmaRx>,
 }
 
 impl Default for AudioReceiver {
@@ -91,8 +104,8 @@ impl Default for AudioReceiver {
 impl AudioReceiver {
     pub fn new() -> Self {
         AudioReceiver {
-            state:     AudioState::new(),
-            _uart_irq: init_audio_uart(),
+            state: AudioState::new(),
+            dma:   init_audio_uart(),
         }
     }
 
@@ -109,29 +122,29 @@ impl AudioReceiver {
         self.state.activity
     }
 
-    /// Called once per frame from the render loop. Drains the bytes the RX interrupt
-    /// buffered through the frame assembler, applies any complete frame, decays toward
-    /// silence when the ear stops sending, and advances the slow arm/release accumulator.
+    /// Called once per frame from the render loop. Chases the DMA engine's write pointer
+    /// through the frame assembler, applies any complete frame, decays toward silence
+    /// when the ear stops sending, and advances the slow arm/release accumulator.
     pub fn update(&mut self, now_ms: u32) {
         // Frame delta for the accumulator, capped so boot delay or a frame overrun
         // can't slam it forward in one step.
         let dt_ms = (now_ms.wrapping_sub(self.state.last_tick_ms) as f32).min(100.0);
         self.state.last_tick_ms = now_ms;
 
-        // Drain every byte the interrupt buffered through the frame state machine.
+        // Drain every byte the DMA engine wrote since last frame through the state machine.
         let mut got_frame = false;
-        loop {
-            let rd = RX_RD.load(Ordering::Relaxed);
-            // Acquire pairs with the handler's Release store of the write index.
-            let wr = RX_WR.load(Ordering::Acquire);
-            if rd == wr {
-                break;
+        if let Some(pos) = self.dma.as_ref().and_then(|d| d.write_pos()) {
+            cache_flush();
+            let mut tail = self.dma.as_ref().unwrap().tail;
+            while tail != pos {
+                let byte = self.dma.as_ref().unwrap().read_ring(tail);
+                tail = (tail + 1) % RX_DMA_BUF_LEN;
+                UART_FIRST_BYTE.store(byte, Ordering::Relaxed);
+                if self.feed_byte(byte, now_ms) {
+                    got_frame = true;
+                }
             }
-            let byte = RX_RING[rd & (RX_RING_SZ - 1)].load(Ordering::Relaxed);
-            RX_RD.store(rd.wrapping_add(1), Ordering::Release);
-            if self.feed_byte(byte, now_ms) {
-                got_frame = true;
-            }
+            self.dma.as_mut().unwrap().tail = tail;
         }
 
         // No fresh frame for a while: the ear stopped sending - decay toward silence
@@ -205,38 +218,33 @@ impl AudioReceiver {
     }
 }
 
-/// Bare RX interrupt handler. Runs in restricted context - no allocation, no locks.
-/// Rebuilds a Uart handle from the addresses published by init_uart and drains all
-/// available bytes into the lock-free slots; the render loop's update() consumes them.
-fn audio_uart_handler(_irq_no: usize, _arg: *mut usize) {
-    // Acquire pairs with init_uart's Release store of the CSR sentinel.
-    let csr_virt = UART_CSR_VIRT.load(Ordering::Acquire);
-    if csr_virt == 0 {
-        return; // not initialized yet
-    }
-    let mut uart = unsafe {
-        Uart::get_handle(csr_virt, bao1x_hal::board::APP_UART_IFRAM_ADDR, UART_IFRAM_VIRT.load(Ordering::Relaxed))
-    };
-    let mut byte: u8 = 0;
-    // Drain so a byte never strands if two arrive between interrupts.
-    while uart.read_async(&mut byte) != 0 {
-        UART_FIRST_BYTE.store(byte, Ordering::Relaxed);
-        // Push into the lock-free ring for update() to frame. Drop on overflow (the
-        // render loop fell more than RX_RING_SZ bytes behind - a lost frame, recovers).
-        let wr = RX_WR.load(Ordering::Relaxed);
-        let rd = RX_RD.load(Ordering::Acquire);
-        if wr.wrapping_sub(rd) < RX_RING_SZ {
-            RX_RING[wr & (RX_RING_SZ - 1)].store(byte, Ordering::Relaxed);
-            // Release so the reader's Acquire load of the write index sees the byte.
-            RX_WR.store(wr.wrapping_add(1), Ordering::Release);
+impl DmaRx {
+    /// The DMA engine's live write position within the RX ring, derived from the RX
+    /// channel's SIZE register - the countdown of bytes remaining in the current pass,
+    /// which decrements as bytes land (and reloads to the full size on each CONT wrap).
+    /// SADDR does not read back as a live pointer on this chip, so SIZE is the source.
+    /// None if the readback is out of range (transfer idle or mid-reload edge).
+    fn write_pos(&self) -> Option<usize> {
+        // Safety: Bank::Rx + DmaReg::Size of the mapped UART CSR page.
+        let remaining = unsafe {
+            (self.csr_virt as *const u32).add(Bank::Rx as usize + DmaReg::Size as usize).read_volatile()
+        } as usize;
+        if remaining == 0 || remaining > RX_DMA_BUF_LEN {
+            return None;
         }
+        Some((RX_DMA_BUF_LEN - remaining) % RX_DMA_BUF_LEN)
+    }
+
+    /// Read ring byte `idx` through the virtual IFRAM mapping.
+    fn read_ring(&self, idx: usize) -> u8 {
+        // Safety: idx is bounded by RX_DMA_BUF_LEN within the mapped 4K IFRAM page.
+        unsafe { ((self.ifram_virt + RX_DMA_BUF_START) as *const u8).add(idx).read_volatile() }
     }
 }
 
-/// Maps + primes UART2 RX and registers the per-byte interrupt handler. Returns the
-/// pinned UartIrq to park for the program's life, or None if the UART never came up
-/// (sound-reactive then stays disabled; the LED loop is unaffected).
-fn init_audio_uart() -> Option<Pin<Box<UartIrq>>> {
+/// Maps UART2, switches its RX path to continuous DMA into the IFRAM ring, and returns
+/// the mapped addresses. None if the UART never came up.
+fn init_audio_uart() -> Option<DmaRx> {
     let tt = ticktimer::Ticktimer::new().unwrap();
     let iox = IoxHal::new();
     pins::setup_input_pin(&iox, pins::AUDIO_UART_RX_PORT, pins::AUDIO_UART_RX_PIN, IoxFunction::AF1, IoxEnable::Enable);
@@ -248,11 +256,11 @@ fn init_audio_uart() -> Option<Pin<Box<UartIrq>>> {
     const MAX_INIT_ATTEMPTS: u32 = 50; // ~5s at 100ms backoff
     let mut attempt = 0u32;
     loop {
-        if init_uart() {
+        if let Some(dma) = init_uart() {
             if attempt > 0 {
                 log::info!("audio UART init recovered after {} retries", attempt);
             }
-            break;
+            return Some(dma);
         }
         if attempt == 0 {
             log::warn!("audio UART init failed (status {}); retrying", UART_STATUS.load(Ordering::Relaxed));
@@ -264,31 +272,18 @@ fn init_audio_uart() -> Option<Pin<Box<UartIrq>>> {
         }
         tt.sleep_ms(100).ok();
     }
-
-    // RX is up and primed: register the per-byte interrupt. Box::pin keeps the handler's
-    // heap address stable forever (the IRQ dereferences it). Gate the channel off while
-    // registering, then enable. claim_interrupt panics if the IRQ is already held - we
-    // own UART2 in this image, so that panic would flag a boot-time conflict to fix.
-    let mut uart_irq = Box::pin(UartIrq::new());
-    uart_irq.rx_irq_ena(UartChannel::Uart2, false);
-    // Safety: uart_irq is returned and parked in AudioReceiver, so it lives forever and never moves.
-    unsafe {
-        Pin::as_mut(&mut uart_irq).register_handler(UartChannel::Uart2, audio_uart_handler);
-    }
-    uart_irq.rx_irq_ena(UartChannel::Uart2, true);
-    Some(uart_irq)
 }
 
-/// Maps and primes UART2 for async RX, publishing the mapped addresses for the handler.
-/// Returns false (with UART_STATUS set) if either mapping fails.
-fn init_uart() -> bool {
+/// Maps UART2's CSR + IFRAM, sets the baud, switches RX to streaming (DMA) mode, and
+/// starts the continuous ring transfer. Returns None (with UART_STATUS set) on failure.
+fn init_uart() -> Option<DmaRx> {
     let csr_mem = match xous::syscall::map_memory(
         xous::MemoryAddress::new(utralib::utra::udma_uart_2::HW_UDMA_UART_2_BASE),
         None, 4096,
         xous::MemoryFlags::R | xous::MemoryFlags::W,
     ) {
         Ok(m) => m,
-        Err(_) => { UART_STATUS.store(STATUS_CSR_FAIL, Ordering::Relaxed); return false; }
+        Err(_) => { UART_STATUS.store(STATUS_CSR_FAIL, Ordering::Relaxed); return None; }
     };
 
     let ifram_mem = match xous::syscall::map_memory(
@@ -297,24 +292,44 @@ fn init_uart() -> bool {
         xous::MemoryFlags::R | xous::MemoryFlags::W,
     ) {
         Ok(m) => m,
-        Err(_) => { UART_STATUS.store(STATUS_IFRAM_FAIL, Ordering::Relaxed); return false; }
+        Err(_) => { UART_STATUS.store(STATUS_IFRAM_FAIL, Ordering::Relaxed); return None; }
     };
 
     let csr_virt   = csr_mem.as_ptr() as usize;
     let ifram_virt = ifram_mem.as_ptr() as usize;
     let _ = (csr_mem, ifram_mem);
 
-    let mut uart = unsafe {
+    let uart = unsafe {
         Uart::get_handle(csr_virt, bao1x_hal::board::APP_UART_IFRAM_ADDR, ifram_virt)
     };
     uart.set_baud(EAR_UART_BAUD, PERCLK_HZ);
-    uart.setup_async_read();
 
-    // Publish addresses for the handler. CSR_VIRT is its "initialized" sentinel (it bails
-    // while it reads 0), so store IFRAM first and CSR last with Release - the handler's
-    // Acquire load then guarantees IFRAM is visible before it acts on a non-zero CSR.
-    UART_IFRAM_VIRT.store(ifram_virt, Ordering::Relaxed);
-    UART_CSR_VIRT.store(csr_virt, Ordering::Release);
+    // set_baud leaves the UART in poll mode (Setup bit 0x10: bytes go to the 1-deep
+    // Valid/Data command interface). Rewrite Setup without that bit so RX streams into
+    // the UDMA engine instead. Same disable-then-configure sequence set_baud uses.
+    let clk_counter: u32 = PERCLK_HZ / EAR_UART_BAUD;
+    // Safety: Bank::Custom + UartReg::Setup is the Setup register of the mapped UART CSR.
+    unsafe {
+        let setup = (csr_virt as *mut u32).add(Bank::Custom as usize + UartReg::Setup as usize);
+        setup.write_volatile(0);
+        setup.write_volatile(0x0306 | (clk_counter << 16));
+    }
+
+    // Start the continuous RX transfer over the whole 2048-byte RX half of the IFRAM
+    // block: the engine wraps forever (0b1 = the HAL's CFG_CONT; udma_enqueue ORs in
+    // its own enable bit) and we chase its write pointer from update().
+    // Safety: the slice describes the physical RX region; only its address/len are used.
+    unsafe {
+        let rx_phys = core::slice::from_raw_parts(
+            (bao1x_hal::board::APP_UART_IFRAM_ADDR + RX_DMA_BUF_START) as *const u8,
+            RX_DMA_BUF_LEN,
+        );
+        uart.udma_enqueue(Bank::Rx, rx_phys, 0b1);
+    }
+
     UART_STATUS.store(STATUS_INIT_OK, Ordering::Relaxed);
-    true
+    let dma = DmaRx { csr_virt, ifram_virt, tail: 0 };
+    // Start reading from wherever the engine is now, not from index 0.
+    let tail = dma.write_pos().unwrap_or(0);
+    Some(DmaRx { tail, ..dma })
 }
