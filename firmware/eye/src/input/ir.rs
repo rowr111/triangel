@@ -9,11 +9,6 @@ use crate::pins;
 // (module inverts and demodulates the 38kHz carrier).
 
 // NEC protocol timing in microseconds.
-// The leader burst is listed for completeness: with rising-edge-only capture
-// its rising edge terminates the (unbounded) idle gap, so the decoder never
-// observes its 9ms length directly.
-#[allow(dead_code)]
-const NEC_LEADER_PULSE_US: u32 = 9_000;
 const NEC_LEADER_SPACE_US: u32 = 4_500;
 const NEC_BIT_PULSE_US:    u32 =   560;
 const NEC_BIT_0_SPACE_US:  u32 =   560;
