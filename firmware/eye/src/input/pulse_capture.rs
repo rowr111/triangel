@@ -13,16 +13,9 @@ use utralib::utra::bio_bdma;
 // Generic BIO edge-interval capture. A dedicated BIO core halts on each RISING
 // edge of the configured pin (ExternalPin quantum mode fires on rising edges
 // only) and writes the elapsed time since the previous rising edge, in BIO
-// clock ticks, into a ring buffer in IFRAM that the CPU drains at its leisure.
-//
-// The ring (not the 8-deep hardware FIFO) is what makes capture reliable: the
-// drain thread can stall for tens of milliseconds when other threads hold the
-// CPU, and FIFO-based capture dropped edges whenever that happened mid-frame.
-// The ring holds seconds of edges. Store pattern modeled on the ear's
-// drain-dma I2S ring (and the baochip dma_basic2 test it derives from).
-//
-// Candidate for upstreaming to bio-lib next to captouch, which uses the same
-// ExternalPin timestamp-delta technique (but a FIFO report path).
+// clock ticks, into a ring buffer in IFRAM. The ring buffers seconds of
+// edges, so capture stays intact even when the thread draining it is not
+// scheduled for tens of milliseconds.
 
 /// Ring capacity in intervals; must match the index mask in the BIO kernel.
 const RING_N: usize = 256;
@@ -30,13 +23,12 @@ const RING_MASK: u32 = (RING_N - 1) as u32;
 /// Ring layout in words: [0] = head (the BIO's free-running write counter),
 /// [1] = startup magic, [2..2+RING_N] = intervals in BIO clock ticks.
 const RING_WORDS: usize = 2 + RING_N;
-/// Startup marker the kernel writes as soon as it receives the ring base.
-/// Seeing it proves core-ran + FIFO handshake + DMA store + CPU readback in
-/// one yes/no check. Same value as the ear's ring programs.
+/// Startup marker the kernel writes once it is running; reading it back
+/// confirms the kernel can write the ring and the CPU can see the writes.
 const MAGIC: u32 = 0x0B10ACED;
 
-/// Custom cache-flush instruction (from the baochip dma_basic2 test) so the
-/// CPU re-reads the BIO's writes from memory instead of a stale cached copy.
+/// Cache-flush hint so the CPU re-reads memory the BIO wrote instead of a
+/// stale cached copy.
 #[inline(always)]
 fn cache_flush() {
     // Safety: a hint instruction with no memory operands of its own.
@@ -63,10 +55,8 @@ impl Resources for PulseCapture {
         ResourceSpec {
             claimer: "PulseCapture".to_string(),
             cores: vec![CoreRequirement::Any],
-            // FIFO0 only hands the BIO its pin mask and the ring's physical
-            // address at startup; interval data flows through the ring.
-            // (FIFO0 is free on the eye: ws2812 holds Fifo1+2, captouch
-            // in the bringup shell holds Fifo3.)
+            // FIFO0 carries only the startup handshake; interval data flows
+            // through the ring.
             fifos: vec![Fifo::Fifo0],
             static_pins: vec![],
             dynamic_pin_count: 1,
@@ -85,8 +75,8 @@ impl Drop for PulseCapture {
 }
 
 impl PulseCapture {
-    /// `probe_out` receives diagnostic lines during init (the store-offset
-    /// probe results); pass a no-op closure if they aren't wanted.
+    /// `probe_out` receives startup diagnostic lines; pass a no-op closure if
+    /// they are not wanted.
     pub fn new(pin: u5, probe_out: &dyn Fn(&str)) -> Result<Self, BioError> {
         // Electrical setup: schmitt-trigger input with the internal pull-up on,
         // suiting an idle-high open-collector style signal like an IR receiver.
@@ -103,8 +93,8 @@ impl PulseCapture {
             None,
         );
 
-        // Allocate the shared IFRAM ring in Bank 0. (Bank 1 was tried once and
-        // the BIO's stores never landed there at all - do not move it back.)
+        // Allocate the shared ring in IFRAM Bank 0. BIO stores do not reach
+        // Bank 1, so the ring must stay in Bank 0.
         // Safety: the IframRange lives in this program-lifetime object.
         let ring_bytes = RING_WORDS * 4;
         let ring = unsafe { IframRange::request(ring_bytes, None) }.ok_or(BioError::Oom)?;
@@ -114,9 +104,8 @@ impl PulseCapture {
         // claim core resource and initialize it
         let resource_grant = bio_ss.claim_resources(&Self::resource_spec())?;
 
-        // Let the BIO write into the ring's IFRAM region. The filter compares
-        // PAGE NUMBERS (address >> 12), not byte addresses - see the DmaWindow
-        // doc and the bio_bdma RTL (match on addr[31:12], 4096-byte granular).
+        // Allow the BIO to write the ring's memory. Window base and bounds
+        // are in pages.
         let base_page = ring_phys >> 12;
         let end_page = (ring_phys + ring_bytes as u32 + 0xFFF) >> 12;
         let window = DmaWindow {
@@ -131,9 +120,8 @@ impl PulseCapture {
 
         // claim pin resource - this only claims the resource, it does not configure it
         bio_ss.claim_dynamic_pin(pin.as_u8(), &Self::resource_spec().claimer)?;
-        // now configure the claimed resource. SetOnly adds this pin to the BIO
-        // map without unmapping pins other drivers (the ws2812 chains) already
-        // configured - Overwrite mode clears every bit not in `mapped`.
+        // now configure the claimed resource. SetOnly maps this pin without
+        // disturbing pins other drivers have mapped.
         let io_config = IoConfig {
             mapped: 1 << pin.as_u32(),
             mode: IoConfigMode::SetOnly,
@@ -146,10 +134,9 @@ impl PulseCapture {
         let clock_hz = bio_ss.get_bio_freq();
 
         // Hand the kernel its pin mask, then the ring's physical base, over
-        // FIFO0. The kernel then runs the store-offset probe (four known
-        // values through sw offsets 0/4/8/12) and blocks until the host sends
-        // a third "go" word. Scoped so the handle drops after the handshake -
-        // the BIO never uses FIFO0 again.
+        // FIFO0. The kernel writes the probe values and blocks until the host
+        // sends a third "go" word. Scoped so the handle drops after the
+        // handshake - the BIO never uses FIFO0 again.
         {
             let fifo_handle =
                 unsafe { bio_ss.get_core_handle(Fifo::Fifo0) }?.expect("Didn't get FIFO0 handle");
@@ -157,9 +144,7 @@ impl PulseCapture {
             tx.csr.wo(bio_bdma::SFR_TXF0, 1 << pin.as_u32());
             tx.csr.wo(bio_bdma::SFR_TXF0, ring_phys);
 
-            // Read back where the probe stores actually landed. This is the
-            // ground truth for whether sw-with-offset works in the BIO: each
-            // value encodes the offset it was stored through.
+            // Read back and report the kernel's probe writes.
             std::thread::sleep(Duration::from_millis(50));
             cache_flush();
             let mut probe = [0u32; 4];
@@ -176,8 +161,8 @@ impl PulseCapture {
             tx.csr.wo(bio_bdma::SFR_TXF0, 1); // go: kernel clears head, writes magic, starts capture
         }
 
-        // The kernel writes the magic right after the go; report but don't
-        // fail if it doesn't appear - the probe line above is the diagnosis.
+        // Wait briefly for the kernel's magic; report and continue if it is
+        // slow to appear.
         let start = Instant::now();
         loop {
             cache_flush();
@@ -234,9 +219,7 @@ impl PulseCapture {
         self.try_read_ticks().map(|ticks| (ticks as u64 * 1_000_000 / self.clock_hz as u64) as u32)
     }
 
-    /// (head, tail, magic word as it reads right now) - diagnostic snapshot.
-    /// A changed magic means another memory user is stomping the ring; a
-    /// frozen head with a live kernel means no edges are arriving at the pin.
+    /// Diagnostic snapshot: (head, tail, magic word as currently read).
     pub fn debug_state(&self) -> (u32, u32, u32) {
         let head = self.head();
         // Safety: virt_range maps the ring; word 1 is the magic.
@@ -257,9 +240,7 @@ bio_code!(
     "mv    x25, x5",         // configure pin as an input
     "mv    x6, x16",         // ring physical base from FIFO0 (second pop)
 
-    // store-offset probe: four known values through four different sw
-    // offsets; the host reads words 0-3 back and reports where each landed.
-    // Each value names the offset it was stored through.
+    // startup probe: four known values the host reads back and reports
     "li    x4, 0xAAAA0000",
     "sw    x4, 0(x6)",
     "li    x4, 0xBBBB0004",
