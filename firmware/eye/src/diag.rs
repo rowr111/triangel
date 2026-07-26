@@ -68,20 +68,15 @@ pub fn spawn_heartbeat() {
                 continue;
             }
             last_stats = Some(stats);
-            let (clock_hz, decoded, rejected, last_frame, edges) = stats;
-            let (head, tail, magic) = crate::input::ir::ring_stats();
+            let (clock_hz, decoded, rejected, last_frame) = stats;
             diag.line(&format!(
-                "alive {} s, stage: {}, ir: edges {}, decoded {}, rejected {}, clock {} Hz, last frame {:08x}, ring head {} tail {} magic {:08x}",
+                "alive {} s, stage: {}, ir: decoded {}, rejected {}, clock {} Hz, last frame {:08x}",
                 tt.elapsed_ms() / 1000,
                 STAGES[STAGE.load(Ordering::Relaxed)],
-                edges,
                 decoded,
                 rejected,
                 clock_hz,
                 last_frame,
-                head,
-                tail,
-                magic,
             ));
         }
     });
