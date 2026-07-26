@@ -84,8 +84,6 @@ mod usb;
 use usb::*;
 mod ws2812;
 use ws2812::*;
-mod ir;
-use ir::*;
 
 pub struct CmdEnv {
     common_env: CommonEnv,
@@ -126,7 +124,6 @@ impl CmdEnv {
         let mut echo_cmd = Echo {}; // this command has no persistent storage, so we can "create" it every time we call dispatch (but it's a zero-cost absraction so this doesn't actually create any instructions)
         let mut ver_cmd = Ver {};
         let mut console_cmd = Test {};
-        let mut ir_cmd = IrCmd {};
         let commands: &mut [&mut dyn ShellCmdApi] = &mut [
             ///// 4. add your command to this array, so that it can be looked up and dispatched
             &mut echo_cmd,
@@ -135,7 +132,6 @@ impl CmdEnv {
             #[cfg(feature = "usb")]
             &mut self.usb,
             &mut self.ws2812_cmd,
-            &mut ir_cmd,
         ];
 
         if let Some(cmdline) = maybe_cmdline {

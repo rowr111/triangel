@@ -61,7 +61,7 @@ const IR_CMD_GEAR:            u8 = 0x46; // Gear button -> cycle sound mode
 #[allow(dead_code)]
 const IR_CMD_TV:              u8 = 0x45; // TV button - spare (use TBD)
 
-// Diagnostic state readable from the `ir` shell command and the heartbeat.
+// Diagnostic state reported by the heartbeat line.
 static CLOCK_HZ:        AtomicU32  = AtomicU32::new(0);
 static DECODED_FRAMES:  AtomicU32  = AtomicU32::new(0);
 static REJECTED_FRAMES: AtomicU32  = AtomicU32::new(0);
@@ -82,8 +82,7 @@ pub fn ring_stats() -> (u32, u32, u32) {
     )
 }
 
-/// (clock_hz, decoded, rejected, last_frame, edges) for the `ir` shell
-/// command and the heartbeat line. Unused in builds with neither.
+/// (clock_hz, decoded, rejected, last_frame, edges) for the heartbeat line.
 #[allow(dead_code)]
 pub fn stats() -> (u32, u32, u32, u32, u32) {
     (
