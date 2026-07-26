@@ -15,7 +15,10 @@ pub struct LedOutput {
 #[cfg(not(feature = "previewer"))]
 struct Inner {
     ws2812_1: bio_lib::ws2812::Ws2812,
-    ws2812_2: bio_lib::ws2812::Ws2812,
+    // None when init fails: bio-lib's Ws2812 claims Fifo1+Fifo2 in every
+    // instance, so a second instance always gets ResourceInUse. Chain 2 stays
+    // dark until the driver supports a second chain; boot must not die over it.
+    ws2812_2: Option<bio_lib::ws2812::Ws2812>,
 }
 
 #[cfg(feature = "previewer")]
@@ -41,12 +44,19 @@ impl LedOutput {
             None,
         )
         .expect("failed to init WS2812 BIO driver (chain 1)");
-        let ws2812_2 = bio_lib::ws2812::Ws2812::new(
+        let ws2812_2 = match bio_lib::ws2812::Ws2812::new(
             bio_lib::ws2812::LedVariant::B,
             pin2,
             None,
-        )
-        .expect("failed to init WS2812 BIO driver (chain 2)");
+        ) {
+            Ok(ws) => Some(ws),
+            Err(e) => {
+                crate::diag::Diag::new()
+                    .line(&format!("WS2812 chain 2 init failed ({:?}), running chain 1 only", e));
+                log::warn!("WS2812 chain 2 init failed ({:?}), running chain 1 only", e);
+                None
+            }
+        };
         LedOutput { inner: Inner { ws2812_1, ws2812_2 } }
     }
 
@@ -75,16 +85,20 @@ impl LedOutput {
             for (i, rgb) in chain_ordered[..CHAIN1_LED_COUNT].iter().enumerate() {
                 packed1[i] = bio_lib::ws2812::rgb_to_u32(rgb[0], rgb[1], rgb[2]);
             }
-            // Chain 2: chainIdx 288-599 (tiles 13-25), renumbered 0-311 for this chain
-            let mut packed2 = [0u32; CHAIN2_LED_COUNT];
-            for (i, rgb) in chain_ordered[CHAIN1_LED_COUNT..].iter().enumerate() {
-                packed2[i] = bio_lib::ws2812::rgb_to_u32(rgb[0], rgb[1], rgb[2]);
-            }
             // Start both BIO cores simultaneously, then wait for both to finish.
             self.inner.ws2812_1.send_async(&packed1);
-            self.inner.ws2812_2.send_async(&packed2);
+            if let Some(ws2812_2) = self.inner.ws2812_2.as_mut() {
+                // Chain 2: chainIdx 288-599 (tiles 13-25), renumbered 0-311 for this chain
+                let mut packed2 = [0u32; CHAIN2_LED_COUNT];
+                for (i, rgb) in chain_ordered[CHAIN1_LED_COUNT..].iter().enumerate() {
+                    packed2[i] = bio_lib::ws2812::rgb_to_u32(rgb[0], rgb[1], rgb[2]);
+                }
+                ws2812_2.send_async(&packed2);
+            }
             self.inner.ws2812_1.send_await();
-            self.inner.ws2812_2.send_await();
+            if let Some(ws2812_2) = self.inner.ws2812_2.as_ref() {
+                ws2812_2.send_await();
+            }
         }
 
         #[cfg(feature = "previewer")]

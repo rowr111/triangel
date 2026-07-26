@@ -51,10 +51,16 @@ pub const SW_B_PIN:  u8      = 2;
 
 // IR receiver
 // Everlight IRM-H638T/TR2 - demodulated output, idle HIGH, burst LOW.
-// Confirmed from controller PCB layout (eye DABAO, socket U1.7). The BIO pin
-// number for PulseCapture is derived automatically from this port/pin (PC8).
+// Confirmed from controller PCB layout (eye DABAO, socket U1.7).
+#[allow(dead_code)]
 pub const IR_PORT: IoxPort = IoxPort::PC;
+#[allow(dead_code)]
 pub const IR_PIN:  u8      = 8;
+// BIO bit for PC8. The hardware maps ports in order (PB0-15 = BIO 0-15,
+// PC0-15 = BIO 16-31, per the HAL's set_ports_from_bio_bitmask table), so the
+// number is spelled out here; bao1x-api's port_and_pin_to_bio_bit() reverses
+// port B and is not trusted for the conversion.
+pub const IR_BIO_PIN: u8 = 24;
 
 /// Configure a pin as a schmitt-trigger input for the given function: `IoxFunction::Gpio`
 /// for buttons, an AFn for a peripheral like UART RX. `pull_up` sets the internal pull-up;

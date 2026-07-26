@@ -2,6 +2,7 @@ pub mod buttons;
 pub mod ir;
 #[cfg(feature = "previewer")]
 pub mod previewer;
+pub mod pulse_capture;
 
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::sync::atomic::{AtomicBool, Ordering};
