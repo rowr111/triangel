@@ -5,23 +5,16 @@ use bao1x_api::{IoxDir, IoxEnable, IoxFunction, IoSetup, IoxPort};
 // BIO pin 4 = PB4 -> chain 1 (tiles 1-12, 288 LEDs)   [schematic: LED DATA_1, U2.7]
 // BIO pin 5 = PB5 -> chain 2 (tiles 13-25, 312 LEDs)  [schematic: LED DATA_2, U2.6]
 // Passed to bio_lib::ws2812::Ws2812::new().
-#[allow(dead_code)]
+#[cfg(not(feature = "previewer"))]
 pub const LED_BIO_PIN:   u8 = 4;
-#[allow(dead_code)]
+#[cfg(not(feature = "previewer"))]
 pub const LED_BIO_PIN_2: u8 = 5;
 
 // Audio UART (ear -> eye)
-// UART2 on the DABAO - the only UART exposed on the board.
-// PB13 = UART2_RX (eye receives the ear's audio level bytes)
-// PB14 = UART2_TX (eye transmits to ear chip - reserved, currently unused)
-#[allow(dead_code)]
+// UART2 on the DABAO - the only UART exposed on the board. PB14 is its TX and
+// is wired but unused; the eye only receives.
 pub const AUDIO_UART_RX_PORT: IoxPort = IoxPort::PB;
-#[allow(dead_code)]
 pub const AUDIO_UART_RX_PIN:  u8      = 13;
-#[allow(dead_code)]
-pub const AUDIO_UART_TX_PORT: IoxPort = IoxPort::PB;
-#[allow(dead_code)]
-pub const AUDIO_UART_TX_PIN:  u8      = 14;
 
 // D-pad buttons
 // Active-low: button press pulls pin to GND; external pull-ups on button board
@@ -51,15 +44,8 @@ pub const SW_B_PIN:  u8      = 2;
 
 // IR receiver
 // Everlight IRM-H638T/TR2 - demodulated output, idle HIGH, burst LOW.
-// Confirmed from controller PCB layout (eye DABAO, socket U1.7).
-#[allow(dead_code)]
-pub const IR_PORT: IoxPort = IoxPort::PC;
-#[allow(dead_code)]
-pub const IR_PIN:  u8      = 8;
-// BIO bit for PC8. The hardware maps ports in order (PB0-15 = BIO 0-15,
-// PC0-15 = BIO 16-31, per the HAL's set_ports_from_bio_bitmask table), so the
-// number is spelled out here; bao1x-api's port_and_pin_to_bio_bit() reverses
-// port B and is not trusted for the conversion.
+// Wired to PC8 (eye DABAO, socket U1.7) = BIO bit 24: ports map in order,
+// PB0-15 to BIO 0-15 and PC0-15 to BIO 16-31.
 pub const IR_BIO_PIN: u8 = 24;
 
 /// Configure a pin as a schmitt-trigger input for the given function: `IoxFunction::Gpio`

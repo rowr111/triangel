@@ -1,6 +1,8 @@
 pub mod map;
 
-use map::{LED_COUNT, CHAIN1_LED_COUNT, CHAIN2_LED_COUNT};
+use map::LED_COUNT;
+#[cfg(not(feature = "previewer"))]
+use map::{CHAIN1_LED_COUNT, CHAIN2_LED_COUNT};
 
 #[cfg(not(feature = "previewer"))]
 use crate::pins;

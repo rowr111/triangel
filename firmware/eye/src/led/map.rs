@@ -15,7 +15,11 @@ pub const WORLD_H: f32   = 430.0;
 pub const WORLD_CENTROID_X: f32 = WORLD_CX;
 pub const WORLD_CENTROID_Y: f32 = WORLD_TOP + (WORLD_BOT - WORLD_TOP) / 3.0;
 pub const LED_COUNT: usize = 600;
+// Chain split, for driving the two WS2812 data lines. The previewer sends all
+// 600 in one stream and does not need it.
+#[cfg(not(feature = "previewer"))]
 pub const CHAIN1_LED_COUNT: usize = 288;
+#[cfg(not(feature = "previewer"))]
 pub const CHAIN2_LED_COUNT: usize = 312;
 
 pub struct Led {

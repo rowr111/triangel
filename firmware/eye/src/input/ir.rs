@@ -16,37 +16,21 @@ const NEC_BIT_1_SPACE_US:  u32 = 1_690;
 const NEC_REPEAT_SPACE_US: u32 = 2_250;
 const NEC_TIMING_MARGIN:   u32 =   200; // +/-us tolerance
 
-// The BIO quantum in ExternalPin mode fires on RISING edges only (the end of
-// each LOW burst), so PulseCapture reports the interval between consecutive
-// rising edges: one space plus the 560us burst that terminates it. That gives
-// four disjoint windows (+/- NEC_TIMING_MARGIN) to classify.
+// The capture reports the interval between consecutive RISING edges (the end
+// of each LOW burst): one space plus the 560us burst that ends it. The four
+// windows below stay disjoint at +/- NEC_TIMING_MARGIN.
 const PERIOD_BIT0_US:   u32 = NEC_BIT_0_SPACE_US + NEC_BIT_PULSE_US;  // 1120
 const PERIOD_BIT1_US:   u32 = NEC_BIT_1_SPACE_US + NEC_BIT_PULSE_US;  // 2250
 const PERIOD_REPEAT_US: u32 = NEC_REPEAT_SPACE_US + NEC_BIT_PULSE_US; // 2810
 const PERIOD_LEADER_US: u32 = NEC_LEADER_SPACE_US + NEC_BIT_PULSE_US; // 5060
 
-// Remote: 7-button remote. Buttons: up, down, left, right,
-// center, gear, TV.
-//
-// Intended mapping:
-//   Up     -> BrightnessUp
-//   Down   -> BrightnessDown
-//   Left   -> PatternPrev
-//   Right  -> PatternNext
-//   Center -> ToggleHold
-//   Gear   -> CycleSoundMode
-//   TV     -> (spare - TBD)
-//
-// Sound mode is handled by the physical 3-position switch, not IR.
-// Address captured from the real remote 2026-07-26: extended NEC, address
-// bytes 85 FE as transmitted (the datasheet's "usercode 00FF" was wrong -
-// the second byte is not the inverse of the first, so only the command
-// byte pair is checksummed).
+// The remote is extended NEC: its two address bytes are a fixed ID (not a
+// byte and its inverse), so only the command byte pair is checksummed.
 const NEC_ADDR_LO: u8 = 0x85;
 const NEC_ADDR_HI: u8 = 0xFE;
 
-// Command bytes: all 7 captured from the real remote 2026-07-26 (the
-// datasheet's 0x28-0x2E values were wrong).
+// Command bytes as sent by the 7-button remote. Sound mode is normally the
+// physical switch's job; the gear button also cycles it.
 const IR_CMD_BRIGHTNESS_UP:   u8 = 0x43; // Up button
 const IR_CMD_BRIGHTNESS_DOWN: u8 = 0x44; // Down button
 const IR_CMD_PATTERN_NEXT:    u8 = 0x41; // Right button
@@ -68,7 +52,7 @@ static RING_TAIL:       AtomicU32  = AtomicU32::new(0);
 static RING_MAGIC:      AtomicU32  = AtomicU32::new(0);
 
 /// (head, tail, magic) as of the drain loop's last pass, for the heartbeat.
-#[allow(dead_code)]
+#[cfg(all(feature = "usb", not(feature = "previewer")))]
 pub fn ring_stats() -> (u32, u32, u32) {
     (
         RING_HEAD.load(Ordering::Relaxed),
@@ -78,7 +62,7 @@ pub fn ring_stats() -> (u32, u32, u32) {
 }
 
 /// (clock_hz, decoded, rejected, last_frame, edges) for the heartbeat line.
-#[allow(dead_code)]
+#[cfg(all(feature = "usb", not(feature = "previewer")))]
 pub fn stats() -> (u32, u32, u32, u32, u32) {
     (
         CLOCK_HZ.load(Ordering::Relaxed),
@@ -89,9 +73,8 @@ pub fn stats() -> (u32, u32, u32, u32, u32) {
     )
 }
 
-/// Spawn the IR remote receiver thread. Diagnostic lines print before and
-/// after each init step so a stall or failure is visible on the USB serial
-/// monitor.
+/// Spawn the IR receiver thread. Init progress prints to the USB serial
+/// monitor so a stall or failure is visible.
 pub fn spawn(queue: EventQueue) {
     std::thread::spawn(move || {
         let diag = Diag::new();
@@ -204,7 +187,7 @@ impl NecDecoder {
                     return;
                 };
                 // Bits arrive LSB first; shifting each into the top bit makes
-                // the finished frame read [addr, ~addr, cmd, ~cmd] in
+                // the finished frame read [addr_lo, addr_hi, cmd, ~cmd] in
                 // to_le_bytes() order.
                 let bits = (bits >> 1) | (bit << 31);
                 if count == 31 {
@@ -217,8 +200,6 @@ impl NecDecoder {
             IrState::Idle => {
                 // Repeat frames arrive every ~108ms while a button is held.
                 // Only brightness auto-repeats; other commands act once per press.
-                // Idle-gap intervals print nothing: the line may be mid-frame
-                // again by the time a send completes.
                 if hit(PERIOD_REPEAT_US) {
                     if let Some(cmd @ (IR_CMD_BRIGHTNESS_UP | IR_CMD_BRIGHTNESS_DOWN)) = self.last_cmd {
                         map_ir_cmd(cmd, queue);

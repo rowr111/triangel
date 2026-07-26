@@ -6,16 +6,6 @@ mod patterns;
 mod pins;
 mod setlist;
 
-#[cfg(feature = "bringup")]
-mod cmds;
-#[cfg(feature = "bringup")]
-mod repl;
-#[cfg(feature = "bringup")]
-mod shell;
-
-#[cfg(feature = "bringup")]
-use cmds::*;
-
 use led::map::LED_MAP;
 use setlist::SetlistManager;
 
@@ -67,9 +57,6 @@ fn main() -> ! {
 
     // Frame buffer - reused every frame to avoid allocation
     let mut frame = [[0u8; 3]; led::map::LED_COUNT];
-
-    #[cfg(feature = "bringup")]
-    shell::start_shell();
 
     #[cfg(not(feature = "previewer"))]
     log::info!("entering render loop");

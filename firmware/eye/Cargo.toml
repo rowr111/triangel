@@ -10,19 +10,10 @@ ticktimer = { package = "xous-api-ticktimer", version = "0.9.70" }
 xous = "0.9.70"
 log-server = { package = "xous-api-log", version = "0.1.69" }
 log = "0.4.14"
-num-derive = { version = "0.4.2", default-features = false }
-num-traits = { version = "0.2.14", default-features = false }
 bao1x-hal = { git = "https://github.com/betrusted-io/xous-core", rev = "aee40a797af372b6debf938d2902b03d1002e8a2", features = ["std"], optional = true }
 bao1x-api = { git = "https://github.com/betrusted-io/xous-core", rev = "aee40a797af372b6debf938d2902b03d1002e8a2" }
 bao1x-hal-service = { git = "https://github.com/betrusted-io/xous-core", rev = "aee40a797af372b6debf938d2902b03d1002e8a2", optional = true }
-bao1x-emu = { git = "https://github.com/betrusted-io/xous-core", rev = "aee40a797af372b6debf938d2902b03d1002e8a2", optional = true }
 usb-bao1x = { git = "https://github.com/betrusted-io/xous-core", rev = "aee40a797af372b6debf938d2902b03d1002e8a2" }
-bytemuck = "1.24.0"
-
-aes = { git = "https://github.com/betrusted-io/xous-core", rev = "aee40a797af372b6debf938d2902b03d1002e8a2", default-features = false, optional = true }
-
-# hid bringup
-xous-usb-hid = { git = "https://github.com/betrusted-io/xous-usb-hid.git", branch = "main", optional = true }
 
 bio-lib = { git = "https://github.com/betrusted-io/xous-core", rev = "aee40a797af372b6debf938d2902b03d1002e8a2" }
 arbitrary-int = "1.2"
@@ -31,23 +22,18 @@ triangel-shared = { path = "../shared" }
 [patch.crates-io]
 getrandom = { git = "https://github.com/betrusted-io/xous-core", rev = "aee40a797af372b6debf938d2902b03d1002e8a2" }
 
-# aes testing
 [features]
-bao1x = ["utralib/bao1x", "usb-bao1x/bao1x", "aes/bao1x"]
+bao1x = ["utralib/bao1x", "usb-bao1x/bao1x"]
 board-dabao = [
     "bao1x-hal-service/board-dabao",
     "bao1x-hal/board-dabao",
     "usb-bao1x/board-dabao",
     "bio-lib/ws2812",
-    "bio-lib/captouch",
 ]
 # Send frames to the browser previewer via USB serial instead of real WS2812 LEDs.
 # Use this when developing without triangle boards connected.
 previewer = ["usb"]
-# Enable the interactive bringup shell (hardware debugging).
-bringup = ["usb", "bio-math-test", "bio-wheel-test"]
-bio-math-test = ["bio-lib/c-math-test"]
-bio-wheel-test = ["bio-lib/c-colorwheel"]
+# Stream boot progress, IR activity, and panics to the USB serial monitor.
+bringup = ["usb"]
 usb = []
-aestests = ["aes"]
 default = ["bao1x", "board-dabao"]
