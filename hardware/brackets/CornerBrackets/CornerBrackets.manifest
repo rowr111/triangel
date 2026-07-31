@@ -1,0 +1,10 @@
+{
+    "autodeskProduct": "Fusion360",
+    "type": "script",
+    "author": "",
+    "description": {
+        "": "Triangel corner / wall-mount standoff bracket generator"
+    },
+    "supportedOS": "windows|mac",
+    "editEnabled": true
+}

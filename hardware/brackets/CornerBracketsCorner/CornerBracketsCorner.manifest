@@ -1,0 +1,10 @@
+{
+    "autodeskProduct": "Fusion360",
+    "type": "script",
+    "author": "",
+    "description": {
+        "": "Triangel corner-mount (room-corner / angled) standoff bracket -- v0"
+    },
+    "supportedOS": "windows|mac",
+    "editEnabled": true
+}

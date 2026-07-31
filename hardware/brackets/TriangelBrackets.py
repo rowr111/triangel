@@ -33,6 +33,9 @@ RIDGE_R0  = 0.0        # ridge inner radius (0 = rails meet at the center, formi
 RIDGE_R1  = 32.0       # ridge outer radius (runs out into the gap)
 
 PART_GAP  = 90.0       # spacing between the two parts in the viewport
+
+EDGE_FILLET  = 0.5     # round on the bigger edges (plate rim, ridge crests, hole mouths)
+EDGE_MIN_LEN = 4.0     # only fillet edges at least this long (skips tiny internal bits)
 # ------------------------------------------------------------------------------
 
 MM = 0.1  # mm -> cm (Fusion internal units)
@@ -61,8 +64,7 @@ def run(context):
                      half=True, x_offset=PART_GAP)
 
         ui.messageBox('Done. Created bodies Bracket_6way and Bracket_3way.\n'
-                      'Insert pockets open on the tile-contact (top) face.\n'
-                      'Next: chamfer the ridge tops (~0.5mm) for a lead-in.')
+                      'Insert pockets open on the tile-contact face; bigger edges rounded 0.5mm.')
     except:
         if ui:
             ui.messageBox('Failed:\n{}'.format(traceback.format_exc()))
@@ -178,3 +180,22 @@ def make_bracket(root, name, hole_angles, ridge_angles, half, x_offset):
     ridge_in.setDistanceExtent(False, val(RIDGE_H))
     ridge_in.participantBodies = [bracket]
     exts.add(ridge_in)
+
+    # --- 6) soften: round the bigger edges (plate rim, ridge crests, hole mouths) ---
+    # Blanket 0.5mm on every edge at least EDGE_MIN_LEN long, which skips the tiny
+    # star-center slivers. Backs off the radius if a set won't compute.
+    for rr in (EDGE_FILLET, 0.4, 0.3):
+        soft = adsk.core.ObjectCollection.create()
+        for i in range(bracket.edges.count):
+            e = bracket.edges.item(i)
+            if e.length >= EDGE_MIN_LEN * MM:
+                soft.add(e)
+        if soft.count == 0:
+            break
+        fin = root.features.filletFeatures.createInput()
+        fin.addConstantRadiusEdgeSet(soft, val(rr), True)
+        try:
+            root.features.filletFeatures.add(fin)
+            break
+        except:
+            continue
