@@ -5,6 +5,10 @@ target/
 node_modules/
 package-lock.json
 
+# Python
+__pycache__/
+*.pyc
+
 # KiCad
 *-backups/
 **/.history/
