@@ -5,9 +5,13 @@ use bao1x_hal::i2c::I2c;
 use super::Inputs;
 use crate::pins;
 
-// Every input on the input board is active-low: each button and each switch throw connects
-// its expander pin to GND, and the MCP23008's internal pull-ups hold the rest HIGH. The
-// switch's center position connects neither throw, so both switch lines read HIGH.
+// Buttons are active-low: a press connects the expander pin to GND, and the expander's
+// internal pull-ups hold them HIGH the rest of the time.
+//
+// The 3-position sound switch is active-HIGH, the same arrangement as the combined
+// controller board: its common is tied to +3.3V and each throw has a 10k pull-down on the
+// input board, so the selected throw reads HIGH. Center connects neither throw, so both
+// switch lines read LOW.
 //
 // The expander asserts INT whenever one of those pins changes, which is what keeps this off
 // the I2C bus while nobody is touching the panel - the common case by a wide margin.
@@ -25,6 +29,10 @@ const IOCON_ODR: u8 = 0x04; // INT open-drain, so the pull-up at the eye sets th
 /// Interrupt-on-change enables. Bit 7 is spare and stays masked so an unconnected pin
 /// cannot generate interrupts.
 const USED_BITS: u8 = 0x7F;
+
+/// Internal pull-ups, enabled for the five button bits only. The two switch bits have 10k
+/// pull-downs on the input board, which an internal pull-up would sit against.
+const PULLUP_BITS: u8 = 0x1F;
 
 /// Read the expander at least this often even without an interrupt, so a panel that was
 /// unplugged, swapped, or that dropped an edge still converges on the right state.
@@ -92,7 +100,7 @@ impl Source {
     /// did not answer, leaving the caller to retry on the next backstop tick.
     fn configure(&mut self) -> bool {
         self.write_reg(IODIR, 0xFF)             // every pin an input
-            && self.write_reg(GPPU, 0xFF)       // internal pull-ups on, so the board needs none
+            && self.write_reg(GPPU, PULLUP_BITS) // pull-ups on the button pins only
             && self.write_reg(INTCON, 0x00)     // interrupt on change
             && self.write_reg(IOCON, IOCON_ODR)
             && self.write_reg(GPINTEN, USED_BITS)
@@ -111,15 +119,16 @@ impl Source {
     }
 }
 
-/// A bit reads LOW while its button is held or its switch throw is selected.
+/// A button bit reads LOW while held; a switch bit reads HIGH while its throw is selected.
 fn decode(bits: u8) -> Inputs {
-    let selected = |bit: u8| bits & (1 << bit) == 0;
+    let pressed  = |bit: u8| bits & (1 << bit) == 0;
+    let selected = |bit: u8| bits & (1 << bit) != 0;
     Inputs {
-        up:     selected(pins::EXP_BIT_UP),
-        down:   selected(pins::EXP_BIT_DOWN),
-        left:   selected(pins::EXP_BIT_LEFT),
-        right:  selected(pins::EXP_BIT_RIGHT),
-        center: selected(pins::EXP_BIT_CENTER),
+        up:     pressed(pins::EXP_BIT_UP),
+        down:   pressed(pins::EXP_BIT_DOWN),
+        left:   pressed(pins::EXP_BIT_LEFT),
+        right:  pressed(pins::EXP_BIT_RIGHT),
+        center: pressed(pins::EXP_BIT_CENTER),
         sw_on:  selected(pins::EXP_BIT_SW_ON),
         sw_off: selected(pins::EXP_BIT_SW_OFF),
     }
