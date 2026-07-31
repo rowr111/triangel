@@ -16,31 +16,73 @@ pub const LED_BIO_PIN_2: u8 = 5;
 pub const AUDIO_UART_RX_PORT: IoxPort = IoxPort::PB;
 pub const AUDIO_UART_RX_PIN:  u8      = 13;
 
-// D-pad buttons
-// Active-low: button press pulls pin to GND; external pull-ups on button board
-// hold pins HIGH when unpressed.
-// Confirmed from controller PCB layout (eye DABAO, socket U1 left edge).
-pub const BTN_UP_PORT:     IoxPort = IoxPort::PC;
-pub const BTN_UP_PIN:      u8      = 0;
-pub const BTN_DOWN_PORT:   IoxPort = IoxPort::PC;
-pub const BTN_DOWN_PIN:    u8      = 7;
-pub const BTN_LEFT_PORT:   IoxPort = IoxPort::PC;
-pub const BTN_LEFT_PIN:    u8      = 3;
-pub const BTN_RIGHT_PORT:  IoxPort = IoxPort::PC;
-pub const BTN_RIGHT_PIN:   u8      = 1;
-pub const BTN_CENTER_PORT: IoxPort = IoxPort::PC;
-pub const BTN_CENTER_PIN:  u8      = 2;
+// Panel inputs (d-pad and 3-position sound switch) sit on whichever board the user can
+// reach. Without the `input-board` feature they are wired straight to eye GPIOs on the
+// combined controller board; with it they live on a separate input board that reaches the
+// eye over I2C, leaving PC0/PC1/PC2/PC3/PB2/PB3 free. The IR sensor lands on PC8 either way.
 
-// 3-position sound mode switch
-// Two active-HIGH GPIO lines encode switch position (see buttons.rs for decode).
-// Switch common is tied to +3.3V; each throw has a 10k pull-down, so the selected
-// line reads HIGH and the others read LOW (center = both LOW).
-// SW_A = SOUND REACTIVE ON line, SW_B = SOUND REACTIVE OFF line.
-// Confirmed from controller PCB layout (eye DABAO, socket U2 right edge).
-pub const SW_A_PORT: IoxPort = IoxPort::PB;
-pub const SW_A_PIN:  u8      = 3;
-pub const SW_B_PORT: IoxPort = IoxPort::PB;
-pub const SW_B_PIN:  u8      = 2;
+#[cfg(not(feature = "input-board"))]
+pub use combined_board::*;
+
+#[cfg(not(feature = "input-board"))]
+mod combined_board {
+    use super::IoxPort;
+
+    // D-pad buttons
+    // Active-low: button press pulls pin to GND; external pull-ups on button board
+    // hold pins HIGH when unpressed.
+    // Confirmed from controller PCB layout (eye DABAO, socket U1 left edge).
+    pub const BTN_UP_PORT:     IoxPort = IoxPort::PC;
+    pub const BTN_UP_PIN:      u8      = 0;
+    pub const BTN_DOWN_PORT:   IoxPort = IoxPort::PC;
+    pub const BTN_DOWN_PIN:    u8      = 7;
+    pub const BTN_LEFT_PORT:   IoxPort = IoxPort::PC;
+    pub const BTN_LEFT_PIN:    u8      = 3;
+    pub const BTN_RIGHT_PORT:  IoxPort = IoxPort::PC;
+    pub const BTN_RIGHT_PIN:   u8      = 1;
+    pub const BTN_CENTER_PORT: IoxPort = IoxPort::PC;
+    pub const BTN_CENTER_PIN:  u8      = 2;
+
+    // 3-position sound mode switch
+    // Two active-HIGH GPIO lines encode switch position (see buttons/gpio.rs for decode).
+    // Switch common is tied to +3.3V; each throw has a 10k pull-down, so the selected
+    // line reads HIGH and the others read LOW (center = both LOW).
+    // SW_A = SOUND REACTIVE ON line, SW_B = SOUND REACTIVE OFF line.
+    // Confirmed from controller PCB layout (eye DABAO, socket U2 right edge).
+    pub const SW_A_PORT: IoxPort = IoxPort::PB;
+    pub const SW_A_PIN:  u8      = 3;
+    pub const SW_B_PORT: IoxPort = IoxPort::PB;
+    pub const SW_B_PIN:  u8      = 2;
+}
+
+#[cfg(feature = "input-board")]
+pub use input_board::*;
+
+#[cfg(feature = "input-board")]
+mod input_board {
+    use super::IoxPort;
+
+    // MCP23008 I2C GPIO expander carrying the d-pad and the sound switch, reached over the
+    // input board cable. A0/A1/A2 are tied to GND, giving 7-bit address 0x20. Every input is
+    // active-low and uses the expander's internal pull-ups, so the input board carries no
+    // pull resistors of its own.
+    pub const EXPANDER_ADDR: u8 = 0x20;
+
+    // Which expander bit each input sits on. Bit 7 is spare.
+    pub const EXP_BIT_UP:     u8 = 0;
+    pub const EXP_BIT_DOWN:   u8 = 1;
+    pub const EXP_BIT_LEFT:   u8 = 2;
+    pub const EXP_BIT_RIGHT:  u8 = 3;
+    pub const EXP_BIT_CENTER: u8 = 4;
+    pub const EXP_BIT_SW_ON:  u8 = 5;
+    pub const EXP_BIT_SW_OFF: u8 = 6;
+
+    // Expander interrupt line: open-drain and active-low, pulled up at the eye. Asserted
+    // whenever an enabled input changes, so the poll loop only spends an I2C transaction
+    // when something actually moved.
+    pub const EXPANDER_INT_PORT: IoxPort = IoxPort::PC;
+    pub const EXPANDER_INT_PIN:  u8      = 7;
+}
 
 // IR receiver
 // Everlight IRM-H638T/TR2 - demodulated output, idle HIGH, burst LOW.

@@ -35,5 +35,8 @@ board-dabao = [
 previewer = ["usb"]
 # Stream boot progress, IR activity, and panics to the USB serial monitor.
 bringup = ["usb"]
+# Panel inputs live on a separate input board reached over I2C (MCP23008 expander plus an
+# interrupt line) instead of being wired straight to eye GPIOs on the combined controller board.
+input-board = []
 usb = []
 default = ["bao1x", "board-dabao"]
