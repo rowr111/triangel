@@ -66,19 +66,22 @@ PLACEMENTS = {
 
     # IR sensor's supply filter, on the back beside the sensor. The front then carries only
     # the parts that have to face the user. Positions below are hand-placed.
-    "R1": (69.25, 45.50, 270, BACK),
-    "C1": (72.75, 45.00, 270, BACK),
-    "C2": (71.25, 45.50,  90, BACK),
+    "R1": (67.00, 41.50,  90, BACK),
+    "C1": (63.50, 42.00,  90, BACK),
+    "C2": (65.00, 41.50, 270, BACK),
 
     # Back side: connector at top centre, expander behind the d-pad.
     # Rotation 0, not 180: Flip() below mirrors top-to-bottom, which already turns the
     # opening towards the top edge. Verified by checking that the connector's tail pads
     # end up on the inward side of its body.
     "USBC1": (WIDTH_MM / 2.0, USB_OPENING_OFFSET + USB_INSET, 0, BACK),
-    "U1":    (40.0, 35.0, 0, BACK),
+    # U1 sits below the connector at 270 degrees, which puts SCL/SDA/INT on its north edge
+    # facing the socket, and GP7..GP0 along its south edge running west to east - the same
+    # order the buttons appear in across the board, so the fan-out does not cross.
+    "U1":    (38.75, 18.25, 270, BACK),
     # Decoupling, hand-placed next to the part each one serves.
-    "C3":    (43.75,  9.50, 180, BACK),
-    "C4":    (43.48, 39.50, 270, BACK),
+    "C3":    (43.97, 10.22, 180, BACK),
+    "C4":    (34.00, 22.00, 180, BACK),
 
     # Mounting holes, inset from each corner.
     "H1": (5.0, 5.0, 0, FRONT),

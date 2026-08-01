@@ -68,14 +68,16 @@ mod input_board {
     // pull resistors of its own.
     pub const EXPANDER_ADDR: u8 = 0x20;
 
-    // Which expander bit each input sits on. Bit 7 is spare.
-    pub const EXP_BIT_UP:     u8 = 0;
-    pub const EXP_BIT_DOWN:   u8 = 1;
-    pub const EXP_BIT_LEFT:   u8 = 2;
-    pub const EXP_BIT_RIGHT:  u8 = 3;
+    // Which expander bit each input sits on. Bit 7 is spare. The order follows the board:
+    // GP7..GP0 run west to east along the expander's south edge, matching the left-to-right
+    // order the controls appear in, so the tracks fan out without crossing.
+    pub const EXP_BIT_SW_OFF: u8 = 0;
+    pub const EXP_BIT_SW_ON:  u8 = 1;
+    pub const EXP_BIT_RIGHT:  u8 = 2;
+    pub const EXP_BIT_DOWN:   u8 = 3;
     pub const EXP_BIT_CENTER: u8 = 4;
-    pub const EXP_BIT_SW_ON:  u8 = 5;
-    pub const EXP_BIT_SW_OFF: u8 = 6;
+    pub const EXP_BIT_LEFT:   u8 = 5;
+    pub const EXP_BIT_UP:     u8 = 6;
 
     // Expander interrupt line: open-drain and active-low, pulled up at the eye. Asserted
     // whenever an enabled input changes, so the poll loop only spends an I2C transaction

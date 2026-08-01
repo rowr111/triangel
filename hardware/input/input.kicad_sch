@@ -3154,7 +3154,7 @@
 	)
 	(global_label "SOUND REACTIVE ON"
 		(shape input)
-		(at 109.855 129.54 0)
+		(at 109.855 139.7 0)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -3164,7 +3164,7 @@
 		)
 		(uuid "03e05065-f1f9-4dd8-8e39-4c01e335ca80")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 132.495 129.54 0)
+			(at 132.495 139.7 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3250,7 +3250,7 @@
 	)
 	(global_label "BTN RIGHT"
 		(shape input)
-		(at 109.855 134.62 0)
+		(at 109.855 137.16 0)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -3260,7 +3260,7 @@
 		)
 		(uuid "37df1407-240a-45bc-b793-b7a3d9797ce4")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 122.8188 134.62 0)
+			(at 122.8188 137.16 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3322,7 +3322,7 @@
 	)
 	(global_label "BTN DOWN"
 		(shape input)
-		(at 109.855 139.7 0)
+		(at 109.855 134.62 0)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -3332,7 +3332,7 @@
 		)
 		(uuid "4809cef2-5826-47c0-9ba8-13d5fe303a82")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 122.7583 139.7 0)
+			(at 122.7583 134.62 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3442,7 +3442,7 @@
 	)
 	(global_label "BTN LEFT"
 		(shape input)
-		(at 109.855 137.16 0)
+		(at 109.855 129.54 0)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -3452,7 +3452,7 @@
 		)
 		(uuid "73258b4a-4787-4518-81f0-748d6c14b614")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 121.6092 137.16 0)
+			(at 121.6092 129.54 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3514,7 +3514,7 @@
 	)
 	(global_label "SOUND REACTIVE OFF"
 		(shape input)
-		(at 109.855 127 0)
+		(at 109.855 142.24 0)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -3524,7 +3524,7 @@
 		)
 		(uuid "a2a39c21-49d1-4281-b633-b3427b43d8ab")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 133.3417 127 0)
+			(at 133.3417 142.24 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3634,7 +3634,7 @@
 	)
 	(global_label "BTN UP"
 		(shape input)
-		(at 109.855 142.24 0)
+		(at 109.855 127 0)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -3644,7 +3644,7 @@
 		)
 		(uuid "b8c1b552-be77-4998-a870-22ddab8034ec")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 119.9764 142.24 0)
+			(at 119.9764 127 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
