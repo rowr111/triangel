@@ -35,7 +35,7 @@
 	(fp_line (start -6.00 -1.75) (end 6.00 -1.75) (layer F.CrtYd) (width 0.05))
 	(fp_line (start 6.00 -1.75) (end 6.00 1.75) (layer F.CrtYd) (width 0.05))
 	(fp_line (start 6.00 1.75) (end -6.00 1.75) (layer F.CrtYd) (width 0.05))
-	(model "${KIPRJMOD}/easyeda2kicad.3dshapes/SW-SMD_CL-SB-13A-0X.wrl"
+	(model "${KIPRJMOD}/../shared/easyeda2kicad.3dshapes/SW-SMD_CL-SB-13A-0X.wrl"
 		(offset (xyz 0.000 0.000 0.000))
 		(scale (xyz 1 1 1))
 		(rotate (xyz 0 0 0))

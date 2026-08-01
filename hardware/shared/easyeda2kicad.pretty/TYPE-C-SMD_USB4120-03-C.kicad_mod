@@ -48,7 +48,7 @@
 	(fp_line (start -4.47 -1.58) (end 4.47 -1.58) (layer F.CrtYd) (width 0.05))
 	(fp_line (start 4.47 -1.58) (end 4.47 1.58) (layer F.CrtYd) (width 0.05))
 	(fp_line (start 4.47 1.58) (end -4.47 1.58) (layer F.CrtYd) (width 0.05))
-	(model "${KIPRJMOD}/easyeda2kicad.3dshapes/TYPE-C-SMD_USB4120-03-C.wrl"
+	(model "${KIPRJMOD}/../shared/easyeda2kicad.3dshapes/TYPE-C-SMD_USB4120-03-C.wrl"
 		(offset (xyz 0.000 0.000 0.000))
 		(scale (xyz 1 1 1))
 		(rotate (xyz 0 0 0))

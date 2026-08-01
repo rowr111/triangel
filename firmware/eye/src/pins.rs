@@ -63,9 +63,9 @@ mod input_board {
     use super::IoxPort;
 
     // MCP23008 I2C GPIO expander carrying the d-pad and the sound switch, reached over the
-    // input board cable. A0/A1/A2 are tied to GND, giving 7-bit address 0x20. Buttons are
-    // active-low on the expander's internal pull-ups; the sound switch is active-HIGH with
-    // 10k pull-downs on the input board, matching the combined controller board.
+    // input board cable. A0/A1/A2 are tied to GND, giving 7-bit address 0x20. Every input is
+    // active-low and rides the expander's internal pull-ups, so the input board carries no
+    // pull resistors of its own.
     pub const EXPANDER_ADDR: u8 = 0x20;
 
     // Which expander bit each input sits on. Bit 7 is spare.

@@ -4026,7 +4026,7 @@
 				)
 			)
 		)
-		(property "Footprint" "footprints:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
+		(property "Footprint" "easyeda2kicad:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
 			(at 146.685 43.18 0)
 			(hide yes)
 			(show_name no)
@@ -4124,7 +4124,7 @@
 				)
 			)
 		)
-		(property "Footprint" "footprints:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
+		(property "Footprint" "easyeda2kicad:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
 			(at 206.375 51.435 0)
 			(hide yes)
 			(show_name no)
@@ -4222,7 +4222,7 @@
 				)
 			)
 		)
-		(property "Footprint" "footprints:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
+		(property "Footprint" "easyeda2kicad:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
 			(at 102.87 43.18 0)
 			(hide yes)
 			(show_name no)
@@ -4412,7 +4412,7 @@
 				)
 			)
 		)
-		(property "Footprint" "footprints:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
+		(property "Footprint" "easyeda2kicad:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
 			(at 124.46 43.18 0)
 			(hide yes)
 			(show_name no)
@@ -4510,7 +4510,7 @@
 				)
 			)
 		)
-		(property "Footprint" "footprints:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
+		(property "Footprint" "easyeda2kicad:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
 			(at 252.73 43.18 0)
 			(hide yes)
 			(show_name no)
@@ -4700,7 +4700,7 @@
 				)
 			)
 		)
-		(property "Footprint" "footprints:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
+		(property "Footprint" "easyeda2kicad:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
 			(at 102.87 96.52 0)
 			(hide yes)
 			(show_name no)
@@ -4798,7 +4798,7 @@
 				)
 			)
 		)
-		(property "Footprint" "footprints:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
+		(property "Footprint" "easyeda2kicad:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
 			(at 124.46 96.52 0)
 			(hide yes)
 			(show_name no)
@@ -5080,7 +5080,7 @@
 				)
 			)
 		)
-		(property "Footprint" "footprints:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
+		(property "Footprint" "easyeda2kicad:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
 			(at 121.92 51.435 0)
 			(hide yes)
 			(show_name no)
@@ -5178,7 +5178,7 @@
 				)
 			)
 		)
-		(property "Footprint" "footprints:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
+		(property "Footprint" "easyeda2kicad:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
 			(at 250.19 51.435 0)
 			(hide yes)
 			(show_name no)
@@ -5547,7 +5547,7 @@
 				)
 			)
 		)
-		(property "Footprint" "footprints:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
+		(property "Footprint" "easyeda2kicad:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
 			(at 146.685 96.52 0)
 			(hide yes)
 			(show_name no)
@@ -5645,7 +5645,7 @@
 				)
 			)
 		)
-		(property "Footprint" "footprints:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
+		(property "Footprint" "easyeda2kicad:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
 			(at 184.785 51.435 0)
 			(hide yes)
 			(show_name no)
@@ -5927,7 +5927,7 @@
 				)
 			)
 		)
-		(property "Footprint" "footprints:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
+		(property "Footprint" "easyeda2kicad:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
 			(at 252.73 96.52 0)
 			(hide yes)
 			(show_name no)
@@ -6392,7 +6392,7 @@
 				)
 			)
 		)
-		(property "Footprint" "footprints:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
+		(property "Footprint" "easyeda2kicad:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
 			(at 168.275 43.18 0)
 			(hide yes)
 			(show_name no)
@@ -6490,7 +6490,7 @@
 				)
 			)
 		)
-		(property "Footprint" "footprints:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
+		(property "Footprint" "easyeda2kicad:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
 			(at 228.6 51.435 0)
 			(hide yes)
 			(show_name no)
@@ -6929,7 +6929,7 @@
 				)
 			)
 		)
-		(property "Footprint" "footprints:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
+		(property "Footprint" "easyeda2kicad:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
 			(at 210.185 43.18 0)
 			(hide yes)
 			(show_name no)
@@ -7363,7 +7363,7 @@
 				)
 			)
 		)
-		(property "Footprint" "footprints:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
+		(property "Footprint" "easyeda2kicad:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
 			(at 231.14 43.18 0)
 			(hide yes)
 			(show_name no)
@@ -7553,7 +7553,7 @@
 				)
 			)
 		)
-		(property "Footprint" "footprints:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
+		(property "Footprint" "easyeda2kicad:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
 			(at 189.865 43.18 0)
 			(hide yes)
 			(show_name no)
@@ -7914,7 +7914,7 @@
 				)
 			)
 		)
-		(property "Footprint" "footprints:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
+		(property "Footprint" "easyeda2kicad:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
 			(at 142.875 51.435 0)
 			(hide yes)
 			(show_name no)
@@ -8012,7 +8012,7 @@
 				)
 			)
 		)
-		(property "Footprint" "footprints:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
+		(property "Footprint" "easyeda2kicad:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
 			(at 163.195 51.435 0)
 			(hide yes)
 			(show_name no)
@@ -8201,7 +8201,7 @@
 				)
 			)
 		)
-		(property "Footprint" "footprints:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
+		(property "Footprint" "easyeda2kicad:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
 			(at 189.865 96.52 0)
 			(hide yes)
 			(show_name no)
@@ -8299,7 +8299,7 @@
 				)
 			)
 		)
-		(property "Footprint" "footprints:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
+		(property "Footprint" "easyeda2kicad:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
 			(at 100.33 51.435 0)
 			(hide yes)
 			(show_name no)
@@ -8668,7 +8668,7 @@
 				)
 			)
 		)
-		(property "Footprint" "footprints:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
+		(property "Footprint" "easyeda2kicad:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
 			(at 210.185 96.52 0)
 			(hide yes)
 			(show_name no)
@@ -9304,7 +9304,7 @@
 				)
 			)
 		)
-		(property "Footprint" "footprints:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
+		(property "Footprint" "easyeda2kicad:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
 			(at 231.14 96.52 0)
 			(hide yes)
 			(show_name no)
@@ -9480,7 +9480,7 @@
 				)
 			)
 		)
-		(property "Footprint" "footprints:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
+		(property "Footprint" "easyeda2kicad:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
 			(at 168.275 96.52 0)
 			(hide yes)
 			(show_name no)

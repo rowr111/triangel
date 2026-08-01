@@ -491,7 +491,7 @@
 			(uuid "f1b239a3-c1f8-4ecf-8d69-1c4c1abf449b")
 		)
 		(embedded_fonts no)
-		(model "${KIPRJMOD}/easyeda2kicad.3dshapes/SW-SMD_PANASONIC_EVPASXXX.wrl"
+		(model "${KIPRJMOD}/../shared/easyeda2kicad.3dshapes/SW-SMD_PANASONIC_EVPASXXX.wrl"
 			(offset
 				(xyz 0 0 0)
 			)
@@ -774,7 +774,7 @@
 			(uuid "21b00187-13e4-4f7c-b788-bc9547743769")
 		)
 		(embedded_fonts no)
-		(model "${KIPRJMOD}/easyeda2kicad.3dshapes/SENSOR-SMD_L5.0-W4.0-H4.0-LS7.0-P2.54.wrl"
+		(model "${KIPRJMOD}/../shared/easyeda2kicad.3dshapes/SENSOR-SMD_L5.0-W4.0-H4.0-LS7.0-P2.54.wrl"
 			(offset
 				(xyz 0 0 0)
 			)
@@ -1185,7 +1185,7 @@
 			(uuid "0651faeb-f213-40f8-b513-f3404658f50a")
 		)
 		(embedded_fonts no)
-		(model "${KIPRJMOD}/easyeda2kicad.3dshapes/HDR2.54-F-LI-1X16P.wrl"
+		(model "${KIPRJMOD}/../shared/easyeda2kicad.3dshapes/HDR2.54-F-LI-1X16P.wrl"
 			(offset
 				(xyz 0 0 0)
 			)
@@ -1962,7 +1962,7 @@
 			(uuid "231a9363-4001-4062-be21-d322311b4465")
 		)
 		(embedded_fonts no)
-		(model "${KIPRJMOD}/easyeda2kicad.3dshapes/SW-SMD_PANASONIC_EVPASXXX.wrl"
+		(model "${KIPRJMOD}/../shared/easyeda2kicad.3dshapes/SW-SMD_PANASONIC_EVPASXXX.wrl"
 			(offset
 				(xyz 0 0 0)
 			)
@@ -2549,7 +2549,7 @@
 			(uuid "e690c8a5-41b7-4b30-97ab-824fc4b81df1")
 		)
 		(embedded_fonts no)
-		(model "${KIPRJMOD}/easyeda2kicad.3dshapes/SOT-23-6_L2.9-W1.6-H1.5-LS2.8-P0.95.wrl"
+		(model "${KIPRJMOD}/../shared/easyeda2kicad.3dshapes/SOT-23-6_L2.9-W1.6-H1.5-LS2.8-P0.95.wrl"
 			(offset
 				(xyz 0 0 0)
 			)
@@ -4204,7 +4204,7 @@
 			(uuid "49ca2579-29a1-4294-9153-49cdc7555a74")
 		)
 		(embedded_fonts no)
-		(model "${KIPRJMOD}/easyeda2kicad.3dshapes/HDR2.54-F-LI-1X16P.wrl"
+		(model "${KIPRJMOD}/../shared/easyeda2kicad.3dshapes/HDR2.54-F-LI-1X16P.wrl"
 			(offset
 				(xyz 0 0 0)
 			)
@@ -5639,7 +5639,7 @@
 			(uuid "72efb046-88c2-4b16-bfec-2df08769bd5e")
 		)
 		(embedded_fonts no)
-		(model "${KIPRJMOD}/easyeda2kicad.3dshapes/SW-SMD_PANASONIC_EVPASXXX.wrl"
+		(model "${KIPRJMOD}/../shared/easyeda2kicad.3dshapes/SW-SMD_PANASONIC_EVPASXXX.wrl"
 			(offset
 				(xyz 0 0 0)
 			)
@@ -7642,7 +7642,7 @@
 			(uuid "5cc019ca-bf3b-4650-865f-f4374d171a23")
 		)
 		(embedded_fonts no)
-		(model "${KIPRJMOD}/easyeda2kicad.3dshapes/TYPE-C-SMD_USB4120-03-C.wrl"
+		(model "${KIPRJMOD}/../shared/easyeda2kicad.3dshapes/TYPE-C-SMD_USB4120-03-C.wrl"
 			(offset
 				(xyz 0 0 0)
 			)
@@ -8426,7 +8426,7 @@
 			(uuid "3bca77dd-e17d-4dd7-ab00-6b2a7e54c260")
 		)
 		(embedded_fonts no)
-		(model "${KIPRJMOD}/easyeda2kicad.3dshapes/TYPE-C-SMD_USB4120-03-C.wrl"
+		(model "${KIPRJMOD}/../shared/easyeda2kicad.3dshapes/TYPE-C-SMD_USB4120-03-C.wrl"
 			(offset
 				(xyz 0 0 0)
 			)
@@ -8837,7 +8837,7 @@
 			(uuid "94ce99f2-32a0-4e4e-a051-a1fdad5273aa")
 		)
 		(embedded_fonts no)
-		(model "${KIPRJMOD}/easyeda2kicad.3dshapes/HDR2.54-F-LI-1X16P.wrl"
+		(model "${KIPRJMOD}/../shared/easyeda2kicad.3dshapes/HDR2.54-F-LI-1X16P.wrl"
 			(offset
 				(xyz 0 0 0)
 			)
@@ -9190,7 +9190,7 @@
 			(uuid "5539bb57-61b5-4878-bddb-24f2e0cd7a4e")
 		)
 		(embedded_fonts no)
-		(model "${KIPRJMOD}/easyeda2kicad.3dshapes/SW-SMD_PANASONIC_EVPASXXX.wrl"
+		(model "${KIPRJMOD}/../shared/easyeda2kicad.3dshapes/SW-SMD_PANASONIC_EVPASXXX.wrl"
 			(offset
 				(xyz 0 0 0)
 			)
@@ -9861,7 +9861,7 @@
 			(uuid "0e390f23-46e8-456e-b59f-4d6fca457b9e")
 		)
 		(embedded_fonts no)
-		(model "${KIPRJMOD}/easyeda2kicad.3dshapes/SW-SMD_PANASONIC_EVPASXXX.wrl"
+		(model "${KIPRJMOD}/../shared/easyeda2kicad.3dshapes/SW-SMD_PANASONIC_EVPASXXX.wrl"
 			(offset
 				(xyz 0 0 0)
 			)
@@ -10970,7 +10970,7 @@
 			(uuid "9665249c-0769-4388-addc-acedf74f32ef")
 		)
 		(embedded_fonts no)
-		(model "${KIPRJMOD}/easyeda2kicad.3dshapes/SW-SMD_CL-SB-13A-0X.wrl"
+		(model "${KIPRJMOD}/../shared/easyeda2kicad.3dshapes/SW-SMD_CL-SB-13A-0X.wrl"
 			(offset
 				(xyz 0 0 0)
 			)
@@ -11554,7 +11554,7 @@
 			(uuid "2c023998-86ff-4d29-9b4c-417ed0689d40")
 		)
 		(embedded_fonts no)
-		(model "${KIPRJMOD}/easyeda2kicad.3dshapes/DC-IN-TH_XDJK-0051-025.wrl"
+		(model "${KIPRJMOD}/../shared/easyeda2kicad.3dshapes/DC-IN-TH_XDJK-0051-025.wrl"
 			(offset
 				(xyz 0 0 0)
 			)
@@ -12283,7 +12283,7 @@
 			(uuid "1df79433-53db-45f5-a4e5-bb14c4362c5b")
 		)
 		(embedded_fonts no)
-		(model "${KIPRJMOD}/easyeda2kicad.3dshapes/HDR2.54-F-LI-1X16P.wrl"
+		(model "${KIPRJMOD}/../shared/easyeda2kicad.3dshapes/HDR2.54-F-LI-1X16P.wrl"
 			(offset
 				(xyz 0 0 0)
 			)

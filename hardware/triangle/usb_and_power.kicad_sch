@@ -1253,7 +1253,7 @@
 			)
 			(embedded_fonts no)
 		)
-		(symbol "new:EA8212HT6R"
+		(symbol "easyeda2kicad:EA8212HT6R"
 			(exclude_from_sim no)
 			(in_bom yes)
 			(on_board yes)
@@ -2625,7 +2625,7 @@
 				)
 			)
 		)
-		(property "Footprint" "footprints:TYPE-C-SMD_USB4120-03-C"
+		(property "Footprint" "easyeda2kicad:TYPE-C-SMD_USB4120-03-C"
 			(at 151.13 59.69 0)
 			(hide yes)
 			(show_name no)
@@ -2838,7 +2838,7 @@
 				)
 			)
 		)
-		(property "Footprint" "footprints:TYPE-C-SMD_USB4120-03-C"
+		(property "Footprint" "easyeda2kicad:TYPE-C-SMD_USB4120-03-C"
 			(at 59.69 58.42 0)
 			(hide yes)
 			(show_name no)
@@ -3454,7 +3454,7 @@
 		)
 	)
 	(symbol
-		(lib_id "new:EA8212HT6R")
+		(lib_id "easyeda2kicad:EA8212HT6R")
 		(at 89.535 152.4 0)
 		(unit 1)
 		(body_style 1)
@@ -3485,7 +3485,7 @@
 				)
 			)
 		)
-		(property "Footprint" "footprints:SOT-23-6_L2.9-W1.6-P0.95-LS2.8-BR"
+		(property "Footprint" "easyeda2kicad:SOT-23-6_L2.9-W1.6-P0.95-LS2.8-BR"
 			(at 89.535 162.56 0)
 			(hide yes)
 			(show_name no)

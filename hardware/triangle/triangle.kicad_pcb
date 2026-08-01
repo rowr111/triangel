@@ -680,7 +680,7 @@
 		)
 		(embedded_fonts no)
 	)
-	(footprint "footprints:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
+	(footprint "easyeda2kicad:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
 		(layer "F.Cu")
 		(uuid "191dd146-496a-413c-87d7-86fcae92bd42")
 		(at 150 145 180)
@@ -932,7 +932,7 @@
 			)
 		)
 	)
-	(footprint "footprints:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
+	(footprint "easyeda2kicad:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
 		(layer "F.Cu")
 		(uuid "2f15010e-e9f3-47a9-ac45-452b1b79e9ed")
 		(at 165.5025 100.248125 -60)
@@ -1186,7 +1186,7 @@
 			)
 		)
 	)
-	(footprint "footprints:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
+	(footprint "easyeda2kicad:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
 		(layer "F.Cu")
 		(uuid "30a19bdc-e1a9-44be-8e8f-89b2a6544edc")
 		(at 189.02 143.84 -120)
@@ -1440,7 +1440,7 @@
 			)
 		)
 	)
-	(footprint "footprints:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
+	(footprint "easyeda2kicad:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
 		(layer "F.Cu")
 		(uuid "345823ef-f75d-4aac-9697-65859ce99fc7")
 		(at 118.995 127.09925 60)
@@ -2290,7 +2290,7 @@
 			)
 		)
 	)
-	(footprint "footprints:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
+	(footprint "easyeda2kicad:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
 		(layer "F.Cu")
 		(uuid "4b6cff2a-0163-43ec-bb8b-88f877041de9")
 		(at 160.335 145 180)
@@ -2542,7 +2542,7 @@
 			)
 		)
 	)
-	(footprint "footprints:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
+	(footprint "easyeda2kicad:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
 		(layer "F.Cu")
 		(uuid "4dcb944b-f954-4b85-ace1-1e13f851d70d")
 		(at 124.1625 118.148875 60)
@@ -2796,7 +2796,7 @@
 			)
 		)
 	)
-	(footprint "footprints:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
+	(footprint "easyeda2kicad:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
 		(layer "F.Cu")
 		(uuid "56d717f8-6a92-4353-bca2-5ada517a5fc7")
 		(at 186.1725 136.049625 -60)
@@ -3050,7 +3050,7 @@
 			)
 		)
 	)
-	(footprint "footprints:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
+	(footprint "easyeda2kicad:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
 		(layer "F.Cu")
 		(uuid "5c74256a-41ba-43f6-befe-663c718fb3bb")
 		(at 139.665 91.29775 60)
@@ -3304,7 +3304,7 @@
 			)
 		)
 	)
-	(footprint "footprints:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
+	(footprint "easyeda2kicad:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
 		(layer "F.Cu")
 		(uuid "63f4be7a-72df-4011-853e-1c69182c9f8f")
 		(at 134.4975 100.248125 60)
@@ -3558,7 +3558,7 @@
 			)
 		)
 	)
-	(footprint "footprints:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
+	(footprint "easyeda2kicad:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
 		(layer "F.Cu")
 		(uuid "66bbd576-f6aa-40fb-8d9e-f4360da8cf6f")
 		(at 160.335 91.29775 -60)
@@ -4210,7 +4210,7 @@
 			)
 		)
 	)
-	(footprint "footprints:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
+	(footprint "easyeda2kicad:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
 		(layer "F.Cu")
 		(uuid "7883f9b5-c47e-4a30-b8bb-d443e3c77eff")
 		(at 144.8325 82.347375 60)
@@ -5062,7 +5062,7 @@
 			)
 		)
 	)
-	(footprint "footprints:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
+	(footprint "easyeda2kicad:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
 		(layer "F.Cu")
 		(uuid "934348f2-3c7c-4544-af67-cf5a44a29ad2")
 		(at 129.329999 145 180)
@@ -5457,7 +5457,7 @@
 		)
 		(embedded_fonts no)
 	)
-	(footprint "footprints:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
+	(footprint "easyeda2kicad:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
 		(layer "F.Cu")
 		(uuid "a0045abb-d774-4a52-a7f2-3ae18dea9cf8")
 		(at 110.825639 143.598161 120)
@@ -5909,7 +5909,7 @@
 			)
 		)
 	)
-	(footprint "footprints:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
+	(footprint "easyeda2kicad:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
 		(layer "F.Cu")
 		(uuid "a42fa849-18e1-4f6a-aa69-fd3d3845e676")
 		(at 175.8375 118.148875 -60)
@@ -6363,7 +6363,7 @@
 			)
 		)
 	)
-	(footprint "footprints:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
+	(footprint "easyeda2kicad:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
 		(layer "F.Cu")
 		(uuid "a711c3a5-95b7-4e03-b006-c02a0484da65")
 		(at 181.005 145 180)
@@ -6615,7 +6615,7 @@
 			)
 		)
 	)
-	(footprint "footprints:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
+	(footprint "easyeda2kicad:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
 		(layer "F.Cu")
 		(uuid "a86496db-00d8-4f40-9fd8-a57a7cfd5af2")
 		(at 170.67 145 180)
@@ -7054,7 +7054,7 @@
 			)
 		)
 	)
-	(footprint "footprints:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
+	(footprint "easyeda2kicad:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
 		(layer "F.Cu")
 		(uuid "adff15bb-a27a-445f-8a60-bd6bf7f3618b")
 		(at 129.329999 109.1985 60)
@@ -7308,7 +7308,7 @@
 			)
 		)
 	)
-	(footprint "footprints:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
+	(footprint "easyeda2kicad:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
 		(layer "F.Cu")
 		(uuid "b1e3048f-a4ea-4068-a0fc-1c0b891291bf")
 		(at 113.8275 136.049625 60)
@@ -7905,7 +7905,7 @@
 		)
 		(embedded_fonts no)
 	)
-	(footprint "footprints:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
+	(footprint "easyeda2kicad:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
 		(layer "F.Cu")
 		(uuid "dc26d7ec-035b-4f71-b0ef-bdea13615b74")
 		(at 170.67 109.1985 -60)
@@ -8159,7 +8159,7 @@
 			)
 		)
 	)
-	(footprint "footprints:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
+	(footprint "easyeda2kicad:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
 		(layer "F.Cu")
 		(uuid "e1773a78-746b-4973-ae65-4cabea831c20")
 		(at 155.1675 82.347375 -60)
@@ -8413,7 +8413,7 @@
 			)
 		)
 	)
-	(footprint "footprints:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
+	(footprint "easyeda2kicad:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
 		(layer "F.Cu")
 		(uuid "e359c03a-1b03-4be8-8650-717fc4981f35")
 		(at 181.005 127.09925 -60)
@@ -9054,7 +9054,7 @@
 			)
 		)
 	)
-	(footprint "footprints:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
+	(footprint "easyeda2kicad:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
 		(layer "F.Cu")
 		(uuid "ee7e1143-4586-499f-bd1e-2d5c3c2baf74")
 		(at 118.995 145 180)
@@ -9506,7 +9506,7 @@
 			)
 		)
 	)
-	(footprint "footprints:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
+	(footprint "easyeda2kicad:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
 		(layer "F.Cu")
 		(uuid "f2533dc4-6506-465b-b569-55ee7a03e749")
 		(at 150 75.397)
@@ -9758,7 +9758,7 @@
 			)
 		)
 	)
-	(footprint "footprints:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
+	(footprint "easyeda2kicad:LED_WS2812B-2020_PLCC4_2.0x2.0mm - no silkscreen"
 		(layer "F.Cu")
 		(uuid "f726d8ba-9395-4fd6-8d7b-c9d2cc558ae8")
 		(at 139.665 145 180)
@@ -10606,7 +10606,7 @@
 			)
 		)
 	)
-	(footprint "footprints:TYPE-C-SMD_USB4120-03-C"
+	(footprint "easyeda2kicad:TYPE-C-SMD_USB4120-03-C"
 		(layer "B.Cu")
 		(uuid "114bb03b-8e88-4acc-9bb4-d4f6e9ea7bdf")
 		(at 133.345625 130.607088 -150)
@@ -12825,7 +12825,7 @@
 			)
 		)
 	)
-	(footprint "footprints:TYPE-C-SMD_USB4120-03-C"
+	(footprint "easyeda2kicad:TYPE-C-SMD_USB4120-03-C"
 		(layer "B.Cu")
 		(uuid "6749617c-8887-4492-a614-1257d523e1b9")
 		(at 149.896593 102.269695 90)
@@ -16032,7 +16032,7 @@
 			)
 		)
 	)
-	(footprint "footprints:SOT-23-6_L2.9-W1.6-P0.95-LS2.8-BR"
+	(footprint "easyeda2kicad:SOT-23-6_L2.9-W1.6-P0.95-LS2.8-BR"
 		(layer "B.Cu")
 		(uuid "ee543afc-8e10-47f7-ba58-83515f77a55b")
 		(at 165.576901 117.879661 30)
@@ -16324,7 +16324,7 @@
 			(uuid "a2778494-4820-4def-9251-8015a929f1f5")
 		)
 		(embedded_fonts no)
-		(model "${EASYEDA2KICAD}/easyeda2kicad.3dshapes/SOT-23-6_L2.9-W1.6-H1.5-LS2.8-P0.95.wrl"
+		(model "${KIPRJMOD}/../shared/easyeda2kicad.3dshapes/SOT-23-6_L2.9-W1.6-H1.5-LS2.8-P0.95.wrl"
 			(offset
 				(xyz 0 0 0)
 			)

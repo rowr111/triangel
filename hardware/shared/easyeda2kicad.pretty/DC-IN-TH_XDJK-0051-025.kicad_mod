@@ -24,7 +24,7 @@
 	(fp_line (start -10.70 -6.85) (end 3.40 -6.85) (layer F.CrtYd) (width 0.05))
 	(fp_line (start 3.40 -6.85) (end 3.40 2.15) (layer F.CrtYd) (width 0.05))
 	(fp_line (start 3.40 2.15) (end -10.70 2.15) (layer F.CrtYd) (width 0.05))
-	(model "${KIPRJMOD}/easyeda2kicad.3dshapes/DC-IN-TH_XDJK-0051-025.wrl"
+	(model "${KIPRJMOD}/../shared/easyeda2kicad.3dshapes/DC-IN-TH_XDJK-0051-025.wrl"
 		(offset (xyz 0.000 0.000 0.000))
 		(scale (xyz 1 1 1))
 		(rotate (xyz 0 0 0))
