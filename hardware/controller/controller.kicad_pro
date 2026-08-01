@@ -702,24 +702,15 @@
         "filename": "voltage_converters.kicad_sch",
         "name": "voltage converters and connector",
         "uuid": "95e5c331-6890-437f-94b9-bde400751ae8"
-      },
-      {
-        "filename": "components.kicad_sch",
-        "name": "components",
-        "uuid": "ed43b915-8637-4fab-a1d1-340d9f2c05b8"
       }
     ],
-    "used_designators": "C30,R11",
+    "used_designators": "C1-2,C30,C36,J3,R1-8,R10-11,H1-4,#PWR7-8,#PWR10-15,#PWR50,#PWR54,#PWR56,#PWR58,#PWR81-82,MK1",
     "variants": []
   },
   "sheets": [
     [
       "2ec1a6cc-e255-4c8d-bf32-cfafd13c2b2e",
       "dabao sockets"
-    ],
-    [
-      "ed43b915-8637-4fab-a1d1-340d9f2c05b8",
-      "components"
     ],
     [
       "f62e3b4d-2397-4cd2-b9ea-47dbc13f5bd4",
