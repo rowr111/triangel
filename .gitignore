@@ -12,6 +12,7 @@ __pycache__/
 # KiCad
 *-backups/
 **/.history/
+*.lck
 
 # Claude
 .claude/
