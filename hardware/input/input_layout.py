@@ -26,16 +26,21 @@ HEIGHT_MM  = 60.0
 CORNER_R   = 3.0
 EDGE_WIDTH = 0.1
 
+# Copper layers. The routing here would fit on two, but four matches the controller board
+# and leaves the inner pair free for solid ground and power pours.
+COPPER_LAYERS = 4
+
 # Top-left of the board on the drawing sheet.
 ORIGIN_X   = 100.0
 ORIGIN_Y   = 80.0
 
 # Centre-to-centre spacing of the d-pad buttons. 19mm is standard keyboard key pitch.
 BTN_PITCH  = 19.0
-# Horizontal room is bounded by the slide switch on the right; vertical room by the USB-C
-# body above and the board edge below, which leaves the cluster centre only ~2mm of play.
+# Offset left of centre to leave the right-hand strip for the switch and IR sensor;
+# vertically centred. The top button clears the USB-C's through-holes by ~2.4mm - the
+# connector's body is on the back, so only its holes constrain the front.
 DPAD_X     = 31.0
-DPAD_Y     = 33.0
+DPAD_Y     = HEIGHT_MM / 2.0
 
 # Distance from the USB-C footprint origin to its opening face, measured from the body
 # outline in the footprint. The part is rotated 180 degrees so the opening points at the
@@ -59,20 +64,21 @@ PLACEMENTS = {
     "SW6":  (64.0, 20.0, 0, FRONT),
     "CGQ1": (64.0, 46.0, 0, FRONT),
 
-    # IR sensor's supply filter, on the back directly behind the sensor. The front then
-    # carries only the parts that have to face the user.
-    "R1": (58.0, 42.0, 90, BACK),
-    "C1": (58.0, 46.0, 90, BACK),
-    "C2": (58.0, 50.0, 90, BACK),
+    # IR sensor's supply filter, on the back beside the sensor. The front then carries only
+    # the parts that have to face the user. Positions below are hand-placed.
+    "R1": (69.25, 45.50, 270, BACK),
+    "C1": (72.75, 45.00, 270, BACK),
+    "C2": (71.25, 45.50,  90, BACK),
 
     # Back side: connector at top centre, expander behind the d-pad.
     # Rotation 0, not 180: Flip() below mirrors top-to-bottom, which already turns the
     # opening towards the top edge. Verified by checking that the connector's tail pads
     # end up on the inward side of its body.
     "USBC1": (WIDTH_MM / 2.0, USB_OPENING_OFFSET + USB_INSET, 0, BACK),
-    "C3":    (WIDTH_MM / 2.0, 12.0, 0, BACK),
     "U1":    (40.0, 35.0, 0, BACK),
-    "C4":    (40.0, 42.0, 0, BACK),
+    # Decoupling, hand-placed next to the part each one serves.
+    "C3":    (43.75,  9.50, 180, BACK),
+    "C4":    (43.48, 39.50, 270, BACK),
 
     # Mounting holes, inset from each corner.
     "H1": (5.0, 5.0, 0, FRONT),
@@ -160,11 +166,13 @@ def place_footprints(board):
 
 def main():
     board = pcbnew.LoadBoard(BOARD_PATH)
+    board.SetCopperLayerCount(COPPER_LAYERS)
     draw_outline(board)
     missing = place_footprints(board)
     pcbnew.SaveBoard(BOARD_PATH, board)
 
-    print("board %.0f x %.0f mm, %.0fmm corners" % (WIDTH_MM, HEIGHT_MM, CORNER_R))
+    print("board %.0f x %.0f mm, %.0fmm corners, %d copper layers" % (
+        WIDTH_MM, HEIGHT_MM, CORNER_R, board.GetCopperLayerCount()))
     print("placed %d footprints" % (len(PLACEMENTS) - len(missing)))
     if missing:
         print("NOT FOUND: " + ", ".join(missing))
