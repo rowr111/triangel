@@ -1048,10 +1048,6 @@
 		(uuid "39f7106c-9337-4d0e-9c67-4c3bcd12062d")
 	)
 	(no_connect
-		(at 95.25 124.46)
-		(uuid "409083e6-050f-4634-a58b-22be4764d494")
-	)
-	(no_connect
 		(at 161.29 67.31)
 		(uuid "44a7810a-41ff-4c72-b62a-254ed3ade928")
 	)
@@ -1465,6 +1461,16 @@
 	)
 	(wire
 		(pts
+			(xy 81.28 114.935) (xy 81.28 124.46)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "d06ea5b6-e6fa-4083-8307-5b0dbba7a72e")
+	)
+	(wire
+		(pts
 			(xy 151.765 72.39) (xy 151.765 87.63)
 		)
 		(stroke
@@ -1502,6 +1508,16 @@
 			(type default)
 		)
 		(uuid "e8c16805-1ba4-4807-8bfb-1f71100fa1f3")
+	)
+	(wire
+		(pts
+			(xy 95.25 124.46) (xy 81.28 124.46)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "e9693360-164c-44db-8253-c93cf14ea4e2")
 	)
 	(wire
 		(pts
@@ -3024,6 +3040,84 @@
 			(project "controller"
 				(path "/2ec1a6cc-e255-4c8d-bf32-cfafd13c2b2e"
 					(reference "#PWR05")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:+3.3V")
+		(at 81.28 114.935 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "e7f4d703-ea7d-4875-b304-e6c73b7e8e7a")
+		(property "Reference" "#PWR056"
+			(at 81.28 118.745 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "+3.3V"
+			(at 81.28 110.49 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 81.28 114.935 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 81.28 114.935 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"+3.3V\""
+			(at 81.28 114.935 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "11a48eff-23ab-44ef-ac4d-99a9841271dc")
+		)
+		(instances
+			(project "controller"
+				(path "/2ec1a6cc-e255-4c8d-bf32-cfafd13c2b2e"
+					(reference "#PWR056")
 					(unit 1)
 				)
 			)
