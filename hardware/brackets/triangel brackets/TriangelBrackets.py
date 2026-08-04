@@ -6,10 +6,11 @@
 # document, which allows only one component).
 #
 # Fastening: M3 screw enters from the FRONT (through the tile), threads into an
-# M3 heat-set insert pressed into the bracket from the tile side. Each hole is:
-#   - a Ø3.6mm x 5mm pocket (open on the tile-contact face) for the JLC M3x4x3 insert;
-#     a thick enough plate holds it entirely (flat back), otherwise a boss is added
-#   - with a Ø3.4mm clearance hole out the back so screw length is uncritical
+# M3 heat-set insert pressed into the bracket from the tile side. Each hole is a
+# Ø3.6mm x 5mm hole (open on the tile-contact face) for the JLC M3x4x3 insert.
+# The plate is 5mm (= the insert depth), so the hole runs straight through with a
+# flat back and the screw shaft passes out the back (screw length is uncritical).
+# (Thicker plate -> blind pocket + Ø3.4mm back clearance; thinner -> a boss is added.)
 #
 # Run from Utilities > Add-Ins > Scripts and Add-Ins.
 # All dimensions in mm; Fusion's API is cm internally, so we scale by MM=0.1.
@@ -19,7 +20,7 @@ import adsk.core, adsk.fusion, traceback, math
 # ---- Editable parameters (mm) -------------------------------------------------
 R_HOLE       = 28.60   # bolt-circle radius: center to each hole
 PLATE_R      = 34.0    # plate radius (3.6mm insert wall, over JLC 3mm min); binding part is the USB-C J1/J2 at ~35mm body edge -> +1.0mm. Needs the moved-cap board layout.
-PLATE_T      = 6.0     # plate thickness (holds the 5mm-deep insert as a blind pocket with a ~1mm floor; ~8x stiffer than 3mm, flat back)
+PLATE_T      = 5.0     # plate thickness = insert depth: the Ø3.6 pocket now goes fully through (no floor), flat back; thinner = less stiff (~thickness^3)
 
 INSERT_HOLE_D = 3.6    # JLC3DP M3x4x3 insert: Ø3.6 hole (from their threaded-insert service table)
 INSERT_DEPTH  = 5.0    # JLC requires a 5.0mm-deep hole for that insert
