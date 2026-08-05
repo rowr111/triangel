@@ -1,6 +1,7 @@
 pub mod buttons;
 pub mod ir;
 pub mod nec_capture;
+pub mod nec_rx;
 #[cfg(feature = "previewer")]
 pub mod previewer;
 

@@ -5,13 +5,12 @@ use crate::diag::Diag;
 use crate::input::nec_capture::{NecCapture, REPEAT_FRAME};
 use crate::pins;
 
-// The remote is extended NEC: its two address bytes are a fixed ID (not a
-// byte and its inverse), so only the command byte pair is checksummed.
+// Extended NEC: the address bytes are a fixed ID, so only the command pair
+// is checksummed.
 const NEC_ADDR_LO: u8 = 0x85;
 const NEC_ADDR_HI: u8 = 0xFE;
 
-// Command bytes as sent by the 7-button remote. Sound mode is normally the
-// physical switch's job; the gear button also cycles it.
+// Command bytes from the 7-button remote.
 const IR_CMD_BRIGHTNESS_UP:   u8 = 0x43; // Up button
 const IR_CMD_BRIGHTNESS_DOWN: u8 = 0x44; // Down button
 const IR_CMD_PATTERN_NEXT:    u8 = 0x41; // Right button
@@ -38,8 +37,7 @@ pub fn stats() -> (u32, u32, u32, u32) {
     )
 }
 
-/// Spawn the IR receiver thread. Init progress prints to the USB serial
-/// monitor so a stall or failure is visible.
+/// Spawn the IR receiver thread; init progress prints to the USB serial monitor.
 pub fn spawn(queue: EventQueue) {
     std::thread::spawn(move || {
         let diag = Diag::new();
@@ -56,7 +54,7 @@ pub fn spawn(queue: EventQueue) {
                 ));
                 receive_loop(capture, queue, diag);
             }
-            // Report and give up rather than panic: the d-pad still works without IR.
+            // Give up rather than panic: the d-pad still works without IR.
             Err(e) => {
                 diag.line(&format!("IR NecCapture init FAILED: {:?}", e));
                 log::error!("IR NecCapture init failed: {:?}", e);
@@ -96,7 +94,7 @@ fn receive_loop(capture: NecCapture, queue: EventQueue, diag: Diag) -> ! {
     }
 }
 
-/// Translate a decoded NEC command byte into an InputEvent and push it to the queue.
+/// Map a command byte to an InputEvent and queue it.
 fn map_ir_cmd(cmd: u8, queue: &EventQueue) {
     let event = match cmd {
         IR_CMD_BRIGHTNESS_UP   => Some(InputEvent::BrightnessUp),
@@ -105,7 +103,7 @@ fn map_ir_cmd(cmd: u8, queue: &EventQueue) {
         IR_CMD_PATTERN_PREV    => Some(InputEvent::PatternPrev),
         IR_CMD_HOLD            => Some(InputEvent::ToggleHold),
         IR_CMD_GEAR            => Some(InputEvent::CycleSoundMode),
-        // TV button spare - add mapping once use is decided
+        // TV button spare
         _                      => None,
     };
     if let Some(ev) = event {
