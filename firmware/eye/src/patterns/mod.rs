@@ -1,5 +1,7 @@
 pub mod ambient;
 pub mod reactive;
+#[allow(dead_code)] // bench patterns, unused until one is added to a setlist by hand
+pub mod test;
 pub mod transition;
 
 use crate::led::map::Led;
