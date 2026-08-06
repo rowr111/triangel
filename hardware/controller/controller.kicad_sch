@@ -1052,6 +1052,10 @@
 		(uuid "44a7810a-41ff-4c72-b62a-254ed3ade928")
 	)
 	(no_connect
+		(at 95.25 137.16)
+		(uuid "45a45a3c-d4aa-4593-8f62-f78625c3f3d4")
+	)
+	(no_connect
 		(at 93.98 44.45)
 		(uuid "4a622720-63a0-48eb-af4c-4a8d42697c57")
 	)
@@ -1110,6 +1114,10 @@
 	(no_connect
 		(at 161.29 57.15)
 		(uuid "addedffb-8f62-477b-9458-f64f43ee3a65")
+	)
+	(no_connect
+		(at 95.25 134.62)
+		(uuid "b6e2c531-5b5e-4a7a-8f93-a78e2dec54db")
 	)
 	(no_connect
 		(at 161.29 44.45)
@@ -1593,30 +1601,6 @@
 			)
 		)
 	)
-	(global_label "SOUND REACTIVE ON"
-		(shape input)
-		(at 95.25 134.62 180)
-		(fields_autoplaced yes)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify right)
-		)
-		(uuid "103bc9e8-9b4d-4607-9bff-acd74c3f10f6")
-		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 72.61 134.62 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify right)
-			)
-		)
-	)
 	(global_label "EAR TO EYE AUDIO"
 		(shape input)
 		(at 93.98 72.39 180)
@@ -1822,30 +1806,6 @@
 		(uuid "b6d035b9-a50e-4422-bedd-e592e8bc94d6")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
 			(at 153.8901 136.525 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify right)
-			)
-		)
-	)
-	(global_label "SOUND REACTIVE OFF"
-		(shape input)
-		(at 95.25 137.16 180)
-		(fields_autoplaced yes)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify right)
-		)
-		(uuid "b8921a80-1eae-41f2-999e-bda7a51c3c6e")
-		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 71.7633 137.16 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)

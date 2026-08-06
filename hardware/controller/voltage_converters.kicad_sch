@@ -2428,7 +2428,7 @@
 	)
 	(wire
 		(pts
-			(xy 161.925 132.08) (xy 166.37 132.08)
+			(xy 161.925 132.08) (xy 178.435 132.08)
 		)
 		(stroke
 			(width 0)
@@ -2588,7 +2588,7 @@
 	)
 	(wire
 		(pts
-			(xy 249.555 116.205) (xy 236.22 116.205)
+			(xy 236.22 116.205) (xy 259.08 116.205)
 		)
 		(stroke
 			(width 0)
@@ -2788,7 +2788,7 @@
 	)
 	(wire
 		(pts
-			(xy 162.56 111.125) (xy 166.37 111.125)
+			(xy 162.56 111.125) (xy 184.785 111.125)
 		)
 		(stroke
 			(width 0)
@@ -2828,7 +2828,7 @@
 	)
 	(wire
 		(pts
-			(xy 249.555 113.665) (xy 245.11 113.665)
+			(xy 245.11 113.665) (xy 259.08 113.665)
 		)
 		(stroke
 			(width 0)
@@ -2995,36 +2995,6 @@
 			(type default)
 		)
 		(uuid "96f13675-ce9c-4c82-87d2-23f1e90a9196")
-	)
-	(wire
-		(pts
-			(xy 259.08 113.665) (xy 257.175 113.665)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "9832d05f-1b46-4355-9374-48d880d7798c")
-	)
-	(wire
-		(pts
-			(xy 173.99 111.125) (xy 184.785 111.125)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "9c145fd8-ef0e-4c8a-b3ce-896a77a7f95b")
-	)
-	(wire
-		(pts
-			(xy 173.99 132.08) (xy 178.435 132.08)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "9c260038-ae29-4aec-b52d-aba01105cf36")
 	)
 	(wire
 		(pts
@@ -3215,16 +3185,6 @@
 			(type default)
 		)
 		(uuid "c49d9f29-3cbc-4a33-83fe-6f6510bfe92d")
-	)
-	(wire
-		(pts
-			(xy 259.08 116.205) (xy 257.175 116.205)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "c5926791-069b-41cb-812c-a09bc4501b70")
 	)
 	(wire
 		(pts
@@ -5181,96 +5141,6 @@
 		)
 	)
 	(symbol
-		(lib_id "Device:R_US")
-		(at 170.18 132.08 90)
-		(unit 1)
-		(body_style 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(in_pos_files yes)
-		(dnp no)
-		(uuid "53c7d0df-1d55-4945-b1cc-d99d1e5a7bf5")
-		(property "Reference" "R11"
-			(at 170.18 127 90)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Value" "1kΩ"
-			(at 170.18 129.54 90)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" "Resistor_SMD:R_0603_1608Metric"
-			(at 170.434 131.064 90)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Datasheet" "https://www.lcsc.com/datasheet/lcsc_datasheet_2206010130_UNI-ROYAL-Uniroyal-Elec-0603WAF1001T5E_C21190.pdf"
-			(at 170.18 132.08 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description" "Resistor, US symbol"
-			(at 170.18 132.08 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "JLCPCB Part #" "C21190"
-			(at 170.18 132.08 90)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "2"
-			(uuid "d9fde522-639e-4dc1-80a3-4c06c47cb789")
-		)
-		(pin "1"
-			(uuid "1ac8e631-4cee-474f-83fa-28fb6f14481f")
-		)
-		(instances
-			(project "controller"
-				(path "/95e5c331-6890-437f-94b9-bde400751ae8"
-					(reference "R11")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
 		(lib_id "power:+12V")
 		(at 128.27 45.085 0)
 		(unit 1)
@@ -5970,96 +5840,6 @@
 	)
 	(symbol
 		(lib_id "Device:R_US")
-		(at 253.365 113.665 90)
-		(unit 1)
-		(body_style 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(in_pos_files yes)
-		(dnp no)
-		(uuid "815ef269-a70b-41bc-a47c-a61a3e251590")
-		(property "Reference" "R5"
-			(at 253.365 108.585 90)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Value" "330Ω"
-			(at 253.365 111.125 90)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" "Resistor_SMD:R_0603_1608Metric"
-			(at 253.619 112.649 90)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Datasheet" "https://jlc-prod-smt.oss-eu-central-1.aliyuncs.com/smtDataManualFile/8579706223205072896-C23138.pdf?response-content-disposition=attachment%3B%20filename%3DC23138.pdf%3B%20filename%2A%3DUTF-8%27%27C23138.pdf&x-oss-date=20260801T182503Z&x-oss-expires=1800&x-oss-security-token=CAISgAN1q6Ft5B2yfSjIr5vCL%2BmNo7xKxvWsTkPTnFkvfst6laPdlTz2IHhMdHJsAOodtv0%2FmmhT6PkclqRLcbhpcmfjV%2BZHzLB8qYp%2FrhVS4J7b16cNrbH4M4H6aXeirtuwDsz9SNTCALjPD3nPii50x5bjaDymRCbLGJaViJlhHLN1Ow6jdmhpCctxLAlvo9NgFxm3D%2Fu2NQPwiWf9FVdhvhEG6Vly8qOi2MaRmFy8yFTx0b0SvJ%2BjYMrmPctoN9JnSdC5mfdzau3a1TJ84gRD0a5wkaVA1zbDs5bfISEIuUzebreLqY03dV4mOvdqIcMe8qigz88fk%2FfIioH6xyxKOexoSCnFTOiiupCcQLPyao9jLu6iayqViY7QaIOTqQohZmkAMwVOasAsI3Ngh4zF97Qt0cVNkXO9gWfLI8DtuMleWorlQNBnSnSgc5lCkRRYwGs1287ugXlSQzo890KPDAEovaKCnZ2ZSfh7Y4sNknI6i%2Bfc2Se2MIkIIxw356KWD5sagAGNwrQ61nPW85MaXB69i7JX246ApxatvPia5Cve9qM2TB4AUj4WI9IkNxIRvyNNooTQMDh3AqRsxHBajEhZr4doAKMlqSTEioXmfC7As7Accat2QGsntbQs%2Fr35Oh%2BJUbOQ3mvgF3tNaXUkveLztaVkyM%2F1k%2B%2F7lT%2FXA7nj2K%2BdHCAA&x-oss-signature-version=OSS4-HMAC-SHA256&x-oss-credential=STS.NXwdS9Nckq7GLebxYzrDVzfvw%2F20260801%2Feu-central-1%2Foss%2Faliyun_v4_request&x-oss-signature=e794b056b2deb587c091be5b8380e611515ca0ed80a04c915a1bf076afeda59c"
-			(at 253.365 113.665 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description" "Resistor, US symbol"
-			(at 253.365 113.665 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "JLCPCB #" "C23138"
-			(at 253.365 113.665 90)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "2"
-			(uuid "89ddd0ed-fa49-4631-86fa-e6aaca80619e")
-		)
-		(pin "1"
-			(uuid "8521c793-c6ee-442b-8afd-860509e00c7f")
-		)
-		(instances
-			(project "controller"
-				(path "/95e5c331-6890-437f-94b9-bde400751ae8"
-					(reference "R5")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Device:R_US")
 		(at 39.37 101.6 270)
 		(unit 1)
 		(body_style 1)
@@ -6313,97 +6093,6 @@
 			(project "controller"
 				(path "/95e5c331-6890-437f-94b9-bde400751ae8"
 					(reference "#PWR059")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Device:R_US")
-		(at 170.18 111.125 90)
-		(unit 1)
-		(body_style 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(in_pos_files yes)
-		(dnp no)
-		(fields_autoplaced yes)
-		(uuid "99637517-3a29-4faf-9f46-97c601bca538")
-		(property "Reference" "R10"
-			(at 170.18 105.41 90)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Value" "1kΩ"
-			(at 170.18 107.95 90)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" "Resistor_SMD:R_0603_1608Metric"
-			(at 170.434 110.109 90)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Datasheet" "https://www.lcsc.com/datasheet/lcsc_datasheet_2206010130_UNI-ROYAL-Uniroyal-Elec-0603WAF1001T5E_C21190.pdf"
-			(at 170.18 111.125 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description" "Resistor, US symbol"
-			(at 170.18 111.125 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "JLCPCB Part #" "C21190"
-			(at 170.18 111.125 90)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "2"
-			(uuid "769ae034-50e9-49ba-a49c-d180a5da1c4d")
-		)
-		(pin "1"
-			(uuid "ebb39a07-c6f7-40a3-b818-e94b94f57877")
-		)
-		(instances
-			(project "controller"
-				(path "/95e5c331-6890-437f-94b9-bde400751ae8"
-					(reference "R10")
 					(unit 1)
 				)
 			)
@@ -7620,96 +7309,6 @@
 			(project "controller"
 				(path "/95e5c331-6890-437f-94b9-bde400751ae8"
 					(reference "C1")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Device:R_US")
-		(at 253.365 116.205 270)
-		(unit 1)
-		(body_style 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(in_pos_files yes)
-		(dnp no)
-		(uuid "ed487c23-e427-4c53-86cf-8ef6648227b0")
-		(property "Reference" "R7"
-			(at 253.365 121.285 90)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Value" "330Ω"
-			(at 253.365 118.745 90)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" "Resistor_SMD:R_0603_1608Metric"
-			(at 253.111 117.221 90)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Datasheet" "https://jlc-prod-smt.oss-eu-central-1.aliyuncs.com/smtDataManualFile/8579706223205072896-C23138.pdf?response-content-disposition=attachment%3B%20filename%3DC23138.pdf%3B%20filename%2A%3DUTF-8%27%27C23138.pdf&x-oss-date=20260801T182503Z&x-oss-expires=1800&x-oss-security-token=CAISgAN1q6Ft5B2yfSjIr5vCL%2BmNo7xKxvWsTkPTnFkvfst6laPdlTz2IHhMdHJsAOodtv0%2FmmhT6PkclqRLcbhpcmfjV%2BZHzLB8qYp%2FrhVS4J7b16cNrbH4M4H6aXeirtuwDsz9SNTCALjPD3nPii50x5bjaDymRCbLGJaViJlhHLN1Ow6jdmhpCctxLAlvo9NgFxm3D%2Fu2NQPwiWf9FVdhvhEG6Vly8qOi2MaRmFy8yFTx0b0SvJ%2BjYMrmPctoN9JnSdC5mfdzau3a1TJ84gRD0a5wkaVA1zbDs5bfISEIuUzebreLqY03dV4mOvdqIcMe8qigz88fk%2FfIioH6xyxKOexoSCnFTOiiupCcQLPyao9jLu6iayqViY7QaIOTqQohZmkAMwVOasAsI3Ngh4zF97Qt0cVNkXO9gWfLI8DtuMleWorlQNBnSnSgc5lCkRRYwGs1287ugXlSQzo890KPDAEovaKCnZ2ZSfh7Y4sNknI6i%2Bfc2Se2MIkIIxw356KWD5sagAGNwrQ61nPW85MaXB69i7JX246ApxatvPia5Cve9qM2TB4AUj4WI9IkNxIRvyNNooTQMDh3AqRsxHBajEhZr4doAKMlqSTEioXmfC7As7Accat2QGsntbQs%2Fr35Oh%2BJUbOQ3mvgF3tNaXUkveLztaVkyM%2F1k%2B%2F7lT%2FXA7nj2K%2BdHCAA&x-oss-signature-version=OSS4-HMAC-SHA256&x-oss-credential=STS.NXwdS9Nckq7GLebxYzrDVzfvw%2F20260801%2Feu-central-1%2Foss%2Faliyun_v4_request&x-oss-signature=e794b056b2deb587c091be5b8380e611515ca0ed80a04c915a1bf076afeda59c"
-			(at 253.365 116.205 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description" "Resistor, US symbol"
-			(at 253.365 116.205 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "JLCPCB #" "C23138"
-			(at 253.365 116.205 90)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "2"
-			(uuid "dad6bd6e-d33a-45f4-a221-f62f4424da1c")
-		)
-		(pin "1"
-			(uuid "dd78861f-011c-4e43-b0d1-92857dab0d96")
-		)
-		(instances
-			(project "controller"
-				(path "/95e5c331-6890-437f-94b9-bde400751ae8"
-					(reference "R7")
 					(unit 1)
 				)
 			)
