@@ -10,7 +10,7 @@ FILE_DESCRIPTION(
 
 FILE_NAME(
 /* name */ 'input-board-front-plate.step',
-/* time_stamp */ '2026-08-04T01:31:12+09:00',
+/* time_stamp */ '2026-08-06T23:30:59+09:00',
 /* author */ (''),
 /* organization */ (''),
 /* preprocessor_version */ 'ST-DEVELOPER v20.1',
@@ -4033,16 +4033,16 @@ SOLID_ANGLE_UNIT()
 #3978=PRODUCT_DEFINITION_SHAPE('',$,#3981);
 #3979=SHAPE_REPRESENTATION('',(#2254),#3972);
 #3980=PRODUCT_DEFINITION_CONTEXT('part definition',#3985,'design');
-#3981=PRODUCT_DEFINITION('input-board 1','input-board v4',#3982,#3980);
+#3981=PRODUCT_DEFINITION('input-board 1','input-board v5',#3982,#3980);
 #3982=PRODUCT_DEFINITION_FORMATION('',$,#3987);
-#3983=PRODUCT_RELATED_PRODUCT_CATEGORY('input-board v4',
-'input-board v4',(#3987));
+#3983=PRODUCT_RELATED_PRODUCT_CATEGORY('input-board v5',
+'input-board v5',(#3987));
 #3984=APPLICATION_PROTOCOL_DEFINITION('international standard',
 'automotive_design',2009,#3985);
 #3985=APPLICATION_CONTEXT(
 'Core Data for Automotive Mechanical Design Process');
 #3986=PRODUCT_CONTEXT('part definition',#3985,'mechanical');
-#3987=PRODUCT('input-board 1','input-board v4',
+#3987=PRODUCT('input-board 1','input-board v5',
 'KiCad electronic assembly',(#3986));
 #3988=PRESENTATION_STYLE_ASSIGNMENT((#3989));
 #3989=SURFACE_STYLE_USAGE(.BOTH.,#3990);

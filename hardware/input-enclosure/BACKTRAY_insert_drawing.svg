@@ -1,0 +1,112 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1180" height="760" viewBox="0 0 1180 760" font-family="Arial,Helvetica,sans-serif">
+<defs><pattern id="hatch" patternUnits="userSpaceOnUse" width="7" height="7" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="7" stroke="#2e8b57" stroke-width="0.9"/></pattern></defs>
+<rect width="1180" height="760" fill="#fff"/>
+<rect x="12" y="12" width="1156" height="736" stroke="#123" stroke-width="1.5" fill="none"/>
+<text x="30.0" y="44.0" font-size="22" fill="#123" text-anchor="start" font-weight="bold">INPUT ENCLOSURE - BACK TRAY</text>
+<text x="30.0" y="66.0" font-size="15" fill="#5a6472" text-anchor="start" font-weight="normal">heat-set insert positions</text>
+<line x1="12.00" y1="82.00" x2="1168.00" y2="82.00" stroke="#123" stroke-width="1.00"/>
+<text x="152.0" y="153.0" font-size="16" fill="#123" text-anchor="start" font-weight="bold">TOP VIEW   looking into the open tray</text>
+<path d="M 183.85 175.00 H 546.45 A 31.85 31.85 0 0 1 578.30 206.85 V 471.45 A 31.85 31.85 0 0 1 546.45 503.30 H 183.85 A 31.85 31.85 0 0 1 152.00 471.45 V 206.85 A 31.85 31.85 0 0 1 183.85 175.00 Z" fill="#eef2f7" stroke="#123" stroke-width="1.4"/>
+<path d="M 183.85 189.70 H 546.45 A 17.15 17.15 0 0 1 563.60 206.85 V 471.45 A 17.15 17.15 0 0 1 546.45 488.60 H 183.85 A 17.15 17.15 0 0 1 166.70 471.45 V 206.85 A 17.15 17.15 0 0 1 183.85 189.70 Z" fill="#fff" stroke="#123" stroke-width="1.2"/>
+<rect x="338.20" y="174.00" width="53.90" height="15.70" fill="#fff" stroke="#123" stroke-width="1.2"/>
+<circle cx="237.75" cy="280.35" r="20.83" fill="none" stroke="#8a93a0" stroke-width="0.9"/>
+<rect x="226.73" y="241.15" width="22.05" height="39.20" fill="none" stroke="#8a93a0" stroke-width="0.9"/>
+<circle cx="492.55" cy="280.35" r="20.83" fill="none" stroke="#8a93a0" stroke-width="0.9"/>
+<rect x="481.53" y="241.15" width="22.05" height="39.20" fill="none" stroke="#8a93a0" stroke-width="0.9"/>
+<circle cx="365.15" cy="250.95" r="29.40" fill="none" stroke="#8a93a0" stroke-width="0.9"/>
+<circle cx="365.15" cy="250.95" r="11.03" fill="none" stroke="#8a93a0" stroke-width="0.9"/>
+<path d="M 166.70 189.70 L 220.60 189.70 L 220.60 228.90 A 14.70 14.70 0 0 1 205.90 243.60 L 166.70 243.60 Z" fill="#eef2f7" stroke="#123" stroke-width="1.2"/>
+<circle cx="193.65" cy="216.65" r="8.82" fill="#dfe7f2" stroke="#123" stroke-width="1.4"/>
+<line x1="176.01" y1="216.65" x2="211.29" y2="216.65" stroke="#c33" stroke-width="0.80" stroke-dasharray="9 3 2 3"/>
+<line x1="193.65" y1="199.01" x2="193.65" y2="234.29" stroke="#c33" stroke-width="0.80" stroke-dasharray="9 3 2 3"/>
+<path d="M 563.60 189.70 L 509.70 189.70 L 509.70 228.90 A 14.70 14.70 0 0 0 524.40 243.60 L 563.60 243.60 Z" fill="#eef2f7" stroke="#123" stroke-width="1.2"/>
+<circle cx="536.65" cy="216.65" r="8.82" fill="#dfe7f2" stroke="#123" stroke-width="1.4"/>
+<line x1="519.01" y1="216.65" x2="554.29" y2="216.65" stroke="#c33" stroke-width="0.80" stroke-dasharray="9 3 2 3"/>
+<line x1="536.65" y1="199.01" x2="536.65" y2="234.29" stroke="#c33" stroke-width="0.80" stroke-dasharray="9 3 2 3"/>
+<path d="M 166.70 488.60 L 220.60 488.60 L 220.60 449.40 A 14.70 14.70 0 0 0 205.90 434.70 L 166.70 434.70 Z" fill="#eef2f7" stroke="#123" stroke-width="1.2"/>
+<circle cx="193.65" cy="461.65" r="8.82" fill="#dfe7f2" stroke="#123" stroke-width="1.4"/>
+<line x1="176.01" y1="461.65" x2="211.29" y2="461.65" stroke="#c33" stroke-width="0.80" stroke-dasharray="9 3 2 3"/>
+<line x1="193.65" y1="444.01" x2="193.65" y2="479.29" stroke="#c33" stroke-width="0.80" stroke-dasharray="9 3 2 3"/>
+<path d="M 563.60 488.60 L 509.70 488.60 L 509.70 449.40 A 14.70 14.70 0 0 1 524.40 434.70 L 563.60 434.70 Z" fill="#eef2f7" stroke="#123" stroke-width="1.2"/>
+<circle cx="536.65" cy="461.65" r="8.82" fill="#dfe7f2" stroke="#123" stroke-width="1.4"/>
+<line x1="519.01" y1="461.65" x2="554.29" y2="461.65" stroke="#c33" stroke-width="0.80" stroke-dasharray="9 3 2 3"/>
+<line x1="536.65" y1="444.01" x2="536.65" y2="479.29" stroke="#c33" stroke-width="0.80" stroke-dasharray="9 3 2 3"/>
+<line x1="127.50" y1="216.65" x2="602.80" y2="216.65" stroke="#c33" stroke-width="1.40"/>
+<path d="M 127.50 216.65 l 11.00 -6 l 0 12 Z" fill="#c33"/>
+<path d="M 602.80 216.65 l -11.00 -6 l 0 12 Z" fill="#c33"/>
+<text x="123.5" y="204.7" font-size="17" fill="#c33" text-anchor="middle" font-weight="bold">A</text>
+<text x="606.8" y="204.7" font-size="17" fill="#c33" text-anchor="middle" font-weight="bold">A</text>
+<line x1="193.65" y1="535.30" x2="536.65" y2="535.30" stroke="#123" stroke-width="0.80"/>
+<path d="M 193.65 535.30 l 7.00 -3 l 0 6 Z" fill="#123"/>
+<path d="M 536.65 535.30 l -7.00 -3 l 0 6 Z" fill="#123"/>
+<text x="365.2" y="528.3" font-size="13" fill="#123" text-anchor="middle" font-weight="normal">70.0</text>
+<line x1="152.00" y1="563.30" x2="578.30" y2="563.30" stroke="#123" stroke-width="0.80"/>
+<path d="M 152.00 563.30 l 7.00 -3 l 0 6 Z" fill="#123"/>
+<path d="M 578.30 563.30 l -7.00 -3 l 0 6 Z" fill="#123"/>
+<text x="365.1" y="556.3" font-size="13" fill="#123" text-anchor="middle" font-weight="normal">87.0</text>
+<line x1="122.00" y1="216.65" x2="122.00" y2="461.65" stroke="#123" stroke-width="0.80"/>
+<path d="M 122.00 216.65 l -3 7.00 l 6 0 Z" fill="#123"/>
+<path d="M 122.00 461.65 l -3 -7.00 l 6 0 Z" fill="#123"/>
+<text x="116.0" y="339.2" font-size="13" fill="#123" text-anchor="middle" transform="rotate(-90 116.0 339.2)">50.0</text>
+<line x1="90.00" y1="175.00" x2="90.00" y2="503.30" stroke="#123" stroke-width="0.80"/>
+<path d="M 90.00 175.00 l -3 7.00 l 6 0 Z" fill="#123"/>
+<path d="M 90.00 503.30 l -3 -7.00 l 6 0 Z" fill="#123"/>
+<text x="84.0" y="339.1" font-size="13" fill="#123" text-anchor="middle" transform="rotate(-90 84.0 339.1)">67.0</text>
+<line x1="542.65" y1="210.65" x2="600.30" y2="145.60" stroke="#123" stroke-width="0.80"/>
+<circle cx="542.65" cy="210.65" r="1.8" fill="#123"/>
+<text x="605.3" y="149.6" font-size="13" fill="#123" text-anchor="start" font-weight="normal">4x  Ø3.6 x 5 deep</text>
+<line x1="152.00" y1="535.30" x2="193.65" y2="535.30" stroke="#123" stroke-width="0.80"/>
+<path d="M 152.00 535.30 l 7.00 -3 l 0 6 Z" fill="#123"/>
+<path d="M 193.65 535.30 l -7.00 -3 l 0 6 Z" fill="#123"/>
+<text x="172.8" y="528.3" font-size="12" fill="#123" text-anchor="middle" font-weight="normal">8.5</text>
+<line x1="122.00" y1="461.65" x2="122.00" y2="503.30" stroke="#123" stroke-width="0.80"/>
+<path d="M 122.00 461.65 l -3 7.00 l 6 0 Z" fill="#123"/>
+<path d="M 122.00 503.30 l -3 -7.00 l 6 0 Z" fill="#123"/>
+<text x="116.0" y="482.5" font-size="12" fill="#123" text-anchor="middle" transform="rotate(-90 116.0 482.5)">8.5</text>
+<text x="655.0" y="190.0" font-size="16" fill="#123" text-anchor="start" font-weight="bold">SECTION A-A</text>
+<path d="M 655.00 300.00 V 248.06 H 669.70 V 255.90 H 687.83 V 280.40 H 705.47 V 255.90 H 723.60 V 285.30 H 1012.70 V 255.90 H 1030.83 V 280.40 H 1048.47 V 255.90 H 1066.60 V 248.06 H 1081.30 V 300.00 Z" fill="url(#hatch)" stroke="none"/>
+<path d="M 655.00 300.00 V 248.06 H 669.70 V 255.90 H 687.83 V 280.40 H 705.47 V 255.90 H 723.60 V 285.30 H 1012.70 V 255.90 H 1030.83 V 280.40 H 1048.47 V 255.90 H 1066.60 V 248.06 H 1081.30 V 300.00 Z" fill="none" stroke="#123" stroke-width="1.5"/>
+<line x1="696.65" y1="240.06" x2="696.65" y2="310.00" stroke="#c33" stroke-width="0.80" stroke-dasharray="9 3 2 3"/>
+<line x1="1039.65" y1="240.06" x2="1039.65" y2="310.00" stroke="#c33" stroke-width="0.80" stroke-dasharray="9 3 2 3"/>
+<line x1="655.00" y1="334.00" x2="1081.30" y2="334.00" stroke="#123" stroke-width="0.80"/>
+<path d="M 655.00 334.00 l 7.00 -3 l 0 6 Z" fill="#123"/>
+<path d="M 1081.30 334.00 l -7.00 -3 l 0 6 Z" fill="#123"/>
+<text x="868.1" y="327.0" font-size="13" fill="#123" text-anchor="middle" font-weight="normal">87.0</text>
+<text x="655.0" y="362.0" font-size="13" fill="#123" text-anchor="start" font-weight="normal">Pockets are blind - the outer face is solid, no hole breaks through.</text>
+<text x="655.0" y="382.0" font-size="13" fill="#123" text-anchor="start" font-weight="normal">Min. 3.2mm of material around each pocket mouth, 3.7mm at the bore.</text>
+<circle cx="696.65" cy="268.15" r="30" fill="none" stroke="#c33" stroke-width="1.0"/>
+<text x="736.6" y="248.1" font-size="17" fill="#c33" text-anchor="middle" font-weight="bold">B</text>
+<text x="690.0" y="428.0" font-size="16" fill="#123" text-anchor="start" font-weight="bold">DETAIL B    boss, enlarged</text>
+<path d="M 690.00 610.00 V 472.20 H 729.00 V 493.00 H 777.10 V 558.00 H 823.90 V 493.00 H 872.00 V 571.00 H 891.50 V 610.00 Z" fill="url(#hatch)" stroke="none"/>
+<path d="M 690.00 610.00 V 472.20 H 729.00 V 493.00 H 777.10 V 558.00 H 823.90 V 493.00 H 872.00 V 571.00 H 891.50 V 610.00 Z" fill="none" stroke="#123" stroke-width="1.5"/>
+<line x1="800.50" y1="468.20" x2="800.50" y2="598.00" stroke="#c33" stroke-width="0.80" stroke-dasharray="9 3 2 3"/>
+<line x1="777.10" y1="459.00" x2="823.90" y2="459.00" stroke="#123" stroke-width="0.80"/>
+<path d="M 777.10 459.00 l 7.00 -3 l 0 6 Z" fill="#123"/>
+<path d="M 823.90 459.00 l -7.00 -3 l 0 6 Z" fill="#123"/>
+<text x="800.5" y="452.0" font-size="13" fill="#123" text-anchor="middle" font-weight="normal">Ø3.6</text>
+<line x1="868.10" y1="493.00" x2="868.10" y2="558.00" stroke="#123" stroke-width="0.80"/>
+<path d="M 868.10 493.00 l -3 7.00 l 6 0 Z" fill="#123"/>
+<path d="M 868.10 558.00 l -3 -7.00 l 6 0 Z" fill="#123"/>
+<text x="883.1" y="525.5" font-size="13" fill="#123" text-anchor="middle" transform="rotate(-90 883.1 525.5)">5.0</text>
+<line x1="917.50" y1="558.00" x2="917.50" y2="610.00" stroke="#123" stroke-width="0.80"/>
+<path d="M 917.50 558.00 l -3 7.00 l 6 0 Z" fill="#123"/>
+<path d="M 917.50 610.00 l -3 -7.00 l 6 0 Z" fill="#123"/>
+<text x="911.5" y="584.0" font-size="13" fill="#123" text-anchor="middle" transform="rotate(-90 911.5 584.0)">4.0</text>
+<text x="933.5" y="588.0" font-size="12" fill="#5a6472" text-anchor="start" font-weight="normal">solid under the pocket</text>
+<line x1="834.30" y1="493.00" x2="917.50" y2="470.20" stroke="#123" stroke-width="0.80"/>
+<circle cx="834.30" cy="493.00" r="1.8" fill="#123"/>
+<text x="922.5" y="474.2" font-size="12" fill="#123" text-anchor="start" font-weight="normal">boss top - the board rests here</text>
+<rect x="95" y="604" width="470" height="128" stroke="#123" stroke-width="1.4" fill="none"/>
+<text x="109.0" y="628.0" font-size="14" fill="#5a6472" text-anchor="start" font-weight="normal">Part:</text>
+<text x="199.0" y="628.0" font-size="14" fill="#123" text-anchor="start" font-weight="normal">INPUT_ENCLOSURE_BACK_TRAY</text>
+<text x="109.0" y="647.0" font-size="14" fill="#5a6472" text-anchor="start" font-weight="normal">Material:</text>
+<text x="199.0" y="647.0" font-size="14" fill="#123" text-anchor="start" font-weight="normal">MJF nylon (PA12)</text>
+<text x="109.0" y="666.0" font-size="14" fill="#5a6472" text-anchor="start" font-weight="normal">Qty:</text>
+<text x="199.0" y="666.0" font-size="14" fill="#123" text-anchor="start" font-weight="normal">1 off</text>
+<text x="109.0" y="685.0" font-size="14" fill="#5a6472" text-anchor="start" font-weight="normal">Inserts:</text>
+<text x="199.0" y="685.0" font-size="14" fill="#123" text-anchor="start" font-weight="bold">4x  M3x4x3 heat-set</text>
+<text x="109.0" y="704.0" font-size="14" fill="#5a6472" text-anchor="start" font-weight="normal">Pocket:</text>
+<text x="199.0" y="704.0" font-size="14" fill="#123" text-anchor="start" font-weight="normal">Ø3.6 x 5.0 deep, blind</text>
+<text x="109.0" y="723.0" font-size="14" fill="#5a6472" text-anchor="start" font-weight="normal">Units:</text>
+<text x="199.0" y="723.0" font-size="14" fill="#123" text-anchor="start" font-weight="normal">mm    (not to scale)</text>
+</svg>

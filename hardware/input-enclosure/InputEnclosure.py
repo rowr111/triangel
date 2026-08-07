@@ -59,9 +59,10 @@ CABLE_GAP  = 1.0    # clearance under it. The notch stops here rather than runni
                     # floor, so raising BACK_CLEAR deepens the tray without deepening the
                     # notch, and the wall below it stays intact.
 
-BOSS_D     = 7.0    # boss outer diameter
-INSERT_D   = 3.6    # M3x4x5 heat-set insert, same part as the brackets
+BOSS_D     = 11.0   # boss outer diameter, sized for 3mm of material around the insert
+INSERT_D   = 3.6    # JLC3DP M3x4x3 heat-set insert, same as the triangle brackets
 INSERT_L   = 5.0    # pocket depth from the boss top
+MOUTH_R    = 0.5    # lead-in round at the pocket mouth, so the insert starts square
 SCREW_CLR  = 3.4    # M3 clearance through the front plate and board
 SCREW_HEAD = 6.5    # countersink diameter on the outer face
 CSK_DEPTH  = 1.8
@@ -87,6 +88,7 @@ OUTER_R_XY   = BOARD_R + FIT + WALL   # plan-view corner radius, follows the boa
 # board fouls them. Filleting them at OUTER_R_XY would eat 0.53mm into each corner.
 INNER_R_XY   = BOARD_R + FIT
 EDGE_R_TRAY  = 3.0  # aggressive rounding on every other tray edge, inside and out
+EDGE_R_CAV   = 1.5  # except round the cavity floor, where 3.0 reads far too heavy
 EDGE_R_PLATE = 1.9  # the plate is only FRONT_T thick, so this is a full bullnose
 RIM_R        = 0.8  # lead-in round on the button and sensor openings
 NOTCH_R      = 1.0  # milder round on the cable opening - the wall is only WALL thick
@@ -224,29 +226,44 @@ def run(context):
             return (abs(bb.minPoint.z - z * MM) < 0.02 * MM
                     and abs(bb.maxPoint.z - z * MM) < 0.02 * MM)
 
-        def fillet_edges(body, radius, keep_flat=()):
-            """Round every edge except those lying in a mating plane. Those faces have to
-            stay flat and full width - a fillet on the wall top would eat the surface the
-            front plate sits on, and one on the boss tops would leave the board rocking."""
+        def in_box(edge, box):
+            x0, x1, y0, y1 = box
+            bb = edge.boundingBox
+            return (bb.minPoint.x > x0 * MM and bb.maxPoint.x < x1 * MM
+                    and bb.minPoint.y > y0 * MM and bb.maxPoint.y < y1 * MM)
+
+        def fillet_edges(body, radius, keep_flat=(), skip=None):
+            """Round every edge except those lying in one of `keep_flat`'s planes - either
+            because the face has to stay flat and full width (a fillet on the wall top would
+            eat the surface the front plate sits on, and one on the boss tops would leave the
+            board rocking) or because it wants a different radius of its own.
+            `skip` drops an XY region rounded separately: the whole set goes in as one
+            feature, so a single edge too small for `radius` drags every edge down to a
+            fallback. Returns the radius that took, 0.0 if none did."""
             for r in [radius, radius * 0.75, radius * 0.5, radius * 0.3]:
                 edges = adsk.core.ObjectCollection.create()
                 for i in range(body.edges.count):
                     e = body.edges.item(i)
-                    if not any(in_plane(e, z) for z in keep_flat):
-                        edges.add(e)
+                    if any(in_plane(e, z) for z in keep_flat):
+                        continue
+                    if skip is not None and in_box(e, skip):
+                        continue
+                    edges.add(e)
                 if not edges.count:
-                    return
+                    return 0.0
                 fin = root.features.filletFeatures.createInput()
                 fin.addConstantRadiusEdgeSet(edges, adsk.core.ValueInput.createByReal(r * MM), True)
                 try:
                     root.features.filletFeatures.add(fin)
-                    return
+                    return r
                 except:
                     continue
+            return 0.0
 
         def fillet_region(body, z, x0, x1, y0, y1, radius):
             """Round one opening's rim, picked by where its edges sit rather than by
-            shape - the switch slot is two lines and two arcs, so a radius test misses it."""
+            shape - the switch slot is two lines and two arcs, so a radius test misses it.
+            Returns the radius that took, 0.0 if none did."""
             for r in [radius, radius * 0.6, radius * 0.3]:
                 edges = adsk.core.ObjectCollection.create()
                 for i in range(body.edges.count):
@@ -257,14 +274,15 @@ def run(context):
                             and bb.minPoint.y > y0 * MM and bb.maxPoint.y < y1 * MM):
                         edges.add(e)
                 if not edges.count:
-                    return
+                    return 0.0
                 fin = root.features.filletFeatures.createInput()
                 fin.addConstantRadiusEdgeSet(edges, adsk.core.ValueInput.createByReal(r * MM), True)
                 try:
                     root.features.filletFeatures.add(fin)
-                    return
+                    return r
                 except:
                     continue
+            return 0.0
 
         def fillet_notch(body, radius):
             """Soften the cable opening, but leave its top edge sharp - that sits on the
@@ -353,12 +371,30 @@ def run(context):
 
         # Everything except the two mating planes: the wall top the plate lands on, and
         # the boss tops the board rests on. Both have to stay flat and full width.
-        fillet_edges(tray, EDGE_R_TRAY, keep_flat=(Z_PCB, Z_PCB_BACK))
+        # The notch is left out and rounded below at its own radius: its sides stand on a
+        # WALL-thick wall, too thin to take EDGE_R_TRAY. The cavity floor is held back too,
+        # then rounded at EDGE_R_CAV.
+        tray_r = fillet_edges(tray, EDGE_R_TRAY, keep_flat=(Z_PCB, Z_PCB_BACK, Z_FLOOR_IN),
+                              skip=(USB_X - CABLE_W / 2.0 - 1.0, USB_X + CABLE_W / 2.0 + 1.0,
+                                    fy(0.0) + FIT - 1.0, fy(0.0) + OFF + 1.0))
         fillet_notch(tray, NOTCH_R)
 
-        # Insert pockets last, so the pocket mouths stay crisp.
+        # Where the cavity wall and the boss pads meet the floor. Done after the pass above
+        # so the two radii don't run into each other.
+        cav_r = fillet_region(tray, Z_FLOOR_IN, -OFF - 1.0, BOARD_W + OFF + 1.0,
+                              -OFF - 1.0, BOARD_H + OFF + 1.0, EDGE_R_CAV)
+
+        # Insert pockets after the fillet pass, so the general rounding never reaches them.
         for hx, hy in HOLES:
             cut(circle_sketch(Z_PCB_BACK, hx, fy(hy), INSERT_D), -INSERT_L, tray)
+
+        # Lead-in at each mouth. These sit in the boss-top plane, which fillet_edges skips,
+        # so they have to be picked out by position once the pockets exist.
+        for hx, hy in HOLES:
+            fillet_region(tray, Z_PCB_BACK,
+                          hx - INSERT_D / 2.0 - 0.6, hx + INSERT_D / 2.0 + 0.6,
+                          fy(hy) - INSERT_D / 2.0 - 0.6, fy(hy) + INSERT_D / 2.0 + 0.6,
+                          MOUTH_R)
 
         # Keyholes: big circle to drop over the screw head, narrow slot above it so the
         # panel hangs down onto the shank.
@@ -384,7 +420,7 @@ def run(context):
 
         round_vertical_edges(plate, OUTER_R_XY, outer_corners)
         # Everything except the inner face, which lands on the tray wall and the board.
-        fillet_edges(plate, EDGE_R_PLATE, keep_flat=(Z_PLATE_IN,))
+        plate_r = fillet_edges(plate, EDGE_R_PLATE, keep_flat=(Z_PLATE_IN,))
 
         for bx, by in BUTTONS:
             cut(rounded_rect_sketch(Z_PLATE_OUT, bx, fy(by), BTN_OPEN_W, BTN_OPEN_H, OPEN_R),
@@ -430,9 +466,12 @@ def run(context):
             'Input enclosure built.\n\n'
             'Outer: %.1f x %.1f mm, %.1fmm deep\n'
             'Front plate %.1fmm, tray floor %.1fmm\n\n'
-            'Buttons stand %.1fmm proud, switch %.1fmm, sensor %.1fmm.'
+            'Buttons stand %.1fmm proud, switch %.1fmm, sensor %.1fmm.\n\n'
+            'Edges rounded: tray %.2f of %.2f asked, cavity floor %.2f of %.2f,\n'
+            'plate %.2f of %.2f.'
             % (OUTER_W, OUTER_H, Z_PLATE_OUT - Z_FLOOR_OUT, FRONT_T, WALL,
-               5.00 - FRONT_T, 5.50 - FRONT_T, 4.20 - FRONT_T))
+               5.00 - FRONT_T, 5.50 - FRONT_T, 4.20 - FRONT_T,
+               tray_r, EDGE_R_TRAY, cav_r, EDGE_R_CAV, plate_r, EDGE_R_PLATE))
 
     except:
         if ui:
