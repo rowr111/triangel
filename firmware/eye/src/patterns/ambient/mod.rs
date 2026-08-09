@@ -1,3 +1,4 @@
+pub mod effervesce;
 pub mod flame;
 pub mod rainbow;
 pub mod scan;
