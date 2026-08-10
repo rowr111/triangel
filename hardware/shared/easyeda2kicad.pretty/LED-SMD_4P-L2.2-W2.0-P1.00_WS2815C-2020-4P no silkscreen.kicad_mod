@@ -1,0 +1,140 @@
+(footprint "LED-SMD_4P-L2.2-W2.0-P1.00_WS2815C-2020-4P no silkscreen"
+	(version 20260206)
+	(generator "pcbnew")
+	(generator_version "10.0")
+	(layer "F.Cu")
+	(property "Reference" "REF**"
+		(at 0 -4.55 0)
+		(layer "F.SilkS")
+		(hide yes)
+		(uuid "bb134337-01d0-484f-8904-cab4da80a6d0")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Value" "LED-SMD_4P-L2.2-W2.0-P1.00_WS2815C-2020-4P no silkscreen"
+		(at 0 4.55 0)
+		(layer "F.Fab")
+		(uuid "c39d122f-51d5-415e-b700-3cc869ba336c")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Datasheet" ""
+		(at 0 0 0)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "e87acca8-90e2-4198-babe-b9237b237d83")
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+		)
+	)
+	(property "Description" ""
+		(at 0 0 0)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "423bc714-f84d-4723-8e16-0342e0e4b8a3")
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+		)
+	)
+	(property "LCSC Part" "C52917434"
+		(at 0 0 0)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "b158260d-b93d-4423-bcb0-5e6f9c567540")
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+		)
+	)
+	(attr through_hole)
+	(duplicate_pad_numbers_are_jumpers no)
+	(fp_line
+		(start -1 -1)
+		(end 1 -1)
+		(stroke
+			(width 0.05)
+			(type solid)
+		)
+		(layer "F.CrtYd")
+		(uuid "5243be3e-2e97-4a5e-b8e6-1222ecc56f2f")
+	)
+	(fp_line
+		(start -1 1)
+		(end -1 -1)
+		(stroke
+			(width 0.05)
+			(type solid)
+		)
+		(layer "F.CrtYd")
+		(uuid "b6bbd953-e896-4cc7-8424-f3ed5fde9b31")
+	)
+	(fp_line
+		(start 1 -1)
+		(end 1 1)
+		(stroke
+			(width 0.05)
+			(type solid)
+		)
+		(layer "F.CrtYd")
+		(uuid "3bef2323-3ba1-4374-bcb1-16082a07e8f7")
+	)
+	(fp_line
+		(start 1 1)
+		(end -1 1)
+		(stroke
+			(width 0.05)
+			(type solid)
+		)
+		(layer "F.CrtYd")
+		(uuid "9ea75433-65ee-431e-bde9-e977f2b1abe1")
+	)
+	(fp_text user "${REFERENCE}"
+		(at 0 0 0)
+		(layer "F.Fab")
+		(uuid "f8cb1dbb-08e1-42be-9b3b-b5e1faba57c6")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(pad "1" smd rect
+		(at -0.87 -0.55 180)
+		(size 0.8 0.8)
+		(layers "F.Cu" "F.Mask" "F.Paste")
+		(uuid "db0f5ccf-ccf1-4cbf-b917-f65a7d69a04c")
+	)
+	(pad "2" smd rect
+		(at -0.87 0.55 180)
+		(size 0.8 0.8)
+		(layers "F.Cu" "F.Mask" "F.Paste")
+		(uuid "c16219bb-aa0f-4da1-b9c1-fc030b77a878")
+	)
+	(pad "3" smd rect
+		(at 0.86 0.55 180)
+		(size 0.8 0.8)
+		(layers "F.Cu" "F.Mask" "F.Paste")
+		(uuid "53d55a37-c63c-48a0-b917-ec68ce42b87c")
+	)
+	(pad "4" smd rect
+		(at 0.86 -0.55 180)
+		(size 0.8 0.8)
+		(layers "F.Cu" "F.Mask" "F.Paste")
+		(uuid "98a5eec9-d6fc-4726-9b58-a3d10e23d95c")
+	)
+	(embedded_fonts no)
+)
