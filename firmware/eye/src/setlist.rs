@@ -3,7 +3,7 @@ use std::collections::VecDeque;
 use crate::led::map::{Led, LED_COUNT};
 use crate::patterns::transition::{self, TransitionStyle};
 use crate::patterns::{Frame, Pattern};
-use crate::patterns::ambient::{effervesce::Effervesce, flame::ApexFlame, rainbow::RainbowX, scan::HorizontalScan, shimmer::CenterShimmer, squall::Squall};
+use crate::patterns::ambient::{effervesce::Effervesce, flame::ApexFlame, fubuki::Fubuki, rainbow::RainbowX, scan::HorizontalScan, shimmer::CenterShimmer, squall::Squall};
 use crate::patterns::reactive::audio_fill::AudioFill;
 
 const CYCLE_MS: u32 = 3 * 60 * 1_000; // 3 minutes
@@ -35,6 +35,7 @@ const STYLES: [TransitionStyle; 7] = [
 
 fn ambient_patterns() -> Vec<Box<dyn Pattern>> {
     vec![
+        Box::new(Fubuki::new()),
         Box::new(Effervesce),
         Box::new(Squall::new()),
         Box::new(ApexFlame      { speed: 100.0, wavelength: 80.0 }),
