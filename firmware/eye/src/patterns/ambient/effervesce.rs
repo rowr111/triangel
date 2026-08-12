@@ -2,10 +2,9 @@ use crate::patterns::{Frame, Pattern, hsv};
 use crate::led::map::Led;
 use core::f32::consts::{PI, TAU};
 
-// Effervesce - a teamLab "Infinite Crystal Universe" ambient pattern: a bright, slowly
-// hue-drifting color field with geometric elements (expanding rings, rotating bars, radial
-// stars) spawning at random spots across the fixture, each its own color and speed, blazing
-// bright and fading, all under a fine per-LED glitter.
+// Effervesce - a bright, slowly hue-drifting color field with geometric elements (expanding
+// rings, rotating bars, radial stars) spawning at random spots across the fixture, each its
+// own color and speed, blazing bright and fading, all under a fine per-LED glitter.
 //
 // The elements are a stateless emitter: at any t_ms each of ELEMENTS "slots" derives its
 // current element (origin, shape, age) from a hash of (slot, generation), so there is no
@@ -30,8 +29,8 @@ const SWELL_MS:      u32 = 12_000;
 
 // ---- Emitter ----
 const ELEMENTS:      usize = 7;     // geometric elements alive at once (density)
-const LIFETIME_MIN_MS: u32 = 1_800; // fastest element (each slot picks its own -> mixed speeds)
-const LIFETIME_MAX_MS: u32 = 4_500; // slowest element
+const LIFETIME_MIN_MS: u32 = 3_500; // fastest element (each slot picks its own -> mixed speeds)
+const LIFETIME_MAX_MS: u32 = 8_000; // slowest element
 const WHITEN:        f32   = 0.3;   // how white the core goes (low = shapes keep their own color)
 
 // ---- Shapes (assortment, cycled per spawn: 0 ring, 1 bar, 2 star) ----
@@ -39,7 +38,7 @@ const RING_MAX_MM:       f32 = 150.0; // how far a bubble expands over its life
 const RING_THICKNESS_MM: f32 = 40.0;  // shell band width (bold enough to light several LEDs)
 const BAR_WIDTH_MM:      f32 = 26.0;  // line half-width (bold enough to catch several LEDs)
 const BAR_LENGTH_MM:     f32 = 130.0; // line half-length
-const SPIN:              f32 = 1.0;   // rotations a bar/star turns over its life
+const SPIN:              f32 = 0.5;   // rotations a bar/star turns over its life
 const EDGE_SHARP:        f32 = 2.5;   // >1 gives shapes a solid body + defined edge (distinctness)
 
 // ---- Glitter ----
@@ -60,7 +59,8 @@ struct Elem {
     r:    f32, // ring radius (ring only)
     cs:   f32, // primary direction cosine (bar / star)
     sn:   f32, // primary direction sine
-    hue:  f32, // this element's color (degrees)
+    chue: f32, // this element's color as a wheel vector (cos), for continuous hue blending
+    shue: f32, // ...and its sin
 }
 
 pub struct Effervesce;
@@ -70,8 +70,10 @@ impl Pattern for Effervesce {
         // Precompute the live elements once per frame (derived purely from t_ms + hashes).
         let elems: [Elem; ELEMENTS] = core::array::from_fn(|s| make_elem(s, t_ms, leds));
 
-        // Field hue drifts slowly through the wheel (one hue at a time, like the installation).
+        // Field hue drifts slowly through the wheel; kept as a wheel vector so it blends
+        // continuously with the element colors below.
         let base_hue = (t_ms % HUE_DRIFT_MS) as f32 / HUE_DRIFT_MS as f32 * 360.0;
+        let (base_shue, base_chue) = base_hue.to_radians().sin_cos();
 
         // Drifting brightness swell (scroll offset, 0..1).
         let swell_t = (t_ms % SWELL_MS) as f32 / SWELL_MS as f32;
@@ -92,21 +94,25 @@ impl Pattern for Effervesce {
             let mut s = BASE_SAT;
             let mut v = BASE_VAL + SWELL * sw * (1.0 - BASE_VAL);
 
-            // Elements: take the strongest one at each LED (max, not sum) so overlapping
-            // shapes stay distinct forms instead of blurring together. Track the winner's hue.
+            // Elements: brightness is the strongest shape's coverage (max, which stays
+            // continuous). Color is a weighted average of the overlapping shapes' colors taken as
+            // vectors on the wheel (plus the base field where they don't cover), so overlaps mix
+            // smoothly with no hue snap when one shape overtakes another.
             let mut e = 0.0f32;
-            let mut ehue = base_hue;
+            let mut vx = 0.0f32;
+            let mut vy = 0.0f32;
             for elem in &elems {
                 let c = shape_intensity(elem, led);
-                if c > e {
-                    e = c;
-                    ehue = elem.hue;
-                }
+                vx += c * elem.chue;
+                vy += c * elem.shue;
+                e = e.max(c);
             }
+            // Fill the remaining weight with the base field color, then read off the wheel angle.
+            vx += (1.0 - e) * base_chue;
+            vy += (1.0 - e) * base_shue;
+            let hue = vy.atan2(vx).to_degrees();
 
-            // The winning shape lends its own color and brightens above the field; a low
-            // WHITEN keeps it colored rather than blown to white.
-            let hue = blend_hue(base_hue, ehue, e);
+            // The shapes brighten above the field; a low WHITEN keeps them colored, not white.
             v += (1.0 - v) * e;
             s *= 1.0 - WHITEN * e;
 
@@ -142,12 +148,13 @@ fn make_elem(s: usize, t_ms: u32, leds: &[Led]) -> Elem {
     let dir  = if (seed >> 28) & 1 == 0 { 1.0 } else { -1.0 };
     let hue  = (seed & 0x1FF) as f32 / 512.0 * 360.0;
 
-    // Precompute rotation and envelope for this age.
+    // Precompute rotation, envelope, and the color as a wheel vector for this age.
     let (sn, cs) = (ang0 + dir * age * SPIN * TAU).sin_cos();
+    let (shue, chue) = hue.to_radians().sin_cos();
     let env = (PI * age).sin(); // every shape fades in at birth, peaks mid-life, fades out
     let r = age * RING_MAX_MM;
 
-    Elem { kind, ox: led.wx, oy: led.wy, env, r, cs, sn, hue }
+    Elem { kind, ox: led.wx, oy: led.wy, env, r, cs, sn, chue, shue }
 }
 
 /// One element's brightness contribution at one LED, in 0..1. Arithmetic-only except the
@@ -188,17 +195,6 @@ fn line_intensity(dx: f32, dy: f32, cs: f32, sn: f32) -> f32 {
 /// Rotate a unit vector by +60 degrees (constant-coefficient, no trig).
 fn rot60(c: f32, s: f32) -> (f32, f32) {
     (c * COS60 - s * SIN60, s * COS60 + c * SIN60)
-}
-
-/// Blend hue `base` -> `target` (degrees) by `t`, along the shorter arc. Arithmetic only.
-fn blend_hue(base: f32, target: f32, t: f32) -> f32 {
-    let mut diff = target - base;
-    if diff > 180.0 {
-        diff -= 360.0;
-    } else if diff < -180.0 {
-        diff += 360.0;
-    }
-    base + diff * t
 }
 
 /// Bit-mix hash of two u32s into a scrambled u32.
