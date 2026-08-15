@@ -17,14 +17,19 @@
 import adsk.core, adsk.fusion, traceback, math
 
 # ---- Editable parameters (mm) -------------------------------------------------
-STANDOFF   = 25.0   # gap from wall to tile back (wall foot face -> tile pad face)
+STANDOFF   = 60.0   # gap from wall to tile back (wall foot face -> tile pad face)
 WIDTH      = 20.0   # bracket width (Y)
-WEB_T      = 6.0    # back web / spine thickness (X)
+WEB_T      = 8.0    # back web / spine thickness (X)
 
-PAD_X      = 20.0   # sets the insert position out past the web (X)
+PAD_X      = 16.0   # sets the insert position out past the web (X)
 TILE_T     = 8.0    # tile pad thickness (holds the M3x4x5 insert: 7mm pocket + ~1mm floor)
-FOOT_X     = 20.0   # wall foot reach (X, opposite side from the pad)
-FOOT_T     = 6.0    # wall foot thickness
+FOOT_X     = 30.0   # wall foot reach (X, opposite side from the pad)
+FOOT_Y     = 30.0   # wall foot width (Y); centered on the web, so it grows past WIDTH symmetrically
+FOOT_T     = 4.0    # wall foot thickness
+
+GUSSET_H   = 16.0   # web-foot brace: rib height up the web (0 = no gusset)
+GUSSET_L   = 6.0    # rib reach out along the foot (kept short to clear the wall hole/counterbore)
+GUSSET_W   = WIDTH  # rib width in Y (across the web)
 
 PLATE_R    = 34.0   # normal-bracket border radius -- the pad's outer edge stops here
 R_HOLE     = 28.6   # hole-to-vertex distance (same as the tile brackets)
@@ -37,6 +42,8 @@ INSERT_DEPTH  = 7.0
 SCREW_CLEAR_D = 3.4 # screw clearance below the insert pocket
 MOUTH_FILLET  = 0.5 # lead-in round at the top of the insert pocket (tile-contact face)
 WALL_HOLE_D   = 6.0 # single wall hole -- clears #6..#12 / M4-M6, washer spans it
+WASHER_D      = 14.0 # counterbore on the foot's outer face for a washer / nail head (0 = none)
+WASHER_DEPTH  = 1.5  # how deep to recess the washer / head
 # ------------------------------------------------------------------------------
 
 MM = 0.1
@@ -130,10 +137,40 @@ def run(context):
                 except:
                     pass
 
+        def add_gusset(x_web, x_dir, z_base, z_dir):
+            # triangular rib bracing the web (face at x_web) to a surface (foot or pad at z_base);
+            # x_dir = which way it reaches out (+/-X), z_dir = which way it climbs the web (+/-Z).
+            # Centered on the web width and kept short so it clears the holes.
+            pin = root.constructionPlanes.createInput()
+            pin.setByOffset(root.xZConstructionPlane, adsk.core.ValueInput.createByReal(WIDTH / 2.0 * MM))
+            pl = root.constructionPlanes.add(pin)
+            if pl.geometry.origin.y < 0:                      # offset went -Y; put the plane on the +Y side
+                pin = root.constructionPlanes.createInput()
+                pin.setByOffset(root.xZConstructionPlane, adsk.core.ValueInput.createByReal(-WIDTH / 2.0 * MM))
+                pl = root.constructionPlanes.add(pin)
+            py = pl.geometry.origin.y                         # actual plane Y (cm)
+            sk = root.sketches.add(pl)
+            ovl = 0.6                                         # dip into web/surface so it merges cleanly
+            def SP(x, z):                                     # a model point on the plane -> sketch space
+                return sk.modelToSketchSpace(adsk.core.Point3D.create(x * MM, py, z * MM))
+            xa, zb = x_web - x_dir * ovl, z_base - z_dir * ovl
+            ln = sk.sketchCurves.sketchLines
+            ln.addByTwoPoints(SP(xa, zb), SP(xa, z_base + z_dir * GUSSET_H))
+            ln.addByTwoPoints(SP(xa, z_base + z_dir * GUSSET_H), SP(x_web + x_dir * GUSSET_L, zb))
+            ln.addByTwoPoints(SP(x_web + x_dir * GUSSET_L, zb), SP(xa, zb))
+            inp = exts.createInput(sk.profiles.item(0), adsk.fusion.FeatureOperations.JoinFeatureOperation)
+            inp.setSymmetricExtent(adsk.core.ValueInput.createByReal(GUSSET_W * MM), True)
+            inp.participantBodies = [state['body']]
+            exts.add(inp)
+
         # --- solid: web spine + tile pad (top, +X, arc-clipped) + wall foot (bottom, -X) ---
         add_box(0, WEB_T, 0, WIDTH, 0, STANDOFF)                     # back web (full height)
         add_pad(STANDOFF - TILE_T, STANDOFF)                         # tile pad, outer edge = border arc
-        add_box(-FOOT_X, WEB_T, 0, WIDTH, 0, FOOT_T)                 # wall foot (overlaps web)
+        add_box(-FOOT_X, WEB_T, WIDTH / 2.0 - FOOT_Y / 2.0, WIDTH / 2.0 + FOOT_Y / 2.0, 0, FOOT_T)  # wall foot (overlaps web, wider in Y)
+
+        if GUSSET_H > 0:                                             # braces at both inside corners (before the fillets)
+            add_gusset(0.0, -1, FOOT_T, +1)                         # web -> foot (base)
+            add_gusset(WEB_T, +1, STANDOFF - TILE_T, -1)            # web -> pad (top, reversed)
 
         # --- soften edges BEFORE the holes: ROUND_R everywhere except the border arc
         #     (both the top and bottom of the clipped edge), which gets the gentler
@@ -151,28 +188,42 @@ def run(context):
                     and abs(cen.y - ins_y * MM) < 0.3 * MM)
 
         body = state['body']
-        for rr in [ROUND_R, 2.5, 2.0, 1.5]:
-            edges = adsk.core.ObjectCollection.create()
-            for i in range(body.edges.count):
-                e = body.edges.item(i)
-                if not is_border_arc(e):
-                    edges.add(e)
-            fin = root.features.filletFeatures.createInput()
-            fin.addConstantRadiusEdgeSet(edges, adsk.core.ValueInput.createByReal(rr * MM), True)
-            try:
-                root.features.filletFeatures.add(fin)
-                break
-            except:
-                continue
-
-        arc = adsk.core.ObjectCollection.create()
+        # The foot is only FOOT_T thick, so its edges can't take the full ROUND_R: the
+        # top and bottom rounds would meet in the middle and eat the whole plate. Cap the
+        # foot's edges well under half its thickness; everything taller keeps the big round.
+        foot_r = min(ROUND_R, FOOT_T / 2.0 - 0.2)
+        # Round every structural edge, ONE fillet feature per edge (found by token so it
+        # survives earlier fillets); each takes the biggest radius that computes.
+        big, arc_tokens = [], []
         for i in range(body.edges.count):
             e = body.edges.item(i)
             if is_border_arc(e):
-                arc.add(e)
-        if arc.count:
+                arc_tokens.append(e.entityToken)
+                continue
+            thin = e.boundingBox.maxPoint.z <= (FOOT_T + 0.05) * MM     # edge lives in the foot plate
+            big.append((e.entityToken, foot_r if thin else ROUND_R))
+        for tk, r0 in big:
+            ents = design.findEntityByToken(tk)
+            if not ents:
+                continue
+            for rr in [r0, r0 * 0.66, r0 * 0.5, r0 * 0.33]:
+                coll = adsk.core.ObjectCollection.create()
+                coll.add(ents[0])
+                fin = root.features.filletFeatures.createInput()
+                fin.addConstantRadiusEdgeSet(coll, adsk.core.ValueInput.createByReal(rr * MM), False)
+                try:
+                    root.features.filletFeatures.add(fin)
+                    break
+                except:
+                    continue
+        for tk in arc_tokens:                                        # gentler round on the border arc
+            ents = design.findEntityByToken(tk)
+            if not ents:
+                continue
+            coll = adsk.core.ObjectCollection.create()
+            coll.add(ents[0])
             fin = root.features.filletFeatures.createInput()
-            fin.addConstantRadiusEdgeSet(arc, adsk.core.ValueInput.createByReal(ARC_FILLET * MM), True)
+            fin.addConstantRadiusEdgeSet(coll, adsk.core.ValueInput.createByReal(ARC_FILLET * MM), False)
             try:
                 root.features.filletFeatures.add(fin)
             except:
@@ -184,9 +235,12 @@ def run(context):
         fillet_mouth(ins_x, ins_y, STANDOFF, INSERT_HOLE_D / 2.0, MOUTH_FILLET)  # 0.5mm lead-in round at the pocket mouth
         wall_x, wall_y = -FOOT_X / 2.0, WIDTH / 2.0
         cut_cyl(wall_x, wall_y, FOOT_T, FOOT_T + 0.5, WALL_HOLE_D)            # wall hole through the foot
+        if WASHER_DEPTH > 0:                                                  # counterbore for the washer / nail head
+            cut_cyl(wall_x, wall_y, FOOT_T, WASHER_DEPTH, WASHER_D)
 
         ui.messageBox('Created CornerBracket (print 3).\n'
-                      'Pad outer edge clipped to the tile-bracket border; Ø6 wall hole in the foot.')
+                      'Foot %.0fx%.0f + %.0fx%.0fmm gussets under foot AND pad; Ø%.0f wall hole + Ø%.0f counterbore.'
+                      % (FOOT_X, FOOT_Y, GUSSET_L, GUSSET_H, WALL_HOLE_D, WASHER_D))
     except:
         if ui:
             ui.messageBox('Failed:\n{}'.format(traceback.format_exc()))
