@@ -14,14 +14,14 @@
 import adsk.core, adsk.fusion, traceback, math
 
 # ---- Editable parameters (mm / deg) -------------------------------------------
-STANDOFF   = 30.0   # pad-to-foot standoff (perpendicular, same as flat bracket)
+STANDOFF   = 50.0   # pad-to-foot standoff (perpendicular, same as flat bracket)
 WIDTH      = 20.0
 WEB_T      = 6.0
 
 PAD_X      = 20.0
 TILE_T     = 8.0
-FOOT_X     = 20.0
-FOOT_T     = 6.0
+FOOT_X     = 30.0
+FOOT_T     = 4.0
 
 PLATE_R    = 34.0   # pad border-arc radius
 R_HOLE     = 28.6
@@ -29,17 +29,22 @@ R_HOLE     = 28.6
 INSERT_HOLE_D = 3.6 # M3x4x5 insert
 INSERT_DEPTH  = 7.0
 SCREW_CLEAR_D = 3.0
-WALL_HOLE_D   = 5.0
+WALL_HOLE_D   = 6.0
+WASHER_D      = 14.0 # counterbore on each foot's outer face for a washer / nail head (0 = none)
+WASHER_DEPTH  = 1.5  # how deep to recess the washer / head
 
 FOLD_TILT  = 54.7   # deg to tilt the foot OUT from flat (arctan(sqrt2) = the corner angle)
 FOOT_DX    = 11.0     # scootch the foot horizontally (+ = toward the standoff) to line its corner up
 FOOT_DZ    = -8.8   # scootch the foot vertically  (- = down) to line its corner up
 FOOT_SPLAY = 45.0   # deg each foot folds about the spine into the corner V (tune for a 90deg corner)
-FOOT_WIDTH = 30.0   # width of EACH foot panel out from the spine (was WIDTH/2=10; wider = more wall contact)
+FOOT_WIDTH = 40.0   # width of EACH foot panel out from the spine (was WIDTH/2=10; wider = more wall contact)
 FOOT_HOLE_OFFSET = 6.0  # shift each foot's hole toward its OUTER edge, off-center (0 = centered)
 STANDOFF_DROP = 12.0  # extend the standoff body DOWN past z=0 to reach + merge with the lowered feet
 TRIM_FRONT_X  = 6.0   # trim the feet flush at this x (= standoff front face WEB_T; they poke ~5.5mm past it)
 TRIM_TOP_Z    = 0.0   # stop the back-of-foot trim at this z so it doesn't run up into the pad/bracket
+GUSSET_H   = 16.0   # under-pad brace: rib height down the web (0 = no gusset)
+GUSSET_L   = 6.0    # rib reach out under the pad (kept short to clear the insert hole)
+GUSSET_W   = WIDTH  # rib width in Y (across the pad)
 ROUND_R       = 3.0   # big fillet on all non-hole edges (backs off if a radius won't fit)
 # ------------------------------------------------------------------------------
 
@@ -146,6 +151,8 @@ def run(context):
             foot.name = 'foot'
             hole_y = (y0 + y1) / 2.0 + splay_sign * FOOT_HOLE_OFFSET   # off-center, toward the outer edge
             cut_cyl(-FOOT_X / 2.0, hole_y, FOOT_T, FOOT_T + 0.5, WALL_HOLE_D, foot)
+            if WASHER_DEPTH > 0:                                        # counterbore on the outer face for a washer / head
+                cut_cyl(-FOOT_X / 2.0, hole_y, FOOT_T, WASHER_DEPTH, WASHER_D, foot)
 
             # 1) tilt the flat half OUT about the Y hinge (same lean as the single foot)
             move_body(foot, lambda inp: inp.defineAsRotate(
@@ -166,6 +173,12 @@ def run(context):
 
         foot1 = build_foot(WIDTH / 2.0, WIDTH / 2.0 + FOOT_WIDTH, 1.0)    # panel out toward +Y
         foot2 = build_foot(WIDTH / 2.0 - FOOT_WIDTH, WIDTH / 2.0, -1.0)   # panel out toward -Y
+
+        def bb6(b):                                                       # bbox as plain cm numbers
+            bb = b.boundingBox
+            return (bb.minPoint.x, bb.minPoint.y, bb.minPoint.z,
+                    bb.maxPoint.x, bb.maxPoint.y, bb.maxPoint.z)
+        foot_bbs = [bb6(foot1), bb6(foot2)]   # capture the foot volumes before the combine consumes them
 
         # --- 3) join both feet onto the pad + standoff ---
         tools = adsk.core.ObjectCollection.create()
@@ -218,6 +231,36 @@ def run(context):
         trim_by_foot_back(1.0)
         trim_by_foot_back(-1.0)
 
+        # --- 5b) one brace under the pad (web -> pad), same rib as the flat corner bracket.
+        #        Added AFTER the foot trims so the trim slab doesn't chop it. ---
+        def add_gusset(x_web, x_dir, z_base, z_dir):
+            # triangular rib bracing the web (face at x_web) to the pad underside (z_base);
+            # x_dir = which way it reaches out, z_dir = which way it climbs the web.
+            pin = root.constructionPlanes.createInput()
+            pin.setByOffset(root.xZConstructionPlane, adsk.core.ValueInput.createByReal(WIDTH / 2.0 * MM))
+            pl = root.constructionPlanes.add(pin)
+            if pl.geometry.origin.y < 0:                      # offset went -Y; put the plane on the +Y side
+                pin = root.constructionPlanes.createInput()
+                pin.setByOffset(root.xZConstructionPlane, adsk.core.ValueInput.createByReal(-WIDTH / 2.0 * MM))
+                pl = root.constructionPlanes.add(pin)
+            py = pl.geometry.origin.y                         # actual plane Y (cm)
+            sk = root.sketches.add(pl)
+            ovl = 0.6                                         # dip into web/pad so it merges cleanly
+            def SP(x, z):                                     # a model point on the plane -> sketch space
+                return sk.modelToSketchSpace(adsk.core.Point3D.create(x * MM, py, z * MM))
+            xa, zb = x_web - x_dir * ovl, z_base - z_dir * ovl
+            ln = sk.sketchCurves.sketchLines
+            ln.addByTwoPoints(SP(xa, zb), SP(xa, z_base + z_dir * GUSSET_H))
+            ln.addByTwoPoints(SP(xa, z_base + z_dir * GUSSET_H), SP(x_web + x_dir * GUSSET_L, zb))
+            ln.addByTwoPoints(SP(x_web + x_dir * GUSSET_L, zb), SP(xa, zb))
+            inp = exts.createInput(sk.profiles.item(0), adsk.fusion.FeatureOperations.JoinFeatureOperation)
+            inp.setSymmetricExtent(adsk.core.ValueInput.createByReal(GUSSET_W * MM), True)
+            inp.participantBodies = [state['body']]
+            exts.add(inp)
+
+        if GUSSET_H > 0:
+            add_gusset(WEB_T, +1, STANDOFF - TILE_T, -1)     # web -> pad (under the pad)
+
         # --- 6) fillets: big round on all structural (non-hole) edges; 0.5mm on the hole rims ---
         fills = root.features.filletFeatures
 
@@ -233,18 +276,35 @@ def run(context):
                     and abs(cen.x - (ins_x - R_HOLE) * MM) < 0.3 * MM
                     and abs(cen.y - ins_y * MM) < 0.3 * MM)
 
+        # The feet are only FOOT_T thick, so their edges can't take the full ROUND_R (the top +
+        # bottom rounds would meet and eat the panel). Cap any edge that lives inside a foot
+        # volume to well under half that thickness; everything else keeps the big round.
+        foot_r = min(ROUND_R, FOOT_T / 2.0 - 0.2)
+
+        def in_feet(e):
+            bb = e.boundingBox
+            cx = (bb.minPoint.x + bb.maxPoint.x) / 2.0
+            cy = (bb.minPoint.y + bb.maxPoint.y) / 2.0
+            cz = (bb.minPoint.z + bb.maxPoint.z) / 2.0
+            m = 0.5 * MM
+            for (x0, y0, z0, x1, y1, z1) in foot_bbs:
+                if x0-m <= cx <= x1+m and y0-m <= cy <= y1+m and z0-m <= cz <= z1+m:
+                    return True
+            return False
+
         # big fillet -- ONE feature per edge (found by entity token so it survives the earlier
         # fillets); each edge takes the biggest radius that computes, fussy ones just get skipped
         tokens = []
         for i in range(main.edges.count):
             e = main.edges.item(i)
-            if not is_circle(e) and not is_border_arc(e):        # border arc gets 0.5mm instead
-                tokens.append(e.entityToken)
-        for tk in tokens:
+            if is_circle(e) or is_border_arc(e):                 # border arc gets 0.5mm instead
+                continue
+            tokens.append((e.entityToken, foot_r if in_feet(e) else ROUND_R))
+        for tk, r0 in tokens:
             ents = design.findEntityByToken(tk)
             if not ents:
                 continue
-            for rr in [ROUND_R, 2.0, 1.0, 0.5]:
+            for rr in [r0, r0 * 0.66, r0 * 0.5, r0 * 0.33]:
                 coll = adsk.core.ObjectCollection.create()
                 coll.add(ents[0])
                 fin = fills.createInput()
