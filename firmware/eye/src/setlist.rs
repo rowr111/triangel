@@ -36,7 +36,7 @@ const STYLES: [TransitionStyle; 7] = [
 fn ambient_patterns() -> Vec<Box<dyn Pattern>> {
     vec![
         Box::new(Fubuki::new()),
-        Box::new(Effervesce),
+        Box::new(Effervesce::new()),
         Box::new(Squall::new()),
         Box::new(ApexFlame::new(100.0, 80.0)),
         Box::new(CenterShimmer::new(60.0, 120.0)),
