@@ -31,12 +31,19 @@ const USED_BITS: u8 = 0x7F;
 /// unplugged, swapped, or that dropped an edge still converges on the right state.
 const BACKSTOP_TICKS: u32 = (250 / super::POLL_MS) as u32;
 
+/// Ticks to sit out after a failed transaction, doubling up to a cap. A failed read leaves the
+/// interrupt asserted, so without this an unresponsive panel drives the bus continuously.
+const BACKOFF_MIN_TICKS: u32 = 2;
+const BACKOFF_MAX_TICKS: u32 = (2_000 / super::POLL_MS) as u32;
+
 /// Panel inputs read over I2C from a separate input board.
 pub struct Source {
     iox:        IoxHal,
     i2c:        I2c,
     configured: bool,
     ticks:      u32,
+    backoff:    u32, // ticks left to skip before the next attempt
+    penalty:    u32, // current backoff length, doubling per consecutive failure
 }
 
 impl Source {
@@ -50,7 +57,8 @@ impl Source {
             IoxFunction::Gpio,
             IoxEnable::Enable,
         );
-        let mut source = Source { iox, i2c: I2c::new(), configured: false, ticks: 0 };
+        let mut source =
+            Source { iox, i2c: I2c::new(), configured: false, ticks: 0, backoff: 0, penalty: 0 };
         source.configured = source.configure();
         if !source.configured {
             log::warn!("input board did not answer at boot; retrying while it stays absent");
@@ -61,6 +69,10 @@ impl Source {
     /// Returns a reading only when the expander reports a change or the backstop falls due.
     /// `None` means nothing new, and the caller keeps the state it already had.
     pub fn read(&mut self) -> Option<Inputs> {
+        if self.backoff > 0 {
+            self.backoff -= 1;
+            return None;
+        }
         self.ticks = self.ticks.saturating_add(1);
         if self.ticks < BACKSTOP_TICKS && !self.int_asserted() {
             return None;
@@ -70,19 +82,30 @@ impl Source {
         if !self.configured {
             self.configured = self.configure();
             if !self.configured {
+                self.fail();
                 return None;
             }
         }
 
         match self.read_port() {
-            Some(bits) => Some(decode(bits)),
+            Some(bits) => {
+                self.penalty = 0;
+                Some(decode(bits))
+            }
             None => {
                 // A panel that lost power comes back at the expander's reset defaults, so
                 // reconfigure before trusting another reading.
                 self.configured = false;
+                self.fail();
                 None
             }
         }
+    }
+
+    /// Sit out a growing run of ticks after a failed transaction.
+    fn fail(&mut self) {
+        self.penalty = (self.penalty * 2).clamp(BACKOFF_MIN_TICKS, BACKOFF_MAX_TICKS);
+        self.backoff = self.penalty;
     }
 
     fn int_asserted(&self) -> bool {
