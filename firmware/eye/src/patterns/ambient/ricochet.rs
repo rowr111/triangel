@@ -1,7 +1,6 @@
 use crate::patterns::{Frame, Pattern, hsv, lerp, wrap360};
-use crate::led::map::{Led, WORLD_TOP, WORLD_BOT, WORLD_CX, WORLD_CENTROID_Y, LED_COUNT, LED_MAP};
+use crate::led::map::{Led, WORLD_TOP, WORLD_BOT, WORLD_CX, WORLD_CENTROID_Y, LED_COUNT};
 use core::f32::consts::TAU;
-use std::sync::OnceLock;
 
 // Ricochet - up to a few comets loose inside the triangle, bouncing off the three walls like
 // Pong and dragging fading trails. Each bounce throws off a little shower of sparks and costs
@@ -53,11 +52,9 @@ const N_TOP:   (f32, f32) = (0.0, 1.0);
 const N_LEFT:  (f32, f32) = (0.866_025_4, -0.5);
 const N_RIGHT: (f32, f32) = (-0.866_025_4, -0.5);
 
-// Spatial grid over the world for scatter rendering. Each dot splats over the cells within its
-// radius (its `reach`), so any dot size renders fully.
-const CELL_MM:    f32   = 48.0;
-const GRID_COLS:  usize = 12;
-const GRID_ROWS:  usize = 10;
+// Each dot splats over the shared grid's cells within its radius (its `reach`), so any dot
+// size renders fully.
+use crate::led::grid::{self, CELL_MM};
 
 #[derive(Clone, Copy)]
 struct Comet {
@@ -106,20 +103,6 @@ pub struct Ricochet {
     acc_v: [f32; LED_COUNT],
     acc_x: [f32; LED_COUNT],
     acc_y: [f32; LED_COUNT],
-}
-
-/// LED indices bucketed into a fixed spatial grid, built once (LED positions never change).
-fn grid() -> &'static Vec<Vec<u16>> {
-    static G: OnceLock<Vec<Vec<u16>>> = OnceLock::new();
-    G.get_or_init(|| {
-        let mut cells = vec![Vec::new(); GRID_COLS * GRID_ROWS];
-        for (i, led) in LED_MAP.iter().enumerate() {
-            let cx = ((led.wx / CELL_MM) as usize).min(GRID_COLS - 1);
-            let cy = ((led.wy / CELL_MM) as usize).min(GRID_ROWS - 1);
-            cells[cy * GRID_COLS + cx].push(i as u16);
-        }
-        cells
-    })
 }
 
 impl Ricochet {
@@ -290,28 +273,20 @@ impl Ricochet {
 
     /// Splat one dot onto the LEDs in the grid cells within its reach.
     fn scatter(&mut self, leds: &[Led], d: &Dot) {
-        let cx = (d.x / CELL_MM).clamp(0.0, (GRID_COLS - 1) as f32) as usize;
-        let cy = (d.y / CELL_MM).clamp(0.0, (GRID_ROWS - 1) as f32) as usize;
-        let reach = d.reach;
-        let cells = grid();
-        for gy in cy.saturating_sub(reach)..=(cy + reach).min(GRID_ROWS - 1) {
-            for gx in cx.saturating_sub(reach)..=(cx + reach).min(GRID_COLS - 1) {
-                for &li in &cells[gy * GRID_COLS + gx] {
-                    let led = &leds[li as usize];
-                    let dx = led.wx - d.x;
-                    let dy = led.wy - d.y;
-                    // Sharpen the edge so it reads as a solid ball, not a soft blob.
-                    let c = ((1.0 - (dx * dx + dy * dy) * d.inv_r2) * EDGE_SHARP).min(1.0);
-                    if c > 0.0 {
-                        let k = li as usize;
-                        let cw = c * d.w;
-                        self.acc_v[k] += cw;
-                        self.acc_x[k] += cw * d.chue;
-                        self.acc_y[k] += cw * d.shue;
-                    }
-                }
+        let (acc_v, acc_x, acc_y) = (&mut self.acc_v, &mut self.acc_x, &mut self.acc_y);
+        grid::for_each_near(d.x, d.y, d.reach, |k| {
+            let led = &leds[k];
+            let dx = led.wx - d.x;
+            let dy = led.wy - d.y;
+            // Sharpen the edge so it reads as a solid ball, not a soft blob.
+            let c = ((1.0 - (dx * dx + dy * dy) * d.inv_r2) * EDGE_SHARP).min(1.0);
+            if c > 0.0 {
+                let cw = c * d.w;
+                acc_v[k] += cw;
+                acc_x[k] += cw * d.chue;
+                acc_y[k] += cw * d.shue;
             }
-        }
+        });
     }
 }
 

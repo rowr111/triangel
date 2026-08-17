@@ -1,5 +1,6 @@
 use crate::patterns::{Frame, Pattern, hsv, lerp, wrap360};
-use crate::led::map::{Led, WORLD_TOP, WORLD_BOT, WORLD_H, WORLD_CX};
+use crate::led::grid::{self, CELL_MM};
+use crate::led::map::{Led, WORLD_TOP, WORLD_BOT, WORLD_H, WORLD_CX, LED_COUNT};
 use core::f32::consts::TAU;
 
 // Fubuki (snowstorm) - a falling-snow ambient pattern that turns with the seasons. Flakes
@@ -85,11 +86,23 @@ pub struct Fubuki {
     origin_ms: u32, // local-clock origin: t_ms when the current activation began
     prev_ms:   u32, // t_ms of the previous render call, to detect a re-entry gap
     active:    bool,
+    // Strongest flake reaching each LED this frame, and the color it carries. Rebuilt per
+    // frame by scattering the flakes onto nearby LEDs.
+    flake_e: [f32; LED_COUNT],
+    flake_h: [f32; LED_COUNT],
+    flake_s: [f32; LED_COUNT],
 }
 
 impl Fubuki {
     pub fn new() -> Self {
-        Fubuki { origin_ms: 0, prev_ms: 0, active: false }
+        Fubuki {
+            origin_ms: 0,
+            prev_ms:   0,
+            active:    false,
+            flake_e:   [0.0; LED_COUNT],
+            flake_h:   [0.0; LED_COUNT],
+            flake_s:   [0.0; LED_COUNT],
+        }
     }
 }
 
@@ -148,6 +161,26 @@ impl Pattern for Fubuki {
         let surface = line_c.min(line_p);
         let flakes: [Flake; FLAKES] = core::array::from_fn(|i| make_flake(i, local, surface, prev, season, nf));
 
+        // Scatter the flakes onto the LEDs they actually reach, keeping the strongest per LED.
+        // Flakes are walked in order and the test is strict, so ties land on the same flake a
+        // per-LED sweep would have picked.
+        let reach = (FLAKE_R_MM / CELL_MM).ceil() as usize;
+        let (fe_buf, fh_buf, fs_buf) = (&mut self.flake_e, &mut self.flake_h, &mut self.flake_s);
+        fe_buf.fill(0.0);
+        for f in &flakes {
+            grid::for_each_near(f.x, f.y, reach, |k| {
+                let led = &leds[k];
+                let dx = led.wx - f.x;
+                let dy = led.wy - f.y;
+                let c = 1.0 - (dx * dx + dy * dy) / (FLAKE_R_MM * FLAKE_R_MM);
+                if c > fe_buf[k] {
+                    fe_buf[k] = c;
+                    fh_buf[k] = f.hue;
+                    fs_buf[k] = f.sat;
+                }
+            });
+        }
+
         for (i, led) in leds.iter().enumerate() {
             // Per-LED texture + pulse (season-independent), shared by both piles.
             let hp = hash2(led.board_id as u32, led.local_idx as u32);
@@ -175,25 +208,14 @@ impl Pattern for Fubuki {
             sat = lerp(sat, cs, fillamt_c);
             val = lerp(val, pile_v, fillamt_c);
 
-            // Strongest flake at this LED (soft squared-distance dot).
-            let mut fe = 0.0f32;
-            let mut fh = hue;
-            let mut fs = sat;
-            for f in &flakes {
-                let dx = led.wx - f.x;
-                let dy = led.wy - f.y;
-                let c = 1.0 - (dx * dx + dy * dy) / (FLAKE_R_MM * FLAKE_R_MM);
-                if c > fe {
-                    fe = c;
-                    fh = f.hue;
-                    fs = f.sat;
-                }
+            // Blend the strongest flake's color over the base and brighten it in. At zero
+            // strength the blends are identities, so LEDs no flake reached are left alone.
+            let fe = self.flake_e[i];
+            if fe > 0.0 {
+                hue = blend_hue(hue, self.flake_h[i], fe);
+                sat = lerp(sat, self.flake_s[i], fe);
+                val += (1.0 - val) * (fe * FLAKE_VAL);
             }
-
-            // Blend the flake's color over the base and brighten it in.
-            hue = blend_hue(hue, fh, fe);
-            sat = lerp(sat, fs, fe);
-            val += (1.0 - val) * (fe * FLAKE_VAL);
 
             out[i] = hsv(wrap360(hue), sat, val);
         }

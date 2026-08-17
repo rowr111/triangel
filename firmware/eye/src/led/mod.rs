@@ -1,4 +1,5 @@
 pub mod geom;
+pub mod grid;
 pub mod map;
 
 use map::LED_COUNT;
