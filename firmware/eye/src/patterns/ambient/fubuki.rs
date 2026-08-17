@@ -1,4 +1,4 @@
-use crate::patterns::{Frame, Pattern, hsv, lerp};
+use crate::patterns::{Frame, Pattern, hsv, lerp, wrap360};
 use crate::led::map::{Led, WORLD_TOP, WORLD_BOT, WORLD_H, WORLD_CX};
 use core::f32::consts::TAU;
 
@@ -195,7 +195,7 @@ impl Pattern for Fubuki {
             sat = lerp(sat, fs, fe);
             val += (1.0 - val) * (fe * FLAKE_VAL);
 
-            out[i] = hsv(hue.rem_euclid(360.0), sat, val);
+            out[i] = hsv(wrap360(hue), sat, val);
         }
     }
 }

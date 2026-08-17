@@ -1,4 +1,4 @@
-use crate::patterns::{Frame, Pattern, hsv};
+use crate::patterns::{Frame, Pattern, hsv, wrap360};
 use crate::led::map::Led;
 use core::f32::consts::{PI, TAU};
 
@@ -124,7 +124,7 @@ impl Pattern for Effervesce {
             v += (1.0 - v) * g;
             s *= 1.0 - g;
 
-            out[i] = hsv(hue.rem_euclid(360.0), s, v);
+            out[i] = hsv(wrap360(hue), s, v);
         }
     }
 }

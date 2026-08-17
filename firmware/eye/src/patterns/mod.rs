@@ -49,11 +49,27 @@ impl Envelope {
 
 /// HSV -> RGB. h: 0-360, s/v: 0-1. Returns [r, g, b] each 0-255.
 pub fn hsv(h: f32, s: f32, v: f32) -> [u8; 3] {
+    let h60 = h / 60.0;
     let f = |n: f32| -> f32 {
-        let k = (n + h / 60.0) % 6.0;
+        // n + h60 is inside [1, 11), so wrapping is at most one subtraction.
+        let mut k = n + h60;
+        if k >= 6.0 {
+            k -= 6.0;
+        }
         v - v * s * k.min(4.0 - k).clamp(0.0, 1.0_f32)
     };
     [(f(5.0) * 255.0) as u8, (f(3.0) * 255.0) as u8, (f(1.0) * 255.0) as u8]
 }
 
 pub fn lerp(a: f32, b: f32, t: f32) -> f32 { a + (b - a) * t }
+
+/// Wrap a hue into [0, 360). Exact for inputs within one turn of range.
+pub fn wrap360(h: f32) -> f32 {
+    if h >= 360.0 {
+        h - 360.0
+    } else if h < 0.0 {
+        h + 360.0
+    } else {
+        h
+    }
+}

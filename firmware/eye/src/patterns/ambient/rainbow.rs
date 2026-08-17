@@ -1,4 +1,4 @@
-use crate::patterns::{Frame, Pattern, hsv};
+use crate::patterns::{Frame, Pattern, hsv, wrap360};
 use crate::led::geom::{DIST_C, THETA_C};
 use crate::led::map::{Led, WORLD_CX, WORLD_TOP, WORLD_BOT};
 use core::f32::consts::TAU;
@@ -165,7 +165,7 @@ impl Pattern for RainbowX {
                 v *= 1.0 - SPARKLE * dip;
             }
 
-            out[i] = hsv(hue.rem_euclid(360.0), s, v);
+            out[i] = hsv(wrap360(hue), s, v);
         }
     }
 }

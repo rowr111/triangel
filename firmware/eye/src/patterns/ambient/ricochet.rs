@@ -1,4 +1,4 @@
-use crate::patterns::{Frame, Pattern, hsv, lerp};
+use crate::patterns::{Frame, Pattern, hsv, lerp, wrap360};
 use crate::led::map::{Led, WORLD_TOP, WORLD_BOT, WORLD_CX, WORLD_CENTROID_Y, LED_COUNT, LED_MAP};
 use core::f32::consts::TAU;
 use std::sync::OnceLock;
@@ -410,7 +410,7 @@ impl Pattern for Ricochet {
             }
             let hue = self.acc_y[k].atan2(self.acc_x[k]).to_degrees();
             let sat = BASE_SAT * (1.0 - v * v * HEAD_WHITEN); // bright cores glint white
-            *slot = hsv(hue.rem_euclid(360.0), sat, v);
+            *slot = hsv(wrap360(hue), sat, v);
         }
     }
 }
