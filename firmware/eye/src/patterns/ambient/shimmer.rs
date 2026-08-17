@@ -1,5 +1,6 @@
 use crate::patterns::{Frame, Pattern, hsv};
-use crate::led::map::{Led, WORLD_CENTROID_X, WORLD_CENTROID_Y};
+use crate::led::geom::{DIST_C, THETA_C};
+use crate::led::map::Led;
 use core::f32::consts::{PI, TAU};
 
 // Radial shimmer: a wave ripples out from the center while each LED twinkles on its own
@@ -46,7 +47,7 @@ impl Pattern for CenterShimmer {
         let spin = (t_ms % SPIRAL_PERIOD_MS) as f32 / SPIRAL_PERIOD_MS as f32;
 
         for (i, led) in leds.iter().enumerate() {
-            let dist = led.dist_to(WORLD_CENTROID_X, WORLD_CENTROID_Y);
+            let dist = DIST_C[i];
 
             // Radial wave (the motion), reshaped by WAVE_FALLOFF so the crest-to-trough
             // falloff broadens the bright band and keeps the dark troughs thin.
@@ -63,7 +64,7 @@ impl Pattern for CenterShimmer {
             // Hue position: radial gradient + drift + per-LED scatter, plus a spiral of
             // SPIRAL_ARMS sectors twisted by radius and spun over time (pinwheels outward).
             let hn = hash as f32 / 97.0; // 0..1 per-LED
-            let theta = (led.wy - WORLD_CENTROID_Y).atan2(led.wx - WORLD_CENTROID_X);
+            let theta = THETA_C[i];
             let spiral = SPIRAL_ARMS * theta / TAU + SPIRAL_TWIST * dist - spin;
             let p = dist / RADIAL_SPAN_MM + drift + (hn - 0.5) * HASH_JITTER + spiral;
 

@@ -1,5 +1,6 @@
 use crate::patterns::{Frame, Pattern, hsv};
-use crate::led::map::{Led, WORLD_CX, WORLD_TOP, WORLD_BOT, WORLD_CENTROID_X, WORLD_CENTROID_Y};
+use crate::led::geom::{DIST_C, THETA_C};
+use crate::led::map::{Led, WORLD_CX, WORLD_TOP, WORLD_BOT};
 use core::f32::consts::TAU;
 
 // ============================ Audition knobs ============================
@@ -125,9 +126,9 @@ impl Pattern for RainbowX {
         for (i, led) in leds.iter().enumerate() {
             // Base hue, optionally warped by a concentric hue ripple on a different axis and
             // frequency than the base, so the two beat into oil-on-water iridescence.
-            let mut hue = hue_for(led, anim);
+            let mut hue = hue_for(led, i, anim);
             if IRIDESCENCE > 0.0 {
-                let r = led.dist_to(WORLD_CENTROID_X, WORLD_CENTROID_Y);
+                let r = DIST_C[i];
                 let ripple = (r / IRID_SPAN_MM * TAU - irid_ph).sin(); // -1..1
                 hue += IRIDESCENCE * IRID_DEG * ripple;
             }
@@ -171,13 +172,10 @@ impl Pattern for RainbowX {
 
 /// Hue in degrees (unwrapped) for one LED, given the geometry's animation term.
 #[inline]
-fn hue_for(led: &Led, anim: f32) -> f32 {
+fn hue_for(led: &Led, i: usize, anim: f32) -> f32 {
     match GEOMETRY {
         Geometry::Horizontal => (led.wx + anim) / HUE_SPAN_MM * 360.0,
-        Geometry::Spin => {
-            let theta = (led.wy - WORLD_CENTROID_Y).atan2(led.wx - WORLD_CENTROID_X);
-            (theta / TAU + anim) * 360.0
-        }
+        Geometry::Spin => (THETA_C[i] / TAU + anim) * 360.0,
         Geometry::Orbit => orbit_hue(led, anim),
     }
 }

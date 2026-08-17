@@ -1,5 +1,6 @@
 use std::sync::OnceLock;
 
+use crate::led::geom::DIST_APEX;
 use crate::patterns::{Frame, Pattern, lerp};
 use crate::led::map::{Led, WORLD_BOT, WORLD_CX, WORLD_H};
 use core::f32::consts::{PI, TAU};
@@ -93,7 +94,7 @@ impl Pattern for ApexFlame {
 
         for (i, led) in leds.iter().enumerate() {
             // Flames rise: the apex of the point-down triangle is the fire's base.
-            let dist = led.dist_to(WORLD_CX, WORLD_BOT);
+            let dist = DIST_APEX[i];
 
             // Two interfering ripples so the wavefronts don't look mechanical.
             let w1 = ((dist - t1_s * self.speed) / self.wavelength * TAU).sin();

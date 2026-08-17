@@ -3,6 +3,7 @@ use std::sync::OnceLock;
 use core::f32::consts::TAU;
 
 use super::Frame;
+use crate::led::geom::DIST_C;
 use crate::led::map::{Led, WORLD_CENTROID_X, WORLD_CENTROID_Y};
 
 // Triangle centroid, from the shared world constants.
@@ -36,29 +37,37 @@ pub fn blend(style: TransitionStyle, leds: &[Led], progress: f32, from: &Frame, 
     let maxd = max_center_dist(leds);
     let ranks = board_spiral_ranks(leds);
     for (i, led) in leds.iter().enumerate() {
-        let alpha = alpha_for(style, led, progress, maxd, ranks[led.board_id as usize]);
+        let alpha = alpha_for(style, led, DIST_C[i], progress, maxd, ranks[led.board_id as usize]);
         out[i] = lerp_rgb(from[i], out[i], alpha);
     }
 }
 
-/// Per-LED mix factor: 0.0 = fully outgoing, 1.0 = fully incoming.
-fn alpha_for(style: TransitionStyle, led: &Led, progress: f32, maxd: f32, board_rank: f32) -> f32 {
+/// Per-LED mix factor: 0.0 = fully outgoing, 1.0 = fully incoming. `dist_c` is the LED's
+/// distance from the centroid, read from the generated table by the caller.
+fn alpha_for(
+    style: TransitionStyle,
+    led: &Led,
+    dist_c: f32,
+    progress: f32,
+    maxd: f32,
+    board_rank: f32,
+) -> f32 {
     match style {
         TransitionStyle::Crossfade => smoothstep(progress),
         TransitionStyle::RadialOut => {
             let front = progress * (maxd + 2.0 * FEATHER_MM) - FEATHER_MM;
-            smoothstep((front - dist_to_center(led)) / FEATHER_MM)
+            smoothstep((front - dist_c) / FEATHER_MM)
         }
         TransitionStyle::RadialIn => {
             let front = (1.0 - progress) * (maxd + 2.0 * FEATHER_MM) - FEATHER_MM;
-            smoothstep((dist_to_center(led) - front) / FEATHER_MM)
+            smoothstep((dist_c - front) / FEATHER_MM)
         }
         TransitionStyle::Sparkle => {
             let threshold = hash01(led) * (1.0 - SPARKLE_EDGE);
             smoothstep((progress - threshold) / SPARKLE_EDGE)
         }
         TransitionStyle::RadialSparkle => {
-            let radial = dist_to_center(led) / maxd;
+            let radial = dist_c / maxd;
             let threshold = (0.5 * radial + 0.5 * hash01(led)) * (1.0 - SPARKLE_EDGE);
             smoothstep((progress - threshold) / SPARKLE_EDGE)
         }
