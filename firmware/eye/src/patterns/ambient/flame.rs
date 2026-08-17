@@ -2,7 +2,7 @@ use std::sync::OnceLock;
 
 use crate::led::geom::DIST_APEX;
 use crate::patterns::{Frame, Pattern, lerp};
-use crate::led::map::{Led, WORLD_BOT, WORLD_CX, WORLD_H};
+use crate::led::map::{Led, WORLD_BOT, WORLD_CX, WORLD_H, LED_COUNT};
 use core::f32::consts::{PI, TAU};
 
 // Tunables - dial these in the previewer. Each scales one ingredient of the flame;
@@ -43,9 +43,48 @@ const FLARE_PERIOD_MS: u32 = 8_300;  // one hash-picked tile flares up per perio
 const FLARE_LEN:  f32 = 0.25;        // flare duration as a fraction of its period
 const FLARE_HEAT: f32 = 0.3;         // heat added across the flaring tile
 
+// The hash quantizes each LED's flicker phase offset to this many steps of 0.01 rad.
+const FLICK_PHASE_STEPS: usize = 628;
+
 pub struct ApexFlame {
     pub speed:      f32, // mm/s outward, primary wave
     pub wavelength: f32, // mm per cycle, primary wave
+    // Each wave's per-LED phase as a phasor. Both wave arguments are a fixed per-LED term plus
+    // a per-frame one, so rotating these by the frame's angle replaces a sin call per LED.
+    w1_sin: [f32; LED_COUNT],
+    w1_cos: [f32; LED_COUNT],
+    w2_sin: [f32; LED_COUNT],
+    w2_cos: [f32; LED_COUNT],
+}
+
+impl ApexFlame {
+    pub fn new(speed: f32, wavelength: f32) -> Self {
+        let k1 = TAU / wavelength;
+        let k2 = TAU / (wavelength * SECOND_WAVELENGTH_RATIO);
+        ApexFlame {
+            speed,
+            wavelength,
+            w1_sin: core::array::from_fn(|i| (DIST_APEX[i] * k1).sin()),
+            w1_cos: core::array::from_fn(|i| (DIST_APEX[i] * k1).cos()),
+            w2_sin: core::array::from_fn(|i| (DIST_APEX[i] * k2).sin()),
+            w2_cos: core::array::from_fn(|i| (DIST_APEX[i] * k2).cos()),
+        }
+    }
+}
+
+/// sin and cos of every flicker phase offset the hash can produce.
+fn flick_phasors() -> &'static ([f32; FLICK_PHASE_STEPS], [f32; FLICK_PHASE_STEPS]) {
+    static T: OnceLock<([f32; FLICK_PHASE_STEPS], [f32; FLICK_PHASE_STEPS])> = OnceLock::new();
+    T.get_or_init(|| {
+        let mut sn = [0.0; FLICK_PHASE_STEPS];
+        let mut cs = [0.0; FLICK_PHASE_STEPS];
+        for k in 0..FLICK_PHASE_STEPS {
+            let (s, c) = (k as f32 / 100.0).sin_cos();
+            sn[k] = s;
+            cs[k] = c;
+        }
+        (sn, cs)
+    })
 }
 
 impl Pattern for ApexFlame {
@@ -64,6 +103,14 @@ impl Pattern for ApexFlame {
         let smoke_rise    = (t_ms % SMOKE_RISE_PERIOD_MS) as f32 / SMOKE_RISE_PERIOD_MS as f32 * TAU;
         let smoke_meander = (t_ms % SMOKE_MEANDER_PERIOD_MS) as f32 / SMOKE_MEANDER_PERIOD_MS as f32 * TAU;
         let extents = board_y_extents(leds);
+
+        // Per-frame rotation angles for the two waves and the two flicker sines. Each pairs
+        // with a per-LED phasor below, replacing four sin calls per LED with multiply-adds.
+        let (b1_sin, b1_cos) = (-t1_s * self.speed * (TAU / self.wavelength)).sin_cos();
+        let (b2_sin, b2_cos) = (-t2_s * spd2 * (TAU / wl2)).sin_cos();
+        let (f1_sin, f1_cos) = flick_phase.sin_cos();
+        let (f2_sin, f2_cos) = flick2_phase.sin_cos();
+        let (fl_sin, fl_cos) = flick_phasors();
 
         // Ember flights: each slot is a scheduled, deterministic arc - spawn inside the
         // triangle's width low down, rise with a sideways wobble, fade out (sin envelope).
@@ -93,12 +140,9 @@ impl Pattern for ApexFlame {
         };
 
         for (i, led) in leds.iter().enumerate() {
-            // Flames rise: the apex of the point-down triangle is the fire's base.
-            let dist = DIST_APEX[i];
-
             // Two interfering ripples so the wavefronts don't look mechanical.
-            let w1 = ((dist - t1_s * self.speed) / self.wavelength * TAU).sin();
-            let w2 = ((dist - t2_s * spd2) / wl2 * TAU).sin();
+            let w1 = self.w1_sin[i] * b1_cos + self.w1_cos[i] * b1_sin;
+            let w2 = self.w2_sin[i] * b2_cos + self.w2_cos[i] * b2_sin;
             let wave = ((w1 + SECOND_WAVE_STRENGTH * w2) / (1.0 + SECOND_WAVE_STRENGTH) + 1.0) / 2.0;
             let wave = WAVE_FLOOR + (1.0 - WAVE_FLOOR) * wave;
 
@@ -124,10 +168,11 @@ impl Pattern for ApexFlame {
             // (transition.rs's sparkle trick): a linear phase step along the chain would
             // read as a coherent sweep across the fixture instead of random flicker.
             let h = (led.chain_idx as u32).wrapping_mul(2654435761);
-            let p1 = (h % 628) as f32 / 100.0;         // 0..TAU
-            let p2 = ((h >> 16) % 628) as f32 / 100.0; // decorrelated second phase
+            let k1 = (h % FLICK_PHASE_STEPS as u32) as usize;
+            let k2 = ((h >> 16) % FLICK_PHASE_STEPS as u32) as usize; // decorrelated second phase
             let flicker = 1.0 + FLICKER_DEPTH * 0.5
-                * ((flick_phase + p1).sin() + (flick2_phase + p2).sin());
+                * (fl_sin[k1] * f1_cos + fl_cos[k1] * f1_sin
+                 + fl_sin[k2] * f2_cos + fl_cos[k2] * f2_sin);
 
             // Occasional events: any nearby ember blobs plus the flaring tile.
             let mut event_heat = 0.0f32;
