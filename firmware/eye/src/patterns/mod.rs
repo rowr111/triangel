@@ -63,6 +63,26 @@ pub fn hsv(h: f32, s: f32, v: f32) -> [u8; 3] {
 
 pub fn lerp(a: f32, b: f32, t: f32) -> f32 { a + (b - a) * t }
 
+/// Steps the patterns' hashes quantize a 0..TAU phase offset into, 0.01 rad each.
+pub const PHASE_STEPS: usize = 628;
+
+/// sin and cos of every hash-quantized phase offset, for rotating a per-LED phasor by a
+/// per-frame angle instead of calling sin per LED.
+pub fn phase_phasors() -> &'static ([f32; PHASE_STEPS], [f32; PHASE_STEPS]) {
+    static T: std::sync::OnceLock<([f32; PHASE_STEPS], [f32; PHASE_STEPS])> =
+        std::sync::OnceLock::new();
+    T.get_or_init(|| {
+        let mut sn = [0.0; PHASE_STEPS];
+        let mut cs = [0.0; PHASE_STEPS];
+        for k in 0..PHASE_STEPS {
+            let (s, c) = (k as f32 / 100.0).sin_cos();
+            sn[k] = s;
+            cs[k] = c;
+        }
+        (sn, cs)
+    })
+}
+
 /// Wrap a hue into [0, 360). Exact for inputs within one turn of range.
 pub fn wrap360(h: f32) -> f32 {
     if h >= 360.0 {

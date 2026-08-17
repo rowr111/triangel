@@ -1,5 +1,6 @@
-use crate::patterns::{Frame, Pattern, lerp};
-use crate::led::map::{Led, WORLD_BOT, WORLD_CX, WORLD_H, WORLD_TOP};
+use crate::patterns::{Frame, Pattern, lerp, phase_phasors, PHASE_STEPS};
+use crate::led::grid::{self, CELL_MM};
+use crate::led::map::{Led, WORLD_BOT, WORLD_CX, WORLD_H, WORLD_TOP, LED_COUNT, LED_MAP};
 use core::f32::consts::{PI, TAU};
 
 // Tunables - dial these in the previewer. The pattern has no top or bottom: every
@@ -18,6 +19,8 @@ const BOIL_DEPTH:  f32 = 0.10;
 const BOIL_CELL_MM: f32 = 140.0;    // spatial scale of the churn
 const BOIL_PERIOD_MS:  u32 = 4_900; // two incommensurate phases so the churn
 const BOIL2_PERIOD_MS: u32 = 3_100; // reads as boiling, not a sweep
+const BOIL_CROSS_Y: f32 = 0.83; // frequency of each axis' modulating sine, relative to the
+const BOIL_CROSS_X: f32 = 0.71; // cell scale - off-integer so the two never lock together
 
 // Upwellings: hash-scheduled blooms that swell out of the dark, spread, and dissolve,
 // peak brightness falling as the radius grows so the energy feels like it diffuses.
@@ -121,6 +124,16 @@ pub struct Squall {
     slots:   [StrikeSlot; BOLT_SLOTS],
     rng:     u32,
     last_ms: Option<u32>, // previous frame time; None until the first render
+    // Phasors for the boil's two inner sines. Their arguments are a fixed per-LED term plus a
+    // per-frame one, so rotating these replaces two of the four sin calls per LED.
+    by_sin: [f32; LED_COUNT],
+    by_cos: [f32; LED_COUNT],
+    bx_sin: [f32; LED_COUNT],
+    bx_cos: [f32; LED_COUNT],
+    // Per-LED totals for this frame, filled by the scatter passes.
+    energy:  [f32; LED_COUNT],
+    density: [f32; LED_COUNT],
+    bolt:    [f32; LED_COUNT],
 }
 
 impl Squall {
@@ -144,7 +157,20 @@ impl Squall {
             gap_start_ms: 0,
             gap_len_ms:   0,
         });
-        Squall { clouds, slots, rng, last_ms: None }
+        let k = TAU / BOIL_CELL_MM;
+        Squall {
+            clouds,
+            slots,
+            rng,
+            last_ms: None,
+            by_sin: core::array::from_fn(|i| (LED_MAP[i].wy * k * BOIL_CROSS_Y).sin()),
+            by_cos: core::array::from_fn(|i| (LED_MAP[i].wy * k * BOIL_CROSS_Y).cos()),
+            bx_sin: core::array::from_fn(|i| (LED_MAP[i].wx * k * BOIL_CROSS_X).sin()),
+            bx_cos: core::array::from_fn(|i| (LED_MAP[i].wx * k * BOIL_CROSS_X).cos()),
+            energy:  [0.0; LED_COUNT],
+            density: [0.0; LED_COUNT],
+            bolt:    [0.0; LED_COUNT],
+        }
     }
 
     /// Advance the drift simulation: ease each cloud toward its target velocity, pick a
@@ -301,8 +327,8 @@ impl Pattern for Squall {
 
         // Bloom slots: each period, a slot hash-picks a spot near the triangle and lives
         // one bloom there - radius grows birth-to-death while a sin envelope swells and
-        // fades the energy. (x, y, 1/r^2, amplitude, ring blend) per slot.
-        let mut blooms = [(0.0f32, 0.0f32, 0.0f32, 0.0f32, 0.0f32); BLOOM_SLOTS];
+        // fades the energy. (x, y, 1/r^2, amplitude, ring blend, grid reach) per slot.
+        let mut blooms = [(0.0f32, 0.0f32, 0.0f32, 0.0f32, 0.0f32, 0usize); BLOOM_SLOTS];
         for (k, b) in blooms.iter_mut().enumerate() {
             let period = BLOOM_PERIOD_MS + k as u32 * BLOOM_STAGGER_MS;
             let cycle = t_ms / period;
@@ -312,12 +338,14 @@ impl Pattern for Squall {
             let hw = (WORLD_BOT - y) / WORLD_H * WORLD_HALF_W + 40.0; // triangle width at y
             let x = WORLD_CX + ((h % 1000) as f32 / 1000.0 * 2.0 - 1.0) * hw;
             let r = lerp(BLOOM_R0_MM, BLOOM_R1_MM, p);
-            *b = (x, y, 1.0 / (r * r), BLOOM_PEAK * (p * PI).sin(), BLOOM_RIM * p);
+            let reach = (r / CELL_MM).ceil() as usize;
+            *b = (x, y, 1.0 / (r * r), BLOOM_PEAK * (p * PI).sin(), BLOOM_RIM * p, reach);
         }
 
         // Cloud lobes, flattened across clouds: each orbits its cloud center and breathes
-        // its radius on seed-derived periods, so the silhouette slowly morphs. (x, y, 1/r^2).
-        let mut lobes = [(0.0f32, 0.0f32, 0.0f32); CLOUD_COUNT * CLOUD_LOBES];
+        // its radius on seed-derived periods, so the silhouette slowly morphs.
+        // (x, y, 1/r^2, grid reach).
+        let mut lobes = [(0.0f32, 0.0f32, 0.0f32, 0usize); CLOUD_COUNT * CLOUD_LOBES];
         for (ci, c) in self.clouds.iter().enumerate() {
             for j in 0..CLOUD_LOBES {
                 let h = c.seed ^ (j as u32).wrapping_mul(0x9E37_79B9);
@@ -327,8 +355,12 @@ impl Pattern for Squall {
                 let breathe = (t_ms % breathe_p) as f32 / breathe_p as f32 * TAU + (h >> 12) as f32;
                 let off = CLOUD_LOBE_OFF_MM * (0.35 + 0.65 * ((h >> 4) % 100) as f32 / 100.0);
                 let r = CLOUD_LOBE_R_MM * (1.0 + CLOUD_BREATHE * breathe.sin());
-                lobes[ci * CLOUD_LOBES + j] =
-                    (c.x + orbit.cos() * off, c.y + orbit.sin() * off, 1.0 / (r * r));
+                lobes[ci * CLOUD_LOBES + j] = (
+                    c.x + orbit.cos() * off,
+                    c.y + orbit.sin() * off,
+                    1.0 / (r * r),
+                    (r / CELL_MM).ceil() as usize,
+                );
             }
         }
 
@@ -336,7 +368,7 @@ impl Pattern for Squall {
         // every side it has reached stays fully lit, so the bolt visibly builds. Once
         // the walk completes, the whole path shares the return-stroke envelope:
         // full-white pops dipping between pulses, dying out after the last one.
-        let mut segs = [((0.0f32, 0.0f32), (0.0f32, 0.0f32), 0.0f32); BOLT_SLOTS * BOLT_SEGS_MAX];
+        let mut segs = [Seg::ZERO; BOLT_SLOTS * BOLT_SEGS_MAX];
         let mut n_segs = 0;
         for slot in &self.slots {
             let Some(s) = &slot.strike else { continue };
@@ -345,7 +377,7 @@ impl Pattern for Squall {
                 // Leader phase: every side reached so far holds at full strength.
                 let reached = (el / BOLT_STEP_MS) as usize + 1;
                 for w in s.bolt.pts[..(reached + 1).min(s.bolt.len)].windows(2) {
-                    segs[n_segs] = (w[0], w[1], 1.0);
+                    segs[n_segs] = Seg::new(w[0], w[1], 1.0);
                     n_segs += 1;
                 }
             } else {
@@ -358,7 +390,7 @@ impl Pattern for Squall {
                 }
                 if env > 0.01 {
                     for w in s.bolt.pts[..s.bolt.len].windows(2) {
-                        segs[n_segs] = (w[0], w[1], env);
+                        segs[n_segs] = Seg::new(w[0], w[1], env);
                         n_segs += 1;
                     }
                 }
@@ -366,57 +398,97 @@ impl Pattern for Squall {
         }
         let segs = &segs[..n_segs];
 
-        for (i, led) in leds.iter().enumerate() {
-            // Boiling floor: two crossed nested sines churn in place - no travel direction.
-            let bx = led.wx / BOIL_CELL_MM * TAU;
-            let by = led.wy / BOIL_CELL_MM * TAU;
-            let boil = ((bx + (by * 0.83 + boil2).sin() + boil1).sin()
-                + (by + (bx * 0.71 + boil1).sin() + boil2).sin()) * 0.5;
-            let mut energy = WATER_FLOOR + BOIL_DEPTH * boil;
+        // Per-frame rotation angles for the boil's inner sines, and the cell scale as one
+        // multiply rather than a divide plus a multiply per LED.
+        let boil_k = TAU / BOIL_CELL_MM;
+        let (b1_sin, b1_cos) = boil1.sin_cos();
+        let (b2_sin, b2_cos) = boil2.sin_cos();
+        let (fp_sin, fp_cos) = foam_phase.sin_cos();
+        let (ph_sin, ph_cos) = phase_phasors();
 
-            // Upwellings: a young bloom is a filled swell; the rim blend morphs it toward
-            // a ring as it ages, so it dies ghosting outward instead of switching off.
-            for &(x, y, inv_r2, amp, ring) in &blooms {
+        // Boiling floor, seeded into the energy buffer. The inner sines come from the phasor
+        // tables; the outer two can't factor, since their arguments contain the inner results.
+        let Squall {
+            by_sin,
+            by_cos,
+            bx_sin,
+            bx_cos,
+            energy: energy_buf,
+            density: density_buf,
+            bolt: bolt_buf,
+            ..
+        } = self;
+        for (i, led) in leds.iter().enumerate() {
+            let bx = led.wx * boil_k;
+            let by = led.wy * boil_k;
+            let mod_y = by_sin[i] * b2_cos + by_cos[i] * b2_sin;
+            let mod_x = bx_sin[i] * b1_cos + bx_cos[i] * b1_sin;
+            let boil = ((bx + mod_y + boil1).sin() + (by + mod_x + boil2).sin()) * 0.5;
+            energy_buf[i] = WATER_FLOOR + BOIL_DEPTH * boil;
+            density_buf[i] = 0.0;
+            bolt_buf[i] = 0.0;
+        }
+
+        // Upwellings: a young bloom is a filled swell; the rim blend morphs it toward a ring as
+        // it ages, so it dies ghosting outward instead of switching off. Scattered onto the LEDs
+        // each bloom reaches, in slot order, so every LED sums them in the order it used to.
+        for &(x, y, inv_r2, amp, ring, reach) in &blooms {
+            grid::for_each_near(x, y, reach, |k| {
+                let led = &leds[k];
                 let q = ((led.wx - x).powi(2) + (led.wy - y).powi(2)) * inv_r2;
                 if q < 1.0 {
                     let filled = (1.0 - q) * (1.0 - q);
                     let ringed = 4.0 * q * (1.0 - q);
-                    energy += amp * lerp(filled, ringed, ring);
+                    energy_buf[k] += amp * lerp(filled, ringed, ring);
                 }
-            }
+            });
+        }
+
+        // Cloud cover, scattered the same way: pale mass over the water, saturating where
+        // lobes overlap.
+        for &(x, y, inv_r2, reach) in &lobes {
+            grid::for_each_near(x, y, reach, |k| {
+                let led = &leds[k];
+                let q = ((led.wx - x).powi(2) + (led.wy - y).powi(2)) * inv_r2;
+                if q < 1.0 {
+                    density_buf[k] += (1.0 - q) * (1.0 - q);
+                }
+            });
+        }
+
+        // Lightning: pure white along the lit tile sides, scattered onto the narrow ribbon of
+        // cells each side passes through. Taking the max means visit order does not matter.
+        let bolt_reach = (BOLT_CORE_MM * 3.0 / CELL_MM).ceil() as usize;
+        for s in segs {
+            grid::for_each_near_seg(s.a, s.b, bolt_reach, |k| {
+                let led = &leds[k];
+                let d2 = seg_d2(s, led.wx, led.wy);
+                if d2 < BOLT_CORE_MM * BOLT_CORE_MM * 9.0 {
+                    let core = (BOLT_GAIN * (-d2 / (BOLT_CORE_MM * BOLT_CORE_MM)).exp()).min(1.0);
+                    bolt_buf[k] = bolt_buf[k].max(s.env * core);
+                }
+            });
+        }
+
+        for (i, led) in leds.iter().enumerate() {
+            let energy = energy_buf[i];
 
             // Water color, then froth where the crest breaks: hash-twinkled speckle.
             let mut c = water_ramp(energy);
             let excess = ((energy - FOAM_THRESH) * FOAM_GAIN).clamp(0.0, 1.0);
             if excess > 0.0 {
                 let h = (led.chain_idx as u32).wrapping_mul(2654435761);
-                let tw = (foam_phase + (h % 628) as f32 / 100.0).sin() * 0.5 + 0.5;
+                let k = (h % PHASE_STEPS as u32) as usize;
+                let tw = (ph_sin[k] * fp_cos + ph_cos[k] * fp_sin) * 0.5 + 0.5;
                 c = mix(c, FOAM_COLOR, excess * tw * tw);
             }
 
-            // Cloud cover: pale mass over the water, saturating where lobes overlap.
-            let mut density = 0.0f32;
-            for &(x, y, inv_r2) in &lobes {
-                let q = ((led.wx - x).powi(2) + (led.wy - y).powi(2)) * inv_r2;
-                if q < 1.0 {
-                    density += (1.0 - q) * (1.0 - q);
-                }
-            }
-            let density = density.min(1.0);
+            let density = density_buf[i].min(1.0);
             c = mix(c, CLOUD_COLOR, density * CLOUD_BRIGHT);
 
-            // Lightning: pure white along the lit tile sides. The overdrive saturates
-            // the spatial falloff, so the LED rows straddling the line hit true full
-            // white while the pulse envelope keeps its whole flicker depth. The
-            // distance cutoff skips the exp for far-away LEDs.
-            let mut bolt = 0.0f32;
-            for &(a, b, env) in segs {
-                let d2 = seg_d2(a, b, led.wx, led.wy);
-                if d2 < BOLT_CORE_MM * BOLT_CORE_MM * 9.0 {
-                    let core = (BOLT_GAIN * (-d2 / (BOLT_CORE_MM * BOLT_CORE_MM)).exp()).min(1.0);
-                    bolt = bolt.max(env * core);
-                }
-            }
+            // The overdrive saturates the spatial falloff, so the LED rows straddling the line
+            // hit true full white while the pulse envelope keeps its whole flicker depth.
+            let bolt = bolt_buf[i];
             if bolt > 0.0 {
                 c = mix(c, FLASH_COLOR, bolt);
             }
@@ -487,10 +559,31 @@ fn lattice_pos(r: i32, i: i32) -> (f32, f32) {
 }
 
 /// Squared distance from (x, y) to the segment a-b.
-fn seg_d2(a: (f32, f32), b: (f32, f32), x: f32, y: f32) -> f32 {
-    let (ex, ey) = (b.0 - a.0, b.1 - a.1);
-    let t = (((x - a.0) * ex + (y - a.1) * ey) / (ex * ex + ey * ey).max(1.0)).clamp(0.0, 1.0);
-    let (dx, dy) = (x - a.0 - ex * t, y - a.1 - ey * t);
+/// One lit bolt side, with the direction terms of the distance test hoisted off the per-LED
+/// path - they depend only on the segment.
+#[derive(Clone, Copy)]
+struct Seg {
+    a:    (f32, f32),
+    b:    (f32, f32),
+    ex:   f32,
+    ey:   f32,
+    len2: f32,
+    env:  f32,
+}
+
+impl Seg {
+    const ZERO: Seg =
+        Seg { a: (0.0, 0.0), b: (0.0, 0.0), ex: 0.0, ey: 0.0, len2: 1.0, env: 0.0 };
+
+    fn new(a: (f32, f32), b: (f32, f32), env: f32) -> Self {
+        let (ex, ey) = (b.0 - a.0, b.1 - a.1);
+        Seg { a, b, ex, ey, len2: (ex * ex + ey * ey).max(1.0), env }
+    }
+}
+
+fn seg_d2(s: &Seg, x: f32, y: f32) -> f32 {
+    let t = (((x - s.a.0) * s.ex + (y - s.a.1) * s.ey) / s.len2).clamp(0.0, 1.0);
+    let (dx, dy) = (x - s.a.0 - s.ex * t, y - s.a.1 - s.ey * t);
     dx * dx + dy * dy
 }
 

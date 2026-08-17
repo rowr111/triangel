@@ -1,7 +1,7 @@
 use std::sync::OnceLock;
 
 use crate::led::geom::DIST_APEX;
-use crate::patterns::{Frame, Pattern, lerp};
+use crate::patterns::{Frame, Pattern, lerp, phase_phasors, PHASE_STEPS};
 use crate::led::map::{Led, WORLD_BOT, WORLD_CX, WORLD_H, LED_COUNT};
 use core::f32::consts::{PI, TAU};
 
@@ -43,9 +43,6 @@ const FLARE_PERIOD_MS: u32 = 8_300;  // one hash-picked tile flares up per perio
 const FLARE_LEN:  f32 = 0.25;        // flare duration as a fraction of its period
 const FLARE_HEAT: f32 = 0.3;         // heat added across the flaring tile
 
-// The hash quantizes each LED's flicker phase offset to this many steps of 0.01 rad.
-const FLICK_PHASE_STEPS: usize = 628;
-
 pub struct ApexFlame {
     pub speed:      f32, // mm/s outward, primary wave
     pub wavelength: f32, // mm per cycle, primary wave
@@ -72,21 +69,6 @@ impl ApexFlame {
     }
 }
 
-/// sin and cos of every flicker phase offset the hash can produce.
-fn flick_phasors() -> &'static ([f32; FLICK_PHASE_STEPS], [f32; FLICK_PHASE_STEPS]) {
-    static T: OnceLock<([f32; FLICK_PHASE_STEPS], [f32; FLICK_PHASE_STEPS])> = OnceLock::new();
-    T.get_or_init(|| {
-        let mut sn = [0.0; FLICK_PHASE_STEPS];
-        let mut cs = [0.0; FLICK_PHASE_STEPS];
-        for k in 0..FLICK_PHASE_STEPS {
-            let (s, c) = (k as f32 / 100.0).sin_cos();
-            sn[k] = s;
-            cs[k] = c;
-        }
-        (sn, cs)
-    })
-}
-
 impl Pattern for ApexFlame {
     fn render(&mut self, leds: &[Led], t_ms: u32, _sound_level: f32, out: &mut Frame) {
         // Fold each time term to its own period before the f32 cast (long-uptime precision).
@@ -110,7 +92,7 @@ impl Pattern for ApexFlame {
         let (b2_sin, b2_cos) = (-t2_s * spd2 * (TAU / wl2)).sin_cos();
         let (f1_sin, f1_cos) = flick_phase.sin_cos();
         let (f2_sin, f2_cos) = flick2_phase.sin_cos();
-        let (fl_sin, fl_cos) = flick_phasors();
+        let (fl_sin, fl_cos) = phase_phasors();
 
         // Ember flights: each slot is a scheduled, deterministic arc - spawn inside the
         // triangle's width low down, rise with a sideways wobble, fade out (sin envelope).
@@ -168,8 +150,8 @@ impl Pattern for ApexFlame {
             // (transition.rs's sparkle trick): a linear phase step along the chain would
             // read as a coherent sweep across the fixture instead of random flicker.
             let h = (led.chain_idx as u32).wrapping_mul(2654435761);
-            let k1 = (h % FLICK_PHASE_STEPS as u32) as usize;
-            let k2 = ((h >> 16) % FLICK_PHASE_STEPS as u32) as usize; // decorrelated second phase
+            let k1 = (h % PHASE_STEPS as u32) as usize;
+            let k2 = ((h >> 16) % PHASE_STEPS as u32) as usize; // decorrelated second phase
             let flicker = 1.0 + FLICKER_DEPTH * 0.5
                 * (fl_sin[k1] * f1_cos + fl_cos[k1] * f1_sin
                  + fl_sin[k2] * f2_cos + fl_cos[k2] * f2_sin);
