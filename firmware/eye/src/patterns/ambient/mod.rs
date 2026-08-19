@@ -5,3 +5,4 @@ pub mod rainbow;
 pub mod ricochet;
 pub mod shimmer;
 pub mod squall;
+pub mod uzumaki;

@@ -1,0 +1,10 @@
+{
+    "autodeskProduct": "Fusion360",
+    "type": "script",
+    "author": "",
+    "description": {
+        "": "Triangel controller board wall-mount plate generator"
+    },
+    "supportedOS": "windows|mac",
+    "editEnabled": true
+}
