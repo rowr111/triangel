@@ -21,7 +21,7 @@ Two Baochip-1x chips run under [Xous OS](https://betrusted.io/xous-book/):
 | [`firmware/shared/`](firmware/shared/README.md) | Shared crate — mel frame wire protocol used by both chips |
 | [`triangel previewer/`](triangel%20previewer/README.md) | Browser-based LED simulator and desktop audio tools |
 | `hardware/` | KiCad PCB design files |
-| `graphics/` | Artwork and graphic assets |
+| [`graphics/`](graphics/README.md) | Artwork, assembly sticker sheets, and the scripts that generate them |
 
 ## Building the ear kernel (UART2 freed)
 
