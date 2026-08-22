@@ -9,10 +9,10 @@ The **ear** chip captures audio, computes a mel filterbank, and streams the resu
 Pipeline per frame (~32 ms):
 
 ```
-mic (I2S)  ──►  512-sample frame  ──►  Hann window + FFT  ──►  24 mel bands  ──►  UART TX  ──►  eye
+mic (I2S)  ──►  512-sample frame  ──►  24 bandpass filters  ──►  24 mel bands  ──►  UART TX  ──►  eye
 ```
 
-The 24 mel bands span 40–8000 Hz on a perceptual (mel) scale — lower bands are narrower in Hz to match how hearing works. This is the same structure as a hardware spectrum analyzer display. Each band value is u16 (0–65535), log-compressed and min-max normalized per frame. An activity flag is also sent, set when sustained RMS energy exceeds a calibrated threshold; the eye uses this for Auto sound mode switching.
+The 24 mel bands span 31–8000 Hz on a perceptual (mel) scale — lower bands are narrower in Hz to match how hearing works. This is the same structure as a hardware spectrum analyzer display, and it is built the same way: one bandpass filter per band, squaring and averaging each filter's output over the frame to get that band's energy. No FFT is involved, so there is no windowing and no frame-boundary reset — the filters run continuously. Each band value is u16 (0–65535), log-compressed and normalized against an adaptive ceiling that tracks the loudest band. An activity flag is also sent, set when sustained RMS energy exceeds a calibrated threshold; the eye uses this for Auto sound mode switching.
 
 ## Hardware
 
@@ -37,7 +37,7 @@ The 24 mel bands span 40–8000 Hz on a perceptual (mel) scale — lower bands a
 src/
 +-- main.rs       - entry point; audio capture → mel → UART loop
 +-- audio.rs      - AudioSource trait + UartAudio (uart-audio feature) + I2sAudio (production)
-+-- mel.rs        - MelProcessor: Hann window, FFT, triangular mel filters, log + normalize
++-- mel.rs        - MelProcessor: 24 mel-spaced bandpass filters, log + normalize
 +-- uart_out.rs   - UartOut: encodes MelFrame and transmits to eye over UART
 ```
 

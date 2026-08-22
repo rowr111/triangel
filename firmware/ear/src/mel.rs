@@ -12,9 +12,17 @@
 //!
 //! # Relation to a spectrum analyzer
 //!
-//! This is doing exactly what a spectrum analyzer does: FFT the audio, group
-//! the frequency bins into bands, display each band's energy level. Our 24 band
-//! values are those energy levels; the LED patterns on the eye chip are the "display".
+//! This is doing exactly what a hardware spectrum analyzer does: run the audio
+//! through a bank of bandpass filters, measure how much energy comes out of each
+//! one, display those levels. Our 24 band values are those energy levels; the LED
+//! patterns on the eye chip are the "display".
+//!
+//! A filter bank is not the only way to get here - the textbook alternative is an
+//! FFT followed by grouping the frequency bins into bands. The filter bank is used
+//! instead because it needs no FFT library, no windowing, and no complex numbers:
+//! each band is five multiplies per sample. It also runs continuously rather than
+//! per-frame, so bands do not reset at frame boundaries. The tradeoff is softer
+//! separation between neighboring bands, which does not matter for driving LEDs.
 //!
 //! The one difference from a simple spectrum analyzer is the mel scale. Most
 //! cheap spectrum analyzers use linearly-spaced bands (equal Hz width each),
@@ -28,24 +36,27 @@
 //!
 //! # Why the mel scale?
 //!
-//! A normal FFT at 16 kHz with 512 samples gives 257 frequency bins each
-//! 31 Hz wide. The problem is that human hearing doesn't care equally about
-//! all 31 Hz-wide slices: we're very sensitive to differences at low frequencies
-//! (100 Hz vs 200 Hz sounds huge) but barely notice differences at high
-//! frequencies (7000 Hz vs 7100 Hz sounds the same). The mel scale compresses
-//! high frequencies and expands low ones to match this perceptual reality.
-//! Grouping FFT bins into mel-spaced triangular filters gives us 24 bands
-//! that each carry roughly equal perceptual weight.
+//! The obvious way to place 24 bands between 31 Hz and 8 kHz is evenly in Hz,
+//! about 330 Hz apart. The problem is that human hearing doesn't care equally
+//! about all 330 Hz-wide slices: we're very sensitive to differences at low
+//! frequencies (100 Hz vs 200 Hz sounds huge) but barely notice differences at
+//! high frequencies (7000 Hz vs 7100 Hz sounds the same). Even spacing would put
+//! all the bass in the first bar and waste most of the display on highs that all
+//! sound alike. The mel scale compresses high frequencies and expands low ones to
+//! match this perceptual reality, so all 24 bands carry roughly equal perceptual
+//! weight and the LED patterns react evenly across the full sonic range.
+//!
+//! Spacing the filter centers on the mel scale makes the bands narrow at the
+//! bottom and wide at the top: band 1 covers about 31-191 Hz while band 24 covers
+//! about 6.4-8 kHz.
 //!
 //! # Processing pipeline
 //!
 //! ```text
 //! raw i16 samples
 //!   -> RMS for activity detection + overall level
-//!   -> Hann window (reduces edge artifacts)
-//!   -> 512-point FFT
-//!   -> power spectrum (|X[k]|^2 for each bin)
-//!   -> 24 triangular mel filters (weighted sum of power bins per band)
+//!   -> 24 mel-spaced bandpass filters, one second-order IIR section each
+//!   -> square and average each filter's output over the frame (band energy)
 //!   -> log compression (matches perceived loudness)
 //!   -> adaptive-gain normalize (fast-attack/slow-decay ceiling) so it stays
 //!      interesting at any volume, preserving relative band loudness
@@ -53,8 +64,6 @@
 //!   -> MelFrame { bands: [u16; 24], level, activity }
 //! ```
 
-use rustfft::{num_complex::Complex, Fft, FftPlanner};
-use std::sync::Arc;
 use triangel_shared::mel::{MelFrame, MEL_BANDS};
 
 use crate::audio::FFT_SIZE;
@@ -64,8 +73,8 @@ const SAMPLE_RATE: f32 = 16_000.0;
 
 /// Lowest frequency covered by the filterbank.
 /// 31 Hz captures sub-bass and kick drum fundamentals (important for EDM).
-/// Going lower than ~31 Hz isn't useful - that's our FFT bin size at 16 kHz/512
-/// samples, so there's no frequency information below it.
+/// Going lower than ~31 Hz isn't useful - one cycle at 31 Hz already fills the
+/// whole 32 ms frame, so there's nothing below it a frame can resolve.
 const MEL_LOW_HZ: f32 = 31.0;
 
 /// Highest frequency covered. At 16 kHz the Nyquist limit is 8 kHz, so this
@@ -117,37 +126,100 @@ fn mel_to_hz(mel: f32) -> f32 {
     700.0 * (10f32.powf(mel / 2595.0) - 1.0)
 }
 
+/// One second-order IIR bandpass section: passes frequencies near its center and
+/// attenuates everything else. Twenty-four of these side by side make the filter bank.
+struct Biquad {
+    b0: f32,
+    a1: f32,
+    a2: f32,
+    /// Delay-line state, carried across samples and across frames.
+    s1: f32,
+    s2: f32,
+}
+
+impl Biquad {
+    /// Constant-peak-gain bandpass (Audio EQ Cookbook) centered on `center_hz` with
+    /// a -3 dB width of `bandwidth_hz`, normalized so the a0 coefficient is 1.
+    fn bandpass(center_hz: f32, bandwidth_hz: f32) -> Self {
+        let w0 = 2.0 * std::f32::consts::PI * center_hz / SAMPLE_RATE;
+        // alpha = sin(w0) / 2Q, with Q = center / bandwidth.
+        let alpha = w0.sin() * bandwidth_hz / (2.0 * center_hz);
+        let a0 = 1.0 + alpha;
+        Self { b0: alpha / a0, a1: -2.0 * w0.cos() / a0, a2: (1.0 - alpha) / a0, s1: 0.0, s2: 0.0 }
+    }
+
+    /// Feed one sample in, get that sample's filtered output back.
+    #[inline]
+    fn step(&mut self, x: f32) -> f32 {
+        // Direct form II transposed. A bandpass has b1 = 0 and b2 = -b0, so the
+        // single product b0*x serves both feed-forward taps: three multiplies total.
+        let bx = self.b0 * x;
+        let y = bx + self.s1;
+        self.s1 = self.s2 - self.a1 * y;
+        self.s2 = -bx - self.a2 * y;
+        y
+    }
+}
+
+/// The 24 mel-spaced bandpass filters plus one energy accumulator per band.
+///
+/// Samples go in one at a time and 24 band energies come out once per frame. That
+/// narrow interface is deliberate: this loop is fixed-shape integer-friendly work
+/// with no branching, so it is the piece that could move to a BIO co-processor core
+/// later without disturbing anything downstream of it.
+struct BandBank {
+    filters: [Biquad; MEL_BANDS],
+    /// Running sum of squared filter output per band, since the last `take_energies`.
+    energy: [f32; MEL_BANDS],
+    /// Samples accumulated into `energy`, so the sum can be turned into a mean.
+    count: u32,
+}
+
+impl BandBank {
+    /// Place MEL_BANDS + 2 points evenly on the mel axis between MEL_LOW_HZ and
+    /// MEL_HIGH_HZ, then give band m a filter centered on point m+1 spanning points
+    /// m..m+2. Q works out between roughly 0.7 at the bottom and 4.6 at the top.
+    fn new() -> Self {
+        let mel_low = hz_to_mel(MEL_LOW_HZ);
+        let mel_high = hz_to_mel(MEL_HIGH_HZ);
+        let edge_hz = |i: usize| {
+            mel_to_hz(mel_low + (mel_high - mel_low) * i as f32 / (MEL_BANDS + 1) as f32)
+        };
+        let filters = std::array::from_fn(|m| {
+            Biquad::bandpass(edge_hz(m + 1), edge_hz(m + 2) - edge_hz(m))
+        });
+        Self { filters, energy: [0.0; MEL_BANDS], count: 0 }
+    }
+
+    /// Run one sample through every band and accumulate its squared output.
+    #[inline]
+    fn push(&mut self, sample: f32) {
+        for (filter, energy) in self.filters.iter_mut().zip(self.energy.iter_mut()) {
+            let y = filter.step(sample);
+            *energy += y * y;
+        }
+        self.count += 1;
+    }
+
+    /// Mean-square energy per band over the samples pushed since the last call,
+    /// clearing the accumulators. Filter state is left alone, so the bands stay
+    /// continuous across frame boundaries.
+    fn take_energies(&mut self) -> [f32; MEL_BANDS] {
+        let n = self.count.max(1) as f32;
+        let out = std::array::from_fn(|m| self.energy[m] / n);
+        self.energy = [0.0; MEL_BANDS];
+        self.count = 0;
+        out
+    }
+}
+
 /// Computes mel-frequency band energies and activity from raw audio samples.
 ///
 /// Create once at startup with `MelProcessor::new()`, then call `process()`
 /// on every incoming 512-sample frame.
 pub struct MelProcessor {
-    /// rustfft plan for a 512-point forward FFT.
-    /// Plans are expensive to build (they pick the fastest algorithm for the
-    /// size), so we build it once and reuse it every frame.
-    fft: Arc<dyn Fft<f32>>,
-
-    /// Precomputed Hann window coefficients, one per sample.
-    ///
-    /// A Hann window is a smooth bell curve (1 at the center, 0 at both ends).
-    /// Multiplying samples by it before the FFT tapers the frame to zero at
-    /// its edges, preventing "spectral leakage" - the artificial smearing of
-    /// energy into neighboring frequency bins that happens when a signal
-    /// isn't an exact multiple of the frame length.
-    hann: [f32; FFT_SIZE],
-
-    // Sparse triangular filter bank: each band is a list of (bin_index, weight).
-    //
-    // For each of the 24 mel bands we store only the FFT bins that overlap
-    // with that band's triangular filter (most bins have zero weight and are
-    // skipped). Each entry is (bin_index, weight) where weight is between
-    // 0.0 and 1.0 from the triangle shape. Sparse storage avoids iterating
-    // over all 257 bins for every band on every frame.
-    filters: Vec<Vec<(usize, f32)>>,
-
-    /// Scratch space that rustfft needs internally during the FFT.
-    /// Pre-allocated once so the FFT itself makes no heap allocations per frame.
-    scratch: Vec<Complex<f32>>,
+    /// The 24 mel-spaced bandpass filters and their per-frame energy accumulators.
+    bank: BandBank,
 
     /// Exponentially-smoothed RMS level used for activity detection and the
     /// overall level. Updated every frame with asymmetric attack/decay.
@@ -162,93 +234,10 @@ pub struct MelProcessor {
 }
 
 impl MelProcessor {
-    /// Build the FFT plan and precompute the Hann window and mel filter bank.
-    /// Call once at startup - this allocates; `process()` does not.
+    /// Build the mel bandpass filter bank. Call once at startup.
     pub fn new() -> Self {
-        // --- FFT plan ---
-        // FftPlanner chooses the fastest algorithm for size 512 (Cooley-Tukey
-        // radix-2, since 512 = 2^9).
-        let mut planner = FftPlanner::new();
-        let fft = planner.plan_fft_forward(FFT_SIZE);
-
-        // --- Hann window ---
-        // w[n] = 0.5 * (1 - cos(2*pi*n / (N-1)))
-        // Ranges from 0.0 at the edges to 1.0 at the center.
-        let mut hann = [0f32; FFT_SIZE];
-        for (i, w) in hann.iter_mut().enumerate() {
-            *w = 0.5
-                * (1.0
-                    - (2.0 * std::f32::consts::PI * i as f32 / (FFT_SIZE - 1) as f32).cos());
-        }
-
-        // --- Mel filter bank construction ---
-        //
-        // Step 1: place MEL_BANDS + 2 = 26 equally-spaced points on the mel
-        // axis between mel(MEL_LOW_HZ) and mel(MEL_HIGH_HZ). These become the left
-        // edge, centre, and right edge of each triangular filter.
-        //
-        // We work in "FFT bin" units throughout (integer indices 0..256),
-        // so we immediately convert each mel point to the nearest bin.
-        let n_bins = FFT_SIZE / 2 + 1; // 257 unique bins from real FFT
-        let mel_low = hz_to_mel(MEL_LOW_HZ);
-        let mel_high = hz_to_mel(MEL_HIGH_HZ);
-        let freq_per_bin = SAMPLE_RATE / FFT_SIZE as f32; // 31.25 Hz per bin at 16 kHz / 512
-
-        // MEL_BANDS + 2 points linearly spaced in mel domain -> FFT bin indices
-        let bin_points: Vec<usize> = (0..=MEL_BANDS + 1)
-            .map(|i| {
-                let mel =
-                    mel_low + (mel_high - mel_low) * i as f32 / (MEL_BANDS + 1) as f32;
-                (mel_to_hz(mel) / freq_per_bin).round() as usize
-            })
-            .collect();
-
-        // Step 2: for each band m, build a triangular filter over bins
-        // [bin_points[m] .. bin_points[m+2]] with peak at bin_points[m+1].
-        //
-        //  weight
-        //    1 |        /\
-        //      |       /  \
-        //      |      /    \
-        //    0 |-----/------\------> bin
-        //      left  center  right
-        //
-        // We store only the (bin, weight) pairs where weight > 0 to keep the
-        // per-frame dot product fast.
-
-        // Build triangular filters as sparse (bin, weight) pairs
-        let filters: Vec<Vec<(usize, f32)>> = (0..MEL_BANDS)
-            .map(|m| {
-                let left = bin_points[m];
-                let center = bin_points[m + 1];
-                let right = bin_points[m + 2];
-                (left..=right.min(n_bins - 1))
-                    .filter_map(|k| {
-                        let w = if k <= center {
-                            if center == left {
-                                1.0
-                            } else {
-                                (k - left) as f32 / (center - left) as f32
-                            }
-                        } else if right == center {
-                            0.0
-                        } else {
-                            (right - k) as f32 / (right - center) as f32
-                        };
-                        if w > 0.0 { Some((k, w)) } else { None }
-                    })
-                    .collect()
-            })
-            .collect();
-
-        let scratch_len = fft.get_inplace_scratch_len();
-        let scratch = vec![Complex::default(); scratch_len];
-
         Self {
-            fft,
-            hann,
-            filters,
-            scratch,
+            bank: BandBank::new(),
             smoothed_rms: 0.0,
             // Start low so the ceiling adapts upward over the first few frames.
             ceiling: -20.0,
@@ -258,14 +247,13 @@ impl MelProcessor {
 
     /// Process one 512-sample audio frame and return a `MelFrame`.
     ///
-    /// Hot path (~30x/second). The FFT runs on the pre-allocated scratch, but the
-    /// input/power buffers still allocate per call. Steps: broadband RMS for level
-    /// and activity, Hann window, 512-point FFT, power spectrum, 24 triangular mel
-    /// filters, log compression, a single adaptive-gain normalize (fast-attack/
-    /// slow-decay ceiling), power-law shaping, and per-band fast-rise/slow-fall
-    /// smoothing. The gain/shaping/smoothing constants are a first pass (see above).
+    /// Hot path (~30x/second), and allocation-free. Steps: broadband RMS for level
+    /// and activity, the 24 bandpass filters, log compression, a single adaptive-gain
+    /// normalize (fast-attack/slow-decay ceiling), power-law shaping, and per-band
+    /// fast-rise/slow-fall smoothing. The gain/shaping/smoothing constants are a
+    /// first pass (see above).
     pub fn process(&mut self, samples: &[i16; FFT_SIZE]) -> MelFrame {
-        // --- Activity + overall level (broadband RMS, before windowing) ---
+        // --- Activity + overall level (broadband RMS, straight off the raw samples) ---
         // RMS = sqrt(mean(sample^2)); i16 normalized to -1.0..1.0 by /32768.
         let rms = (samples
             .iter()
@@ -283,26 +271,18 @@ impl MelProcessor {
         let activity = self.smoothed_rms > ACTIVITY_THRESHOLD;
         let level = ((self.smoothed_rms * LEVEL_GAIN).clamp(0.0, 1.0) * 65535.0) as u16;
 
-        // --- Hann window + FFT ---
-        // Multiply each sample by its Hann coefficient, normalize to float, pack as
-        // a complex number (imag = 0). rustfft works in-place on complex buffers.
-        let mut buf: Vec<Complex<f32>> = samples
-            .iter()
-            .zip(self.hann.iter())
-            .map(|(&s, &w)| Complex { re: (s as f32 / 32768.0) * w, im: 0.0 })
-            .collect();
-        self.fft.process_with_scratch(&mut buf, &mut self.scratch);
-
-        // Power spectrum |X[k]|^2, positive frequencies only (257 unique bins).
-        let power: Vec<f32> = buf[..FFT_SIZE / 2 + 1].iter().map(|c| c.norm_sqr()).collect();
-
-        // --- Mel filterbank -> log energy per band ---
-        // Weighted sum of power bins per triangular filter, then natural log
-        // (perceived loudness is ~logarithmic; 1e-10 guards log(0) on silence).
+        // --- Bandpass filter bank -> log energy per band ---
+        // Every sample passes through all 24 filters; each band accumulates the square
+        // of its own filter's output. No windowing is needed because the filters run
+        // continuously rather than treating the frame as an isolated block.
+        for &s in samples.iter() {
+            self.bank.push(s as f32 / 32768.0);
+        }
+        // Natural log of each band's mean-square energy (perceived loudness is
+        // ~logarithmic; 1e-10 guards log(0) on silence).
         let mut logmel = [0f32; MEL_BANDS];
-        for (m, filter) in self.filters.iter().enumerate() {
-            let energy: f32 = filter.iter().map(|&(k, w)| power[k] * w).sum();
-            logmel[m] = (energy + 1e-10).ln();
+        for (lm, e) in logmel.iter_mut().zip(self.bank.take_energies()) {
+            *lm = (e + 1e-10).ln();
         }
 
         // --- Adaptive normalization ---

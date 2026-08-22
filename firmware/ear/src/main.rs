@@ -28,7 +28,7 @@ fn main() -> ! {
 
     log::info!("ear ready");
 
-    // With the `mel` feature: run the FFT + 24-band mel filterbank on each frame and
+    // With the `mel` feature: run the 24-band mel filterbank on each frame and
     // send framed MelFrames to the eye. Otherwise: the temporary level path - a simple
     // RMS from each frame sent as one 0-255 byte.
     #[cfg(feature = "mel")]

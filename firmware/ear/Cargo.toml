@@ -25,7 +25,6 @@ aes = { git = "https://github.com/betrusted-io/xous-core", rev = "aee40a797af372
 xous-usb-hid = { git = "https://github.com/betrusted-io/xous-usb-hid.git", branch = "main", optional = true }
 
 triangel-shared = { path = "../shared" }
-rustfft = "6"
 
 [patch.crates-io]
 getrandom = { git = "https://github.com/betrusted-io/xous-core", rev = "aee40a797af372b6debf938d2902b03d1002e8a2" }
@@ -40,7 +39,7 @@ board-dabao = [
 ]
 usb = []
 uart-audio = ["usb"]
-# Compute the real 24-band mel filterbank on the ear (runs the FFT). Off = a
+# Compute the real 24-band mel filterbank on the ear (runs the bandpass filters). Off = a
 # level-only frame from a simple RMS, bands zeroed. Either way the ear sends the same
 # 53-byte MelFrame, so this is ear-only and never affects the eye or the wire format.
 mel = []

@@ -2,7 +2,7 @@
 //! `MelFrame` (see `triangel-shared`): 53 bytes total - a sync byte, the 24 bands,
 //! the level, an activity flag, and an XOR checksum. The frame format is constant
 //! regardless of the `mel` feature, so the two chips never disagree on the wire
-//! layout; `mel` only decides whether the bands carry real FFT data (`main.rs` with
+//! layout; `mel` only decides whether the bands carry real filterbank data (`main.rs` with
 //! mel) or are zero with just the level filled in (without mel, via
 //! `MelFrame::level_only`).
 //!

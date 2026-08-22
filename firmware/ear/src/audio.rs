@@ -1,4 +1,4 @@
-/// Number of samples per audio frame - matches the FFT size in mel.rs.
+/// Number of samples per audio frame - the block mel.rs reduces to one MelFrame.
 pub const FFT_SIZE: usize = 512;
 
 pub trait AudioSource {
