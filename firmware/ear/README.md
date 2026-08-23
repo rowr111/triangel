@@ -14,6 +14,8 @@ mic (I2S)  ──►  512-sample frame  ──►  24 bandpass filters  ──�
 
 The 24 mel bands span 31–8000 Hz on a perceptual (mel) scale — lower bands are narrower in Hz to match how hearing works. This is the same structure as a hardware spectrum analyzer display, and it is built the same way: one bandpass filter per band, squaring and averaging each filter's output over the frame to get that band's energy. No FFT is involved, so there is no windowing and no frame-boundary reset — the filters run continuously. Each band value is u16 (0–65535), log-compressed and normalized against an adaptive ceiling that tracks the loudest band. An activity flag is also sent, set when sustained RMS energy exceeds a calibrated threshold; the eye uses this for Auto sound mode switching.
 
+Every frame also carries an overall **level**, on a different scale from the bands on purpose: the bands are normalized so they give spectral shape but never go dark in a quiet room, while the level is absolute dBFS over `LEVEL_DB_FLOOR`..0 and does. Both chips convert through `level_to_wire` / `level_from_wire` in the shared crate. dB SPL is dBFS + 120.
+
 ## Hardware
 
 | Thing | Detail |
@@ -65,6 +67,7 @@ Until the first keystroke the board prints a liveness line every 2 s naming the 
 | `s` | Count samples for 1 s and compare against the expected 48000 Hz |
 | `t` | 1 s of statistics: min, max, DC offset, RMS |
 | `m` | Live level meter for 15 s |
+| `p` | Filterbank cost per frame against the frame budget |
 | `?` | Help |
 
 Commands run on the audio thread between frames, so the eye stops receiving mel frames while one is in progress - up to 15 s for `m`, 3 s or less for the rest. The eye decays to silence after 200 ms without a frame and recovers on its own; because its Auto-mode arm and release times are both 30 s, even the longest command will not flip it out of sound-reactive mode.

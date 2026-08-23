@@ -1,10 +1,7 @@
-//! Sends the ear's audio to the eye chip over a hardware UART, always as a framed
-//! `MelFrame` (see `triangel-shared`): 53 bytes total - a sync byte, the 24 bands,
-//! the level, an activity flag, and an XOR checksum. The frame format is constant
-//! regardless of the `mel` feature, so the two chips never disagree on the wire
-//! layout; `mel` only decides whether the bands carry real filterbank data (`main.rs` with
-//! mel) or are zero with just the level filled in (without mel, via
-//! `MelFrame::level_only`).
+//! Sends the ear's audio to the eye chip over a hardware UART as a framed `MelFrame`
+//! (see `triangel-shared`): 53 bytes total - a sync byte, the 24 bands, the level, an
+//! activity flag, and an XOR checksum. The bands carry the filterbank's normalized
+//! output and the level carries absolute dBFS; both are produced on every frame.
 //!
 //! Physical connection: ear pin 15 (PB14, UART2 TX) wires to eye pin 16 (PB13,
 //! UART2 RX), plus GND. Baud rate must match `EAR_UART_BAUD` in eye's `audio.rs`.

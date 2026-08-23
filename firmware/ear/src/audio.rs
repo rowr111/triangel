@@ -18,6 +18,9 @@ pub const DECIMATE: usize = 3;
 pub const RAW_RATE_HZ: u32 = BIO_QUANTUM_HZ / 2 / BCLK_PER_FRAME;
 /// The rate read_frame returns, after the box average that decimates each group.
 pub const SAMPLE_RATE_HZ: u32 = RAW_RATE_HZ / DECIMATE as u32;
+/// Wall-clock period of one FFT_SIZE frame - the budget everything downstream of
+/// read_frame has to fit inside before the next frame is ready.
+pub const FRAME_PERIOD_MS: u32 = FFT_SIZE as u32 * 1000 / SAMPLE_RATE_HZ;
 
 // Integer division would quietly truncate a combination that does not divide evenly,
 // leaving the filterbank tuned for a rate that never occurs.

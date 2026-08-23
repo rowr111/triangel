@@ -26,6 +26,12 @@ xous-usb-hid = { git = "https://github.com/betrusted-io/xous-usb-hid.git", branc
 
 triangel-shared = { path = "../shared" }
 
+[profile.release]
+# The soft-float intrinsics live in compiler_builtins, so they only inline across
+# the crate boundary with LTO on. This loop is 98k of them per frame.
+lto = true
+codegen-units = 1
+
 [patch.crates-io]
 getrandom = { git = "https://github.com/betrusted-io/xous-core", rev = "aee40a797af372b6debf938d2902b03d1002e8a2" }
 
@@ -37,9 +43,5 @@ board-dabao = [
     "bao1x-hal/board-dabao",
     "usb-bao1x/board-dabao",
 ]
-# Compute the real 24-band mel filterbank on the ear (runs the bandpass filters). Off = a
-# level-only frame from a simple RMS, bands zeroed. Either way the ear sends the same
-# 53-byte MelFrame, so this is ear-only and never affects the eye or the wire format.
-mel = []
 aestests = ["aes"]
 default = ["bao1x", "board-dabao"]

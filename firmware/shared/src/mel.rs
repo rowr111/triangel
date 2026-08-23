@@ -7,6 +7,20 @@ pub const SYNC_BYTE: u8 = 0xAA;
 /// Number of mel frequency bands the ear chip computes.
 pub const MEL_BANDS: usize = 24;
 
+/// Quietest level the wire carries. LEVEL_DB_FLOOR..0 dBFS maps onto 0..=65535.
+pub const LEVEL_DB_FLOOR: f32 = -90.0;
+
+/// Encode dBFS for the wire. Both chips go through this so they cannot disagree.
+pub fn level_to_wire(dbfs: f32) -> u16 {
+    let t = ((dbfs - LEVEL_DB_FLOOR) / -LEVEL_DB_FLOOR).clamp(0.0, 1.0);
+    (t * 65535.0) as u16
+}
+
+/// Decode a wire level back to absolute dBFS.
+pub fn level_from_wire(level: u16) -> f32 {
+    LEVEL_DB_FLOOR + (level as f32 / 65535.0) * -LEVEL_DB_FLOOR
+}
+
 /// Wire frame length in bytes: 1 sync + MEL_BANDS*2 bands + 2 level + 1 activity + 1 checksum.
 pub const FRAME_LEN: usize = 1 + MEL_BANDS * 2 + 2 + 1 + 1; // 53 bytes
 
@@ -31,9 +45,9 @@ pub const FRAME_LEN: usize = 1 + MEL_BANDS * 2 + 2 + 1 + 1; // 53 bytes
 /// [0x34]        XOR checksum of bytes [0x01..0x33]
 /// ```
 ///
-/// `bands` are AGC-normalized + smoothed and scaled so 0 = silence and 65535 = full
-/// scale (the eye divides by 65535.0). `level` is one overall loudness value on the
-/// same scale, for simple level-reactive patterns. The eye chip divides by 65535.0.
+/// Different scales on purpose: `bands` are AGC-normalized, so they give spectral
+/// shape but never go dark in a quiet room. `level` is absolute dBFS, so it does.
+/// dB SPL is dBFS + 120 with this microphone.
 ///
 /// The activity flag is set by the ear chip based on sustained absolute energy
 /// exceeding a calibrated threshold - the eye uses it for Auto sound mode without
@@ -45,13 +59,6 @@ pub struct MelFrame {
 }
 
 impl MelFrame {
-    /// Build a frame that carries only an overall level + activity, with the bands
-    /// zeroed. Used before the mel FFT is enabled (or anywhere a level is all that's
-    /// available), so the wire format stays the same 53-byte frame either way.
-    pub fn level_only(level: u16, activity: bool) -> Self {
-        MelFrame { bands: [0; MEL_BANDS], level, activity }
-    }
-
     /// Serialise into a 53-byte wire buffer.
     pub fn encode(&self, buf: &mut [u8; FRAME_LEN]) {
         buf[0] = SYNC_BYTE;

@@ -64,7 +64,7 @@
 //!   -> MelFrame { bands: [u16; 24], level, activity }
 //! ```
 
-use triangel_shared::mel::{MelFrame, MEL_BANDS};
+use triangel_shared::mel::{level_to_wire, MelFrame, LEVEL_DB_FLOOR, MEL_BANDS};
 
 use crate::audio::{FFT_SIZE, SAMPLE_RATE_HZ};
 
@@ -110,8 +110,6 @@ const POWER_LAW: f32 = 1.4;
 /// Per-band smoothing envelope: fast rise, slower fall.
 const BAND_ATTACK: f32 = 0.6;
 const BAND_DECAY: f32  = 0.25;
-/// Maps the smoothed broadband RMS to the 0..1 overall level.
-const LEVEL_GAIN: f32 = 10.0;
 
 /// Convert a frequency in Hz to the mel scale.
 ///
@@ -270,7 +268,13 @@ impl MelProcessor {
             self.smoothed_rms += ACTIVITY_DECAY * (rms - self.smoothed_rms);
         }
         let activity = self.smoothed_rms > ACTIVITY_THRESHOLD;
-        let level = ((self.smoothed_rms * LEVEL_GAIN).clamp(0.0, 1.0) * 65535.0) as u16;
+        // RMS is already normalized to full scale, so dBFS needs no calibration.
+        let dbfs = if self.smoothed_rms > 0.0 {
+            20.0 * self.smoothed_rms.log10()
+        } else {
+            LEVEL_DB_FLOOR
+        };
+        let level = level_to_wire(dbfs);
 
         // --- Bandpass filter bank -> log energy per band ---
         // Every sample passes through all 24 filters; each band accumulates the square

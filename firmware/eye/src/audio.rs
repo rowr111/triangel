@@ -7,7 +7,7 @@ use bao1x_hal::udma::{Bank, DmaReg, Udma, Uart, UartReg};
 use bao1x_hal_service::UdmaGlobal;
 
 pub use triangel_shared::mel::MEL_BANDS;
-use triangel_shared::mel::{EAR_UART_BAUD, FRAME_LEN, MelFrame, SYNC_BYTE};
+use triangel_shared::mel::{level_from_wire, EAR_UART_BAUD, FRAME_LEN, LEVEL_DB_FLOOR, MelFrame, SYNC_BYTE};
 
 use crate::pins;
 
@@ -32,13 +32,19 @@ const RX_DMA_BUF_START: usize = 2048;
 const RX_DMA_BUF_LEN:   usize = 2048;
 
 // --- Auto-mode activity detection - all three are tune-at-bringup placeholders ---
-// A level byte above this bar counts as "loud" (the ear currently sends RMS * 1.8).
-const ACTIVITY_LOUD_LEVEL: f32 = 0.15;
+// Sustained loudness above this counts as "loud". -45 dBFS is about 75 dB SPL.
+const ACTIVITY_LOUD_DBFS: f32 = -45.0;
 // Net loud time before reactive mode engages, and unbroken quiet time before it
 // releases. Fill is 1:1 with loud time; drain is scaled by ARM/RELEASE, so brief
 // quiet gaps (beat spacing, EDM breakdowns) only pause progress, never reset it.
 const ACTIVITY_ARM_MS:     f32 = 30_000.0;
 const ACTIVITY_RELEASE_MS: f32 = 30_000.0;
+
+// dBFS window mapped onto the 0.0-1.0 `sound_level` patterns get. Retune here.
+const RENDER_DB_FLOOR: f32 = -70.0;
+const RENDER_DB_CEIL:  f32 = -20.0;
+// Fall per quiet tick once the ear stops sending; drains the window in ~4 s.
+const QUIET_DECAY_DB: f32 = 2.5;
 
 /// Custom cache-flush instruction (from the baochip dma_basic2 test) so the CPU
 /// re-reads the DMA engine's writes instead of a stale cached copy.
@@ -52,7 +58,7 @@ fn cache_flush() {
 
 struct AudioState {
     mel:            [f32; MEL_BANDS],
-    smoothed_level: f32,
+    smoothed_dbfs:  f32,
     activity:       bool,
     last_loud:      bool, // freshest byte's verdict; persists across byte-less frames
     loud_ms:        f32,  // leaky accumulator of net loud time, 0..=ACTIVITY_ARM_MS
@@ -67,7 +73,7 @@ impl AudioState {
     fn new() -> Self {
         AudioState {
             mel:            [0.0; MEL_BANDS],
-            smoothed_level: 0.0,
+            smoothed_dbfs:  LEVEL_DB_FLOOR,
             activity:       false,
             last_loud:      false,
             loud_ms:        0.0,
@@ -109,8 +115,16 @@ impl AudioReceiver {
         }
     }
 
+    /// Loudness as 0.0-1.0, mapped from dBFS over the render window.
     pub fn smoothed_level(&self) -> f32 {
-        self.state.smoothed_level
+        ((self.state.smoothed_dbfs - RENDER_DB_FLOOR) / (RENDER_DB_CEIL - RENDER_DB_FLOOR))
+            .clamp(0.0, 1.0)
+    }
+
+    /// Absolute loudness in dBFS. Add 120 for dB SPL.
+    #[allow(dead_code)]
+    pub fn smoothed_dbfs(&self) -> f32 {
+        self.state.smoothed_dbfs
     }
 
     #[allow(dead_code)]
@@ -150,7 +164,8 @@ impl AudioReceiver {
         // No fresh frame for a while: the ear stopped sending - decay toward silence
         // and count the time as quiet.
         if !got_frame && now_ms.wrapping_sub(self.state.last_update_ms) >= 200 {
-            self.state.smoothed_level = (self.state.smoothed_level - 0.05).max(0.0);
+            self.state.smoothed_dbfs =
+                (self.state.smoothed_dbfs - QUIET_DECAY_DB).max(LEVEL_DB_FLOOR);
             self.state.last_loud = false;
             self.state.last_update_ms = now_ms;
         }
@@ -208,10 +223,10 @@ impl AudioReceiver {
         for (m, &b) in self.state.mel.iter_mut().zip(frame.bands.iter()) {
             *m = b as f32 / 65535.0;
         }
-        let level = frame.level as f32 / 65535.0;
-        // Light EMA so a single rogue frame doesn't spike the fill.
-        self.state.smoothed_level = self.state.smoothed_level * 0.6 + level * 0.4;
-        self.state.last_loud = self.state.smoothed_level > ACTIVITY_LOUD_LEVEL;
+        let dbfs = level_from_wire(frame.level);
+        // Light EMA so one rogue frame can't spike the fill. In dB: even steps.
+        self.state.smoothed_dbfs = self.state.smoothed_dbfs * 0.6 + dbfs * 0.4;
+        self.state.last_loud = self.state.smoothed_dbfs > ACTIVITY_LOUD_DBFS;
         self.state.last_update_ms = now_ms;
         UART_STATUS.store(STATUS_RECEIVING, Ordering::Relaxed);
         UART_LAST_FRAME_MS.store(now_ms, Ordering::Relaxed);

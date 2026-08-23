@@ -4,6 +4,8 @@
 
 use std::sync::atomic::{AtomicU32, Ordering};
 
+use crate::audio::FRAME_PERIOD_MS;
+
 use crate::audio::{DECIMATE, I2sAudio, RAW_RATE_HZ, SAMPLE_RATE_HZ};
 use crate::diag::{self, Diag};
 
@@ -66,6 +68,12 @@ const COMMAND_POLL_MS: usize = 20;
 /// mic, and waits.
 static PENDING: AtomicU32 = AtomicU32::new(0);
 
+/// Latest filterbank cost in microseconds, published by the audio loop for `p`.
+static MEL_US: AtomicU32 = AtomicU32::new(0);
+
+/// Publish the filterbank's per-frame cost so `p` can report it on demand.
+pub fn record_mel_time(us: u32) { MEL_US.store(us, Ordering::Relaxed); }
+
 /// Start the console thread. It blocks waiting for a keystroke, so until someone
 /// types something it costs nothing.
 pub fn spawn() {
@@ -76,9 +84,13 @@ pub fn spawn() {
             let cmd = d.command();
             // First keystroke silences the heartbeat so it cannot break up output.
             diag::quiet();
-            // Help needs no mic, so answer it here rather than interrupting audio.
+            // Neither of these needs the mic, so answer here rather than interrupting audio.
             if cmd == '?' || cmd == 'h' {
                 help(&d);
+                continue;
+            }
+            if cmd == 'p' {
+                perf(&d);
                 continue;
             }
             PENDING.store(cmd as u32, Ordering::Release);
@@ -120,7 +132,24 @@ pub fn help(d: &Diag) {
         EXPECTED_RATE_HZ));
     d.line("  t  1 s of statistics: min, max, DC offset, RMS");
     d.line("  m  live level meter for 15 s");
+    d.line("  p  filterbank cost per frame against the frame budget");
     d.line("  ?  this help");
+}
+
+/// Report what the filterbank costs. Needs no mic, so the eye link keeps running.
+fn perf(d: &Diag) {
+    let us = MEL_US.load(Ordering::Relaxed);
+    if us == 0 {
+        d.line("no timing yet - the first batch of frames has not finished");
+        return;
+    }
+    let ms = us as f32 / 1000.0;
+    d.line(&format!(
+        "mel: {:.2} ms per frame, budget {} ms ({:.0}%)",
+        ms,
+        FRAME_PERIOD_MS,
+        ms / FRAME_PERIOD_MS as f32 * 100.0
+    ));
 }
 
 /// Drain and discard, giving the mic time to wake and its filter time to settle
