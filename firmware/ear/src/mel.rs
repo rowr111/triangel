@@ -68,7 +68,7 @@ use triangel_shared::mel::{MelFrame, MEL_BANDS};
 
 use crate::audio::FFT_SIZE;
 
-/// Audio sample rate in Hz. Must match what the microphone and ear_sim.py use.
+/// Audio sample rate in Hz. Must match what the microphone provides.
 const SAMPLE_RATE: f32 = 16_000.0;
 
 /// Lowest frequency covered by the filterbank.

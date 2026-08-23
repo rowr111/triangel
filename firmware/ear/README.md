@@ -36,7 +36,7 @@ The 24 mel bands span 31–8000 Hz on a perceptual (mel) scale — lower bands a
 ```
 src/
 +-- main.rs       - entry point; audio capture → mel → UART loop
-+-- audio.rs      - AudioSource trait + UartAudio (uart-audio feature) + I2sAudio (production)
++-- audio.rs      - AudioSource trait + I2sAudio: ICS43434 mic over I2S
 +-- mel.rs        - MelProcessor: 24 mel-spaced bandpass filters, log + normalize
 +-- uart_out.rs   - UartOut: encodes MelFrame and transmits to eye over UART
 ```
@@ -45,15 +45,4 @@ Wire protocol types shared between ear and eye live in [`../shared/`](../shared/
 
 ## Building
 
-Build via the Baochip VSCode extension (`buildMode: out-of-tree`). The `uart-audio` feature swaps the audio source from the real I2S mic to USB serial input from `ear_sim.py` on a desktop:
-
-| Feature | Audio source | Use case |
-|---|---|---|
-| _(none)_ | ICS43434 MEMS mic via I2S | Production |
-| `uart-audio` | USB serial from `ear_sim.py` | Development / testing without the mic |
-
-Add `uart-audio` under **Extra Features** in the Baochip extension settings when developing without the assembled mic circuit.
-
-## Desktop testing with ear_sim.py
-
-`ear_sim.py` in [`../../triangel previewer/`](../../triangel%20previewer/) streams desktop audio or mic input to the ear board over USB serial, letting the full mel filterbank and UART output path run on real music without the ICS43434 mic being assembled. Build with the `uart-audio` feature and see the [previewer README](../../triangel%20previewer/README.md) for setup and usage.
+Build via the Baochip VSCode extension (`buildMode: out-of-tree`). Audio comes from the ICS43434 MEMS mic over I2S.

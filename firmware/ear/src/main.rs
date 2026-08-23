@@ -9,7 +9,7 @@ mod mel;
 mod pins;
 mod uart_out;
 
-use audio::{ActiveAudio, AudioSource};
+use audio::{AudioSource, I2sAudio};
 use uart_out::UartOut;
 // Without `mel`, main builds a level-only frame directly (the mel module isn't compiled).
 #[cfg(not(feature = "mel"))]
@@ -23,7 +23,7 @@ fn main() -> ! {
     let hal = bao1x_hal_service::Hal::new();
     hal.set_preemption(true);
 
-    let mut audio    = ActiveAudio::new();
+    let mut audio    = I2sAudio::new();
     let mut uart_out = UartOut::new();
 
     log::info!("ear ready");
