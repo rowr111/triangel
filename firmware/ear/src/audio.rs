@@ -1,6 +1,32 @@
 /// Number of samples per audio frame - the block mel.rs reduces to one MelFrame.
 pub const FFT_SIZE: usize = 512;
 
+// Every sample rate in the firmware derives from the three numbers below, so changing
+// the BIO clock or the decimation cannot leave the filterbank tuned for a rate the
+// hardware no longer produces.
+
+/// BIO quantum clock, which paces the program's wait_quantum loop. The BIO toggles
+/// BCLK, so BCLK is half of this.
+const BIO_QUANTUM_HZ: u32 = 6_144_000;
+/// SCK cycles per WS frame. Fixed at 64 by the mic: the ICS43434 requires exactly 64
+/// SCK cycles in each stereo frame (datasheet, I2S Data Interface).
+const BCLK_PER_FRAME: u32 = 64;
+/// Decimation factor from the mic's rate down to the pipeline's.
+pub const DECIMATE: usize = 3;
+
+/// The rate the mic is clocked at - one 24-bit sample per WS frame.
+pub const RAW_RATE_HZ: u32 = BIO_QUANTUM_HZ / 2 / BCLK_PER_FRAME;
+/// The rate read_frame returns, after the box average that decimates each group.
+pub const SAMPLE_RATE_HZ: u32 = RAW_RATE_HZ / DECIMATE as u32;
+
+// Integer division would quietly truncate a combination that does not divide evenly,
+// leaving the filterbank tuned for a rate that never occurs.
+const _: () = assert!(BIO_QUANTUM_HZ.is_multiple_of(2 * BCLK_PER_FRAME));
+const _: () = assert!(RAW_RATE_HZ.is_multiple_of(DECIMATE as u32));
+// The ICS43434 runs high-performance mode from 23 kHz to 51.6 kHz; between 6.25 and
+// 18.75 kHz it drops to low-power mode, and below 3.125 kHz it sleeps.
+const _: () = assert!(RAW_RATE_HZ >= 23_000 && RAW_RATE_HZ <= 51_600);
+
 pub trait AudioSource {
     /// Block until a complete 512-sample frame is available, then return it.
     fn read_frame(&mut self) -> [i16; FFT_SIZE];
@@ -21,20 +47,18 @@ pub trait AudioSource {
 // continuously and samples are lost between frames rather than the mic being
 // stopped.
 mod i2s {
-    use super::{AudioSource, FFT_SIZE};
+    use super::{AudioSource, BIO_QUANTUM_HZ, DECIMATE, FFT_SIZE, RAW_RATE_HZ};
     use bao1x_api::bio::*;
     use bao1x_api::bio_resources::*;
     use bao1x_api::{IoSetup, IoxDir, IoxFunction, IoxPort};
     use bao1x_hal::bio::{Bio, CoreCsr};
     use utralib::utra::bio_bdma;
 
-    /// BIO quantum clock; paces the program's wait_quantum loop to yield 48 kHz.
-    const BIO_QUANTUM_HZ: u32 = 6_144_000;
-    /// Decimation factor from the 48 kHz mic to the 16 kHz pipeline.
-    const DECIMATE: usize = 3;
-    /// Raw 48 kHz samples discarded at startup while the mic's decimation filter
-    /// settles (~100 ms). Conservative; tighten to the ICS43434 spec if wanted.
-    const STARTUP_DISCARD: usize = 4800;
+    /// Raw samples discarded at startup while the mic wakes and its decimation
+    /// filter settles - 100 ms. The datasheet asks for less: output begins 32768 SCK
+    /// cycles after the clock starts (10.7 ms at 3.072 MHz) and is within 1 dB of
+    /// settled sensitivity by 20 ms.
+    const STARTUP_DISCARD: usize = RAW_RATE_HZ as usize / 10;
     /// Polls of an empty FIFO before a read gives up. Generous - it only has to
     /// tell "samples are flowing" from "nothing is arriving at all", never to
     /// time anything.

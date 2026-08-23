@@ -66,10 +66,11 @@
 
 use triangel_shared::mel::{MelFrame, MEL_BANDS};
 
-use crate::audio::FFT_SIZE;
+use crate::audio::{FFT_SIZE, SAMPLE_RATE_HZ};
 
-/// Audio sample rate in Hz. Must match what the microphone provides.
-const SAMPLE_RATE: f32 = 16_000.0;
+/// Audio sample rate in Hz, as read_frame delivers it. Derived from the BIO clock
+/// and the decimation, so the band centres cannot drift away from the real rate.
+const SAMPLE_RATE: f32 = SAMPLE_RATE_HZ as f32;
 
 /// Lowest frequency covered by the filterbank.
 /// 31 Hz captures sub-bass and kick drum fundamentals (important for EDM).

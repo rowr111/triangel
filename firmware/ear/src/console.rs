@@ -4,7 +4,7 @@
 
 use std::sync::atomic::{AtomicU32, Ordering};
 
-use crate::audio::I2sAudio;
+use crate::audio::{DECIMATE, I2sAudio, RAW_RATE_HZ, SAMPLE_RATE_HZ};
 use crate::diag::{self, Diag};
 
 /// Raw FIFO words shown by `r`, and how many are printed per line.
@@ -14,22 +14,21 @@ const RAW_DUMP_PER_LINE: usize = 8;
 const MEASURE_MS: u64 = 1000;
 /// How long `m` runs, and how much it measures per printed line.
 const METER_MS:             u64   = 15_000;
-const METER_WINDOW_SAMPLES: usize = 4800; // 100 ms at 48 kHz
+const METER_WINDOW_SAMPLES: usize = RAW_RATE_HZ as usize / 10; // 100 ms
 /// `c` records this many windows of this many samples, printing nothing until done.
 const CAPTURE_WINDOWS:        usize = 30;
-const CAPTURE_WINDOW_SAMPLES: usize = 4800; // 100 ms at 48 kHz
+const CAPTURE_WINDOW_SAMPLES: usize = RAW_RATE_HZ as usize / 10; // 100 ms
 /// Octave band centres for `f`. A Q near 1.41 makes each filter about an octave
 /// wide, so adjacent bands meet without gaps and any sound lands in one of them
 /// whatever its pitch.
 const BANDS:   usize        = 6;
 const BAND_HZ: [f32; BANDS] = [125.0, 250.0, 500.0, 1000.0, 2000.0, 4000.0];
 const BAND_Q:  f32          = 1.41;
-/// `f` records into a buffer at the pipeline's 16 kHz, then filters it afterwards.
+/// `f` records into a buffer at the pipeline's rate, then filters it afterwards.
 /// Buffering first means the per-sample cost during capture stays tiny, so the
 /// drain never falls behind and the blocks stay contiguous.
-const ANALYZE_DECIMATE: usize = 3;
-const ANALYZE_RATE_HZ:  f32   = 16_000.0;
-const ANALYZE_SAMPLES:  usize = 16_000; // 1 s
+const ANALYZE_RATE_HZ: f32   = SAMPLE_RATE_HZ as f32;
+const ANALYZE_SAMPLES: usize = SAMPLE_RATE_HZ as usize; // 1 s
 /// A band this much above its own quiet reference is real. Each band averages
 /// hundreds of hertz over a full second, so the estimate scatters by well under
 /// 1 dB - unlike a single narrow bin, where the scatter is nearly 8 dB.
@@ -39,14 +38,15 @@ const READY_MS: usize = 1500;
 /// Samples drained and discarded before anything is measured, so the mic's
 /// decimation filter has settled after the clock first starts. Also a cheap way
 /// to begin every measurement on a known-fresh part of the stream.
-const SETTLE_SAMPLES:       usize = 9600; // 200 ms
-const METER_SETTLE_SAMPLES: usize = 2400; // 50 ms, between meter windows
+const SETTLE_SAMPLES:       usize = RAW_RATE_HZ as usize / 5;  // 200 ms
+const METER_SETTLE_SAMPLES: usize = RAW_RATE_HZ as usize / 20; // 50 ms, between windows
 /// Samples read between clock checks. Reading the ticktimer is a syscall, far too
 /// slow to do once per sample at 48 kHz - it would throttle the very rate we are
 /// trying to measure.
 const SAMPLE_BLOCK: usize = 256;
-/// Raw sample rate the BIO program should produce, before the 3:1 decimation.
-const EXPECTED_RATE_HZ: u64 = 48_000;
+/// Raw sample rate the BIO program should produce, before decimation. `s` measures
+/// the hardware against this, which is what makes the derived chain checkable.
+const EXPECTED_RATE_HZ: u64 = RAW_RATE_HZ as u64;
 /// Full scale for a sign-extended 24-bit sample.
 const FULL_SCALE_RAW: f64 = 8_388_608.0;
 /// The ICS43434 reads -26 dBFS at 94 dB SPL, so sound pressure is dBFS + 120.
@@ -116,7 +116,8 @@ pub fn help(d: &Diag) {
     d.line("  f  measure a quiet second, then a noisy one, and compare them per octave");
     d.line("     band - about 30 dB more sensitive than c, and works with any sound");
     d.line("  r  hex-dump the raw 24-bit words after settling");
-    d.line("  s  count samples for 1 s, compare against the expected 48000 Hz");
+    d.line(&format!("  s  count samples for 1 s, compare against the expected {} Hz",
+        EXPECTED_RATE_HZ));
     d.line("  t  1 s of statistics: min, max, DC offset, RMS");
     d.line("  m  live level meter for 15 s");
     d.line("  ?  this help");
@@ -310,7 +311,7 @@ fn meter(d: &Diag, tt: &ticktimer::Ticktimer, mic: &mut I2sAudio) {
 /// mic hears anything.
 fn capture(d: &Diag, mic: &mut I2sAudio) {
     d.line(&format!("recording {} s silently - make noise NOW (clap, talk, music)",
-        CAPTURE_WINDOWS * CAPTURE_WINDOW_SAMPLES / 48_000));
+        CAPTURE_WINDOWS * CAPTURE_WINDOW_SAMPLES / RAW_RATE_HZ as usize));
 
     if !settle(mic, SETTLE_SAMPLES) {
         d.line("no samples: the BIO core is not pushing anything");
@@ -414,14 +415,14 @@ fn record(d: &Diag, mic: &mut I2sAudio, buf: &mut Vec<i16>) -> bool {
     buf.clear();
     for _ in 0..ANALYZE_SAMPLES {
         let mut acc = 0i32;
-        for _ in 0..ANALYZE_DECIMATE {
+        for _ in 0..DECIMATE {
             let Some(s) = mic.try_read_sample() else {
                 d.line("recording starved - the BIO stopped pushing partway");
                 return false;
             };
             acc += s >> 8; // 24-bit -> 16-bit, as read_frame does
         }
-        buf.push((acc / ANALYZE_DECIMATE as i32) as i16);
+        buf.push((acc / DECIMATE as i32) as i16);
     }
     true
 }
