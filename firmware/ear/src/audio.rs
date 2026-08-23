@@ -16,11 +16,10 @@ pub trait AudioSource {
 // -> 64 BCLK/frame); read_frame downsamples 3:1 to the 16 kHz the mel pipeline
 // expects (see mel.rs SAMPLE_RATE).
 //
-// The drain - how samples get from the BIO to read_frame - is feature-selected:
-//   default    : the BIO pushes to FIFO0 and read_frame polls it (simple; pauses
-//                the mic clock between frames).
-//   drain-dma  : the BIO writes an IFRAM ring the CPU reads, so the clock never
-//                pauses (see the drain-dma block below and i2s_dma.rs). UNVALIDATED.
+// The BIO pushes each sample to FIFO0 and read_frame polls it. The BIO checks for
+// room first and drops the sample when the FIFO is full, so the clock runs
+// continuously and samples are lost between frames rather than the mic being
+// stopped.
 mod i2s {
     use super::{AudioSource, FFT_SIZE};
     use bao1x_api::bio::*;
@@ -36,9 +35,11 @@ mod i2s {
     /// Raw 48 kHz samples discarded at startup while the mic's decimation filter
     /// settles (~100 ms). Conservative; tighten to the ICS43434 spec if wanted.
     const STARTUP_DISCARD: usize = 4800;
+    /// Polls of an empty FIFO before a read gives up. Generous - it only has to
+    /// tell "samples are flowing" from "nothing is arriving at all", never to
+    /// time anything.
+    const SAMPLE_SPIN_LIMIT: u32 = 2_000_000;
 
-    // ----- default drain: poll FIFO0 in read_frame -----
-    #[cfg(not(feature = "drain-dma"))]
     pub struct I2sAudio {
         bio_ss: Bio,
         // CoreCsr view of FIFO0, where the BIO program pushes mic samples.
@@ -48,7 +49,6 @@ mod i2s {
         resource_grant: ResourceGrant,
     }
 
-    #[cfg(not(feature = "drain-dma"))]
     impl Resources for I2sAudio {
         fn resource_spec() -> ResourceSpec {
             ResourceSpec {
@@ -66,7 +66,6 @@ mod i2s {
         }
     }
 
-    #[cfg(not(feature = "drain-dma"))]
     impl Drop for I2sAudio {
         fn drop(&mut self) {
             for &core in self.resource_grant.cores.iter() {
@@ -76,7 +75,6 @@ mod i2s {
         }
     }
 
-    #[cfg(not(feature = "drain-dma"))]
     impl I2sAudio {
         pub fn new() -> Self {
             // Configure the three mic pins on the IO mux. BIO bit N maps to PB N on
@@ -110,6 +108,21 @@ mod i2s {
             };
             bio_ss.setup_io_config(io_config).unwrap();
 
+            // FIFO0 slot 0 fires while the level is under 7, so the BIO program can
+            // test whether there is room and drop the sample rather than block. A
+            // blocked push halts the core, and a halted core stops BCLK, which puts
+            // the mic to sleep. Must be set before the core runs.
+            bio_ss
+                .setup_fifo_event_triggers(FifoEventConfig {
+                    which: Fifo::Fifo0,
+                    trigger_slot: TriggerSlot::new_with_raw_value(0),
+                    level: FifoLevel::new_with_raw_value(7),
+                    trigger_less_than: true,
+                    trigger_greater_than: false,
+                    trigger_equal_to: false,
+                })
+                .expect("couldn't set the FIFO0 room-available trigger");
+
             bio_ss.set_core_run_state(&resource_grant, true);
 
             // FIFO0 is where the BIO pushes samples. Keep the handle alongside `rx`.
@@ -120,40 +133,59 @@ mod i2s {
             let mut this = Self { bio_ss, rx, _rx_handle: rx_handle, resource_grant };
 
             // The mic outputs garbage until its filter settles after the clock starts,
-            // so drop the first ~100 ms of samples before any frame is read.
+            // so drop the first ~100 ms of samples before any frame is read. Stops early
+            // if nothing is arriving, so a silent mic reaches the caller instead of
+            // spinning here forever.
             for _ in 0..STARTUP_DISCARD {
-                this.read_sample();
+                if this.try_read_raw().is_none() {
+                    break;
+                }
             }
             this
         }
 
-        // Pop one 24-bit sample, blocking until FIFO0 is non-empty. The BIO pushes one
-        // right-aligned 24-bit left-channel sample per frame; the FIFO is only 8 deep,
-        // so read_frame must keep draining or the BIO stalls on a full FIFO.
-        fn read_sample(&mut self) -> i32 {
-            while self.rx.csr.rf(bio_bdma::SFR_FLEVEL_PCLK_REGFIFO_LEVEL0) == 0 {}
-            let raw = self.rx.csr.r(bio_bdma::SFR_RXF0);
-            // 24-bit two's-complement in the low 24 bits: shift the sign bit (23) up to
-            // bit 31, then arithmetic-shift back down to sign-extend into i32.
-            (raw << 8) as i32 >> 8
+        /// Samples queued in FIFO0 right now (0..=8). A steady 8 means the BIO is
+        /// pushing and nobody is draining; a steady 0 means nothing is arriving.
+        pub fn fifo_level(&self) -> u32 {
+            self.rx.csr.rf(bio_bdma::SFR_FLEVEL_PCLK_REGFIFO_LEVEL0)
+        }
+
+        // Pop one raw FIFO word, giving up after SAMPLE_SPIN_LIMIT polls of an empty
+        // FIFO. The BIO pushes one right-aligned 24-bit left-channel sample per frame;
+        // the FIFO is only 8 deep, so a reader must keep draining or samples are
+        // dropped. None means nothing is arriving.
+        pub fn try_read_raw(&mut self) -> Option<u32> {
+            let mut spins = 0u32;
+            while self.fifo_level() == 0 {
+                spins += 1;
+                if spins >= SAMPLE_SPIN_LIMIT {
+                    return None;
+                }
+            }
+            Some(self.rx.csr.r(bio_bdma::SFR_RXF0))
+        }
+
+        /// `try_read_raw` sign-extended: the low 24 bits are two's-complement, so shift
+        /// the sign bit (23) up to bit 31 and arithmetic-shift back down into i32.
+        pub fn try_read_sample(&mut self) -> Option<i32> {
+            self.try_read_raw().map(|raw| (raw << 8) as i32 >> 8)
         }
 
         /// Discard everything currently queued in FIFO0, without blocking.
-        fn flush(&mut self) {
-            while self.rx.csr.rf(bio_bdma::SFR_FLEVEL_PCLK_REGFIFO_LEVEL0) != 0 {
+        pub fn flush(&mut self) {
+            while self.fifo_level() != 0 {
                 let _ = self.rx.csr.r(bio_bdma::SFR_RXF0);
             }
         }
     }
 
-    #[cfg(not(feature = "drain-dma"))]
     impl AudioSource for I2sAudio {
         fn read_frame(&mut self) -> [i16; FFT_SIZE] {
-            // Drop whatever queued while the caller processed the previous frame. The
-            // BIO stalls its clock on a full 8-deep FIFO, so those stale samples sit on
-            // the far side of a clock gap; flushing keeps each returned frame contiguous.
-            // If the mic proves intolerant of that between-frame pause on real hardware,
-            // this polled drain becomes an interrupt- or DMA-driven one.
+            // Drop whatever queued while the caller processed the previous frame. Once
+            // the FIFO fills the BIO discards new samples, so the eight sitting there
+            // are the oldest ones from whenever it filled; flushing starts the frame on
+            // fresh audio. The clock keeps running throughout, so these are ordinary
+            // gaps in the stream rather than the mic being stopped and restarted.
             self.flush();
 
             let mut out = [0i16; FFT_SIZE];
@@ -164,189 +196,7 @@ mod i2s {
                 let mut acc: i32 = 0;
                 for _ in 0..DECIMATE {
                     // 24-bit -> 16-bit: keep the 16 most-significant bits.
-                    acc += self.read_sample() >> 8;
-                }
-                *slot = (acc / DECIMATE as i32) as i16;
-            }
-            out
-        }
-    }
-
-    // ----- drain-dma: the BIO writes an IFRAM ring; the CPU reads memory -----
-    // No FIFO draining, so the mic clock never pauses between the CPU's frames.
-    // The BIO program (i2s_dma.rs) stores each sample into a ring in IFRAM and
-    // publishes a head counter; we read it back. Modeled on the baochip dma_basic2
-    // test (the store pattern + the cache_flush before reading). UNVALIDATED - needs
-    // hardware or the sim memory model (see bio-sim sw/i2s_dma/README.md).
-    #[cfg(feature = "drain-dma")]
-    use bao1x_hal::ifram::IframRange;
-    #[cfg(feature = "drain-dma")]
-    use core::num::NonZeroU32;
-
-    /// Ring capacity in samples; must match RING_N in the i2s_dma BIO program.
-    #[cfg(feature = "drain-dma")]
-    const RING_N: usize = 4096;
-    #[cfg(feature = "drain-dma")]
-    const RING_MASK: u32 = (RING_N - 1) as u32;
-
-    /// Custom cache-flush instruction (from the baochip dma_basic2 test) so the CPU
-    /// re-reads the BIO's writes from memory instead of a stale cached copy.
-    #[cfg(feature = "drain-dma")]
-    #[inline(always)]
-    fn cache_flush() {
-        // Safety: a hint instruction with no memory operands of its own.
-        unsafe {
-            core::arch::asm!(".word 0x500F", "nop", "nop", "nop", "nop", "nop");
-        }
-    }
-
-    #[cfg(feature = "drain-dma")]
-    pub struct I2sAudio {
-        bio_ss: Bio,
-        resource_grant: ResourceGrant,
-        // Shared IFRAM ring the BIO writes and we read. Word 0 = head (the BIO's
-        // write counter); words 1.. = samples[RING_N], right-aligned 24-bit left.
-        ring: IframRange,
-        // CPU read counter (free-running, like head).
-        tail: u32,
-    }
-
-    #[cfg(feature = "drain-dma")]
-    impl Resources for I2sAudio {
-        fn resource_spec() -> ResourceSpec {
-            ResourceSpec {
-                claimer: "i2s-mic-dma".to_string(),
-                cores: vec![CoreRequirement::Any],
-                // FIFO0 hands the BIO the ring's physical address once at startup.
-                fifos: vec![Fifo::Fifo0],
-                static_pins: vec![
-                    crate::pins::MIC_BCLK_BIO_PIN,
-                    crate::pins::MIC_SD_BIO_PIN,
-                    crate::pins::MIC_WS_BIO_PIN,
-                ],
-                dynamic_pin_count: 0,
-            }
-        }
-    }
-
-    #[cfg(feature = "drain-dma")]
-    impl Drop for I2sAudio {
-        fn drop(&mut self) {
-            for &core in self.resource_grant.cores.iter() {
-                self.bio_ss.de_init_core(core).unwrap();
-            }
-            self.bio_ss.release_resources(self.resource_grant.grant_id).unwrap();
-        }
-    }
-
-    #[cfg(feature = "drain-dma")]
-    impl I2sAudio {
-        pub fn new() -> Self {
-            let iox = bao1x_api::iox::IoxHal::new();
-            for (pin, dir) in [
-                (crate::pins::MIC_BCLK_BIO_PIN, IoxDir::Output),
-                (crate::pins::MIC_WS_BIO_PIN, IoxDir::Output),
-                (crate::pins::MIC_SD_BIO_PIN, IoxDir::Input),
-            ] {
-                iox.setup_pin(IoxPort::PB, pin, Some(dir), Some(IoxFunction::Gpio), None, None, None, None);
-            }
-
-            // Allocate the shared IFRAM ring: one head word + RING_N sample words.
-            let ring_bytes = (1 + RING_N) * 4;
-            // Safety: the IframRange lives in this program-lifetime object.
-            let ring =
-                unsafe { IframRange::request(ring_bytes, None) }.expect("couldn't allocate IFRAM ring");
-            let ring_phys = ring.phys_range.as_ptr() as u32;
-
-            let mut bio_ss = Bio::new();
-            let spec = Self::resource_spec();
-            let resource_grant =
-                bio_ss.claim_resources(&spec).expect("couldn't claim BIO resources for I2S DMA");
-
-            // Let the BIO write into the ring's IFRAM region.
-            let window = DmaWindow {
-                base: ring_phys,
-                bounds: NonZeroU32::new(ring_bytes as u32).expect("ring size is nonzero"),
-            };
-            bio_ss
-                .setup_dma_windows(DmaFilterWindows { windows: [Some(window), None, None, None] })
-                .expect("couldn't set BIO DMA window");
-
-            let config = CoreConfig { clock_mode: ClockMode::TargetFreqInt(BIO_QUANTUM_HZ) };
-            bio_ss
-                .init_core(resource_grant.cores[0], crate::i2s_dma::i2s_dma_bio_code(), config)
-                .expect("couldn't init I2S DMA BIO core");
-
-            let io_config = IoConfig {
-                mapped: (1u32 << crate::pins::MIC_BCLK_BIO_PIN)
-                    | (1u32 << crate::pins::MIC_SD_BIO_PIN)
-                    | (1u32 << crate::pins::MIC_WS_BIO_PIN),
-                mode: IoConfigMode::Overwrite,
-                ..Default::default()
-            };
-            bio_ss.setup_io_config(io_config).unwrap();
-
-            bio_ss.set_core_run_state(&resource_grant, true);
-
-            // Hand the ring's physical base to the BIO over FIFO0 (its startup pop).
-            // Scoped so the handle drops right after - the BIO never uses FIFO0 again.
-            {
-                let fifo_handle = unsafe { bio_ss.get_core_handle(Fifo::Fifo0) }
-                    .expect("FIFO0 handle error")
-                    .expect("no FIFO0 handle");
-                let mut tx = CoreCsr::from_handle(&fifo_handle);
-                tx.csr.wo(bio_bdma::SFR_TXF0, ring_phys);
-            }
-
-            let mut this = Self { bio_ss, resource_grant, ring, tail: 0 };
-
-            // Startup discard: let the mic settle, then skip everything captured so far.
-            while this.head() < STARTUP_DISCARD as u32 {}
-            this.tail = this.head();
-            this
-        }
-
-        /// Read the BIO's write counter, flushing the cache first so we see its
-        /// writes rather than a stale cached copy.
-        fn head(&self) -> u32 {
-            cache_flush();
-            // Safety: virt_range maps the coherent IFRAM ring; word 0 is the head.
-            unsafe { (self.ring.virt_range.as_ptr() as *const u32).read_volatile() }
-        }
-
-        /// Read raw sample `idx` (a free-running counter) from the ring, sign-extended.
-        fn sample(&self, idx: u32) -> i32 {
-            let off = 1 + (idx & RING_MASK) as usize; // word 0 is the head
-            // Safety: off is within the mapped ring (masked to RING_N, +1 for head).
-            let raw =
-                unsafe { (self.ring.virt_range.as_ptr() as *const u32).add(off).read_volatile() };
-            // 24-bit two's-complement right-aligned -> sign-extend into i32.
-            (raw << 8) as i32 >> 8
-        }
-    }
-
-    #[cfg(feature = "drain-dma")]
-    impl AudioSource for I2sAudio {
-        fn read_frame(&mut self) -> [i16; FFT_SIZE] {
-            let needed = (DECIMATE * FFT_SIZE) as u32;
-            // Block until a full frame of new samples is in the ring.
-            let head = loop {
-                let h = self.head();
-                if h.wrapping_sub(self.tail) >= needed {
-                    break h;
-                }
-            };
-            // Overrun: if the BIO lapped us, resync to the newest RING_N samples.
-            if head.wrapping_sub(self.tail) > RING_N as u32 {
-                self.tail = head.wrapping_sub(RING_N as u32);
-            }
-            let mut out = [0i16; FFT_SIZE];
-            for slot in out.iter_mut() {
-                // Downsample 48 kHz -> 16 kHz by averaging each group of DECIMATE.
-                let mut acc: i32 = 0;
-                for _ in 0..DECIMATE {
-                    acc += self.sample(self.tail) >> 8; // 24 -> 16 bit
-                    self.tail = self.tail.wrapping_add(1);
+                    acc += self.try_read_sample().unwrap_or(0) >> 8;
                 }
                 *slot = (acc / DECIMATE as i32) as i16;
             }

@@ -39,6 +39,8 @@ src/
 +-- audio.rs      - AudioSource trait + I2sAudio: ICS43434 mic over I2S
 +-- mel.rs        - MelProcessor: 24 mel-spaced bandpass filters, log + normalize
 +-- uart_out.rs   - UartOut: encodes MelFrame and transmits to eye over UART
++-- diag.rs       - USB-serial output: boot stages, heartbeat, command input
++-- console.rs    - mic diagnostic commands
 ```
 
 Wire protocol types shared between ear and eye live in [`../shared/`](../shared/) (`triangel-shared` crate).
@@ -46,3 +48,23 @@ Wire protocol types shared between ear and eye live in [`../shared/`](../shared/
 ## Building
 
 Build via the Baochip VSCode extension (`buildMode: out-of-tree`). Audio comes from the ICS43434 MEMS mic over I2S.
+
+## Mic diagnostic console
+
+The ear has no log console - UART2 carries the audio link to the eye, so the board runs the `gdb-stub` kernel and the log server has no UART left to print on. Everything the firmware reports goes over **USB CDC serial** instead.
+
+The board presents two serial ports: the bootloader's and the running application's. The console is on the application's.
+
+Until the first keystroke the board prints a liveness line every 2 s naming the startup stage it reached and how many bytes it has received, so a stalled boot says where it stopped. Commands are a single character and act on the keystroke - no Enter, because terminals disagree on whether that sends CR, LF, or both.
+
+| Key | What it does |
+|---|---|
+| `c` | Record 3 s silently, then print the level per 100 ms. The test that answers whether the mic hears you |
+| `f` | Measure a quiet second against a noisy one, per octave band. About 30 dB more sensitive than `c`, and works with any sound |
+| `r` | Hex-dump the raw 24-bit words after settling |
+| `s` | Count samples for 1 s and compare against the expected 48000 Hz |
+| `t` | 1 s of statistics: min, max, DC offset, RMS |
+| `m` | Live level meter for 15 s |
+| `?` | Help |
+
+Commands run on the audio thread between frames, so the eye stops receiving mel frames while one is in progress - up to 15 s for `m`, 3 s or less for the rest. The eye decays to silence after 200 ms without a frame and recovers on its own; because its Auto-mode arm and release times are both 30 s, even the longest command will not flip it out of sound-reactive mode.
