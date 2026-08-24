@@ -125,37 +125,57 @@ fn mel_to_hz(mel: f32) -> f32 {
     700.0 * (10f32.powf(mel / 2595.0) - 1.0)
 }
 
+/// Fraction bits for coefficients and for the signal path. The chip has no FPU, so
+/// f32 here costs ~95 cycles an operation; these are plain integers instead.
+/// Coefficients need Q30 because a1 reaches -1.937, and the signal needs the extra
+/// range of Q28 because a full-scale tone on a band centre drives the state to 1.004.
+const COEF_Q: u32 = 30;
+const SIG_Q: u32 = 28;
+
 /// One second-order IIR bandpass section: passes frequencies near its center and
 /// attenuates everything else. Twenty-four of these side by side make the filter bank.
 struct Biquad {
-    b0: f32,
-    a1: f32,
-    a2: f32,
+    b0: i32,
+    a1: i32,
+    a2: i32,
     /// Delay-line state, carried across samples and across frames.
-    s1: f32,
-    s2: f32,
+    s1: i32,
+    s2: i32,
 }
 
 impl Biquad {
     /// Constant-peak-gain bandpass (Audio EQ Cookbook) centered on `center_hz` with
     /// a -3 dB width of `bandwidth_hz`, normalized so the a0 coefficient is 1.
+    /// Designed in f32 and quantized once - this runs 24 times at startup, not in
+    /// the hot loop.
     fn bandpass(center_hz: f32, bandwidth_hz: f32) -> Self {
         let w0 = 2.0 * std::f32::consts::PI * center_hz / SAMPLE_RATE;
         // alpha = sin(w0) / 2Q, with Q = center / bandwidth.
         let alpha = w0.sin() * bandwidth_hz / (2.0 * center_hz);
         let a0 = 1.0 + alpha;
-        Self { b0: alpha / a0, a1: -2.0 * w0.cos() / a0, a2: (1.0 - alpha) / a0, s1: 0.0, s2: 0.0 }
+        let q = |v: f32| (v as f64 * (1i64 << COEF_Q) as f64).round() as i32;
+        Self {
+            b0: q(alpha / a0),
+            a1: q(-2.0 * w0.cos() / a0),
+            a2: q((1.0 - alpha) / a0),
+            s1: 0,
+            s2: 0,
+        }
     }
+
+    /// Q30 coefficient times Q28 signal, back to Q28.
+    #[inline]
+    fn mul(coef: i32, sig: i32) -> i32 { ((coef as i64 * sig as i64) >> COEF_Q) as i32 }
 
     /// Feed one sample in, get that sample's filtered output back.
     #[inline]
-    fn step(&mut self, x: f32) -> f32 {
+    fn step(&mut self, x: i32) -> i32 {
         // Direct form II transposed. A bandpass has b1 = 0 and b2 = -b0, so the
         // single product b0*x serves both feed-forward taps: three multiplies total.
-        let bx = self.b0 * x;
+        let bx = Self::mul(self.b0, x);
         let y = bx + self.s1;
-        self.s1 = self.s2 - self.a1 * y;
-        self.s2 = -bx - self.a2 * y;
+        self.s1 = self.s2 - Self::mul(self.a1, y);
+        self.s2 = -bx - Self::mul(self.a2, y);
         y
     }
 }
@@ -169,7 +189,7 @@ impl Biquad {
 struct BandBank {
     filters: [Biquad; MEL_BANDS],
     /// Running sum of squared filter output per band, since the last `take_energies`.
-    energy: [f32; MEL_BANDS],
+    energy: [i64; MEL_BANDS],
     /// Samples accumulated into `energy`, so the sum can be turned into a mean.
     count: u32,
 }
@@ -187,15 +207,16 @@ impl BandBank {
         let filters = std::array::from_fn(|m| {
             Biquad::bandpass(edge_hz(m + 1), edge_hz(m + 2) - edge_hz(m))
         });
-        Self { filters, energy: [0.0; MEL_BANDS], count: 0 }
+        Self { filters, energy: [0; MEL_BANDS], count: 0 }
     }
 
     /// Run one sample through every band and accumulate its squared output.
     #[inline]
-    fn push(&mut self, sample: f32) {
+    fn push(&mut self, sample: i32) {
         for (filter, energy) in self.filters.iter_mut().zip(self.energy.iter_mut()) {
             let y = filter.step(sample);
-            *energy += y * y;
+            // y*y is Q56; shift back to Q28 so a frame of sums cannot overflow i64.
+            *energy += (y as i64 * y as i64) >> SIG_Q;
         }
         self.count += 1;
     }
@@ -204,9 +225,9 @@ impl BandBank {
     /// clearing the accumulators. Filter state is left alone, so the bands stay
     /// continuous across frame boundaries.
     fn take_energies(&mut self) -> [f32; MEL_BANDS] {
-        let n = self.count.max(1) as f32;
-        let out = std::array::from_fn(|m| self.energy[m] / n);
-        self.energy = [0.0; MEL_BANDS];
+        let scale = self.count.max(1) as f32 * (1i64 << SIG_Q) as f32;
+        let out = std::array::from_fn(|m| self.energy[m] as f32 / scale);
+        self.energy = [0; MEL_BANDS];
         self.count = 0;
         out
     }
@@ -281,7 +302,8 @@ impl MelProcessor {
         // of its own filter's output. No windowing is needed because the filters run
         // continuously rather than treating the frame as an isolated block.
         for &s in samples.iter() {
-            self.bank.push(s as f32 / 32768.0);
+            // i16 -> Q28: s/32768 scaled by 2^28 is exactly s << 13.
+            self.bank.push((s as i32) << (SIG_Q - 15));
         }
         // Natural log of each band's mean-square energy (perceived loudness is
         // ~logarithmic; 1e-10 guards log(0) on silence).
