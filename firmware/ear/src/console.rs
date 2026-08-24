@@ -246,6 +246,7 @@ fn stats(d: &Diag, tt: &ticktimer::Ticktimer, mic: &mut I2sAudio) {
     }
 
     let start = tt.elapsed_ms();
+    let mut starved = false;
     let (mut min, mut max) = (i32::MAX, i32::MIN);
     let (mut sum, mut sumsq, mut n) = (0i64, 0i64, 0i64);
     // Bits that were ever set, and bits that were always set. Together they name
@@ -254,7 +255,10 @@ fn stats(d: &Diag, tt: &ticktimer::Ticktimer, mic: &mut I2sAudio) {
 
     'measure: loop {
         for _ in 0..SAMPLE_BLOCK {
-            let Some(s) = mic.try_read_sample() else { break 'measure };
+            let Some(s) = mic.try_read_sample() else {
+                starved = true;
+                break 'measure;
+            };
             let bits = s as u32 & 0x00ff_ffff;
             any_set |= bits;
             all_set &= bits;
@@ -280,6 +284,9 @@ fn stats(d: &Diag, tt: &ticktimer::Ticktimer, mic: &mut I2sAudio) {
     let rms = ((sumsq / n - mean * mean).max(0) as f64).sqrt();
     let (min, max) = (min as i64, max as i64);
 
+    if starved {
+        d.line("the BIO stopped pushing partway - this covers less than the full second");
+    }
     d.line(&format!("{} samples", n));
     d.line(&format!("raw 24-bit: min {} max {} p-p {} dc {} rms {:.1}",
         min, max, max - min, mean, rms));
@@ -424,6 +431,11 @@ fn spectrum(d: &Diag, tt: &ticktimer::Ticktimer, mic: &mut I2sAudio) {
     d.line("  band     quiet      loud      diff");
     let mut heard = false;
     for (i, &hz) in BAND_HZ.iter().enumerate() {
+        // Zero has no dB value; dbfs()'s floor would read as a rise.
+        if quiet[i] <= 0.0 || loud[i] <= 0.0 {
+            d.line(&format!("{:6.0}   no reading - this band produced no energy", hz));
+            continue;
+        }
         let q = dbfs(quiet[i], 1.0);
         let l = dbfs(loud[i], 1.0);
         let diff = l - q;

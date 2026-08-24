@@ -69,6 +69,8 @@ mod i2s {
         // The handle must outlive `rx` or the underlying CSR mapping is dropped.
         _rx_handle: CoreHandle,
         resource_grant: ResourceGrant,
+        /// Frames abandoned because nothing was arriving.
+        starved_frames: u32,
     }
 
     impl Resources for I2sAudio {
@@ -152,7 +154,8 @@ mod i2s {
                 .expect("FIFO0 handle error")
                 .expect("no FIFO0 handle");
             let rx = CoreCsr::from_handle(&rx_handle);
-            let mut this = Self { bio_ss, rx, _rx_handle: rx_handle, resource_grant };
+            let mut this =
+                Self { bio_ss, rx, _rx_handle: rx_handle, resource_grant, starved_frames: 0 };
 
             // The mic outputs garbage until its filter settles after the clock starts,
             // so drop the first ~100 ms of samples before any frame is read. Stops early
@@ -193,6 +196,9 @@ mod i2s {
             self.try_read_raw().map(|raw| (raw << 8) as i32 >> 8)
         }
 
+        /// Frames abandoned so far because nothing was arriving.
+        pub fn starved_frames(&self) -> u32 { self.starved_frames }
+
         /// Discard everything currently queued in FIFO0, without blocking.
         pub fn flush(&mut self) {
             while self.fifo_level() != 0 {
@@ -218,8 +224,13 @@ mod i2s {
                 // sharper FIR could replace it if aliasing artifacts appear.
                 let mut acc: i32 = 0;
                 for _ in 0..DECIMATE {
+                    let Some(s) = self.try_read_sample() else {
+                        // Give up rather than pay the spin limit 1500 more times.
+                        self.starved_frames = self.starved_frames.wrapping_add(1);
+                        return out;
+                    };
                     // 24-bit -> 16-bit: keep the 16 most-significant bits.
-                    acc += self.try_read_sample().unwrap_or(0) >> 8;
+                    acc += s >> 8;
                 }
                 *slot = (acc / DECIMATE as i32) as i16;
             }

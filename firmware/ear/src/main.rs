@@ -61,6 +61,7 @@ fn main() -> ! {
     // Filterbank cost, averaged over a batch - the ticktimer only resolves ms.
     let (mut mel_ms, mut mel_frames) = (0u64, 0u32);
     let mut mel_reported: Option<f32> = None;
+    let mut starved_reported = 0u32;
 
     loop {
         // The mic is not Send, so diagnostic commands run here rather than on the
@@ -68,6 +69,13 @@ fn main() -> ! {
         console::service(&d, &tt, &mut mic);
 
         let frame = mic.read_frame();
+
+        // The eye cannot tell a starved frame from a quiet room, so say so.
+        let starved = mic.starved_frames();
+        if starved != starved_reported {
+            d.line(&format!("mic starved: {} frames abandoned, the BIO stopped pushing", starved));
+            starved_reported = starved;
+        }
 
         let started = tt.elapsed_ms();
         let processed = processor.process(&frame);
