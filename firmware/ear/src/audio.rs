@@ -30,11 +30,6 @@ const _: () = assert!(RAW_RATE_HZ.is_multiple_of(DECIMATE as u32));
 // 18.75 kHz it drops to low-power mode, and below 3.125 kHz it sleeps.
 const _: () = assert!(RAW_RATE_HZ >= 23_000 && RAW_RATE_HZ <= 51_600);
 
-pub trait AudioSource {
-    /// Block until a complete 512-sample frame is available, then return it.
-    fn read_frame(&mut self) -> [i16; FFT_SIZE];
-}
-
 // --- I2S from the ICS43434 MEMS microphone (JLCPCB C5656610) ---
 //
 // The mic I2S is a BIO driver (the vendored program in i2s_bio.rs), not the
@@ -50,7 +45,7 @@ pub trait AudioSource {
 // continuously and samples are lost between frames rather than the mic being
 // stopped.
 mod i2s {
-    use super::{AudioSource, BIO_QUANTUM_HZ, DECIMATE, FFT_SIZE, RAW_RATE_HZ};
+    use super::{BIO_QUANTUM_HZ, DECIMATE, FFT_SIZE, RAW_RATE_HZ};
     use bao1x_api::bio::*;
     use bao1x_api::bio_resources::*;
     use bao1x_api::{IoSetup, IoxDir, IoxFunction, IoxPort};
@@ -206,8 +201,9 @@ mod i2s {
         }
     }
 
-    impl AudioSource for I2sAudio {
-        fn read_frame(&mut self) -> [i16; FFT_SIZE] {
+    impl I2sAudio {
+        /// Block until a complete 512-sample frame is available, then return it.
+        pub fn read_frame(&mut self) -> [i16; FFT_SIZE] {
             // Drop whatever queued while the caller processed the previous frame. Once
             // the FIFO fills the BIO discards new samples, so the eight sitting there
             // are the oldest ones from whenever it filled; flushing starts the frame on

@@ -185,6 +185,10 @@ fn raw_dump(d: &Diag, mic: &mut I2sAudio) {
             line.clear();
         }
     }
+    // Flush a partial last line if the two constants stop dividing evenly.
+    if !line.is_empty() {
+        d.line(line.trim_end());
+    }
 
     d.line("all 000000 = data line low or mic unpowered; all ffffff = line high or");
     d.line("floating; one value repeating = latching problem; small values changing");

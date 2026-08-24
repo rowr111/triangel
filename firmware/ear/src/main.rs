@@ -7,7 +7,7 @@ mod mel;
 mod pins;
 mod uart_out;
 
-use audio::{AudioSource, FRAME_PERIOD_MS, I2sAudio};
+use audio::{FRAME_PERIOD_MS, I2sAudio};
 use diag::Diag;
 use uart_out::UartOut;
 
