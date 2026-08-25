@@ -1,8 +1,10 @@
 # CornerBracketsCorner.py  -- v1 (room-corner mount)
 #
-# Built on the working flat CornerBrackets.py: the tile PAD + 90-degree standoff (web)
-# are identical; the ONLY change is the wall FOOT, which is built flat and then tilted
-# OUT about a hinge by the corner angle so it lies against an angled wall.
+# Built on the working flat CornerBrackets.py: the 90-degree standoff (web) is identical.
+# The wall FOOT is built flat and then tilted OUT about a hinge by the corner angle so it
+# lies against an angled wall. The tile PAD reaches back OVER the feet rather than away
+# from them -- see PAD_DIR. The flat bracket points it the other way to keep the wall screw
+# drivable, which stops being the right trade once the feet fold into a corner.
 #
 # An equilateral triangle capping a right-angle corner sits at the "magic angle"
 # arctan(sqrt2) = 54.7deg to each wall, so the foot tilts 54.7deg off flat and the
@@ -19,6 +21,13 @@ WIDTH      = 20.0
 WEB_T      = 6.0
 
 PAD_X      = 20.0
+PAD_DIR    = -1     # which way the pad reaches off the web: -1 = back over the feet,
+                    # +1 = out into the room, the way the flat bracket has it
+PAD_TIP_W   = 11.0  # pad width at the back, where it meets the web. The tile has converged
+                    # to 12.2mm there, so the full WIDTH stands ~3.9mm proud on each side
+PAD_TAPER_L = 8.0   # how far out from that face the taper runs before it reaches WIDTH
+PAD_TAPER_FADE = 20.0  # how far DOWN the web the narrowing fades back to full width. Cutting
+                       # straight through the pad instead puts the web back in a single step
 TILE_T     = 8.0
 FOOT_X     = 30.0
 FOOT_T     = 4.0
@@ -63,7 +72,15 @@ def run(context):
         root = design.rootComponent
         exts = root.features.extrudeFeatures
         state = {'body': None}
-        ins_x, ins_y = WEB_T + PAD_X / 2.0, WIDTH / 2.0
+        # The pad is laid out in u: distance out from whichever web face it springs from.
+        # PX mirrors u about the web's midplane, so flipping PAD_DIR keeps the pad's overlap
+        # with the web, and the part's thickness, exactly as they are.
+        def PX(u):
+            return u if PAD_DIR > 0 else WEB_T - u
+
+        ins_u = WEB_T + PAD_X / 2.0
+        ins_x, ins_y = PX(ins_u), WIDTH / 2.0
+        arc_cx = PX(ins_u - R_HOLE)      # border-arc center, mirrored along with the pad
 
         def plane_at(z):
             if abs(z) < 1e-9:
@@ -95,16 +112,16 @@ def run(context):
             extrude(sk, z0, z1)
 
         def add_pad(z0, z1):
-            vx = ins_x - R_HOLE
-            xa0 = vx + math.sqrt(PLATE_R ** 2 - (0.0 - ins_y) ** 2)
-            xa1 = vx + math.sqrt(PLATE_R ** 2 - (WIDTH - ins_y) ** 2)
-            xmid = vx + PLATE_R
+            vu = ins_u - R_HOLE
+            ua0 = vu + math.sqrt(PLATE_R ** 2 - (0.0 - ins_y) ** 2)
+            ua1 = vu + math.sqrt(PLATE_R ** 2 - (WIDTH - ins_y) ** 2)
+            umid = vu + PLATE_R
             sk = root.sketches.add(plane_at(z0))
             crv = sk.sketchCurves
-            crv.sketchLines.addByTwoPoints(P(0, 0), P(xa0, 0))
-            crv.sketchArcs.addByThreePoints(P(xa0, 0), P(xmid, ins_y), P(xa1, WIDTH))
-            crv.sketchLines.addByTwoPoints(P(xa1, WIDTH), P(0, WIDTH))
-            crv.sketchLines.addByTwoPoints(P(0, WIDTH), P(0, 0))
+            crv.sketchLines.addByTwoPoints(P(PX(0), 0), P(PX(ua0), 0))
+            crv.sketchArcs.addByThreePoints(P(PX(ua0), 0), P(PX(umid), ins_y), P(PX(ua1), WIDTH))
+            crv.sketchLines.addByTwoPoints(P(PX(ua1), WIDTH), P(PX(0), WIDTH))
+            crv.sketchLines.addByTwoPoints(P(PX(0), WIDTH), P(PX(0), 0))
             extrude(sk, z0, z1)
 
         def cut_cyl(cx, cy, z_top, depth, dia, body):
@@ -124,7 +141,40 @@ def run(context):
             inp.participantBodies = [body]
             exts.add(inp)
 
-        # --- 1) pad + web (the 90-degree standoff) -- same as the flat bracket ---
+        def cut_pad_taper():
+            # Narrow the pad's back, where it meets the web: the tile has converged toward its
+            # tip by then, so a full-WIDTH slab stands proud of it either side. The wedge is
+            # LOFTED, full at the tile face and gone PAD_TAPER_FADE further down, so the web
+            # comes back to width gradually. It has to reach past the pad into the web at all,
+            # because over this stretch the web reaches the tile face too.
+            m = (WIDTH / 2.0 - PAD_TIP_W / 2.0) / PAD_TAPER_L   # half-width gained per mm out
+            u0 = -1.0                                           # start clear of the pad's back face
+            out = WIDTH / 2.0 + 20.0                            # well outside the part
+
+            def quad(z, side, y_near, y_far):
+                sk = root.sketches.add(plane_at(z))
+                ln = sk.sketchCurves.sketchLines
+                pts = [(PX(u0), ins_y + side * y_near),
+                       (PX(PAD_TAPER_L), ins_y + side * y_far),
+                       (PX(PAD_TAPER_L), ins_y + side * out),
+                       (PX(u0), ins_y + side * out)]
+                for i in range(len(pts)):
+                    ln.addByTwoPoints(P(*pts[i]), P(*pts[(i + 1) % len(pts)]))
+                return sk.profiles.item(0)
+
+            for side in (-1.0, 1.0):
+                lin = root.features.loftFeatures.createInput(
+                    adsk.fusion.FeatureOperations.CutFeatureOperation)
+                # top section bites in to the taper line; the bottom one clears the web
+                # entirely, so the cut runs out to nothing between them
+                lin.loftSections.add(quad(STANDOFF, side, PAD_TIP_W / 2.0 + m * u0, WIDTH / 2.0))
+                lin.loftSections.add(quad(STANDOFF - PAD_TAPER_FADE, side,
+                                          WIDTH / 2.0 + 0.5, WIDTH / 2.0 + 0.5))
+                lin.isSolid = True
+                lin.participantBodies = [main]
+                root.features.loftFeatures.add(lin)
+
+        # --- 1) pad + web (the 90-degree standoff); the web is the flat bracket's ---
         add_box(0, WEB_T, 0, WIDTH, -STANDOFF_DROP, STANDOFF)     # back web (extended down to meet the feet)
         add_pad(STANDOFF - TILE_T, STANDOFF)                      # arc-clipped tile pad
         main = state['body']
@@ -259,7 +309,11 @@ def run(context):
             exts.add(inp)
 
         if GUSSET_H > 0:
-            add_gusset(WEB_T, +1, STANDOFF - TILE_T, -1)     # web -> pad (under the pad)
+            add_gusset(PX(WEB_T), PAD_DIR, STANDOFF - TILE_T, -1)   # web -> pad (under the pad)
+
+        # After the gusset, so the taper shapes its near corner too rather than leaving the
+        # gusset standing full width in the stretch the cut just narrowed.
+        cut_pad_taper()
 
         # --- 6) fillets: big round on all structural (non-hole) edges; 0.5mm on the hole rims ---
         fills = root.features.filletFeatures
@@ -273,7 +327,7 @@ def run(context):
             if cen is None or rad is None:
                 return False
             return (abs(rad - PLATE_R * MM) < 0.2 * MM
-                    and abs(cen.x - (ins_x - R_HOLE) * MM) < 0.3 * MM
+                    and abs(cen.x - arc_cx * MM) < 0.3 * MM
                     and abs(cen.y - ins_y * MM) < 0.3 * MM)
 
         # The feet are only FOOT_T thick, so their edges can't take the full ROUND_R (the top +
