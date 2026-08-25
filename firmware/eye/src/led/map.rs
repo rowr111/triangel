@@ -18,8 +18,10 @@ pub const LED_COUNT: usize = 600;
 // Chain split, for driving the two WS2812 data lines. The previewer sends all
 // 600 in one stream and does not need it.
 #[cfg(not(feature = "previewer"))]
+#[allow(dead_code)]
 pub const CHAIN1_LED_COUNT: usize = 288;
 #[cfg(not(feature = "previewer"))]
+#[allow(dead_code)]
 pub const CHAIN2_LED_COUNT: usize = 312;
 
 pub struct Led {

@@ -2,12 +2,15 @@ use bao1x_api::iox::IoxHal;
 use bao1x_api::{IoxDir, IoxEnable, IoxFunction, IoSetup, IoxPort};
 
 // LED output
-// BIO pin 4 = PB4 -> chain 1 (tiles 1-12, 288 LEDs)   [schematic: LED DATA_1, U2.7]
-// BIO pin 5 = PB5 -> chain 2 (tiles 13-25, 312 LEDs)  [schematic: LED DATA_2, U2.6]
-// Passed to bio_lib::ws2812::Ws2812::new().
+// BIO pin 4 = PB4 -> the data line all 600 LEDs are driven from
+//                                                     [schematic: LED DATA_1, U2.7]
+// BIO pin 5 = PB5 -> second data line, wired but unused
+//                                                     [schematic: LED DATA_2, U2.6]
+// Passed to led::ws2812::Ws2812::new().
 #[cfg(not(feature = "previewer"))]
 pub const LED_BIO_PIN:   u8 = 4;
 #[cfg(not(feature = "previewer"))]
+#[allow(dead_code)] // second data line is wired on the board but not driven
 pub const LED_BIO_PIN_2: u8 = 5;
 
 // Audio UART (ear -> eye)
