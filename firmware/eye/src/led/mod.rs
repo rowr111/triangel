@@ -2,9 +2,11 @@ pub mod geom;
 pub mod grid;
 pub mod map;
 #[cfg(not(feature = "previewer"))]
-mod ws2812;
+mod ws2812_pair;
 
 use map::LED_COUNT;
+#[cfg(not(feature = "previewer"))]
+use map::{CHAIN1_LED_COUNT, CHAIN2_LED_COUNT};
 
 #[cfg(not(feature = "previewer"))]
 use crate::pins;
@@ -18,7 +20,7 @@ pub struct LedOutput {
 
 #[cfg(not(feature = "previewer"))]
 struct Inner {
-    ws2812: ws2812::Ws2812,
+    ws2812: ws2812_pair::Ws2812Pair,
 }
 
 #[cfg(feature = "previewer")]
@@ -36,9 +38,12 @@ impl Default for LedOutput {
 impl LedOutput {
     #[cfg(not(feature = "previewer"))]
     pub fn new() -> Self {
-        let pin = arbitrary_int::u5::new(pins::LED_BIO_PIN);
-        // A failure here means no LEDs at all; the panic hook reports it over USB.
-        let ws2812 = ws2812::Ws2812::new(pin).expect("failed to init WS2812 BIO driver");
+        let pin1 = arbitrary_int::u5::new(pins::LED_BIO_PIN);
+        let pin2 = arbitrary_int::u5::new(pins::LED_BIO_PIN_2);
+        // Both chains are claimed together, so a failure here means no LEDs at all
+        // rather than a silently half-dark panel. The panic hook reports it over USB.
+        let ws2812 = ws2812_pair::Ws2812Pair::new(pin1, pin2)
+            .expect("failed to init WS2812 BIO driver");
         LedOutput { inner: Inner { ws2812 } }
     }
 
@@ -52,7 +57,7 @@ impl LedOutput {
     /// Send one frame. `frame[i]` is `[r, g, b]` for the LED described by `LED_MAP[i]`.
     /// LED_MAP is sorted by boardId/localIdx, not by chainIdx, so we reorder before
     /// sending - the hardware and previewer bridge both expect bytes in chainIdx order.
-    /// Hardware: one BIO core clocks all 600 LEDs out of the first data line, 18ms.
+    /// Hardware: two BIO cores clock both chains out in parallel, ~9.4ms.
     pub fn send_frame(&mut self, frame: &[[u8; 3]; LED_COUNT]) {
         // Reorder: chain_ordered[chainIdx] = colour for that physical chain position.
         let mut chain_ordered = [[0u8; 3]; LED_COUNT];
@@ -62,12 +67,17 @@ impl LedOutput {
 
         #[cfg(not(feature = "previewer"))]
         {
-            // One chain, chainIdx 0-599: tiles 1-12 then tiles 13-25.
-            let mut packed = [0u32; LED_COUNT];
-            for (i, rgb) in chain_ordered.iter().enumerate() {
-                packed[i] = ws2812::rgb_to_u32(rgb[0], rgb[1], rgb[2]);
+            // Chain 1: chainIdx 0-287. Chain 2: chainIdx 288-599, renumbered from 0.
+            let mut packed1 = [0u32; CHAIN1_LED_COUNT];
+            for (i, rgb) in chain_ordered[..CHAIN1_LED_COUNT].iter().enumerate() {
+                packed1[i] = ws2812_pair::rgb_to_u32(rgb[0], rgb[1], rgb[2]);
             }
-            self.inner.ws2812.send_async(&packed);
+            let mut packed2 = [0u32; CHAIN2_LED_COUNT];
+            for (i, rgb) in chain_ordered[CHAIN1_LED_COUNT..].iter().enumerate() {
+                packed2[i] = ws2812_pair::rgb_to_u32(rgb[0], rgb[1], rgb[2]);
+            }
+            // Start both BIO cores, then wait for both to finish.
+            self.inner.ws2812.send_async(&packed1, &packed2);
             self.inner.ws2812.send_await();
         }
 

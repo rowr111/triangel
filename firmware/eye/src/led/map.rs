@@ -1,8 +1,9 @@
 // Auto-generated from triangel previewer/led_map.js - do not edit by hand.
 // Run generate_map.js in the previewer, then re-run the generation script to update.
 // 600 LEDs across 25 boards. Two chains:
-//   Chain 1 (PB4): boards 1-12,  chainIdx 0-287   (288 LEDs)
-//   Chain 2 (PB5): boards 13-25, chainIdx 288-599  (312 LEDs)
+//   Chain 1 (PB4): chainIdx 0-287   (288 LEDs) - boards 1-9,16,15,14
+//   Chain 2 (PB5): chainIdx 288-599 (312 LEDs) - boards 13,12,11,10,17-21,24,23,22,25
+// The chain snakes, so each half is a run of consecutive chainIdx, not consecutive board ids.
 // Chain snake: row1 left->right, row2 right->left, row3 left->right, row4 right->left, row5.
 // Baochip data wires connect at board 1 (chain 1) and board 13 (chain 2).
 
@@ -18,10 +19,8 @@ pub const LED_COUNT: usize = 600;
 // Chain split, for driving the two WS2812 data lines. The previewer sends all
 // 600 in one stream and does not need it.
 #[cfg(not(feature = "previewer"))]
-#[allow(dead_code)]
 pub const CHAIN1_LED_COUNT: usize = 288;
 #[cfg(not(feature = "previewer"))]
-#[allow(dead_code)]
 pub const CHAIN2_LED_COUNT: usize = 312;
 
 pub struct Led {
