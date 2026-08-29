@@ -2,10 +2,10 @@
 # Fusion 360 script: wall-mount standoff bracket for the 3 corners of Triangel.
 # Iteration 1 = flat on one wall; all three corners use this same part (print 3).
 #
-# "Z" standoff: a full-height back web, with the TILE PAD (M3 insert) at the top on
-# one side and the WALL FOOT (single screw/nail hole) at the bottom on the other side.
-# Offsetting the pad and foot to opposite sides leaves the wall screw drivable and
-# keeps the insert clear -- and the full-height web is the stiff part.
+# "Z" standoff: a full-height back web, with the TILE PAD (M3 insert) at the top and
+# the WALL FOOT (single screw/nail hole) at the bottom. Both reach off the SAME side --
+# see PAD_DIR. The full-height web is the stiff part. The wall screw stays reachable
+# because the pad's far edge stops 1.6mm short of the wall hole, 48mm above it.
 #
 # The pad's outer edge is clipped to the SAME border arc as a normal tile bracket
 # (radius PLATE_R about the vertex) so it never reaches past their footprint into the
@@ -22,9 +22,20 @@ WIDTH      = 20.0   # bracket width (Y)
 WEB_T      = 8.0    # back web / spine thickness (X)
 
 PAD_X      = 16.0   # sets the insert position out past the web (X)
+PAD_DIR    = -1     # which way the pad reaches off the web: -1 = back over the foot,
+                    # +1 = out the other side, the way this bracket used to have it
+PAD_TIP_W   = 11.0  # pad width at the back, where it meets the web. The tile has
+                    # converged to 12.2mm there, so full WIDTH stands 3.9mm out each side
+PAD_TAPER_L = 8.0   # how far out from that face the taper runs before it reaches WIDTH
+PAD_TAPER_FADE = 30.0  # how far DOWN the web the narrowing fades back to full width.
+                       # Cutting straight through the pad puts the web back in one step.
+                       # 30 over a 4.5mm recovery is an 8.5 degree run-out
 TILE_T     = 8.0    # tile pad thickness (holds the M3x4x5 insert: 7mm pocket + ~1mm floor)
-FOOT_X     = 30.0   # wall foot reach (X, opposite side from the pad)
-FOOT_Y     = 30.0   # wall foot width (Y); centered on the web, so it grows past WIDTH symmetrically
+WALL_HOLE_X = 15.0  # how far out from the web face the wall hole sits
+FOOT_RIM    = 3.0   # material left past the washer recess at the foot's far end. FOOT_X
+                    # is derived from it so the rim is even all round rather than long
+                    # at the end - the sides are (FOOT_Y - WASHER_D)/2, the same 3.0
+FOOT_Y     = WIDTH  # wall foot width (Y); centered on the web, so this sits it flush
 FOOT_T     = 4.0    # wall foot thickness
 
 GUSSET_H   = 16.0   # web-foot brace: rib height up the web (0 = no gusset)
@@ -48,6 +59,10 @@ WASHER_DEPTH  = 1.5  # how deep to recess the washer / head
 
 MM = 0.1
 
+# Foot reach, derived so the washer recess sits in an even border: FOOT_RIM past its far
+# edge, and (FOOT_Y - WASHER_D)/2 at each side. Set it directly to override.
+FOOT_X = WALL_HOLE_X + WASHER_D / 2.0 + FOOT_RIM
+
 
 def run(context):
     ui = None
@@ -62,7 +77,15 @@ def run(context):
         exts = root.features.extrudeFeatures
         state = {'body': None}
 
-        ins_x, ins_y = WEB_T + PAD_X / 2.0, WIDTH / 2.0   # insert position (unchanged)
+        # The pad is laid out in u: distance out from whichever web face it springs from.
+        # PX mirrors u about the web's midplane, so flipping PAD_DIR keeps the pad's overlap
+        # with the web, and the part's thickness, exactly as they are.
+        def PX(u):
+            return u if PAD_DIR > 0 else WEB_T - u
+
+        ins_u = WEB_T + PAD_X / 2.0
+        ins_x, ins_y = PX(ins_u), WIDTH / 2.0
+        arc_cx = PX(ins_u - R_HOLE)      # border-arc center, mirrored along with the pad
 
         def plane_at(z):
             if abs(z) < 1e-9:
@@ -93,19 +116,19 @@ def run(context):
             extrude(sk, z0, z1)
 
         def add_pad(z0, z1):
-            # rectangle from the web (x=0) out, but the far edge is the normal-bracket
-            # border arc (radius PLATE_R about the vertex, which is R_HOLE toward -X of the insert)
-            vx = ins_x - R_HOLE
-            xa0 = vx + math.sqrt(PLATE_R ** 2 - (0.0 - ins_y) ** 2)      # arc meets y=0
-            xa1 = vx + math.sqrt(PLATE_R ** 2 - (WIDTH - ins_y) ** 2)    # arc meets y=WIDTH
-            xmid = vx + PLATE_R                                          # arc apex at y=ins_y
+            # rectangle from the web face out, but the far edge is the normal-bracket
+            # border arc (radius PLATE_R about the vertex, which is R_HOLE back from the insert)
+            vu = ins_u - R_HOLE
+            ua0 = vu + math.sqrt(PLATE_R ** 2 - (0.0 - ins_y) ** 2)      # arc meets y=0
+            ua1 = vu + math.sqrt(PLATE_R ** 2 - (WIDTH - ins_y) ** 2)    # arc meets y=WIDTH
+            umid = vu + PLATE_R                                          # arc apex at y=ins_y
             sk = root.sketches.add(plane_at(z0))
             P = lambda x, y: adsk.core.Point3D.create(x * MM, y * MM, 0)
             crv = sk.sketchCurves
-            crv.sketchLines.addByTwoPoints(P(0, 0), P(xa0, 0))
-            crv.sketchArcs.addByThreePoints(P(xa0, 0), P(xmid, ins_y), P(xa1, WIDTH))
-            crv.sketchLines.addByTwoPoints(P(xa1, WIDTH), P(0, WIDTH))
-            crv.sketchLines.addByTwoPoints(P(0, WIDTH), P(0, 0))
+            crv.sketchLines.addByTwoPoints(P(PX(0), 0), P(PX(ua0), 0))
+            crv.sketchArcs.addByThreePoints(P(PX(ua0), 0), P(PX(umid), ins_y), P(PX(ua1), WIDTH))
+            crv.sketchLines.addByTwoPoints(P(PX(ua1), WIDTH), P(PX(0), WIDTH))
+            crv.sketchLines.addByTwoPoints(P(PX(0), WIDTH), P(PX(0), 0))
             extrude(sk, z0, z1)
 
         def cut_cyl(cx, cy, z_top, depth, dia):
@@ -163,20 +186,58 @@ def run(context):
             inp.participantBodies = [state['body']]
             exts.add(inp)
 
-        # --- solid: web spine + tile pad (top, +X, arc-clipped) + wall foot (bottom, -X) ---
+        def cut_pad_taper():
+            # Narrow the pad's back, where it meets the web: the tile has converged toward
+            # its tip by then, so a full-WIDTH slab stands out past it either side. The wedge
+            # is LOFTED, full at the tile face and gone PAD_TAPER_FADE further down, so the
+            # web comes back to width gradually. It has to reach past the pad into the web at
+            # all, because over this stretch the web reaches the tile face too.
+            m = (WIDTH / 2.0 - PAD_TIP_W / 2.0) / PAD_TAPER_L   # half-width gained per mm out
+            u0 = -1.0                                           # start clear of the pad's back face
+            out = WIDTH / 2.0 + 20.0                            # well outside the part
+
+            def quad(z, side, y_near, y_far):
+                sk = root.sketches.add(plane_at(z))
+                ln = sk.sketchCurves.sketchLines
+                pts = [(PX(u0), ins_y + side * y_near),
+                       (PX(PAD_TAPER_L), ins_y + side * y_far),
+                       (PX(PAD_TAPER_L), ins_y + side * out),
+                       (PX(u0), ins_y + side * out)]
+                for i in range(len(pts)):
+                    ln.addByTwoPoints(
+                        adsk.core.Point3D.create(pts[i][0] * MM, pts[i][1] * MM, 0),
+                        adsk.core.Point3D.create(pts[(i + 1) % len(pts)][0] * MM,
+                                                 pts[(i + 1) % len(pts)][1] * MM, 0))
+                return sk.profiles.item(0)
+
+            for side in (-1.0, 1.0):
+                lin = root.features.loftFeatures.createInput(
+                    adsk.fusion.FeatureOperations.CutFeatureOperation)
+                # top section follows the taper line; the bottom one clears the web
+                # entirely, so the cut runs out to nothing between them
+                lin.loftSections.add(quad(STANDOFF, side, PAD_TIP_W / 2.0 + m * u0, WIDTH / 2.0))
+                lin.loftSections.add(quad(STANDOFF - PAD_TAPER_FADE, side,
+                                          WIDTH / 2.0 + 0.5, WIDTH / 2.0 + 0.5))
+                lin.isSolid = True
+                lin.participantBodies = [state['body']]
+                root.features.loftFeatures.add(lin)
+
+        # --- solid: web spine + tile pad (top, arc-clipped) + wall foot (bottom) ---
         add_box(0, WEB_T, 0, WIDTH, 0, STANDOFF)                     # back web (full height)
         add_pad(STANDOFF - TILE_T, STANDOFF)                         # tile pad, outer edge = border arc
         add_box(-FOOT_X, WEB_T, WIDTH / 2.0 - FOOT_Y / 2.0, WIDTH / 2.0 + FOOT_Y / 2.0, 0, FOOT_T)  # wall foot (overlaps web, wider in Y)
 
         if GUSSET_H > 0:                                             # braces at both inside corners (before the fillets)
             add_gusset(0.0, -1, FOOT_T, +1)                         # web -> foot (base)
-            add_gusset(WEB_T, +1, STANDOFF - TILE_T, -1)            # web -> pad (top, reversed)
+            add_gusset(PX(WEB_T), PAD_DIR, STANDOFF - TILE_T, -1)   # web -> pad (top, reversed)
+
+        # After the gussets, so the taper shapes the top one's near corner too rather than
+        # leaving it standing full width in the stretch the cut just narrowed.
+        cut_pad_taper()
 
         # --- soften edges BEFORE the holes: ROUND_R everywhere except the border arc
         #     (both the top and bottom of the clipped edge), which gets the gentler
         #     ARC_FILLET so that edge stays an even thickness top to bottom ---
-        vx = ins_x - R_HOLE
-
         def is_border_arc(e):
             g = e.geometry
             cen = getattr(g, 'center', None)
@@ -184,7 +245,7 @@ def run(context):
             if cen is None or rad is None:
                 return False
             return (abs(rad - PLATE_R * MM) < 0.2 * MM
-                    and abs(cen.x - vx * MM) < 0.3 * MM
+                    and abs(cen.x - arc_cx * MM) < 0.3 * MM
                     and abs(cen.y - ins_y * MM) < 0.3 * MM)
 
         body = state['body']
@@ -233,14 +294,18 @@ def run(context):
         cut_cyl(ins_x, ins_y, STANDOFF, INSERT_DEPTH, INSERT_HOLE_D)          # insert pocket, opens on the tile face
         cut_cyl(ins_x, ins_y, STANDOFF, TILE_T + 0.5, SCREW_CLEAR_D)          # screw clearance through the pad
         fillet_mouth(ins_x, ins_y, STANDOFF, INSERT_HOLE_D / 2.0, MOUTH_FILLET)  # 0.5mm lead-in round at the pocket mouth
-        wall_x, wall_y = -FOOT_X / 2.0, WIDTH / 2.0
+        wall_x, wall_y = -WALL_HOLE_X, WIDTH / 2.0
         cut_cyl(wall_x, wall_y, FOOT_T, FOOT_T + 0.5, WALL_HOLE_D)            # wall hole through the foot
         if WASHER_DEPTH > 0:                                                  # counterbore for the washer / nail head
             cut_cyl(wall_x, wall_y, FOOT_T, WASHER_DEPTH, WASHER_D)
 
         ui.messageBox('Created CornerBracket (print 3).\n'
-                      'Foot %.0fx%.0f + %.0fx%.0fmm gussets under foot AND pad; Ø%.0f wall hole + Ø%.0f counterbore.'
-                      % (FOOT_X, FOOT_Y, GUSSET_L, GUSSET_H, WALL_HOLE_D, WASHER_D))
+                      'Foot %.0fx%.0f, flush with the %.0fmm web; gussets %.0fx%.0f under foot AND pad.\n'
+                      'Pad narrows to %.0f at the web, full %.0f from %.0fmm out.\n'
+                      'Wall hole %.0f dia + %.0f dia counterbore, %.1fmm of rim each side.'
+                      % (FOOT_X, FOOT_Y, WIDTH, GUSSET_L, GUSSET_H,
+                         PAD_TIP_W, WIDTH, PAD_TAPER_L,
+                         WALL_HOLE_D, WASHER_D, (FOOT_Y - WASHER_D) / 2.0))
     except:
         if ui:
             ui.messageBox('Failed:\n{}'.format(traceback.format_exc()))

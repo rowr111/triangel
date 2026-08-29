@@ -26,8 +26,9 @@ PAD_DIR    = -1     # which way the pad reaches off the web: -1 = back over the 
 PAD_TIP_W   = 11.0  # pad width at the back, where it meets the web. The tile has converged
                     # to 12.2mm there, so the full WIDTH stands ~3.9mm proud on each side
 PAD_TAPER_L = 8.0   # how far out from that face the taper runs before it reaches WIDTH
-PAD_TAPER_FADE = 20.0  # how far DOWN the web the narrowing fades back to full width. Cutting
-                       # straight through the pad instead puts the web back in a single step
+PAD_TAPER_FADE = 30.0  # how far DOWN the web the narrowing fades back to full width. Cutting
+                       # straight through the pad instead puts the web back in a single step.
+                       # 30 over a 4.5mm recovery is an 8.5 degree run-out
 TILE_T     = 8.0
 FOOT_X     = 30.0
 FOOT_T     = 4.0
@@ -165,7 +166,7 @@ def run(context):
             for side in (-1.0, 1.0):
                 lin = root.features.loftFeatures.createInput(
                     adsk.fusion.FeatureOperations.CutFeatureOperation)
-                # top section bites in to the taper line; the bottom one clears the web
+                # top section follows the taper line; the bottom one clears the web
                 # entirely, so the cut runs out to nothing between them
                 lin.loftSections.add(quad(STANDOFF, side, PAD_TIP_W / 2.0 + m * u0, WIDTH / 2.0))
                 lin.loftSections.add(quad(STANDOFF - PAD_TAPER_FADE, side,
