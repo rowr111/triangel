@@ -10,10 +10,10 @@
     "opacity": {
       "images": 0.699999988079071,
       "pads": 1.0,
-      "shapes": 0.4399999976158142,
+      "shapes": 0.30000001192092896,
       "tracks": 1.0,
       "vias": 1.0,
-      "zones": 0.14000000059604645
+      "zones": 0.07999999821186066
     },
     "prototype_zone_fills": false,
     "selection_filter": {
@@ -53,7 +53,7 @@
       "board_outline_area",
       "ly_points"
     ],
-    "visible_layers": "ffffffff_ffffffff_fffffff5_ffffffab",
+    "visible_layers": "ffffffff_ffffffff_fffffff5_ffffffff",
     "zone_display_mode": 0
   },
   "git": {
