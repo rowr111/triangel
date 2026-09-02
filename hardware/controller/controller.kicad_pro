@@ -702,6 +702,11 @@
         "filename": "voltage_converters.kicad_sch",
         "name": "voltage converters and connector",
         "uuid": "95e5c331-6890-437f-94b9-bde400751ae8"
+      },
+      {
+        "filename": "inputs.kicad_sch",
+        "name": "panel inputs",
+        "uuid": "da8194a8-a0ef-4b58-ac57-0c2fbad6634d"
       }
     ],
     "used_designators": "",
@@ -719,6 +724,10 @@
     [
       "95e5c331-6890-437f-94b9-bde400751ae8",
       "voltage converters and connector"
+    ],
+    [
+      "da8194a8-a0ef-4b58-ac57-0c2fbad6634d",
+      "panel inputs"
     ]
   ],
   "text_variables": {},
