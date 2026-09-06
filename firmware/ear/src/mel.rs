@@ -113,6 +113,13 @@ const BAND_OWN_WINDOW_FRAMES: usize = 48;
 /// Floor on one band's measured span, so a steady band is not stretched to fill.
 const BAND_MIN_SPAN_DB: f32 = 8.0;
 
+/// Music loses roughly this much energy per octave above the bass. Without a matching
+/// lift the treble bands sit 25-30 dB under the bass ones and normalize to black.
+const TILT_DB_PER_OCTAVE: f32 = 4.5;
+
+/// Band the tilt pivots around: below it bands are cut, above it lifted.
+const TILT_PIVOT_BAND: f32 = 8.0;
+
 /// Absolute level a band needs before any of the above applies, and the range it
 /// fades in over. Without this a band holding nothing but noise has its few dB of
 /// wobble stretched to a full swing, so it sits lit and mushy while a real hit in it
@@ -357,6 +364,9 @@ pub struct MelProcessor {
     /// Each band's own reference, so a quiet band still moves rather than sitting flat.
     band_own: [RangeTracker<BAND_OWN_WINDOW_FRAMES>; MEL_BANDS],
 
+    /// Per-band dB lift that cancels music's natural rolloff with frequency.
+    tilt: [f32; MEL_BANDS],
+
     /// Quietest and loudest band of the last frame, for the console readout.
     band_lo: f32,
     band_hi: f32,
@@ -376,6 +386,13 @@ impl MelProcessor {
             smoothed_rms: 0.0,
             band_ref: RangeTracker::new(),
             band_own: core::array::from_fn(|_| RangeTracker::new()),
+            tilt: {
+                let per_band =
+                    (BAND_HIGH_HZ / BAND_LOW_HZ).log2() / (MEL_BANDS + 1) as f32;
+                core::array::from_fn(|m| {
+                    TILT_DB_PER_OCTAVE * (m as f32 - TILT_PIVOT_BAND) * per_band
+                })
+            },
             band_lo: 0.0,
             band_hi: 0.0,
             level_ref: RangeTracker::new(),
@@ -440,20 +457,27 @@ impl MelProcessor {
         // --- Adaptive normalization, under an absolute gate ---
         // Each band is scaled between the shared reference, which preserves relative
         // loudness, and its own, which keeps it moving. PER_BAND_MIX sets the balance.
+        // The references see tilted levels; the gate sees true ones, since it is
+        // asking whether the band holds anything above the microphone's noise.
         self.band_lo = band_db.iter().copied().fold(f32::MAX, f32::min);
         self.band_hi = band_db.iter().copied().fold(f32::MIN, f32::max);
-        self.band_ref.push(self.band_hi);
+        let tilted_peak = band_db
+            .iter()
+            .zip(self.tilt.iter())
+            .fold(f32::MIN, |m, (&db, &t)| m.max(db + t));
+        self.band_ref.push(tilted_peak);
         let shared_high = self.band_ref.high;
         let shared_low = shared_high - BAND_VISIBLE_RANGE_DB;
 
         // --- Normalize -> power-law -> per-band smoothing -> u16 ---
         let mut bands = [0u16; MEL_BANDS];
-        for (m, &db) in band_db.iter().enumerate() {
+        for (m, &raw_db) in band_db.iter().enumerate() {
+            let db = raw_db + self.tilt[m];
             let own = &mut self.band_own[m];
             own.push(db);
             let high = shared_high + (own.high - shared_high) * PER_BAND_MIX;
             let low = shared_low + (own.low - shared_low) * PER_BAND_MIX;
-            let gate = ((db - GATE_FLOOR_DB) / GATE_KNEE_DB).clamp(0.0, 1.0);
+            let gate = ((raw_db - GATE_FLOOR_DB) / GATE_KNEE_DB).clamp(0.0, 1.0);
             let norm = ((db - low) / (high - low).max(BAND_MIN_SPAN_DB)).clamp(0.0, 1.0) * gate;
             let shaped = norm.powf(POWER_LAW);
             let sm = &mut self.band_smooth[m];

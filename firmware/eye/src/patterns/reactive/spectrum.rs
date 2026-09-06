@@ -18,12 +18,13 @@ const HUE_SPIN_MS:      u32 = 30_000;
 // Floor under the loudness scale, so a quiet room still shows the band shape.
 const QUIET_FLOOR: f32 = 0.20;
 
-// Steepens the brightness ramp. The response stays linear, so contrast holds; the
-// loudest bands reach full and clip there.
-const GAIN: f32 = 1.7;
+// Steepens the brightness ramp. Kept below the point where a sustained bass line
+// clips solid, so a kick still has somewhere to go above it.
+const GAIN: f32 = 1.25;
 
-// A band's onset adds this much brightness and whitens it by this much.
-const HIT_GAIN:  f32 = 0.6;
+// A band's onset adds this much brightness and whitens it by this much. The onset is
+// what makes a kick read, so it carries more of the range than the steady level does.
+const HIT_GAIN:  f32 = 0.9;
 const HIT_WHITE: f32 = 0.65;
 
 // Slow angular ripple, so the rings breathe instead of sitting still.
