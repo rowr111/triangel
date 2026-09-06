@@ -85,7 +85,7 @@ fn cache_flush() {
 }
 
 /// One frame of audio as patterns see it.
-#[allow(dead_code)] // not every field has a pattern reading it yet
+#[allow(dead_code)] // bass/mid/treble/active are for patterns not written yet
 #[derive(Clone, Copy)]
 pub struct Audio {
     /// Absolute loudness over the render window, 0.0-1.0. Goes dark in a quiet room.
