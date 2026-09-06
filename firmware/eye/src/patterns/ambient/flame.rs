@@ -70,7 +70,7 @@ impl ApexFlame {
 }
 
 impl Pattern for ApexFlame {
-    fn render(&mut self, leds: &[Led], t_ms: u32, _sound_level: f32, out: &mut Frame) {
+    fn render(&mut self, leds: &[Led], t_ms: u32, out: &mut Frame) {
         // Fold each time term to its own period before the f32 cast (long-uptime precision).
         let wl2  = self.wavelength * SECOND_WAVELENGTH_RATIO;
         let spd2 = self.speed * SECOND_SPEED_RATIO;

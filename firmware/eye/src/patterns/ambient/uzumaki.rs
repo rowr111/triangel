@@ -147,7 +147,7 @@ impl Uzumaki {
 }
 
 impl Pattern for Uzumaki {
-    fn render(&mut self, leds: &[Led], t_ms: u32, _sound_level: f32, out: &mut Frame) {
+    fn render(&mut self, leds: &[Led], t_ms: u32, out: &mut Frame) {
         // One revolution advances the phase by exactly ARMS bands, so folding time at ROT_MS
         // is exact: it shifts the band index by a whole ARMS and leaves the colors in place.
         let rot = ARMS as f32 * (t_ms % ROT_MS) as f32 / ROT_MS as f32;

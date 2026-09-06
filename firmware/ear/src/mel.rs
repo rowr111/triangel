@@ -57,14 +57,14 @@
 //!   -> RMS for activity detection + overall level
 //!   -> 24 mel-spaced bandpass filters, one second-order IIR section each
 //!   -> square and average each filter's output over the frame (band energy)
-//!   -> log compression (matches perceived loudness)
-//!   -> adaptive-gain normalize (fast-attack/slow-decay ceiling) so it stays
-//!      interesting at any volume, preserving relative band loudness
+//!   -> convert to dB (matches perceived loudness)
+//!   -> normalize against a windowed low/high reference so it stays interesting at
+//!      any volume, preserving relative band loudness
 //!   -> power-law shaping + per-band fast-rise/slow-fall smoothing -> u16
 //!   -> MelFrame { bands: [u16; 24], level, activity }
 //! ```
 
-use triangel_shared::mel::{level_to_wire, MelFrame, LEVEL_DB_FLOOR, MEL_BANDS};
+use triangel_shared::mel::{level_to_wire, norm_to_wire, MelFrame, LEVEL_DB_FLOOR, MEL_BANDS};
 
 use crate::audio::{FFT_SIZE, SAMPLE_RATE_HZ};
 
@@ -99,17 +99,101 @@ const ACTIVITY_DECAY: f32  = 0.4;
 // floor/ceiling, pow 1.4) and audio-reactive-led-strip (fast-attack/slow-decay
 // gain follower). Expect to tune them once real mic audio is flowing.
 
-/// Adaptive-gain ceiling follower: rises fast toward a louder spectrum peak,
-/// drifts down slowly so quiet passages still fill the display.
-const CEIL_ATTACK: f32 = 0.5;
-const CEIL_DECAY: f32  = 0.01;
-/// Log-energy span below the ceiling that maps to 0 (the visible dynamic range).
-const DYNAMIC_RANGE: f32 = 8.0;
-/// Power-law shaping (from the blinky-badge: expands the top, compresses the bottom).
+/// Samples averaged at each end of the window to form the low/high reference.
+const EXTREME_COUNT: usize = 5;
+
+/// Frames between reference recomputations (~256 ms).
+const REFRESH_FRAMES: u32 = 8;
+
+/// History behind the band reference, ~3 s.
+const BAND_WINDOW_FRAMES: usize = 94;
+
+/// History behind the level reference, ~10 s. Longer than the band window so loud
+/// and quiet passages still read differently rather than both being scaled to fill.
+const LEVEL_WINDOW_FRAMES: usize = 312;
+
+/// dB below the band ceiling that maps to 0 - the visible depth of the spectrum.
+const BAND_VISIBLE_RANGE_DB: f32 = 35.0;
+
+/// Floor on the level reference's span, so a silent room's noise floor is not
+/// stretched to full scale.
+const LEVEL_MIN_SPAN_DB: f32 = 6.0;
+
+/// Power-law shaping: expands the top, compresses the bottom.
 const POWER_LAW: f32 = 1.4;
+
 /// Per-band smoothing envelope: fast rise, slower fall.
 const BAND_ATTACK: f32 = 0.6;
 const BAND_DECAY: f32  = 0.25;
+
+/// Rolling low/high reference over the last `N` frames: the average of the
+/// `EXTREME_COUNT` lowest and highest values in the window. A new extreme joins its
+/// group immediately but only leaves when it ages out, so `N` sets how long a loud
+/// moment keeps counting.
+struct RangeTracker<const N: usize> {
+    history: [f32; N],
+    idx:     usize,
+    /// Values pushed so far, capped at `N`; the rest of the array is still zeros.
+    filled:  usize,
+    /// Frames since the last recompute.
+    age:     u32,
+    low:     f32,
+    high:    f32,
+}
+
+impl<const N: usize> RangeTracker<N> {
+    fn new() -> Self {
+        // age starts due, so the first push computes a reference immediately.
+        Self { history: [0.0; N], idx: 0, filled: 0, age: REFRESH_FRAMES, low: 0.0, high: 0.0 }
+    }
+
+    fn push(&mut self, v: f32) {
+        self.history[self.idx] = v;
+        self.idx = (self.idx + 1) % N;
+        if self.filled < N {
+            self.filled += 1;
+        }
+        self.age += 1;
+        if self.age >= REFRESH_FRAMES {
+            self.age = 0;
+            self.recompute();
+        }
+    }
+
+    /// Each value is offered to a small sorted group and displaces the one it beats.
+    fn recompute(&mut self) {
+        if self.filled == 0 {
+            return;
+        }
+        let count = EXTREME_COUNT.min(self.filled);
+        let mut lowest  = [f32::MAX; EXTREME_COUNT];
+        let mut highest = [f32::MIN; EXTREME_COUNT];
+        for &sample in self.history[..self.filled].iter() {
+            let mut v = sample;
+            for slot in lowest[..count].iter_mut() {
+                if v < *slot {
+                    core::mem::swap(slot, &mut v);
+                }
+            }
+            let mut v = sample;
+            for slot in highest[..count].iter_mut() {
+                if v > *slot {
+                    core::mem::swap(slot, &mut v);
+                }
+            }
+        }
+        let inv = 1.0 / count as f32;
+        self.low  = lowest[..count].iter().sum::<f32>()  * inv;
+        self.high = highest[..count].iter().sum::<f32>() * inv;
+    }
+
+    /// Where `v` sits in the measured range, 0.0-1.0. A range narrower than
+    /// `min_span` is widened to it.
+    fn normalize(&self, v: f32, min_span: f32) -> f32 {
+        let span = (self.high - self.low).max(min_span);
+        ((v - self.low) / span).clamp(0.0, 1.0)
+    }
+}
 
 /// Convert a frequency in Hz to the mel scale.
 ///
@@ -245,9 +329,11 @@ pub struct MelProcessor {
     /// overall level. Updated every frame with asymmetric attack/decay.
     smoothed_rms: f32,
 
-    /// Adaptive-gain ceiling: follows the spectrum peak (fast up, slow down).
-    /// The normalization maps [ceiling - DYNAMIC_RANGE, ceiling] -> 0..1.
-    ceiling: f32,
+    /// Reference for the band ceiling, fed the loudest band's dB each frame.
+    band_ref: RangeTracker<BAND_WINDOW_FRAMES>,
+
+    /// Reference for `level_norm`, fed the broadband dBFS each frame.
+    level_ref: RangeTracker<LEVEL_WINDOW_FRAMES>,
 
     /// Per-band smoothed output (0..1), updated with asymmetric attack/decay.
     band_smooth: [f32; MEL_BANDS],
@@ -259,19 +345,24 @@ impl MelProcessor {
         Self {
             bank: BandBank::new(),
             smoothed_rms: 0.0,
-            // Start low so the ceiling adapts upward over the first few frames.
-            ceiling: -20.0,
+            band_ref: RangeTracker::new(),
+            level_ref: RangeTracker::new(),
             band_smooth: [0.0; MEL_BANDS],
         }
     }
 
+    /// Live band reference (low, high) in dB, for the console readout.
+    pub fn band_reference(&self) -> (f32, f32) { (self.band_ref.low, self.band_ref.high) }
+
+    /// Live level reference (low, high) in dBFS, for the console readout.
+    pub fn level_reference(&self) -> (f32, f32) { (self.level_ref.low, self.level_ref.high) }
+
     /// Process one 512-sample audio frame and return a `MelFrame`.
     ///
     /// Hot path (~30x/second), and allocation-free. Steps: broadband RMS for level
-    /// and activity, the 24 bandpass filters, log compression, a single adaptive-gain
-    /// normalize (fast-attack/slow-decay ceiling), power-law shaping, and per-band
-    /// fast-rise/slow-fall smoothing. The gain/shaping/smoothing constants are a
-    /// first pass (see above).
+    /// and activity, the 24 bandpass filters, conversion to dB, normalization against
+    /// a windowed reference, power-law shaping, and per-band fast-rise/slow-fall
+    /// smoothing. The gain/shaping/smoothing constants are a first pass (see above).
     pub fn process(&mut self, samples: &[i16; FFT_SIZE]) -> MelFrame {
         // --- Activity + overall level (broadband RMS, straight off the raw samples) ---
         // RMS = sqrt(mean(sample^2)); i16 normalized to -1.0..1.0 by /32768.
@@ -296,6 +387,8 @@ impl MelProcessor {
             LEVEL_DB_FLOOR
         };
         let level = level_to_wire(dbfs);
+        self.level_ref.push(dbfs);
+        let level_norm = norm_to_wire(self.level_ref.normalize(dbfs, LEVEL_MIN_SPAN_DB));
 
         // --- Bandpass filter bank -> log energy per band ---
         // Every sample passes through all 24 filters; each band accumulates the square
@@ -305,31 +398,24 @@ impl MelProcessor {
             // i16 -> Q28: s/32768 scaled by 2^28 is exactly s << 13.
             self.bank.push((s as i32) << (SIG_Q - 15));
         }
-        // Natural log of each band's mean-square energy (perceived loudness is
-        // ~logarithmic; 1e-10 guards log(0) on silence).
-        let mut logmel = [0f32; MEL_BANDS];
-        for (lm, e) in logmel.iter_mut().zip(self.bank.take_energies()) {
-            *lm = (e + 1e-10).ln();
+        // Each band's mean-square energy in dB (perceived loudness is ~logarithmic;
+        // 1e-10 guards log(0) on silence, and floors the result at -100 dB).
+        let mut band_db = [0f32; MEL_BANDS];
+        for (b, e) in band_db.iter_mut().zip(self.bank.take_energies()) {
+            *b = 10.0 * (e + 1e-10).log10();
         }
 
         // --- Adaptive normalization ---
-        // Track one ceiling across the whole spectrum (so relative band loudness is
-        // preserved): it follows the peak quickly up and drifts down slowly. The
-        // floor sits a fixed log span below it. This is what keeps the display
-        // interesting at any volume instead of dark-when-quiet / full-when-loud.
-        let peak = logmel.iter().copied().fold(f32::MIN, f32::max);
-        if peak > self.ceiling {
-            self.ceiling += CEIL_ATTACK * (peak - self.ceiling);
-        } else {
-            self.ceiling += CEIL_DECAY * (peak - self.ceiling);
-        }
-        let floor = self.ceiling - DYNAMIC_RANGE;
-        let span = (self.ceiling - floor).max(1e-3);
+        // One ceiling for the whole spectrum, so relative band loudness is preserved.
+        // The floor sits a fixed depth below it.
+        let peak = band_db.iter().copied().fold(f32::MIN, f32::max);
+        self.band_ref.push(peak);
+        let floor = self.band_ref.high - BAND_VISIBLE_RANGE_DB;
 
         // --- Normalize -> power-law -> per-band smoothing -> u16 ---
         let mut bands = [0u16; MEL_BANDS];
-        for (m, &lm) in logmel.iter().enumerate() {
-            let norm = ((lm - floor) / span).clamp(0.0, 1.0);
+        for (m, &db) in band_db.iter().enumerate() {
+            let norm = ((db - floor) / BAND_VISIBLE_RANGE_DB).clamp(0.0, 1.0);
             let shaped = norm.powf(POWER_LAW);
             let sm = &mut self.band_smooth[m];
             if shaped > *sm {
@@ -343,6 +429,6 @@ impl MelProcessor {
         // FUTURE (2b): also compute the raw (non-normalized) bands and reductions
         // (bass/mid/treble sums, onset/beat) here and add them to the MelFrame.
 
-        MelFrame { bands, level, activity }
+        MelFrame { bands, level, level_norm, activity }
     }
 }

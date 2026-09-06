@@ -89,7 +89,7 @@ impl Effervesce {
 }
 
 impl Pattern for Effervesce {
-    fn render(&mut self, leds: &[Led], t_ms: u32, _sound_level: f32, out: &mut Frame) {
+    fn render(&mut self, leds: &[Led], t_ms: u32, out: &mut Frame) {
         // Precompute the live elements once per frame (derived purely from t_ms + hashes).
         let elems: [Elem; ELEMENTS] = core::array::from_fn(|s| make_elem(s, t_ms, leds));
 

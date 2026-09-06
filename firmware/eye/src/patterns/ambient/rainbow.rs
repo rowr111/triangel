@@ -71,7 +71,7 @@ pub struct RainbowX {
 }
 
 impl Pattern for RainbowX {
-    fn render(&mut self, leds: &[Led], t_ms: u32, _sound_level: f32, out: &mut Frame) {
+    fn render(&mut self, leds: &[Led], t_ms: u32, out: &mut Frame) {
         // Breathe: a bounded sinusoidal wobble added to the scroll/rotation phase so the
         // motion visibly eases faster then slower. Kept additive (not a speed multiply) so
         // the steady term below still folds cleanly to its period. Unit: hue cycles.

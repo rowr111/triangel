@@ -8,6 +8,7 @@ mod pins;
 mod uart_out;
 
 use audio::{FRAME_PERIOD_MS, I2sAudio};
+use triangel_shared::mel::{level_from_wire, norm_from_wire};
 use diag::Diag;
 use uart_out::UartOut;
 
@@ -81,6 +82,12 @@ fn main() -> ! {
         let processed = processor.process(&frame);
         mel_ms += tt.elapsed_ms() - started;
         uart_out.send(&processed);
+        console::record_refs(
+            processor.band_reference(),
+            processor.level_reference(),
+            level_from_wire(processed.level),
+            norm_from_wire(processed.level_norm),
+        );
 
         mel_frames += 1;
         if mel_frames == MEL_TIMING_FRAMES {

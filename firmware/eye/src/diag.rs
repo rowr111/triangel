@@ -61,8 +61,21 @@ pub fn spawn_heartbeat() {
         let diag = Diag::new();
         diag.line("heartbeat thread up");
         let mut last_stats = None;
+        let mut last_audio = None;
         loop {
             tt.sleep_ms(5000).ok();
+
+            // Audio link: counters first, so bytes-but-no-frames is distinguishable
+            // from nothing arriving at all.
+            let (status, ok, bad, first, dbfs, norm) = crate::audio::stats();
+            if last_audio != Some((ok, bad)) {
+                last_audio = Some((ok, bad));
+                diag.line(&format!(
+                    "audio: status {}, frames {}, dropped {}, first byte {:02x}, {:.1} dBFS, norm {:.2}",
+                    status, ok, bad, first, dbfs, norm,
+                ));
+            }
+
             let stats = crate::input::ir::stats();
             if last_stats == Some(stats) {
                 continue;

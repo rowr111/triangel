@@ -13,7 +13,7 @@ const COLOR: [u8; 3] = [255, 255, 255];
 pub struct MaxLoad;
 
 impl Pattern for MaxLoad {
-    fn render(&mut self, leds: &[Led], _t_ms: u32, _sound_level: f32, out: &mut Frame) {
+    fn render(&mut self, leds: &[Led], _t_ms: u32, out: &mut Frame) {
         for slot in out.iter_mut().take(leds.len()) {
             *slot = COLOR;
         }

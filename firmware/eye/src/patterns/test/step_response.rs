@@ -30,7 +30,7 @@ const SWEEP_DWELL_MS: u32      = 5_000;
 pub struct StepResponse;
 
 impl Pattern for StepResponse {
-    fn render(&mut self, leds: &[Led], t_ms: u32, _sound_level: f32, out: &mut Frame) {
+    fn render(&mut self, leds: &[Led], t_ms: u32, out: &mut Frame) {
         let high = if SWEEP { sweep_high(t_ms) } else { fixed_high(t_ms) };
         let color = if high { HIGH } else { LOW };
         for slot in out.iter_mut().take(leds.len()) {

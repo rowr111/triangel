@@ -74,6 +74,24 @@ static MEL_US: AtomicU32 = AtomicU32::new(0);
 /// Publish the filterbank's per-frame cost so `p` can report it on demand.
 pub fn record_mel_time(us: u32) { MEL_US.store(us, Ordering::Relaxed); }
 
+/// Live normalization references and the level they scale, as f32 bits, for `n`.
+static REF_BAND_LO: AtomicU32 = AtomicU32::new(0);
+static REF_BAND_HI: AtomicU32 = AtomicU32::new(0);
+static REF_LVL_LO:  AtomicU32 = AtomicU32::new(0);
+static REF_LVL_HI:  AtomicU32 = AtomicU32::new(0);
+static LAST_DBFS:   AtomicU32 = AtomicU32::new(0);
+static LAST_NORM:   AtomicU32 = AtomicU32::new(0);
+
+/// Publish the normalization references so `n` can report them on demand.
+pub fn record_refs(band: (f32, f32), level: (f32, f32), dbfs: f32, norm: f32) {
+    REF_BAND_LO.store(band.0.to_bits(), Ordering::Relaxed);
+    REF_BAND_HI.store(band.1.to_bits(), Ordering::Relaxed);
+    REF_LVL_LO.store(level.0.to_bits(), Ordering::Relaxed);
+    REF_LVL_HI.store(level.1.to_bits(), Ordering::Relaxed);
+    LAST_DBFS.store(dbfs.to_bits(), Ordering::Relaxed);
+    LAST_NORM.store(norm.to_bits(), Ordering::Relaxed);
+}
+
 /// Start the console thread. It blocks waiting for a keystroke, so until someone
 /// types something it costs nothing.
 pub fn spawn() {
@@ -91,6 +109,10 @@ pub fn spawn() {
             }
             if cmd == 'p' {
                 perf(&d);
+                continue;
+            }
+            if cmd == 'n' {
+                references(&d);
                 continue;
             }
             PENDING.store(cmd as u32, Ordering::Release);
@@ -133,7 +155,19 @@ pub fn help(d: &Diag) {
     d.line("  t  1 s of statistics: min, max, DC offset, RMS");
     d.line("  m  live level meter for 15 s");
     d.line("  p  filterbank cost per frame against the frame budget");
+    d.line("  n  live low/high normalization references and the level they scale");
     d.line("  ?  this help");
+}
+
+/// Report the live normalization references. Needs no mic, so the eye link keeps
+/// running.
+fn references(d: &Diag) {
+    let g = |a: &AtomicU32| f32::from_bits(a.load(Ordering::Relaxed));
+    let (blo, bhi) = (g(&REF_BAND_LO), g(&REF_BAND_HI));
+    let (llo, lhi) = (g(&REF_LVL_LO), g(&REF_LVL_HI));
+    d.line(&format!("band  ref {:>7.1} .. {:>7.1} dB, span {:.1}", blo, bhi, bhi - blo));
+    d.line(&format!("level ref {:>7.1} .. {:>7.1} dBFS, span {:.1}", llo, lhi, lhi - llo));
+    d.line(&format!("level now {:>7.1} dBFS -> norm {:.2}", g(&LAST_DBFS), g(&LAST_NORM)));
 }
 
 /// Report what the filterbank costs. Needs no mic, so the eye link keeps running.

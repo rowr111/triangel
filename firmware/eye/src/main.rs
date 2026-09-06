@@ -72,7 +72,7 @@ fn main() -> ! {
         // Ingest whatever the RX DMA ring collected; decay toward zero when ear is silent
         audio.update(frame_start as u32);
 
-        let sound_level = audio.smoothed_level();
+        let snapshot = audio.snapshot();
 
         // Drain input events and apply to setlist; it derives sound_active per event.
         input::apply_events(&event_queue, &mut setlist, frame_start as u32, audio.is_active());
@@ -84,7 +84,7 @@ fn main() -> ! {
         setlist.tick(frame_start as u32, sound_active);
 
         // Render current pattern (compositing any in-flight transition) into frame buffer
-        setlist.render(&LED_MAP, frame_start as u32, sound_level, sound_active, &mut frame);
+        setlist.render(&LED_MAP, frame_start as u32, &snapshot, sound_active, &mut frame);
 
         // Apply global brightness
         let brightness = setlist.brightness();

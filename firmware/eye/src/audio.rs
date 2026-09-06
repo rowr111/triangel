@@ -7,7 +7,7 @@ use bao1x_hal::udma::{Bank, DmaReg, Udma, Uart, UartReg};
 use bao1x_hal_service::UdmaGlobal;
 
 pub use triangel_shared::mel::MEL_BANDS;
-use triangel_shared::mel::{level_from_wire, EAR_UART_BAUD, FRAME_LEN, LEVEL_DB_FLOOR, MelFrame, SYNC_BYTE};
+use triangel_shared::mel::{level_from_wire, norm_from_wire, EAR_UART_BAUD, FRAME_LEN, LEVEL_DB_FLOOR, MelFrame, SYNC_BYTE};
 
 use crate::pins;
 
@@ -21,6 +21,27 @@ pub const STATUS_RECEIVING:  u8 = 5;
 pub static UART_STATUS:        AtomicU8  = AtomicU8::new(STATUS_PENDING);
 pub static UART_FIRST_BYTE:    AtomicU8  = AtomicU8::new(0);
 pub static UART_LAST_FRAME_MS: AtomicU32 = AtomicU32::new(0);
+/// Frames that decoded, and frames dropped on a bad sync or checksum. The pair tells
+/// a wrong-data link from a dead one.
+pub static UART_FRAMES_OK:     AtomicU32 = AtomicU32::new(0);
+pub static UART_FRAMES_BAD:    AtomicU32 = AtomicU32::new(0);
+/// Latest decoded level, as f32 bits: absolute dBFS and the ear's normalized 0.0-1.0.
+pub static UART_LAST_DBFS:     AtomicU32 = AtomicU32::new(0);
+pub static UART_LAST_NORM:     AtomicU32 = AtomicU32::new(0);
+
+/// Link state for the diagnostic heartbeat: status, frames decoded, frames dropped,
+/// the first byte ever seen, current dBFS, and current normalized level.
+#[allow(dead_code)] // only the bringup build's heartbeat reads it
+pub fn stats() -> (u8, u32, u32, u8, f32, f32) {
+    (
+        UART_STATUS.load(Ordering::Relaxed),
+        UART_FRAMES_OK.load(Ordering::Relaxed),
+        UART_FRAMES_BAD.load(Ordering::Relaxed),
+        UART_FIRST_BYTE.load(Ordering::Relaxed),
+        f32::from_bits(UART_LAST_DBFS.load(Ordering::Relaxed)),
+        f32::from_bits(UART_LAST_NORM.load(Ordering::Relaxed)),
+    )
+}
 
 // The UART's IFRAM block is split 2048 TX + 2048 RX by the HAL (UART_RX_BUF_START /
 // UART_RX_BUF_SIZE in bao1x-hal's uart.rs - private there, so mirrored here). The RX
@@ -40,6 +61,13 @@ const ACTIVITY_LOUD_DBFS: f32 = -45.0;
 const ACTIVITY_ARM_MS:     f32 = 30_000.0;
 const ACTIVITY_RELEASE_MS: f32 = 30_000.0;
 
+// Per-band fast and slow envelopes. Their difference is the band's onset: a kick or
+// a hi-hat moves the fast one well before the slow one catches up.
+const BAND_FAST: f32 = 0.6;
+const BAND_SLOW: f32 = 0.1;
+// Scales that difference into a usable 0.0-1.0 - the raw gap is small.
+const RISE_GAIN: f32 = 3.0;
+
 // dBFS window mapped onto the 0.0-1.0 `sound_level` patterns get. Retune here.
 const RENDER_DB_FLOOR: f32 = -70.0;
 const RENDER_DB_CEIL:  f32 = -20.0;
@@ -56,8 +84,31 @@ fn cache_flush() {
     }
 }
 
+/// One frame of audio as patterns see it.
+#[allow(dead_code)] // not every field has a pattern reading it yet
+#[derive(Clone, Copy)]
+pub struct Audio {
+    /// Absolute loudness over the render window, 0.0-1.0. Goes dark in a quiet room.
+    pub level:      f32,
+    /// Loudness relative to recent music, 0.0-1.0.
+    pub level_norm: f32,
+    /// The 24 mel bands, 0.0-1.0, low frequency first. Keep their shape when quiet.
+    pub bands:      [f32; MEL_BANDS],
+    /// How far each band has just jumped above its own recent average, 0.0-1.0.
+    pub rise:       [f32; MEL_BANDS],
+    /// Mean of the low, middle and high thirds of `bands`.
+    pub bass:       f32,
+    pub mid:        f32,
+    pub treble:     f32,
+    /// The slow arm/release verdict behind Auto sound mode.
+    pub active:     bool,
+}
+
 struct AudioState {
     mel:            [f32; MEL_BANDS],
+    band_fast:      [f32; MEL_BANDS],
+    band_slow:      [f32; MEL_BANDS],
+    level_norm:     f32,
     smoothed_dbfs:  f32,
     activity:       bool,
     last_loud:      bool, // freshest byte's verdict; persists across byte-less frames
@@ -67,12 +118,16 @@ struct AudioState {
     // Frame assembler (owned by the render loop): the partial frame and fill position.
     frame_buf:      [u8; FRAME_LEN],
     frame_pos:      usize,
+    first_byte_seen: bool,
 }
 
 impl AudioState {
     fn new() -> Self {
         AudioState {
             mel:            [0.0; MEL_BANDS],
+            band_fast:      [0.0; MEL_BANDS],
+            band_slow:      [0.0; MEL_BANDS],
+            level_norm:     0.0,
             smoothed_dbfs:  LEVEL_DB_FLOOR,
             activity:       false,
             last_loud:      false,
@@ -81,6 +136,7 @@ impl AudioState {
             last_update_ms: 0,
             frame_buf:      [0u8; FRAME_LEN],
             frame_pos:      0,
+            first_byte_seen: false,
         }
     }
 }
@@ -136,6 +192,29 @@ impl AudioReceiver {
         self.state.activity
     }
 
+    /// The frame patterns render against.
+    pub fn snapshot(&self) -> Audio {
+        let third = MEL_BANDS / 3;
+        let mean = |r: &[f32]| r.iter().sum::<f32>() / r.len() as f32;
+        let mut rise = [0.0; MEL_BANDS];
+        for (r, (fast, slow)) in rise
+            .iter_mut()
+            .zip(self.state.band_fast.iter().zip(self.state.band_slow.iter()))
+        {
+            *r = ((fast - slow) * RISE_GAIN).clamp(0.0, 1.0);
+        }
+        Audio {
+            level:      self.smoothed_level(),
+            level_norm: self.state.level_norm,
+            bands:      self.state.mel,
+            rise,
+            bass:       mean(&self.state.mel[..third]),
+            mid:        mean(&self.state.mel[third..third * 2]),
+            treble:     mean(&self.state.mel[third * 2..]),
+            active:     self.state.activity,
+        }
+    }
+
     /// Called once per frame from the render loop. Chases the DMA engine's write pointer
     /// through the frame assembler, applies any complete frame, decays toward silence
     /// when the ear stops sending, and advances the slow arm/release accumulator.
@@ -147,18 +226,29 @@ impl AudioReceiver {
 
         // Drain every byte the DMA engine wrote since last frame through the state machine.
         let mut got_frame = false;
+        let mut got_byte = false;
         if let Some(pos) = self.dma.as_ref().and_then(|d| d.write_pos()) {
             cache_flush();
             let mut tail = self.dma.as_ref().unwrap().tail;
             while tail != pos {
                 let byte = self.dma.as_ref().unwrap().read_ring(tail);
                 tail = (tail + 1) % RX_DMA_BUF_LEN;
-                UART_FIRST_BYTE.store(byte, Ordering::Relaxed);
+                got_byte = true;
+                if !self.state.first_byte_seen {
+                    self.state.first_byte_seen = true;
+                    UART_FIRST_BYTE.store(byte, Ordering::Relaxed);
+                }
                 if self.feed_byte(byte, now_ms) {
                     got_frame = true;
                 }
             }
             self.dma.as_mut().unwrap().tail = tail;
+        }
+
+        // Bytes arriving but nothing decoding is a different fault from silence, so
+        // give it its own status rather than leaving it as "waiting for the first".
+        if got_byte && UART_STATUS.load(Ordering::Relaxed) == STATUS_INIT_OK {
+            UART_STATUS.store(STATUS_DMA_DONE, Ordering::Relaxed);
         }
 
         // No fresh frame for a while: the ear stopped sending - decay toward silence
@@ -212,6 +302,7 @@ impl AudioReceiver {
         } else {
             // Bad checksum (we locked onto a 0xAA inside the data). Drop it; the
             // stream self-resyncs on the next real sync byte.
+            UART_FRAMES_BAD.fetch_add(1, Ordering::Relaxed);
             false
         }
     }
@@ -220,9 +311,13 @@ impl AudioReceiver {
     /// flag. The frame's own activity flag is available but not consumed yet - the
     /// eye's slow arm/release accumulator judges the level, unchanged from before.
     fn apply_frame(&mut self, frame: &MelFrame, now_ms: u32) {
-        for (m, &b) in self.state.mel.iter_mut().zip(frame.bands.iter()) {
-            *m = b as f32 / 65535.0;
+        for (i, &b) in frame.bands.iter().enumerate() {
+            let v = b as f32 / 65535.0;
+            self.state.mel[i] = v;
+            self.state.band_fast[i] += (v - self.state.band_fast[i]) * BAND_FAST;
+            self.state.band_slow[i] += (v - self.state.band_slow[i]) * BAND_SLOW;
         }
+        self.state.level_norm = norm_from_wire(frame.level_norm);
         let dbfs = level_from_wire(frame.level);
         // Light EMA so one rogue frame can't spike the fill. In dB: even steps.
         self.state.smoothed_dbfs = self.state.smoothed_dbfs * 0.6 + dbfs * 0.4;
@@ -230,6 +325,9 @@ impl AudioReceiver {
         self.state.last_update_ms = now_ms;
         UART_STATUS.store(STATUS_RECEIVING, Ordering::Relaxed);
         UART_LAST_FRAME_MS.store(now_ms, Ordering::Relaxed);
+        UART_FRAMES_OK.fetch_add(1, Ordering::Relaxed);
+        UART_LAST_DBFS.store(self.state.smoothed_dbfs.to_bits(), Ordering::Relaxed);
+        UART_LAST_NORM.store(self.state.level_norm.to_bits(), Ordering::Relaxed);
     }
 }
 

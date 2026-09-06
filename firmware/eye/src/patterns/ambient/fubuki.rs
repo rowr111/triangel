@@ -107,7 +107,7 @@ impl Fubuki {
 }
 
 impl Pattern for Fubuki {
-    fn render(&mut self, leds: &[Led], t_ms: u32, _sound_level: f32, out: &mut Frame) {
+    fn render(&mut self, leds: &[Led], t_ms: u32, out: &mut Frame) {
         // Restart the season cycle whenever we (re)enter the pattern - at boot, or when it's
         // switched to. The pattern isn't rendered while off-screen, so a gap since the last
         // render means we just came back; reset the local clock to start from an empty triangle.

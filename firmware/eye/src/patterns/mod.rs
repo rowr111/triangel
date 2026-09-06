@@ -4,23 +4,29 @@ pub mod reactive;
 pub mod test;
 pub mod transition;
 
+use crate::audio::Audio;
 use crate::led::map::Led;
 
 pub type Frame = [[u8; 3]; crate::led::map::LED_COUNT];
 
+/// A pattern in the ambient setlist.
 pub trait Pattern: Send {
     /// Render one frame into `out`.
-    /// `leds`        - world-position metadata for each LED, indexed by chain position
-    /// `t_ms`        - monotonic time in milliseconds
-    /// `sound_level` - smoothed normalised sound level 0.0-1.0 (ignored by ambient patterns)
-    fn render(&mut self, leds: &[Led], t_ms: u32, sound_level: f32, out: &mut Frame);
+    /// `leds` - world-position metadata for each LED, indexed by chain position
+    /// `t_ms` - monotonic time in milliseconds
+    fn render(&mut self, leds: &[Led], t_ms: u32, out: &mut Frame);
+}
+
+/// A pattern in the sound-reactive setlist. Has to look interesting at every level,
+/// silence included.
+pub trait ReactivePattern: Send {
+    fn render(&mut self, leds: &[Led], t_ms: u32, audio: &Audio, out: &mut Frame);
 }
 
 // --- Envelope ---
 
-/// Attack/decay envelope for sound-reactive patterns.
-/// Hold one as a field on your pattern struct and call `update()` each frame.
-// Unused until the ear chip I2S mic is wired and audio.rs UART receive is implemented.
+/// Attack/decay envelope for a reactive pattern that wants to rise and fall at its
+/// own rate. Hold one as a field and call `update()` each frame.
 #[allow(dead_code)]
 pub struct Envelope {
     pub attack: f32,

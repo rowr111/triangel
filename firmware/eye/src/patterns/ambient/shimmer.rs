@@ -71,7 +71,7 @@ fn hash_tables() -> &'static ([f32; HASH_STEPS], [f32; HASH_STEPS], [f32; HASH_S
 }
 
 impl Pattern for CenterShimmer {
-    fn render(&mut self, leds: &[Led], t_ms: u32, _sound_level: f32, out: &mut Frame) {
+    fn render(&mut self, leds: &[Led], t_ms: u32, out: &mut Frame) {
         // Fold each time term to its own period before the f32 cast: raw t_ms loses
         // sub-frame precision after hours of uptime. The wave wraps exactly one cycle;
         // sparkle's rounded period leaves a ~0.0007 rad seam every ~2.5 s - invisible.

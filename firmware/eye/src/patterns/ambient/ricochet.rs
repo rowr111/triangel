@@ -327,7 +327,7 @@ impl Ricochet {
 }
 
 impl Pattern for Ricochet {
-    fn render(&mut self, leds: &[Led], t_ms: u32, _sound_level: f32, out: &mut Frame) {
+    fn render(&mut self, leds: &[Led], t_ms: u32, out: &mut Frame) {
         // Real elapsed time since the last render; a long gap means we just (re)entered the
         // pattern, so reseed, clear the sparks, and stagger the comets' first launches.
         let reset = !self.active || t_ms.wrapping_sub(self.prev_ms) > REENTRY_GAP_MS;

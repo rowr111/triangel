@@ -290,7 +290,7 @@ impl Squall {
 }
 
 impl Pattern for Squall {
-    fn render(&mut self, leds: &[Led], t_ms: u32, _sound_level: f32, out: &mut Frame) {
+    fn render(&mut self, leds: &[Led], t_ms: u32, out: &mut Frame) {
         // Fold each time term to its own period before the f32 cast (long-uptime precision).
         let boil1 = (t_ms % BOIL_PERIOD_MS) as f32 / BOIL_PERIOD_MS as f32 * TAU;
         let boil2 = (t_ms % BOIL2_PERIOD_MS) as f32 / BOIL2_PERIOD_MS as f32 * TAU;
