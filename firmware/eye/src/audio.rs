@@ -64,9 +64,11 @@ const ACTIVITY_RELEASE_MS: f32 = 30_000.0;
 // Per-band fast and slow envelopes. Their difference is the band's onset: a kick or
 // a hi-hat moves the fast one well before the slow one catches up.
 const BAND_FAST: f32 = 0.6;
-const BAND_SLOW: f32 = 0.1;
-// Scales that difference into a usable 0.0-1.0 - the raw gap is small.
-const RISE_GAIN: f32 = 3.0;
+// The slow one is the baseline a hit is measured against. It takes ~1.6 s to
+// respond, several beats, so it does not rise with each kick and close the gap.
+const BAND_SLOW: f32 = 0.02;
+// Scales that difference into a usable 0.0-1.0.
+const RISE_GAIN: f32 = 1.5;
 
 // dBFS window mapped onto the 0.0-1.0 `sound_level` patterns get. Retune here.
 const RENDER_DB_FLOOR: f32 = -70.0;

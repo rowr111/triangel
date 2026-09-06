@@ -1,11 +1,10 @@
-//! Mel-frequency filterbank and activity detection.
+//! Third-octave filterbank and activity detection.
 //!
 //! # What this does
 //!
 //! Every 32 ms the ear chip receives 512 audio samples from the microphone.
 //! This module converts those raw samples into a compact 24-number summary
-//! that describes how much energy is in each frequency region of the sound,
-//! shaped to match how human hearing actually works.
+//! that describes how much energy is in each frequency region of the sound.
 //!
 //! The result is a `MelFrame` containing 24 band values (u16 each), one overall
 //! level, and an activity flag, which is then sent over UART to the eye chip.
@@ -24,42 +23,25 @@
 //! per-frame, so bands do not reset at frame boundaries. The tradeoff is softer
 //! separation between neighboring bands, which does not matter for driving LEDs.
 //!
-//! The one difference from a simple spectrum analyzer is the mel scale. Most
-//! cheap spectrum analyzers use linearly-spaced bands (equal Hz width each),
-//! which means the first few bars cover all the bass while most of the display
-//! is wasted on high frequencies that all sound similar. The mel scale spaces
-//! the bands to match how hearing actually works - more bands in the low and
-//! mid frequencies where music has most of its interesting structure, fewer in
-//! the highs. The result is that all 24 bands carry roughly equal perceptual
-//! weight, so the LED patterns react evenly across the full sonic range rather
-//! than being dominated by whichever frequency happens to have the most energy.
+//! # Band spacing
 //!
-//! # Why the mel scale?
+//! Neighboring bands sit a constant frequency ratio apart, so each covers the same
+//! musical interval. 31 Hz to 8 kHz is almost exactly 8 octaves, so 24 bands makes
+//! every band a third of an octave wide - the spacing music spectrum analyzers use,
+//! because pitch is ratios rather than differences in Hz.
 //!
-//! The obvious way to place 24 bands between 31 Hz and 8 kHz is evenly in Hz,
-//! about 330 Hz apart. The problem is that human hearing doesn't care equally
-//! about all 330 Hz-wide slices: we're very sensitive to differences at low
-//! frequencies (100 Hz vs 200 Hz sounds huge) but barely notice differences at
-//! high frequencies (7000 Hz vs 7100 Hz sounds the same). Even spacing would put
-//! all the bass in the first bar and waste most of the display on highs that all
-//! sound alike. The mel scale compresses high frequencies and expands low ones to
-//! match this perceptual reality, so all 24 bands carry roughly equal perceptual
-//! weight and the LED patterns react evenly across the full sonic range.
-//!
-//! Spacing the filter centers on the mel scale makes the bands narrow at the
-//! bottom and wide at the top: band 1 covers about 31-191 Hz while band 24 covers
-//! about 6.4-8 kHz.
+//! It matters most at the bottom. A kick fundamental near 50 Hz and a speaking voice
+//! near 120 Hz land four bands apart instead of sharing one.
 //!
 //! # Processing pipeline
 //!
 //! ```text
 //! raw i16 samples
 //!   -> RMS for activity detection + overall level
-//!   -> 24 mel-spaced bandpass filters, one second-order IIR section each
+//!   -> 24 third-octave bandpass filters, one second-order IIR section each
 //!   -> square and average each filter's output over the frame (band energy)
 //!   -> convert to dB (matches perceived loudness)
-//!   -> normalize against a windowed low/high reference so it stays interesting at
-//!      any volume, preserving relative band loudness
+//!   -> normalize against windowed references, gated by absolute level
 //!   -> power-law shaping + per-band fast-rise/slow-fall smoothing -> u16
 //!   -> MelFrame { bands: [u16; 24], level, activity }
 //! ```
@@ -72,15 +54,14 @@ use crate::audio::{FFT_SIZE, SAMPLE_RATE_HZ};
 /// and the decimation, so the band centres cannot drift away from the real rate.
 const SAMPLE_RATE: f32 = SAMPLE_RATE_HZ as f32;
 
-/// Lowest frequency covered by the filterbank.
-/// 31 Hz captures sub-bass and kick drum fundamentals (important for EDM).
-/// Going lower than ~31 Hz isn't useful - one cycle at 31 Hz already fills the
-/// whole 32 ms frame, so there's nothing below it a frame can resolve.
-const MEL_LOW_HZ: f32 = 31.0;
+/// Lowest frequency covered by the filterbank, and so what the innermost LEDs show.
+/// 40 Hz puts a kick drum fundamental in the first bands rather than a ring outside
+/// them. Below this there is little musical content a 32 ms frame can resolve.
+const BAND_LOW_HZ: f32 = 40.0;
 
 /// Highest frequency covered. At 16 kHz the Nyquist limit is 8 kHz, so this
 /// is the maximum we can represent.
-const MEL_HIGH_HZ: f32 = 8_000.0;
+const BAND_HIGH_HZ: f32 = 8_000.0;
 
 // RMS threshold (0.0-1.0, normalized from i16) above which activity is flagged.
 // 0.02 corresponds to roughly -34 dBFS - loud enough to be intentional music
@@ -105,6 +86,12 @@ const EXTREME_COUNT: usize = 5;
 /// Frames between reference recomputations (~256 ms).
 const REFRESH_FRAMES: u32 = 8;
 
+/// How fast the reference follows a recomputed target, up and down. Rising quickly
+/// keeps it responsive to something louder; falling slowly hides the step as the
+/// loudest samples age out of the window together.
+const REF_RISE: f32 = 0.5;
+const REF_FALL: f32 = 0.03;
+
 /// History behind the band reference, ~3 s.
 const BAND_WINDOW_FRAMES: usize = 94;
 
@@ -112,8 +99,27 @@ const BAND_WINDOW_FRAMES: usize = 94;
 /// and quiet passages still read differently rather than both being scaled to fill.
 const LEVEL_WINDOW_FRAMES: usize = 312;
 
-/// dB below the band ceiling that maps to 0 - the visible depth of the spectrum.
-const BAND_VISIBLE_RANGE_DB: f32 = 35.0;
+/// dB below the shared ceiling that maps to 0 - the visible depth of the spectrum.
+const BAND_VISIBLE_RANGE_DB: f32 = 26.0;
+
+/// How far each band is scaled to its own range instead of the shared one. At 0 the
+/// bands keep exact relative loudness, so quiet ones sit permanently dark; at 1 every
+/// band fills its own range and they all look equally busy.
+const PER_BAND_MIX: f32 = 0.45;
+
+/// History behind each band's own reference, ~1.5 s.
+const BAND_OWN_WINDOW_FRAMES: usize = 48;
+
+/// Floor on one band's measured span, so a steady band is not stretched to fill.
+const BAND_MIN_SPAN_DB: f32 = 8.0;
+
+/// Absolute level a band needs before any of the above applies, and the range it
+/// fades in over. Without this a band holding nothing but noise has its few dB of
+/// wobble stretched to a full swing, so it sits lit and mushy while a real hit in it
+/// has no room left to show. The `n` console command reports the dB the bands
+/// actually occupy, for setting these.
+const GATE_FLOOR_DB: f32 = -78.0;
+const GATE_KNEE_DB:  f32 = 12.0;
 
 /// Floor on the level reference's span, so a silent room's noise floor is not
 /// stretched to full scale.
@@ -137,14 +143,27 @@ struct RangeTracker<const N: usize> {
     filled:  usize,
     /// Frames since the last recompute.
     age:     u32,
-    low:     f32,
-    high:    f32,
+    /// What the window currently measures, and what `normalize` reads after gliding
+    /// toward it.
+    target_low:  f32,
+    target_high: f32,
+    low:         f32,
+    high:        f32,
 }
 
 impl<const N: usize> RangeTracker<N> {
     fn new() -> Self {
         // age starts due, so the first push computes a reference immediately.
-        Self { history: [0.0; N], idx: 0, filled: 0, age: REFRESH_FRAMES, low: 0.0, high: 0.0 }
+        Self {
+            history: [0.0; N],
+            idx: 0,
+            filled: 0,
+            age: REFRESH_FRAMES,
+            target_low: 0.0,
+            target_high: 0.0,
+            low: 0.0,
+            high: 0.0,
+        }
     }
 
     fn push(&mut self, v: f32) {
@@ -157,6 +176,15 @@ impl<const N: usize> RangeTracker<N> {
         if self.age >= REFRESH_FRAMES {
             self.age = 0;
             self.recompute();
+        }
+        if self.filled == 1 {
+            // Start on the first real value. Gliding up from zero would leave the
+            // reference far too loud for the first few seconds.
+            self.low = self.target_low;
+            self.high = self.target_high;
+        } else {
+            self.low = glide(self.low, self.target_low);
+            self.high = glide(self.high, self.target_high);
         }
     }
 
@@ -183,8 +211,8 @@ impl<const N: usize> RangeTracker<N> {
             }
         }
         let inv = 1.0 / count as f32;
-        self.low  = lowest[..count].iter().sum::<f32>()  * inv;
-        self.high = highest[..count].iter().sum::<f32>() * inv;
+        self.target_low  = lowest[..count].iter().sum::<f32>()  * inv;
+        self.target_high = highest[..count].iter().sum::<f32>() * inv;
     }
 
     /// Where `v` sits in the measured range, 0.0-1.0. A range narrower than
@@ -195,18 +223,16 @@ impl<const N: usize> RangeTracker<N> {
     }
 }
 
-/// Convert a frequency in Hz to the mel scale.
-///
-/// The mel scale is a perceptual scale of pitches - equal distances on the
-/// mel scale sound equally spaced to a human listener. This formula
-/// (HTK definition) maps 0 Hz -> 0 mel, 1000 Hz -> ~1000 mel.
-fn hz_to_mel(hz: f32) -> f32 {
-    2595.0 * (1.0 + hz / 700.0).log10()
+/// Move a reference one step toward its target, quickly up and slowly down.
+fn glide(current: f32, target: f32) -> f32 {
+    let rate = if target > current { REF_RISE } else { REF_FALL };
+    current + (target - current) * rate
 }
 
-/// Inverse of `hz_to_mel` - convert a mel value back to Hz.
-fn mel_to_hz(mel: f32) -> f32 {
-    700.0 * (10f32.powf(mel / 2595.0) - 1.0)
+/// Band edge `i` of the MEL_BANDS + 2 points between BAND_LOW_HZ and BAND_HIGH_HZ,
+/// each a constant ratio above the last.
+fn edge_hz(i: usize) -> f32 {
+    BAND_LOW_HZ * (BAND_HIGH_HZ / BAND_LOW_HZ).powf(i as f32 / (MEL_BANDS + 1) as f32)
 }
 
 /// Fraction bits for coefficients and for the signal path. The chip has no FPU, so
@@ -279,15 +305,10 @@ struct BandBank {
 }
 
 impl BandBank {
-    /// Place MEL_BANDS + 2 points evenly on the mel axis between MEL_LOW_HZ and
-    /// MEL_HIGH_HZ, then give band m a filter centered on point m+1 spanning points
-    /// m..m+2. Q works out between roughly 0.7 at the bottom and 4.6 at the top.
+    /// Give band m a filter centered on edge m+1 spanning edges m..m+2. Constant
+    /// ratio spacing means every band has the same Q, about 2.2, and they overlap
+    /// enough to leave no gaps.
     fn new() -> Self {
-        let mel_low = hz_to_mel(MEL_LOW_HZ);
-        let mel_high = hz_to_mel(MEL_HIGH_HZ);
-        let edge_hz = |i: usize| {
-            mel_to_hz(mel_low + (mel_high - mel_low) * i as f32 / (MEL_BANDS + 1) as f32)
-        };
         let filters = std::array::from_fn(|m| {
             Biquad::bandpass(edge_hz(m + 1), edge_hz(m + 2) - edge_hz(m))
         });
@@ -329,8 +350,16 @@ pub struct MelProcessor {
     /// overall level. Updated every frame with asymmetric attack/decay.
     smoothed_rms: f32,
 
-    /// Reference for the band ceiling, fed the loudest band's dB each frame.
+    /// Shared reference, fed the loudest band's dB each frame. Holds the bands in
+    /// their true loudness order.
     band_ref: RangeTracker<BAND_WINDOW_FRAMES>,
+
+    /// Each band's own reference, so a quiet band still moves rather than sitting flat.
+    band_own: [RangeTracker<BAND_OWN_WINDOW_FRAMES>; MEL_BANDS],
+
+    /// Quietest and loudest band of the last frame, for the console readout.
+    band_lo: f32,
+    band_hi: f32,
 
     /// Reference for `level_norm`, fed the broadband dBFS each frame.
     level_ref: RangeTracker<LEVEL_WINDOW_FRAMES>,
@@ -346,13 +375,16 @@ impl MelProcessor {
             bank: BandBank::new(),
             smoothed_rms: 0.0,
             band_ref: RangeTracker::new(),
+            band_own: core::array::from_fn(|_| RangeTracker::new()),
+            band_lo: 0.0,
+            band_hi: 0.0,
             level_ref: RangeTracker::new(),
             band_smooth: [0.0; MEL_BANDS],
         }
     }
 
-    /// Live band reference (low, high) in dB, for the console readout.
-    pub fn band_reference(&self) -> (f32, f32) { (self.band_ref.low, self.band_ref.high) }
+    /// Quietest and loudest band of the last frame, in dB, for the console readout.
+    pub fn band_reference(&self) -> (f32, f32) { (self.band_lo, self.band_hi) }
 
     /// Live level reference (low, high) in dBFS, for the console readout.
     pub fn level_reference(&self) -> (f32, f32) { (self.level_ref.low, self.level_ref.high) }
@@ -360,9 +392,9 @@ impl MelProcessor {
     /// Process one 512-sample audio frame and return a `MelFrame`.
     ///
     /// Hot path (~30x/second), and allocation-free. Steps: broadband RMS for level
-    /// and activity, the 24 bandpass filters, conversion to dB, normalization against
-    /// a windowed reference, power-law shaping, and per-band fast-rise/slow-fall
-    /// smoothing. The gain/shaping/smoothing constants are a first pass (see above).
+    /// and activity, the 24 bandpass filters, conversion to dB, a gated normalization
+    /// against windowed references, power-law shaping, and per-band fast-rise/slow-fall
+    /// smoothing.
     pub fn process(&mut self, samples: &[i16; FFT_SIZE]) -> MelFrame {
         // --- Activity + overall level (broadband RMS, straight off the raw samples) ---
         // RMS = sqrt(mean(sample^2)); i16 normalized to -1.0..1.0 by /32768.
@@ -405,17 +437,24 @@ impl MelProcessor {
             *b = 10.0 * (e + 1e-10).log10();
         }
 
-        // --- Adaptive normalization ---
-        // One ceiling for the whole spectrum, so relative band loudness is preserved.
-        // The floor sits a fixed depth below it.
-        let peak = band_db.iter().copied().fold(f32::MIN, f32::max);
-        self.band_ref.push(peak);
-        let floor = self.band_ref.high - BAND_VISIBLE_RANGE_DB;
+        // --- Adaptive normalization, under an absolute gate ---
+        // Each band is scaled between the shared reference, which preserves relative
+        // loudness, and its own, which keeps it moving. PER_BAND_MIX sets the balance.
+        self.band_lo = band_db.iter().copied().fold(f32::MAX, f32::min);
+        self.band_hi = band_db.iter().copied().fold(f32::MIN, f32::max);
+        self.band_ref.push(self.band_hi);
+        let shared_high = self.band_ref.high;
+        let shared_low = shared_high - BAND_VISIBLE_RANGE_DB;
 
         // --- Normalize -> power-law -> per-band smoothing -> u16 ---
         let mut bands = [0u16; MEL_BANDS];
         for (m, &db) in band_db.iter().enumerate() {
-            let norm = ((db - floor) / BAND_VISIBLE_RANGE_DB).clamp(0.0, 1.0);
+            let own = &mut self.band_own[m];
+            own.push(db);
+            let high = shared_high + (own.high - shared_high) * PER_BAND_MIX;
+            let low = shared_low + (own.low - shared_low) * PER_BAND_MIX;
+            let gate = ((db - GATE_FLOOR_DB) / GATE_KNEE_DB).clamp(0.0, 1.0);
+            let norm = ((db - low) / (high - low).max(BAND_MIN_SPAN_DB)).clamp(0.0, 1.0) * gate;
             let shaped = norm.powf(POWER_LAW);
             let sm = &mut self.band_smooth[m];
             if shaped > *sm {

@@ -64,8 +64,9 @@ impl Spectrum {
 
 impl ReactivePattern for Spectrum {
     fn render(&mut self, _leds: &[Led], t_ms: u32, audio: &Audio, out: &mut Frame) {
-        // Overall loudness scales the whole field, never below the quiet floor.
-        let loud = QUIET_FLOOR + (1.0 - QUIET_FLOOR) * audio.level;
+        // Loudness relative to recent music, not absolute: heavily compressed tracks
+        // barely move the absolute level, so it would leave brightness nearly flat.
+        let loud = QUIET_FLOOR + (1.0 - QUIET_FLOOR) * audio.level_norm;
         // Rotate the ripple once per period. Wrapping the clock first keeps f32 exact.
         let w = (t_ms % SWIRL_PERIOD_MS) as f32 / SWIRL_PERIOD_MS as f32 * TAU;
         let (ws, wc) = w.sin_cos();
