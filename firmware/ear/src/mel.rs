@@ -117,8 +117,8 @@ const TILT_PIVOT_BAND: f32 = 8.0;
 
 /// Absolute level a band needs before it is normalized at all, and the range it fades
 /// in over. The `n` console command reports where the bands sit, for setting these.
-const GATE_FLOOR_DB: f32 = -78.0;
-const GATE_KNEE_DB:  f32 = 12.0;
+const GATE_FLOOR_DB: f32 = -100.0;
+const GATE_KNEE_DB:  f32 = 10.0;
 
 /// Floor on the level reference's span, so a silent room's noise floor is not
 /// stretched to full scale.
