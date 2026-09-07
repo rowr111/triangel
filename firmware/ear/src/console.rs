@@ -7,6 +7,7 @@ use std::sync::atomic::{AtomicU32, Ordering};
 use crate::audio::FRAME_PERIOD_MS;
 
 use crate::audio::{DECIMATE, I2sAudio, RAW_RATE_HZ, SAMPLE_RATE_HZ};
+use triangel_shared::mel::MEL_BANDS;
 use crate::diag::{self, Diag};
 
 /// Raw FIFO words shown by `r`, and how many are printed per line.
@@ -81,8 +82,15 @@ static REF_LVL_LO:  AtomicU32 = AtomicU32::new(0);
 static REF_LVL_HI:  AtomicU32 = AtomicU32::new(0);
 static LAST_DBFS:   AtomicU32 = AtomicU32::new(0);
 static LAST_NORM:   AtomicU32 = AtomicU32::new(0);
+static BAND_DB: [AtomicU32; MEL_BANDS] = [const { AtomicU32::new(0) }; MEL_BANDS];
 
 /// Publish the normalization references so `n` can report them on demand.
+pub fn record_bands(db: &[f32; MEL_BANDS]) {
+    for (slot, &v) in BAND_DB.iter().zip(db.iter()) {
+        slot.store(v.to_bits(), Ordering::Relaxed);
+    }
+}
+
 pub fn record_refs(band: (f32, f32), level: (f32, f32), dbfs: f32, norm: f32) {
     REF_BAND_LO.store(band.0.to_bits(), Ordering::Relaxed);
     REF_BAND_HI.store(band.1.to_bits(), Ordering::Relaxed);
@@ -168,6 +176,15 @@ fn references(d: &Diag) {
     d.line(&format!("band  ref {:>7.1} .. {:>7.1} dB, span {:.1}", blo, bhi, bhi - blo));
     d.line(&format!("level ref {:>7.1} .. {:>7.1} dBFS, span {:.1}", llo, lhi, lhi - llo));
     d.line(&format!("level now {:>7.1} dBFS -> norm {:.2}", g(&LAST_DBFS), g(&LAST_NORM)));
+    let mut line = String::from("band dB  ");
+    for (m, slot) in BAND_DB.iter().enumerate() {
+        if m == 12 {
+            d.line(&line);
+            line = String::from("         ");
+        }
+        line.push_str(&format!("{:5.0}", f32::from_bits(slot.load(Ordering::Relaxed))));
+    }
+    d.line(&line);
 }
 
 /// Report what the filterbank costs. Needs no mic, so the eye link keeps running.

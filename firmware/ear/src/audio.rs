@@ -1,5 +1,5 @@
 /// Number of samples per audio frame - the block mel.rs reduces to one MelFrame.
-pub const FFT_SIZE: usize = 512;
+pub const FFT_SIZE: usize = 768;
 
 // Every sample rate in the firmware derives from the three numbers below, so changing
 // the BIO clock or the decimation cannot leave the filterbank tuned for a rate the
@@ -12,7 +12,7 @@ const BIO_QUANTUM_HZ: u32 = 6_144_000;
 /// SCK cycles in each stereo frame (datasheet, I2S Data Interface).
 const BCLK_PER_FRAME: u32 = 64;
 /// Decimation factor from the mic's rate down to the pipeline's.
-pub const DECIMATE: usize = 3;
+pub const DECIMATE: usize = 2;
 
 /// The rate the mic is clocked at - one 24-bit sample per WS frame.
 pub const RAW_RATE_HZ: u32 = BIO_QUANTUM_HZ / 2 / BCLK_PER_FRAME;
@@ -37,7 +37,7 @@ const _: () = assert!(RAW_RATE_HZ >= 23_000 && RAW_RATE_HZ <= 51_600);
 // BCLK + WS and reads the mic's data line, pushing one right-aligned 24-bit
 // left-channel sample per frame. The ICS43434 is the slave, mono (IS_SELECT tied
 // low = left channel). It runs at 48 kHz (BIO quantum 6.144 MHz -> 3.072 MHz BCLK
-// -> 64 BCLK/frame); read_frame downsamples 3:1 to the 16 kHz the mel pipeline
+// -> 64 BCLK/frame); read_frame downsamples 2:1 to the 24 kHz the filterbank
 // expects (see mel.rs SAMPLE_RATE).
 //
 // The BIO pushes each sample to FIFO0 and read_frame polls it. The BIO checks for
@@ -219,7 +219,7 @@ mod i2s {
 
             let mut out = [0i16; FFT_SIZE];
             for slot in out.iter_mut() {
-                // Downsample 48 kHz -> 16 kHz by averaging each group of DECIMATE
+                // Downsample 48 kHz -> 24 kHz by averaging each group of DECIMATE
                 // samples. The box average doubles as a cheap anti-alias low-pass; a
                 // sharper FIR could replace it if aliasing artifacts appear.
                 let mut acc: i32 = 0;

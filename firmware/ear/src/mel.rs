@@ -26,9 +26,9 @@
 //! # Band spacing
 //!
 //! Neighboring bands sit a constant frequency ratio apart, so each covers the same
-//! musical interval. 31 Hz to 8 kHz is almost exactly 8 octaves, so 24 bands makes
-//! every band a third of an octave wide - the spacing music spectrum analyzers use,
-//! because pitch is ratios rather than differences in Hz.
+//! musical interval. 40 Hz to 12 kHz is a little over 8 octaves, so 24 bands makes
+//! every band about a third of an octave wide - the spacing music spectrum analyzers
+//! use, because pitch is ratios rather than differences in Hz.
 //!
 //! It matters most at the bottom. A kick fundamental near 50 Hz and a speaking voice
 //! near 120 Hz land four bands apart instead of sharing one.
@@ -59,9 +59,8 @@ const SAMPLE_RATE: f32 = SAMPLE_RATE_HZ as f32;
 /// them. Below this there is little musical content a 32 ms frame can resolve.
 const BAND_LOW_HZ: f32 = 40.0;
 
-/// Highest frequency covered. At 16 kHz the Nyquist limit is 8 kHz, so this
-/// is the maximum we can represent.
-const BAND_HIGH_HZ: f32 = 8_000.0;
+/// Highest frequency covered - the Nyquist limit at 24 kHz sampling.
+const BAND_HIGH_HZ: f32 = 12_000.0;
 
 // RMS threshold (0.0-1.0, normalized from i16) above which activity is flagged.
 // 0.02 corresponds to roughly -34 dBFS - loud enough to be intentional music
@@ -86,9 +85,7 @@ const EXTREME_COUNT: usize = 5;
 /// Frames between reference recomputations (~256 ms).
 const REFRESH_FRAMES: u32 = 8;
 
-/// How fast the reference follows a recomputed target, up and down. Rising quickly
-/// keeps it responsive to something louder; falling slowly hides the step as the
-/// loudest samples age out of the window together.
+/// How fast a reference follows its recomputed target, up and down.
 const REF_RISE: f32 = 0.5;
 const REF_FALL: f32 = 0.03;
 
@@ -102,9 +99,8 @@ const LEVEL_WINDOW_FRAMES: usize = 312;
 /// dB below the shared ceiling that maps to 0 - the visible depth of the spectrum.
 const BAND_VISIBLE_RANGE_DB: f32 = 26.0;
 
-/// How far each band is scaled to its own range instead of the shared one. At 0 the
-/// bands keep exact relative loudness, so quiet ones sit permanently dark; at 1 every
-/// band fills its own range and they all look equally busy.
+/// How far each band is scaled to its own range rather than the shared one. 0 keeps
+/// exact relative loudness, 1 gives every band its full range.
 const PER_BAND_MIX: f32 = 0.45;
 
 /// History behind each band's own reference, ~1.5 s.
@@ -113,18 +109,14 @@ const BAND_OWN_WINDOW_FRAMES: usize = 48;
 /// Floor on one band's measured span, so a steady band is not stretched to fill.
 const BAND_MIN_SPAN_DB: f32 = 8.0;
 
-/// Music loses roughly this much energy per octave above the bass. Without a matching
-/// lift the treble bands sit 25-30 dB under the bass ones and normalize to black.
+/// Lift applied per octave, cancelling music's rolloff with frequency.
 const TILT_DB_PER_OCTAVE: f32 = 4.5;
 
 /// Band the tilt pivots around: below it bands are cut, above it lifted.
 const TILT_PIVOT_BAND: f32 = 8.0;
 
-/// Absolute level a band needs before any of the above applies, and the range it
-/// fades in over. Without this a band holding nothing but noise has its few dB of
-/// wobble stretched to a full swing, so it sits lit and mushy while a real hit in it
-/// has no room left to show. The `n` console command reports the dB the bands
-/// actually occupy, for setting these.
+/// Absolute level a band needs before it is normalized at all, and the range it fades
+/// in over. The `n` console command reports where the bands sit, for setting these.
 const GATE_FLOOR_DB: f32 = -78.0;
 const GATE_KNEE_DB:  f32 = 12.0;
 
@@ -371,6 +363,9 @@ pub struct MelProcessor {
     band_lo: f32,
     band_hi: f32,
 
+    /// Last frame's untilted band levels in dB, for the console readout.
+    last_db: [f32; MEL_BANDS],
+
     /// Reference for `level_norm`, fed the broadband dBFS each frame.
     level_ref: RangeTracker<LEVEL_WINDOW_FRAMES>,
 
@@ -395,6 +390,7 @@ impl MelProcessor {
             },
             band_lo: 0.0,
             band_hi: 0.0,
+            last_db: [0.0; MEL_BANDS],
             level_ref: RangeTracker::new(),
             band_smooth: [0.0; MEL_BANDS],
         }
@@ -402,6 +398,9 @@ impl MelProcessor {
 
     /// Quietest and loudest band of the last frame, in dB, for the console readout.
     pub fn band_reference(&self) -> (f32, f32) { (self.band_lo, self.band_hi) }
+
+    /// Last frame's band levels in dB, before the tilt, for the console readout.
+    pub fn band_levels(&self) -> &[f32; MEL_BANDS] { &self.last_db }
 
     /// Live level reference (low, high) in dBFS, for the console readout.
     pub fn level_reference(&self) -> (f32, f32) { (self.level_ref.low, self.level_ref.high) }
@@ -466,6 +465,7 @@ impl MelProcessor {
             .zip(self.tilt.iter())
             .fold(f32::MIN, |m, (&db, &t)| m.max(db + t));
         self.band_ref.push(tilted_peak);
+        self.last_db = band_db;
         let shared_high = self.band_ref.high;
         let shared_low = shared_high - BAND_VISIBLE_RANGE_DB;
 

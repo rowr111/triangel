@@ -82,6 +82,7 @@ fn main() -> ! {
         let processed = processor.process(&frame);
         mel_ms += tt.elapsed_ms() - started;
         uart_out.send(&processed);
+        console::record_bands(processor.band_levels());
         console::record_refs(
             processor.band_reference(),
             processor.level_reference(),
