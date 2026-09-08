@@ -2,12 +2,11 @@ use crate::audio::Audio;
 use crate::led::map::{Led, LED_COUNT};
 use crate::patterns::{Frame, ReactivePattern, hsv};
 
-// Beat trigger: the strongest onset across bands 0-2, 40-100 Hz. Narrow on purpose -
-// wider than this reaches the bass line and low mids, which fire off the beat.
+// Beat trigger: the strongest onset across bands 0-2, 40-100 Hz.
 const KICK_BANDS: usize = 3;
 // Fires above TRIGGER, and does not re-arm until it falls back under RELEASE, so one
 // kick makes one drop.
-const TRIGGER: f32 = 0.22;
+const TRIGGER: f32 = 0.20;
 const RELEASE: f32 = 0.10;
 const REFRACTORY_MS: u32 = 120;
 
@@ -77,12 +76,16 @@ struct Drop {
 /// One live drop's geometry for this frame.
 #[derive(Clone, Copy)]
 struct Ring {
+    x:           f32,
+    y:           f32,
     r:           f32,
     u_inner:     f32,
     u_outer:     f32,
+    /// Already carries the drop's gain and its young boost.
     amp:         f32,
-    /// 1 the moment the drop lands, 0 once the front has run WHITE_MM.
-    young:       f32,
+    hue:         f32,
+    /// Already carries the palette saturation and the fade out of white.
+    sat_w:       f32,
     inv_spacing: f32,
     inv_train:   f32,
 }
@@ -214,11 +217,14 @@ impl ReactivePattern for Raindrop {
         }
 
         let blank = Ring {
-            r: 0.0, u_inner: 0.0, u_outer: 0.0, amp: 0.0, young: 0.0,
-            inv_spacing: 0.0, inv_train: 0.0,
+            x: 0.0, y: 0.0, r: 0.0, u_inner: 0.0, u_outer: 0.0, amp: 0.0, hue: 0.0,
+            sat_w: 0.0, inv_spacing: 0.0, inv_train: 0.0,
         };
-        let mut rings = [blank; MAX_DROPS];
-        for (ring, drop) in rings.iter_mut().zip(self.drops.iter_mut()) {
+        // Gather only the live drops, so the per-LED loop walks one tight array with no
+        // liveness check and no second lookup.
+        let mut live = [blank; MAX_DROPS];
+        let mut n_live = 0;
+        for drop in self.drops.iter_mut() {
             if !drop.alive {
                 continue;
             }
@@ -228,15 +234,24 @@ impl ReactivePattern for Raindrop {
                 continue;
             }
             let inner = (r - drop.train).max(0.0);
-            *ring = Ring {
+            let young = (1.0 - (r - START_RADIUS_MM) / WHITE_MM).clamp(0.0, 1.0);
+            live[n_live] = Ring {
+                x: drop.x,
+                y: drop.y,
                 r,
                 u_inner: inner * inner,
                 u_outer: r * r,
-                amp: drop.strength * (GAIN_BASE + GAIN_HIT * drop.strength),
-                young: (1.0 - (r - START_RADIUS_MM) / WHITE_MM).clamp(0.0, 1.0),
+                // The young boost and the palette saturation fold in here rather than
+                // being multiplied again for every LED.
+                amp: drop.strength
+                    * (GAIN_BASE + GAIN_HIT * drop.strength)
+                    * (1.0 + HIT_BOOST * young),
+                hue: drop.hue,
+                sat_w: DROP_SAT * (1.0 - young),
                 inv_spacing: 1.0 / drop.spacing,
                 inv_train: 1.0 / drop.train,
             };
+            n_live += 1;
         }
 
         let inv_reach = 1.0 / RIPPLE_MAX_MM;
@@ -245,12 +260,9 @@ impl ReactivePattern for Raindrop {
             let mut ripple = 0.0f32;
             let mut hue_acc = 0.0f32;
             let mut sat_acc = 0.0f32;
-            for (ring, drop) in rings.iter().zip(self.drops.iter()) {
-                if !drop.alive {
-                    continue;
-                }
-                let dx = led.wx - drop.x;
-                let dy = led.wy - drop.y;
+            for ring in live[..n_live].iter() {
+                let dx = led.wx - ring.x;
+                let dy = led.wy - ring.y;
                 let u = dx * dx + dy * dy;
                 // Reject on squared distance, so the square root only runs for the
                 // LEDs actually inside this drop's train.
@@ -263,18 +275,19 @@ impl ReactivePattern for Raindrop {
                 // Half a cell of offset puts a crest exactly on the leading edge,
                 // rather than a trough.
                 let cell = q * ring.inv_spacing + 0.5;
-                let frac = cell - cell.floor();
+                // The reject above leaves q at zero or more, so truncating is the same
+                // as flooring and far cheaper on a chip with no floating-point unit.
+                let frac = cell - (cell as u32) as f32;
                 // Triangle wave, squared for a sharper crest.
                 let crest = 1.0 - (2.0 * frac - 1.0).abs();
                 let w = ring.amp
                     * crest
                     * crest
                     * (1.0 - q * ring.inv_train)
-                    * (1.0 - d * inv_reach).max(0.0)
-                    * (1.0 + HIT_BOOST * ring.young);
+                    * (1.0 - d * inv_reach).max(0.0);
                 ripple += w;
-                hue_acc += drop.hue * w;
-                sat_acc += DROP_SAT * (1.0 - ring.young) * w;
+                hue_acc += ring.hue * w;
+                sat_acc += ring.sat_w * w;
             }
 
             if ripple > 1e-3 {

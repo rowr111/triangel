@@ -33,8 +33,8 @@ pub fn norm_from_wire(norm: u16) -> f32 {
 }
 
 /// Wire frame length in bytes: 1 sync + MEL_BANDS*2 bands + 2 level + 2 level_norm
-/// + 1 activity + 1 checksum.
-pub const FRAME_LEN: usize = 1 + MEL_BANDS * 2 + 2 + 2 + 1 + 1; // 55 bytes
+/// + 2 flux + 1 activity + 1 checksum.
+pub const FRAME_LEN: usize = 1 + MEL_BANDS * 2 + 2 + 2 + 2 + 1 + 1; // 57 bytes
 
 // FUTURE (step 2b): the ear will also send less-processed views so patterns can
 // choose. Planned additions to MelFrame + the wire format, appended before the
@@ -54,8 +54,9 @@ pub const FRAME_LEN: usize = 1 + MEL_BANDS * 2 + 2 + 2 + 1 + 1; // 55 bytes
 /// [0x01..0x30]  bands[0..23] as u16 little-endian  (48 bytes)
 /// [0x31..0x32]  level as u16 little-endian          (2 bytes)
 /// [0x33..0x34]  level_norm as u16 little-endian     (2 bytes)
-/// [0x35]        activity flag (0 = quiet, 1 = music active)
-/// [0x36]        XOR checksum of bytes [0x01..0x35]
+/// [0x35..0x36]  flux as u16 little-endian           (2 bytes)
+/// [0x37]        activity flag (0 = quiet, 1 = music active)
+/// [0x38]        XOR checksum of bytes [0x01..0x37]
 /// ```
 ///
 /// Different scales on purpose: `bands` are AGC-normalized, so they give spectral
@@ -65,6 +66,9 @@ pub const FRAME_LEN: usize = 1 + MEL_BANDS * 2 + 2 + 2 + 1 + 1; // 55 bytes
 /// `level_norm` is the same loudness measured against the loudest and quietest the
 /// room has been recently, so it fills 0..1 whatever the volume.
 ///
+/// `flux` is how much the whole spectrum rose this frame, measured before the bands are
+/// smoothed or normalized. A struck drum moves every band at once and spikes it.
+///
 /// The activity flag is set by the ear chip based on sustained absolute energy
 /// exceeding a calibrated threshold - the eye uses it for Auto sound mode without
 /// needing to reason about absolute levels itself.
@@ -72,6 +76,7 @@ pub struct MelFrame {
     pub bands:      [u16; MEL_BANDS],
     pub level:      u16,
     pub level_norm: u16,
+    pub flux:       u16,
     pub activity:   bool,
 }
 
@@ -89,6 +94,8 @@ impl MelFrame {
         buf[lvl_off + 1] = (self.level >> 8)   as u8;
         buf[lvl_off + 2] = (self.level_norm & 0xFF) as u8;
         buf[lvl_off + 3] = (self.level_norm >> 8)   as u8;
+        buf[lvl_off + 4] = (self.flux & 0xFF) as u8;
+        buf[lvl_off + 5] = (self.flux >> 8)   as u8;
         buf[FRAME_LEN - 2] = self.activity as u8;
         let checksum = buf[1..FRAME_LEN - 1].iter().fold(0u8, |acc, &b| acc ^ b);
         buf[FRAME_LEN - 1] = checksum;
@@ -111,7 +118,8 @@ impl MelFrame {
         let lvl_off = 1 + MEL_BANDS * 2;
         let level = (buf[lvl_off] as u16) | ((buf[lvl_off + 1] as u16) << 8);
         let level_norm = (buf[lvl_off + 2] as u16) | ((buf[lvl_off + 3] as u16) << 8);
+        let flux = (buf[lvl_off + 4] as u16) | ((buf[lvl_off + 5] as u16) << 8);
         let activity = buf[FRAME_LEN - 2] != 0;
-        Some(MelFrame { bands, level, level_norm, activity })
+        Some(MelFrame { bands, level, level_norm, flux, activity })
     }
 }

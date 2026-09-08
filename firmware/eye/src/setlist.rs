@@ -1,11 +1,11 @@
 use std::collections::VecDeque;
 
-use crate::led::map::{Led, LED_COUNT};
+use crate::led::map::{Led, LED_COUNT, LED_MAP};
 use crate::patterns::transition::{self, TransitionStyle};
 use crate::audio::Audio;
 use crate::patterns::{Frame, Pattern, ReactivePattern};
 use crate::patterns::ambient::{effervesce::Effervesce, flame::ApexFlame, fubuki::Fubuki, rainbow::RainbowX, ricochet::Ricochet, shimmer::CenterShimmer, squall::Squall, uzumaki::Uzumaki};
-use crate::patterns::reactive::{audio_fill::AudioFill, raindrop::Raindrop, spectrum::Spectrum};
+use crate::patterns::reactive::{firework::Firework, raindrop::Raindrop, spectrum::Spectrum};
 
 const CYCLE_MS: u32 = 3 * 60 * 1_000; // 3 minutes
 
@@ -51,7 +51,7 @@ fn reactive_patterns() -> Vec<Box<dyn ReactivePattern>> {
     vec![
         Box::new(Spectrum::new()),
         Box::new(Raindrop::new()),
-        Box::new(AudioFill),
+        Box::new(Firework::new(&LED_MAP)),
     ]
 }
 

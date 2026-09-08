@@ -109,6 +109,9 @@ const BAND_OWN_WINDOW_FRAMES: usize = 48;
 /// Floor on one band's measured span, so a steady band is not stretched to fill.
 const BAND_MIN_SPAN_DB: f32 = 8.0;
 
+/// Summed rise across all bands that maps to a full-scale flux reading.
+const FLUX_FULL_DB: f32 = 120.0;
+
 /// Lift applied per octave, cancelling music's rolloff with frequency.
 const TILT_DB_PER_OCTAVE: f32 = 2.0;
 
@@ -465,6 +468,18 @@ impl MelProcessor {
             .zip(self.tilt.iter())
             .fold(f32::MIN, |m, (&db, &t)| m.max(db + t));
         self.band_ref.push(tilted_peak);
+
+        // Total rise across the spectrum, taken from the raw dB before any smoothing or
+        // normalization, which is where a struck drum still has a sharp edge. The tilt
+        // is a fixed per-band offset and cancels in the difference, so it is not needed.
+        let mut flux_db = 0.0f32;
+        for (db, prev) in band_db.iter().zip(self.last_db.iter()) {
+            let step = db - prev;
+            if step > 0.0 {
+                flux_db += step;
+            }
+        }
+        let flux = norm_to_wire(flux_db / FLUX_FULL_DB);
         self.last_db = band_db;
         let shared_high = self.band_ref.high;
         let shared_low = shared_high - BAND_VISIBLE_RANGE_DB;
@@ -492,6 +507,6 @@ impl MelProcessor {
         // FUTURE (2b): also compute the raw (non-normalized) bands and reductions
         // (bass/mid/treble sums, onset/beat) here and add them to the MelFrame.
 
-        MelFrame { bands, level, level_norm, activity }
+        MelFrame { bands, level, level_norm, flux, activity }
     }
 }

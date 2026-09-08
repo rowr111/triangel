@@ -70,6 +70,25 @@ const BAND_SLOW: f32 = 0.02;
 // Scales that difference into a usable 0.0-1.0.
 const RISE_GAIN: f32 = 1.5;
 
+// --- Beat detection ---
+// A struck drum moves the whole spectrum at once, so the trigger is the total rise
+// across every band, gated on the low bands holding energy to tell a kick from a hat.
+// The threshold is a multiple of the running average rather than a level: every band
+// moves a little every frame, so flux has a busy floor a fixed threshold sits under.
+const KICK_BANDS: usize = 3;
+const LOW_MIN: f32 = 0.15;
+const FLUX_TRIGGER: f32 = 1.9;
+const FLUX_RELEASE: f32 = 1.3;
+const FLUX_AVG_RATE: f32 = 0.02;
+const BEAT_REFRACTORY_MS: u32 = 100;
+// Gaps outside this range are not beats. A gap near double or half the running estimate
+// is folded back onto it, so a missed beat still counts as evidence.
+const BEAT_MIN_MS: f32 = 250.0;
+const BEAT_MAX_MS: f32 = 1200.0;
+const BEAT_EASE: f32 = 0.2;
+/// Silence this long clears the tempo rather than holding a stale one.
+const BEAT_LOST_MS: u32 = 4_000;
+
 // dBFS window mapped onto the 0.0-1.0 `sound_level` patterns get. Retune here.
 const RENDER_DB_FLOOR: f32 = -70.0;
 const RENDER_DB_CEIL:  f32 = -20.0;
@@ -98,10 +117,21 @@ pub struct Audio {
     pub bands:      [f32; MEL_BANDS],
     /// How far each band has just jumped above its own recent average, 0.0-1.0.
     pub rise:       [f32; MEL_BANDS],
+    /// Rise across the spectrum this frame, 0.0-1.0, measured on the ear before the
+    /// bands are smoothed. A struck drum moves every band at once and spikes it.
+    pub flux:       f32,
     /// Mean of the low, middle and high thirds of `bands`.
     pub bass:       f32,
     pub mid:        f32,
     pub treble:     f32,
+    /// True on the one frame a beat was detected, with how far past the threshold it
+    /// reached in `beat_strength`.
+    pub beat:          bool,
+    pub beat_strength: f32,
+    /// Beat period in ms, 0 when no tempo is established, and where we are between
+    /// beats as 0.0 at the beat rising to 1.0 just before the next.
+    pub beat_ms:    f32,
+    pub beat_phase: f32,
     /// The slow arm/release verdict behind Auto sound mode.
     pub active:     bool,
 }
@@ -110,6 +140,14 @@ struct AudioState {
     mel:            [f32; MEL_BANDS],
     band_fast:      [f32; MEL_BANDS],
     band_slow:      [f32; MEL_BANDS],
+    flux:           f32,
+    flux_avg:       f32,
+    beat_armed:     bool,
+    beat_pending:   bool,
+    beat_strength:  f32,
+    beat_ms:        f32,
+    beat_phase:     f32,
+    last_beat_ms:   u32,
     level_norm:     f32,
     smoothed_dbfs:  f32,
     activity:       bool,
@@ -129,6 +167,14 @@ impl AudioState {
             mel:            [0.0; MEL_BANDS],
             band_fast:      [0.0; MEL_BANDS],
             band_slow:      [0.0; MEL_BANDS],
+            flux:           0.0,
+            flux_avg:       0.0,
+            beat_armed:     true,
+            beat_pending:   false,
+            beat_strength:  0.0,
+            beat_ms:        0.0,
+            beat_phase:     0.0,
+            last_beat_ms:   0,
             level_norm:     0.0,
             smoothed_dbfs:  LEVEL_DB_FLOOR,
             activity:       false,
@@ -194,8 +240,48 @@ impl AudioReceiver {
         self.state.activity
     }
 
+    /// Fire a beat when this frame's flux stands well above its recent average and the
+    /// low bands hold energy. Called once per received frame, which is when flux moves.
+    fn detect_beat(&mut self, now_ms: u32) {
+        let st = &mut self.state;
+        st.flux_avg += (st.flux - st.flux_avg) * FLUX_AVG_RATE;
+        let low = st.mel[..KICK_BANDS].iter().sum::<f32>() / KICK_BANDS as f32;
+        let ratio = if low >= LOW_MIN && st.flux_avg > 1e-4 { st.flux / st.flux_avg } else { 0.0 };
+
+        if st.beat_armed
+            && ratio >= FLUX_TRIGGER
+            && now_ms.wrapping_sub(st.last_beat_ms) >= BEAT_REFRACTORY_MS
+        {
+            st.beat_armed = false;
+            st.beat_strength = ((ratio - FLUX_TRIGGER) / FLUX_TRIGGER).clamp(0.0, 1.0);
+            st.beat_pending = true;
+
+            // Fold a gap that is a double or half of the estimate back onto it, then
+            // ease toward it. Gaps matching neither are noise and are dropped.
+            let gap = now_ms.wrapping_sub(st.last_beat_ms) as f32;
+            if (BEAT_MIN_MS..=BEAT_MAX_MS).contains(&gap) {
+                if st.beat_ms <= 0.0 {
+                    st.beat_ms = gap;
+                } else {
+                    let mut g = gap;
+                    if g > st.beat_ms * 1.6 {
+                        g *= 0.5;
+                    } else if g < st.beat_ms * 0.65 {
+                        g *= 2.0;
+                    }
+                    if (g - st.beat_ms).abs() < st.beat_ms * 0.25 {
+                        st.beat_ms += (g - st.beat_ms) * BEAT_EASE;
+                    }
+                }
+            }
+            st.last_beat_ms = now_ms;
+        } else if ratio < FLUX_RELEASE {
+            st.beat_armed = true;
+        }
+    }
+
     /// The frame patterns render against.
-    pub fn snapshot(&self) -> Audio {
+    pub fn snapshot(&mut self) -> Audio {
         let third = MEL_BANDS / 3;
         let mean = |r: &[f32]| r.iter().sum::<f32>() / r.len() as f32;
         let mut rise = [0.0; MEL_BANDS];
@@ -205,9 +291,16 @@ impl AudioReceiver {
         {
             *r = ((fast - slow) * RISE_GAIN).clamp(0.0, 1.0);
         }
+        let beat = self.state.beat_pending;
+        self.state.beat_pending = false;
         Audio {
+            beat,
+            beat_strength: self.state.beat_strength,
+            beat_ms:       self.state.beat_ms,
+            beat_phase:    self.state.beat_phase,
             level:      self.smoothed_level(),
             level_norm: self.state.level_norm,
+            flux:       self.state.flux,
             bands:      self.state.mel,
             rise,
             bass:       mean(&self.state.mel[..third]),
@@ -261,6 +354,17 @@ impl AudioReceiver {
             self.state.last_loud = false;
             self.state.last_update_ms = now_ms;
         }
+
+        // Advance the beat phase on the render clock, so it runs smoothly between the
+        // frames the ear sends and through any beat the detector misses.
+        if now_ms.wrapping_sub(self.state.last_beat_ms) > BEAT_LOST_MS {
+            self.state.beat_ms = 0.0;
+        }
+        self.state.beat_phase = if self.state.beat_ms > 0.0 {
+            (now_ms.wrapping_sub(self.state.last_beat_ms) as f32 / self.state.beat_ms).min(1.0)
+        } else {
+            0.0
+        };
 
         // Leaky accumulator: fill 1:1 while loud, drain at ARM/RELEASE while quiet.
         // Activity flips only at the rails, so borderline sound holds the current mode.
@@ -319,6 +423,8 @@ impl AudioReceiver {
             self.state.band_fast[i] += (v - self.state.band_fast[i]) * BAND_FAST;
             self.state.band_slow[i] += (v - self.state.band_slow[i]) * BAND_SLOW;
         }
+        self.state.flux = norm_from_wire(frame.flux);
+        self.detect_beat(now_ms);
         self.state.level_norm = norm_from_wire(frame.level_norm);
         let dbfs = level_from_wire(frame.level);
         // Light EMA so one rogue frame can't spike the fill. In dB: even steps.
