@@ -87,14 +87,14 @@ const REFRESH_FRAMES: u32 = 8;
 
 /// How fast a reference follows its recomputed target, up and down.
 const REF_RISE: f32 = 0.5;
-const REF_FALL: f32 = 0.03;
+const REF_FALL: f32 = 0.06;
 
 /// History behind the band reference, ~3 s.
 const BAND_WINDOW_FRAMES: usize = 94;
 
-/// History behind the level reference, ~10 s. Longer than the band window so loud
+/// History behind the level reference, ~7.5 s. Longer than the band window so loud
 /// and quiet passages still read differently rather than both being scaled to fill.
-const LEVEL_WINDOW_FRAMES: usize = 312;
+const LEVEL_WINDOW_FRAMES: usize = 234;
 
 /// dB below the shared ceiling that maps to 0 - the visible depth of the spectrum.
 const BAND_VISIBLE_RANGE_DB: f32 = 26.0;
@@ -110,7 +110,7 @@ const BAND_OWN_WINDOW_FRAMES: usize = 48;
 const BAND_MIN_SPAN_DB: f32 = 8.0;
 
 /// Lift applied per octave, cancelling music's rolloff with frequency.
-const TILT_DB_PER_OCTAVE: f32 = 4.5;
+const TILT_DB_PER_OCTAVE: f32 = 2.0;
 
 /// Band the tilt pivots around: below it bands are cut, above it lifted.
 const TILT_PIVOT_BAND: f32 = 8.0;
