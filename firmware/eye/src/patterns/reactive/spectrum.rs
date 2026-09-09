@@ -32,14 +32,21 @@ const PALETTES: [[[f32; 3]; STOPS]; 6] = [
     [[146.0, 55.0, 255.0], [163.0, 76.0, 255.0], [190.0, 110.0, 255.0], [225.0, 180.0, 255.0],
      [250.0, 240.0, 255.0]],
 ];
-/// Time on each palette, and how much of that is spent fading into the next.
+/// Time on each palette, and how long the next one takes to sweep out over it.
 const PALETTE_MS: u32 = 25_000;
 const PALETTE_FADE_MS: u32 = 5_000;
+/// Width of the change front, in bands. The new palette holds behind it and the old one
+/// ahead, so a palette arrives by travelling outward rather than dissolving everywhere.
+const FRONT_EDGE: f32 = 3.0;
 /// How far the ripple pushes an LED along the ramp, which keeps the colors moving
 /// without anything rotating through hues the palette does not contain.
 const RIPPLE_SHIFT: f32 = 0.10;
 /// Maps a band index onto the ramp.
 const BAND_TO_RAMP: f32 = 1.0 / (MEL_BANDS - 1) as f32;
+/// How long the colors take to travel from the core to the rim and back. The ramp
+/// reflects at each end rather than wrapping, so its last stop never lands beside its
+/// first and there is no seam running outward.
+const FLOW_PERIOD_MS: u32 = 14_000;
 
 // Floor under the loudness scale, so a quiet room still shows the band shape.
 const QUIET_FLOOR: f32 = 0.20;
@@ -97,7 +104,6 @@ impl ReactivePattern for Spectrum {
         // Rotate the ripple once per period. Wrapping the clock first keeps f32 exact.
         let w = (t_ms % SWIRL_PERIOD_MS) as f32 / SWIRL_PERIOD_MS as f32 * TAU;
         let (ws, wc) = w.sin_cos();
-        // Cross-fade the palettes once per frame rather than per LED.
         let slot = (t_ms / PALETTE_MS) as usize % PALETTES.len();
         let within = t_ms % PALETTE_MS;
         let held = PALETTE_MS - PALETTE_FADE_MS;
@@ -106,13 +112,12 @@ impl ReactivePattern for Spectrum {
         } else {
             0.0
         };
+        let flow = (t_ms % FLOW_PERIOD_MS) as f32 / FLOW_PERIOD_MS as f32 * 2.0;
         let (from, to) = (&PALETTES[slot], &PALETTES[(slot + 1) % PALETTES.len()]);
-        let mut ramp = [[0.0f32; 3]; STOPS];
-        for (stop, (a, b)) in ramp.iter_mut().zip(from.iter().zip(to.iter())) {
-            for (c, (x, y)) in stop.iter_mut().zip(a.iter().zip(b.iter())) {
-                *c = lerp(*x, *y, mix);
-            }
-        }
+        // Where the change front has reached, in band positions. It starts and ends off
+        // the ends so the sweep clears the whole fixture.
+        let front = mix * ((MEL_BANDS - 1) as f32 + 2.0 * FRONT_EDGE) - FRONT_EDGE;
+        let inv_edge = 1.0 / FRONT_EDGE;
 
         for (i, o) in out.iter_mut().enumerate() {
             let pos = self.band_pos[i];
@@ -127,14 +132,26 @@ impl ReactivePattern for Spectrum {
             let lit = energy * loud * GAIN * (1.0 + SWIRL_DEPTH * ripple);
             let v = (lit + hit * HIT_GAIN).clamp(0.0, 1.0);
 
-            // Position along the ramp, nudged by the ripple so the colors keep moving.
-            let t = (pos * BAND_TO_RAMP + RIPPLE_SHIFT * ripple).clamp(0.0, 1.0)
-                * (STOPS - 1) as f32;
+            // Position along the ramp: where the band sits, carried outward by the
+            // flow and nudged by the ripple. Subtracting the flow is what sends colors
+            // from the core toward the rim rather than inward.
+            let mut f = pos * BAND_TO_RAMP - flow + RIPPLE_SHIFT * ripple + 4.0;
+            // Fold into 0..2, then reflect the upper half back down so the ramp runs out
+            // and back. The offset above keeps this positive, so truncating is a floor.
+            f -= 2.0 * ((f * 0.5) as u32) as f32;
+            let t = if f > 1.0 { 2.0 - f } else { f } * (STOPS - 1) as f32;
             let seg = (t as usize).min(STOPS - 2);
             let u = t - seg as f32;
             let white = hit * HIT_WHITE;
+            // 1 behind the front, where the new palette has arrived; 0 ahead of it.
+            let m = ((front - pos) * inv_edge).clamp(0.0, 1.0);
             for (ch, o_ch) in o.iter_mut().enumerate() {
-                let c = lerp(ramp[seg][ch], ramp[seg + 1][ch], u);
+                let a = lerp(from[seg][ch], from[seg + 1][ch], u);
+                let c = if m <= 0.0 {
+                    a
+                } else {
+                    lerp(a, lerp(to[seg][ch], to[seg + 1][ch], u), m)
+                };
                 *o_ch = (lerp(c, 255.0, white) * v) as u8;
             }
         }

@@ -79,7 +79,9 @@ const ACTIVITY_DECAY: f32  = 0.4;
 // floor/ceiling, pow 1.4) and audio-reactive-led-strip (fast-attack/slow-decay
 // gain follower). Expect to tune them once real mic audio is flowing.
 
-/// Samples averaged at each end of the window to form the low/high reference.
+/// Samples gathered at each end of the window. The reference is the last of them, so a
+/// lone spike - a knock on the desk, a slammed door - displaces one entry and cannot
+/// move it at all.
 const EXTREME_COUNT: usize = 5;
 
 /// Frames between reference recomputations (~256 ms).
@@ -134,10 +136,9 @@ const POWER_LAW: f32 = 1.4;
 const BAND_ATTACK: f32 = 0.6;
 const BAND_DECAY: f32  = 0.25;
 
-/// Rolling low/high reference over the last `N` frames: the average of the
-/// `EXTREME_COUNT` lowest and highest values in the window. A new extreme joins its
-/// group immediately but only leaves when it ages out, so `N` sets how long a loud
-/// moment keeps counting.
+/// Rolling low/high reference over the last `N` frames: the `EXTREME_COUNT`th lowest
+/// and highest values in the window. A new extreme joins its group immediately but only
+/// leaves when it ages out, so `N` sets how long a loud moment keeps counting.
 struct RangeTracker<const N: usize> {
     history: [f32; N],
     idx:     usize,
@@ -212,9 +213,10 @@ impl<const N: usize> RangeTracker<N> {
                 }
             }
         }
-        let inv = 1.0 / count as f32;
-        self.target_low  = lowest[..count].iter().sum::<f32>()  * inv;
-        self.target_high = highest[..count].iter().sum::<f32>() * inv;
+        // The far end of each group rather than its mean. Both are sorted outward from
+        // the extreme, so this is the count'th lowest and highest.
+        self.target_low = lowest[count - 1];
+        self.target_high = highest[count - 1];
     }
 
     /// Where `v` sits in the measured range, 0.0-1.0. A range narrower than
