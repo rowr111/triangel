@@ -3,17 +3,43 @@ use core::f32::consts::TAU;
 use crate::audio::{Audio, MEL_BANDS};
 use crate::led::geom::{DIST_C, THETA_C};
 use crate::led::map::{Led, LED_COUNT};
-use crate::patterns::{Frame, ReactivePattern, hsv, lerp};
+use crate::patterns::{Frame, ReactivePattern, lerp};
 
-// Hue in fractions of the color wheel rather than degrees, so wrapping the sum is a
-// floor rather than a modulo. Core to rim runs gold, red, magenta, cyan.
-const HUE_BASE_TURN:   f32 = 0.125;
-const HUE_SWEEP_TURNS: f32 = -0.61;
-const BAND_TO_TURN:    f32 = HUE_SWEEP_TURNS / (MEL_BANDS - 1) as f32;
-// How far the ripple bends the colors, and how long the whole wheel takes to come
-// back around.
-const HUE_WOBBLE_TURNS: f32 = 0.10;
-const HUE_SPIN_MS:      u32 = 30_000;
+// Color runs as a ramp of RGB stops from the core to the rim, rather than a sweep of
+// hue. A ramp can leave the color wheel - passing through white, or desaturating in the
+// middle - which is what gives a fire its shape and a hue sweep cannot do.
+//
+// Every stop is scaled so its brightest channel is 255, leaving brightness entirely to
+// `v`. A stop that peaked lower would cap that part of the ramp below full.
+const STOPS: usize = 5;
+const PALETTES: [[[f32; 3]; STOPS]; 6] = [
+    // Ember: red through orange and gold to a blue-white core.
+    [[255.0, 28.0, 0.0], [255.0, 90.0, 0.0], [255.0, 190.0, 40.0], [255.0, 240.0, 200.0],
+     [170.0, 210.0, 255.0]],
+    // Cool arc: cyan up through blue and violet to magenta.
+    [[0.0, 255.0, 255.0], [0.0, 150.0, 255.0], [90.0, 90.0, 255.0], [180.0, 70.0, 255.0],
+     [255.0, 70.0, 205.0]],
+    // Aurora: green through teal and cyan to white.
+    [[60.0, 255.0, 120.0], [0.0, 255.0, 195.0], [0.0, 233.0, 255.0], [150.0, 215.0, 255.0],
+     [240.0, 250.0, 255.0]],
+    // Sunset: magenta through rose and orange to cream.
+    [[255.0, 45.0, 140.0], [255.0, 85.0, 95.0], [255.0, 145.0, 45.0], [255.0, 205.0, 65.0],
+     [255.0, 240.0, 195.0]],
+    // Teal to rose, easing through a warm cream so the two never meet head on.
+    [[0.0, 255.0, 248.0], [128.0, 255.0, 238.0], [255.0, 245.0, 198.0], [255.0, 170.0, 80.0],
+     [255.0, 110.0, 140.0]],
+    // One hue from deep to white, for a controlled look among the busier ramps.
+    [[146.0, 55.0, 255.0], [163.0, 76.0, 255.0], [190.0, 110.0, 255.0], [225.0, 180.0, 255.0],
+     [250.0, 240.0, 255.0]],
+];
+/// Time on each palette, and how much of that is spent fading into the next.
+const PALETTE_MS: u32 = 25_000;
+const PALETTE_FADE_MS: u32 = 5_000;
+/// How far the ripple pushes an LED along the ramp, which keeps the colors moving
+/// without anything rotating through hues the palette does not contain.
+const RIPPLE_SHIFT: f32 = 0.10;
+/// Maps a band index onto the ramp.
+const BAND_TO_RAMP: f32 = 1.0 / (MEL_BANDS - 1) as f32;
 
 // Floor under the loudness scale, so a quiet room still shows the band shape.
 const QUIET_FLOOR: f32 = 0.20;
@@ -71,7 +97,22 @@ impl ReactivePattern for Spectrum {
         // Rotate the ripple once per period. Wrapping the clock first keeps f32 exact.
         let w = (t_ms % SWIRL_PERIOD_MS) as f32 / SWIRL_PERIOD_MS as f32 * TAU;
         let (ws, wc) = w.sin_cos();
-        let spin = (t_ms % HUE_SPIN_MS) as f32 / HUE_SPIN_MS as f32;
+        // Cross-fade the palettes once per frame rather than per LED.
+        let slot = (t_ms / PALETTE_MS) as usize % PALETTES.len();
+        let within = t_ms % PALETTE_MS;
+        let held = PALETTE_MS - PALETTE_FADE_MS;
+        let mix = if within > held {
+            (within - held) as f32 / PALETTE_FADE_MS as f32
+        } else {
+            0.0
+        };
+        let (from, to) = (&PALETTES[slot], &PALETTES[(slot + 1) % PALETTES.len()]);
+        let mut ramp = [[0.0f32; 3]; STOPS];
+        for (stop, (a, b)) in ramp.iter_mut().zip(from.iter().zip(to.iter())) {
+            for (c, (x, y)) in stop.iter_mut().zip(a.iter().zip(b.iter())) {
+                *c = lerp(*x, *y, mix);
+            }
+        }
 
         for (i, o) in out.iter_mut().enumerate() {
             let pos = self.band_pos[i];
@@ -85,9 +126,17 @@ impl ReactivePattern for Spectrum {
             let ripple = self.swirl_s[i] * wc + self.swirl_c[i] * ws;
             let lit = energy * loud * GAIN * (1.0 + SWIRL_DEPTH * ripple);
             let v = (lit + hit * HIT_GAIN).clamp(0.0, 1.0);
-            let s = (1.0 - hit * HIT_WHITE).clamp(0.0, 1.0);
-            let turns = HUE_BASE_TURN + BAND_TO_TURN * pos + HUE_WOBBLE_TURNS * ripple + spin;
-            *o = hsv((turns - turns.floor()) * 360.0, s, v);
+
+            // Position along the ramp, nudged by the ripple so the colors keep moving.
+            let t = (pos * BAND_TO_RAMP + RIPPLE_SHIFT * ripple).clamp(0.0, 1.0)
+                * (STOPS - 1) as f32;
+            let seg = (t as usize).min(STOPS - 2);
+            let u = t - seg as f32;
+            let white = hit * HIT_WHITE;
+            for (ch, o_ch) in o.iter_mut().enumerate() {
+                let c = lerp(ramp[seg][ch], ramp[seg + 1][ch], u);
+                *o_ch = (lerp(c, 255.0, white) * v) as u8;
+            }
         }
     }
 }
