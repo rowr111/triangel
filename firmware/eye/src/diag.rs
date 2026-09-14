@@ -74,6 +74,12 @@ pub fn spawn_heartbeat() {
                     "audio: status {}, frames {}, dropped {}, first byte {:02x}, {:.1} dBFS, norm {:.2}",
                     status, ok, bad, first, dbfs, norm,
                 ));
+                let (breakdown, drops, bass, reference) = crate::audio::drop_stats();
+                diag.line(&format!(
+                    "drop: {}, drops {}, bass {:.1} dB against {:.1} dB",
+                    if breakdown { "in breakdown" } else { "normal" },
+                    drops, bass, reference,
+                ));
             }
 
             let stats = crate::input::ir::stats();

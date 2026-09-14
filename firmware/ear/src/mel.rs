@@ -114,6 +114,9 @@ const BAND_MIN_SPAN_DB: f32 = 8.0;
 /// Summed rise across all bands that maps to a full-scale flux reading.
 const FLUX_FULL_DB: f32 = 120.0;
 
+/// Bands averaged for the raw bass level: 40-100 Hz, the kick and the bass line.
+const BASS_BANDS: usize = 3;
+
 /// Lift applied per octave, cancelling music's rolloff with frequency.
 const TILT_DB_PER_OCTAVE: f32 = 2.0;
 
@@ -482,6 +485,7 @@ impl MelProcessor {
             }
         }
         let flux = norm_to_wire(flux_db / FLUX_FULL_DB);
+        let bass = level_to_wire(band_db[..BASS_BANDS].iter().sum::<f32>() / BASS_BANDS as f32);
         self.last_db = band_db;
         let shared_high = self.band_ref.high;
         let shared_low = shared_high - BAND_VISIBLE_RANGE_DB;
@@ -509,6 +513,6 @@ impl MelProcessor {
         // FUTURE (2b): also compute the raw (non-normalized) bands and reductions
         // (bass/mid/treble sums, onset/beat) here and add them to the MelFrame.
 
-        MelFrame { bands, level, level_norm, flux, activity }
+        MelFrame { bands, level, level_norm, flux, bass, activity }
     }
 }

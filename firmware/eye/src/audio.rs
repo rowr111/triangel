@@ -1,4 +1,4 @@
-use std::sync::atomic::{AtomicU32, AtomicU8, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU8, Ordering};
 
 use bao1x_api::iox::IoxHal;
 use bao1x_api::{IoxEnable, IoxFunction, PeriphId};
@@ -28,6 +28,24 @@ pub static UART_FRAMES_BAD:    AtomicU32 = AtomicU32::new(0);
 /// Latest decoded level, as f32 bits: absolute dBFS and the ear's normalized 0.0-1.0.
 pub static UART_LAST_DBFS:     AtomicU32 = AtomicU32::new(0);
 pub static UART_LAST_NORM:     AtomicU32 = AtomicU32::new(0);
+/// Drop detector state for the heartbeat: in a breakdown, drops so far, and the raw
+/// bass level against its reference, both in dB as f32 bits.
+pub static DROP_BREAKDOWN:     AtomicBool = AtomicBool::new(false);
+pub static DROP_COUNT:         AtomicU32  = AtomicU32::new(0);
+pub static DROP_BASS_DB:       AtomicU32  = AtomicU32::new(0);
+pub static DROP_REF_DB:        AtomicU32  = AtomicU32::new(0);
+
+/// Drop detector state for the diagnostic heartbeat: in a breakdown, drops detected,
+/// the bass level, and the reference it is judged against.
+#[allow(dead_code)] // only the bringup build's heartbeat reads it
+pub fn drop_stats() -> (bool, u32, f32, f32) {
+    (
+        DROP_BREAKDOWN.load(Ordering::Relaxed),
+        DROP_COUNT.load(Ordering::Relaxed),
+        f32::from_bits(DROP_BASS_DB.load(Ordering::Relaxed)),
+        f32::from_bits(DROP_REF_DB.load(Ordering::Relaxed)),
+    )
+}
 
 /// Link state for the diagnostic heartbeat: status, frames decoded, frames dropped,
 /// the first byte ever seen, current dBFS, and current normalized level.
@@ -89,6 +107,31 @@ const BEAT_EASE: f32 = 0.2;
 /// Silence this long clears the tempo rather than holding a stale one.
 const BEAT_LOST_MS: u32 = 4_000;
 
+// --- Drop detection ---
+// A drop is the bass returning after a breakdown, so it is found by the absence before
+// it rather than by how loud it is. It runs on the raw bass level alone, not on the beat
+// detector, so it does not inherit that detector's misses.
+//
+// The bass follower rides the kick peaks and holds across the gaps between them, so a
+// single bar's rest does not read as the bass leaving.
+const BASS_ATTACK: f32 = 0.5;
+const BASS_DECAY: f32 = 0.05;
+/// How fast the reference - the normal level of the bass - follows while music plays.
+const BASS_REF_RATE: f32 = 0.008;
+/// Below this the reference is room noise, not music, and no breakdown is possible.
+const BASS_MIN_DB: f32 = -75.0;
+/// How far below the reference the bass has to fall, and for how long, to count as a
+/// breakdown. The reference holds still while the bass is down, or it would sink to meet
+/// the quiet and the breakdown would never be confirmed.
+const BREAKDOWN_DB: f32 = 10.0;
+const BREAKDOWN_MS: u32 = 4_000;
+/// The drop lands when the bass comes back to within this of the frozen reference.
+const DROP_DB: f32 = 6.0;
+/// A breakdown with no drop after this long is the music stopping, not a build.
+const BREAKDOWN_MAX_MS: u32 = 90_000;
+/// Breakdown length at which `build` reaches 1.0.
+const BUILD_FULL_MS: f32 = 16_000.0;
+
 // dBFS window mapped onto the 0.0-1.0 `sound_level` patterns get. Retune here.
 const RENDER_DB_FLOOR: f32 = -70.0;
 const RENDER_DB_CEIL:  f32 = -20.0;
@@ -132,6 +175,12 @@ pub struct Audio {
     /// beats as 0.0 at the beat rising to 1.0 just before the next.
     pub beat_ms:    f32,
     pub beat_phase: f32,
+    /// True on the one frame a drop lands: the bass returning after a breakdown.
+    pub drop:       bool,
+    /// The bass has been gone long enough to count as a breakdown.
+    pub breakdown:  bool,
+    /// How far into the breakdown, 0.0 at its start rising to 1.0 over BUILD_FULL_MS.
+    pub build:      f32,
     /// The slow arm/release verdict behind Auto sound mode.
     pub active:     bool,
 }
@@ -148,6 +197,14 @@ struct AudioState {
     beat_ms:        f32,
     beat_phase:     f32,
     last_beat_ms:   u32,
+    bass_db:        f32,
+    bass_env:       f32,
+    bass_ref:       f32,
+    low_since:      Option<u32>,
+    in_breakdown:   bool,
+    breakdown_since: u32,
+    drop_pending:   bool,
+    build:          f32,
     level_norm:     f32,
     smoothed_dbfs:  f32,
     activity:       bool,
@@ -175,6 +232,14 @@ impl AudioState {
             beat_ms:        0.0,
             beat_phase:     0.0,
             last_beat_ms:   0,
+            bass_db:        LEVEL_DB_FLOOR,
+            bass_env:       LEVEL_DB_FLOOR,
+            bass_ref:       LEVEL_DB_FLOOR,
+            low_since:      None,
+            in_breakdown:   false,
+            breakdown_since: 0,
+            drop_pending:   false,
+            build:          0.0,
             level_norm:     0.0,
             smoothed_dbfs:  LEVEL_DB_FLOOR,
             activity:       false,
@@ -242,6 +307,59 @@ impl AudioReceiver {
 
     /// Fire a beat when this frame's flux stands well above its recent average and the
     /// low bands hold energy. Called once per received frame, which is when flux moves.
+    /// Track the bass against its normal level: enter a breakdown when it stays well
+    /// below for long enough, and fire a drop when it comes back. Called once per
+    /// received frame.
+    fn detect_drop(&mut self, now_ms: u32) {
+        let st = &mut self.state;
+        let rate = if st.bass_db > st.bass_env { BASS_ATTACK } else { BASS_DECAY };
+        st.bass_env += (st.bass_db - st.bass_env) * rate;
+
+        if st.in_breakdown {
+            let elapsed = now_ms.wrapping_sub(st.breakdown_since);
+            st.build = (elapsed as f32 / BUILD_FULL_MS).min(1.0);
+            let back = st.bass_env >= st.bass_ref - DROP_DB;
+            let expired = elapsed > BREAKDOWN_MAX_MS;
+            if back || expired {
+                st.in_breakdown = false;
+                st.build = 0.0;
+                st.low_since = None;
+                if back {
+                    st.drop_pending = true;
+                    DROP_COUNT.fetch_add(1, Ordering::Relaxed);
+                } else {
+                    // The music stopped. Let the quiet become the new normal rather than
+                    // re-entering a breakdown against a level that has gone.
+                    st.bass_ref = st.bass_env;
+                }
+            }
+        } else {
+            let low = st.bass_ref > BASS_MIN_DB && st.bass_env < st.bass_ref - BREAKDOWN_DB;
+            // Only learn the normal level while the bass is present. Following it down
+            // during the seconds it takes to confirm a breakdown closes the gap before the
+            // confirmation can finish.
+            if !low {
+                st.bass_ref += (st.bass_env - st.bass_ref) * BASS_REF_RATE;
+            }
+            match (low, st.low_since) {
+                (false, _) => st.low_since = None,
+                (true, None) => st.low_since = Some(now_ms),
+                (true, Some(since)) => {
+                    if now_ms.wrapping_sub(since) >= BREAKDOWN_MS {
+                        st.in_breakdown = true;
+                        // Build counts from when the bass first left, not from when the
+                        // breakdown was confirmed.
+                        st.breakdown_since = since;
+                    }
+                }
+            }
+        }
+
+        DROP_BREAKDOWN.store(st.in_breakdown, Ordering::Relaxed);
+        DROP_BASS_DB.store(st.bass_env.to_bits(), Ordering::Relaxed);
+        DROP_REF_DB.store(st.bass_ref.to_bits(), Ordering::Relaxed);
+    }
+
     fn detect_beat(&mut self, now_ms: u32) {
         let st = &mut self.state;
         st.flux_avg += (st.flux - st.flux_avg) * FLUX_AVG_RATE;
@@ -293,8 +411,13 @@ impl AudioReceiver {
         }
         let beat = self.state.beat_pending;
         self.state.beat_pending = false;
+        let drop = self.state.drop_pending;
+        self.state.drop_pending = false;
         Audio {
             beat,
+            drop,
+            breakdown: self.state.in_breakdown,
+            build:     self.state.build,
             beat_strength: self.state.beat_strength,
             beat_ms:       self.state.beat_ms,
             beat_phase:    self.state.beat_phase,
@@ -424,7 +547,9 @@ impl AudioReceiver {
             self.state.band_slow[i] += (v - self.state.band_slow[i]) * BAND_SLOW;
         }
         self.state.flux = norm_from_wire(frame.flux);
+        self.state.bass_db = level_from_wire(frame.bass);
         self.detect_beat(now_ms);
+        self.detect_drop(now_ms);
         self.state.level_norm = norm_from_wire(frame.level_norm);
         let dbfs = level_from_wire(frame.level);
         // Light EMA so one rogue frame can't spike the fill. In dB: even steps.

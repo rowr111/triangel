@@ -5,7 +5,9 @@ use crate::patterns::transition::{self, TransitionStyle};
 use crate::audio::Audio;
 use crate::patterns::{Frame, Pattern, ReactivePattern};
 use crate::patterns::ambient::{effervesce::Effervesce, flame::ApexFlame, fubuki::Fubuki, rainbow::RainbowX, ricochet::Ricochet, shimmer::CenterShimmer, squall::Squall, uzumaki::Uzumaki};
-use crate::patterns::reactive::{firework::Firework, raindrop::Raindrop, spectrum::Spectrum};
+use crate::patterns::reactive::{
+    firework::Firework, raindrop::Raindrop, spectrum::Spectrum, spiderweb::Spiderweb, tiles::Tiles,
+};
 
 const CYCLE_MS: u32 = 3 * 60 * 1_000; // 3 minutes
 
@@ -49,6 +51,8 @@ fn ambient_patterns() -> Vec<Box<dyn Pattern>> {
 
 fn reactive_patterns() -> Vec<Box<dyn ReactivePattern>> {
     vec![
+        Box::new(Spiderweb::new(&LED_MAP)),
+        Box::new(Tiles::new(&LED_MAP)),
         Box::new(Spectrum::new()),
         Box::new(Raindrop::new()),
         Box::new(Firework::new(&LED_MAP)),

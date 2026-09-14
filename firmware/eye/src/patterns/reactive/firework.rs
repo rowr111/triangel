@@ -5,10 +5,18 @@ use crate::led::grid::{self, CELL_MM};
 use crate::led::map::{Led, LED_COUNT};
 use crate::patterns::{Frame, ReactivePattern, hsv};
 
-const MAX_SPARKS: usize = 56;
+/// Room for a drop's bursts on top of the sparks still flying from recent beats. Must stay
+/// under 255, since each LED records which spark owns it in a byte.
+const MAX_SPARKS: usize = 192;
 /// Sparks a burst throws: every hit gets BURST_MIN, a full one adds BURST_EXTRA.
 const BURST_MIN: usize = 8;
 const BURST_EXTRA: f32 = 8.0;
+/// Full-strength bursts thrown at once when a drop lands, and how far apart their
+/// origins are kept so that between them they cover the fixture instead of clumping.
+const DROP_BURSTS: usize = 7;
+const DROP_SPACING_MM: f32 = 110.0;
+/// Spots tried for each drop burst before settling for the farthest one found.
+const DROP_TRIES: usize = 12;
 
 /// Spark speed in mm per ms, and how long one lasts.
 const SPEED_MIN: f32 = 0.08;
@@ -17,8 +25,8 @@ const SPARK_LIFE_MS: f32 = 1500.0;
 /// Downward pull in mm per ms squared, so the shower droops as it falls.
 const GRAVITY: f32 = 0.00005;
 /// Spark size at the burst and at the end of its life.
-const SPARK_START_MM: f32 = 30.0;
-const SPARK_END_MM: f32 = 12.0;
+const SPARK_START_MM: f32 = 44.0;
+const SPARK_END_MM: f32 = 18.0;
 /// Fraction of its life a spark spends turning from white to its color.
 const WHITE_FRAC: f32 = 0.22;
 /// Extra brightness over that same moment.
@@ -28,8 +36,8 @@ const HIT_BOOST: f32 = 2.2;
 /// fixture is never empty between bursts. One sine per axis, each with its phase pushed
 /// around by a sine of the other axis at an off-integer ratio, so the two never line up
 /// and it turns over rather than sweeping across.
-const WASH_BASE: f32 = 0.30;
-const WASH_DEPTH: f32 = 0.20;
+const WASH_BASE: f32 = 0.0;
+const WASH_DEPTH: f32 = 0.0;
 const WASH_CELL_MM: f32 = 180.0;
 const WASH_PERIOD_MS: u32 = 9_000;
 const WASH2_PERIOD_MS: u32 = 6_100;
@@ -41,6 +49,15 @@ const WASH_CROSS_X: f32 = 0.71;
 /// dim rather than vivid.
 const PALETTE: [(f32, f32); 5] =
     [(45.0, 0.95), (12.0, 0.97), (330.0, 0.90), (190.0, 0.82), (130.0, 0.88)];
+
+/// Squared distance from `p` to the nearest of `others`, or the largest value when there
+/// are none.
+fn nearest_d2(p: (f32, f32), others: &[(f32, f32)]) -> f32 {
+    others.iter().fold(f32::MAX, |m, q| {
+        let (dx, dy) = (p.0 - q.0, p.1 - q.1);
+        m.min(dx * dx + dy * dy)
+    })
+}
 
 /// No spark owns this LED, so it keeps the background's white.
 const NO_OWNER: u8 = u8::MAX;
@@ -132,10 +149,47 @@ impl Firework {
         })
     }
 
-    /// Burst at a random LED, throwing `count` sparks outward in one color.
-    fn burst(&mut self, leds: &[Led], t_ms: u32, strength: f32, count: usize) {
+    /// A random LED's position, which keeps a burst on the fixture.
+    fn random_point(&mut self, leds: &[Led]) -> (f32, f32) {
         let pick = (self.randf() * LED_COUNT as f32) as usize % LED_COUNT;
-        let (x, y) = (leds[pick].wx, leds[pick].wy);
+        (leds[pick].wx, leds[pick].wy)
+    }
+
+    /// Burst at a random LED.
+    fn burst(&mut self, leds: &[Led], t_ms: u32, strength: f32, count: usize) {
+        let (x, y) = self.random_point(leds);
+        self.burst_at(x, y, t_ms, strength, count);
+    }
+
+    /// A drop: many full bursts at once, each placed at least DROP_SPACING_MM from the
+    /// others already placed where one can be found, so together they fill the fixture.
+    fn drop_bursts(&mut self, leds: &[Led], t_ms: u32) {
+        let count = BURST_MIN + BURST_EXTRA as usize;
+        let min2 = DROP_SPACING_MM * DROP_SPACING_MM;
+        let mut placed = [(0.0f32, 0.0f32); DROP_BURSTS];
+        for k in 0..DROP_BURSTS {
+            // Keep whichever spot is farthest from the bursts already placed, stopping as
+            // soon as one clears the spacing.
+            let mut best = self.random_point(leds);
+            let mut best_d2 = nearest_d2(best, &placed[..k]);
+            for _ in 0..DROP_TRIES {
+                if best_d2 >= min2 {
+                    break;
+                }
+                let p = self.random_point(leds);
+                let d2 = nearest_d2(p, &placed[..k]);
+                if d2 > best_d2 {
+                    best = p;
+                    best_d2 = d2;
+                }
+            }
+            placed[k] = best;
+            self.burst_at(best.0, best.1, t_ms, 1.0, count);
+        }
+    }
+
+    /// Throw `count` sparks outward from (x, y) in one color.
+    fn burst_at(&mut self, x: f32, y: f32, t_ms: u32, strength: f32, count: usize) {
         let (hue, sat) = PALETTE[(self.randf() * PALETTE.len() as f32) as usize % PALETTE.len()];
         // Spread the sparks around the circle rather than leaving them to clump.
         let step = TAU / count as f32;
@@ -162,7 +216,9 @@ impl Firework {
 
 impl ReactivePattern for Firework {
     fn render(&mut self, leds: &[Led], t_ms: u32, audio: &Audio, out: &mut Frame) {
-        if audio.beat {
+        if audio.drop {
+            self.drop_bursts(leds, t_ms);
+        } else if audio.beat {
             let count = BURST_MIN + (audio.beat_strength * BURST_EXTRA) as usize;
             self.burst(leds, t_ms, 0.4 + 0.6 * audio.beat_strength, count);
         }
