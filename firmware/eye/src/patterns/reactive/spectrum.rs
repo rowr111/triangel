@@ -4,6 +4,7 @@ use crate::audio::{Audio, MEL_BANDS};
 use crate::led::geom::{DIST_C, THETA_C};
 use crate::led::map::{Led, LED_COUNT};
 use crate::patterns::{Frame, ReactivePattern, lerp};
+use triangel_shared::tuning::spectrum::*;
 
 // Color runs as a ramp of RGB stops from the core to the rim, rather than a sweep of
 // hue. A ramp can leave the color wheel - passing through white, or desaturating in the
@@ -32,38 +33,11 @@ const PALETTES: [[[f32; 3]; STOPS]; 6] = [
     [[146.0, 55.0, 255.0], [163.0, 76.0, 255.0], [190.0, 110.0, 255.0], [225.0, 180.0, 255.0],
      [250.0, 240.0, 255.0]],
 ];
-/// Time on each palette, and how long the next one takes to sweep out over it.
-const PALETTE_MS: u32 = 25_000;
-const PALETTE_FADE_MS: u32 = 5_000;
-/// Width of the change front, in bands. The new palette holds behind it and the old one
-/// ahead, so a palette arrives by travelling outward rather than dissolving everywhere.
-const FRONT_EDGE: f32 = 3.0;
-/// How far the ripple pushes an LED along the ramp, which keeps the colors moving
-/// without anything rotating through hues the palette does not contain.
-const RIPPLE_SHIFT: f32 = 0.10;
 /// Maps a band index onto the ramp.
 const BAND_TO_RAMP: f32 = 1.0 / (MEL_BANDS - 1) as f32;
-/// How long the colors take to travel from the core to the rim and back. The ramp
-/// reflects at each end rather than wrapping, so its last stop never lands beside its
-/// first and there is no seam running outward.
-const FLOW_PERIOD_MS: u32 = 14_000;
-
-// Floor under the loudness scale, so a quiet room still shows the band shape.
-const QUIET_FLOOR: f32 = 0.20;
-
-// Steepens the brightness ramp. Kept below the point where a sustained bass line
-// clips solid, so a kick still has somewhere to go above it.
-const GAIN: f32 = 1.25;
-
-// A band's onset adds this much brightness and whitens it by this much. The onset is
-// what makes a kick read, so it carries more of the range than the steady level does.
-const HIT_GAIN:  f32 = 0.9;
-const HIT_WHITE: f32 = 0.65;
 
 // Slow angular ripple, so the rings breathe instead of sitting still.
-const LOBES:            f32 = 3.0;
-const SWIRL_DEPTH:      f32 = 0.18;
-const SWIRL_PERIOD_MS:  u32 = 12_000;
+const LOBES: f32 = 3.0;
 
 /// The 24 mel bands mapped onto distance from the fixture centroid: bass at the core,
 /// treble at the rim. Bands are assigned by radius rank rather than by radius, so each

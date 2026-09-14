@@ -4,40 +4,18 @@ use crate::audio::Audio;
 use crate::led::grid::{self, CELL_MM};
 use crate::led::map::{Led, LED_COUNT};
 use crate::patterns::{Frame, ReactivePattern, hsv};
+use triangel_shared::tuning::firework::*;
 
 /// Room for a drop's bursts on top of the sparks still flying from recent beats. Must stay
 /// under 255, since each LED records which spark owns it in a byte.
 const MAX_SPARKS: usize = 192;
-/// Sparks a burst throws: every hit gets BURST_MIN, a full one adds BURST_EXTRA.
-const BURST_MIN: usize = 8;
-const BURST_EXTRA: f32 = 8.0;
-/// Full-strength bursts thrown at once when a drop lands, and how far apart their
-/// origins are kept so that between them they cover the fixture instead of clumping.
-const DROP_BURSTS: usize = 7;
-const DROP_SPACING_MM: f32 = 110.0;
 /// Spots tried for each drop burst before settling for the farthest one found.
 const DROP_TRIES: usize = 12;
-
-/// Spark speed in mm per ms, and how long one lasts.
-const SPEED_MIN: f32 = 0.08;
-const SPEED_MAX: f32 = 0.20;
-const SPARK_LIFE_MS: f32 = 1500.0;
-/// Downward pull in mm per ms squared, so the shower droops as it falls.
-const GRAVITY: f32 = 0.00005;
-/// Spark size at the burst and at the end of its life.
-const SPARK_START_MM: f32 = 44.0;
-const SPARK_END_MM: f32 = 18.0;
-/// Fraction of its life a spark spends turning from white to its color.
-const WHITE_FRAC: f32 = 0.22;
-/// Extra brightness over that same moment.
-const HIT_BOOST: f32 = 2.2;
 
 /// A white churn under everything, on its own slow clock rather than the music, so the
 /// fixture is never empty between bursts. One sine per axis, each with its phase pushed
 /// around by a sine of the other axis at an off-integer ratio, so the two never line up
 /// and it turns over rather than sweeping across.
-const WASH_BASE: f32 = 0.0;
-const WASH_DEPTH: f32 = 0.0;
 const WASH_CELL_MM: f32 = 180.0;
 const WASH_PERIOD_MS: u32 = 9_000;
 const WASH2_PERIOD_MS: u32 = 6_100;

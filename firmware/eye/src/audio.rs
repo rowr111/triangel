@@ -8,6 +8,7 @@ use bao1x_hal_service::UdmaGlobal;
 
 pub use triangel_shared::mel::MEL_BANDS;
 use triangel_shared::mel::{level_from_wire, norm_from_wire, EAR_UART_BAUD, FRAME_LEN, LEVEL_DB_FLOOR, MelFrame, SYNC_BYTE};
+use triangel_shared::tuning::{beat::*, drop_detect::*, level::*, onset::*};
 
 use crate::pins;
 
@@ -70,39 +71,13 @@ pub fn stats() -> (u8, u32, u32, u8, f32, f32) {
 const RX_DMA_BUF_START: usize = 2048;
 const RX_DMA_BUF_LEN:   usize = 2048;
 
-// --- Auto-mode activity detection - all three are tune-at-bringup placeholders ---
-// Sustained loudness above this counts as "loud". -45 dBFS is about 75 dB SPL.
-const ACTIVITY_LOUD_DBFS: f32 = -45.0;
-// Net loud time before reactive mode engages, and unbroken quiet time before it
-// releases. Fill is 1:1 with loud time; drain is scaled by ARM/RELEASE, so brief
-// quiet gaps (beat spacing, EDM breakdowns) only pause progress, never reset it.
-const ACTIVITY_ARM_MS:     f32 = 30_000.0;
-const ACTIVITY_RELEASE_MS: f32 = 30_000.0;
-
-// Per-band fast and slow envelopes. Their difference is the band's onset: a kick or
-// a hi-hat moves the fast one well before the slow one catches up.
-const BAND_FAST: f32 = 0.6;
-// The slow one is the baseline a hit is measured against. It takes ~1.6 s to
-// respond, several beats, so it does not rise with each kick and close the gap.
-const BAND_SLOW: f32 = 0.02;
-// Scales that difference into a usable 0.0-1.0.
-const RISE_GAIN: f32 = 1.5;
-
 // --- Beat detection ---
 // A struck drum moves the whole spectrum at once, so the trigger is the total rise
 // across every band, gated on the low bands holding energy to tell a kick from a hat.
 // The threshold is a multiple of the running average rather than a level: every band
 // moves a little every frame, so flux has a busy floor a fixed threshold sits under.
-const KICK_BANDS: usize = 3;
-const LOW_MIN: f32 = 0.15;
-const FLUX_TRIGGER: f32 = 1.9;
-const FLUX_RELEASE: f32 = 1.3;
-const FLUX_AVG_RATE: f32 = 0.02;
-const BEAT_REFRACTORY_MS: u32 = 100;
-// Gaps outside this range are not beats. A gap near double or half the running estimate
-// is folded back onto it, so a missed beat still counts as evidence.
-const BEAT_MIN_MS: f32 = 250.0;
-const BEAT_MAX_MS: f32 = 1200.0;
+// A gap near double or half the running estimate is folded back onto it, so a missed
+// beat still counts as evidence. This is how far the estimate moves toward each one.
 const BEAT_EASE: f32 = 0.2;
 /// Silence this long clears the tempo rather than holding a stale one.
 const BEAT_LOST_MS: u32 = 4_000;
@@ -118,23 +93,7 @@ const BASS_ATTACK: f32 = 0.5;
 const BASS_DECAY: f32 = 0.05;
 /// How fast the reference - the normal level of the bass - follows while music plays.
 const BASS_REF_RATE: f32 = 0.008;
-/// Below this the reference is room noise, not music, and no breakdown is possible.
-const BASS_MIN_DB: f32 = -75.0;
-/// How far below the reference the bass has to fall, and for how long, to count as a
-/// breakdown. The reference holds still while the bass is down, or it would sink to meet
-/// the quiet and the breakdown would never be confirmed.
-const BREAKDOWN_DB: f32 = 10.0;
-const BREAKDOWN_MS: u32 = 4_000;
-/// The drop lands when the bass comes back to within this of the frozen reference.
-const DROP_DB: f32 = 6.0;
-/// A breakdown with no drop after this long is the music stopping, not a build.
-const BREAKDOWN_MAX_MS: u32 = 90_000;
-/// Breakdown length at which `build` reaches 1.0.
-const BUILD_FULL_MS: f32 = 16_000.0;
 
-// dBFS window mapped onto the 0.0-1.0 `sound_level` patterns get. Retune here.
-const RENDER_DB_FLOOR: f32 = -70.0;
-const RENDER_DB_CEIL:  f32 = -20.0;
 // Fall per quiet tick once the ear stops sending; drains the window in ~4 s.
 const QUIET_DECAY_DB: f32 = 2.5;
 

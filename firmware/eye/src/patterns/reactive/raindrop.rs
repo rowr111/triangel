@@ -1,38 +1,14 @@
 use crate::audio::Audio;
 use crate::led::map::{Led, LED_COUNT};
 use crate::patterns::{Frame, ReactivePattern, hsv};
-
-// Beat trigger: the strongest onset across bands 0-2, 40-100 Hz.
-const KICK_BANDS: usize = 3;
-// Fires above TRIGGER, and does not re-arm until it falls back under RELEASE, so one
-// kick makes one drop.
-const TRIGGER: f32 = 0.20;
-const RELEASE: f32 = 0.10;
-const REFRACTORY_MS: u32 = 120;
+use triangel_shared::tuning::raindrop::*;
 
 /// A ripple lives for several seconds and a hard beat lands several at once, so the
 /// pool has to be deep or older ones get evicted while still crossing the fixture.
 const MAX_DROPS: usize = 18;
-/// Drops a beat lands, scattered across the fixture: every kick gets at least
-/// BURST_MIN, and a full-strength one adds BURST_EXTRA on top.
-const BURST_MIN: usize = 2;
-const BURST_EXTRA: f32 = 2.0;
-/// Front travel in mm per ms, and the distance a drop is retired at. The fixture is
-/// about 670 mm corner to corner, so this carries a ripple most of the way across.
-const RIPPLE_SPEED: f32 = 0.22;
-const RIPPLE_MAX_MM: f32 = 560.0;
-/// Gain on the crests, scaled by how hard the drop landed. Past 1 they clip to full,
-/// so a soft drop stays dim while a hard one blows out into a wide blazing ring.
-const GAIN_BASE: f32 = 1.2;
-const GAIN_HIT:  f32 = 3.0;
-/// Crest spacing when no tempo has been found, and the range it is held to once one
-/// has. Each drop picks its own from this range, so no two look alike.
-const SPACING_MIN_MM: f32 = 24.0;
-const SPACING_MAX_MM: f32 = 42.0;
+/// Crest spacing is held to this range once a tempo has been found.
 const SPACING_LOCKED_MIN_MM: f32 = 16.0;
 const SPACING_LOCKED_MAX_MM: f32 = 150.0;
-const RINGS_MIN: f32 = 2.0;
-const RINGS_MAX: f32 = 5.0;
 
 /// Fractions of a beat a drop can space its crests by. Every drop is in time with the
 /// music, but one ripples in sixteenths where another ripples in quarters.
@@ -44,14 +20,6 @@ const BEAT_MAX_MS: f32 = 1200.0;
 const BEAT_LOST_MS: u32 = 4_000;
 /// How far the estimate moves toward each accepted gap.
 const BEAT_EASE: f32 = 0.2;
-/// Radius a drop starts at. LEDs sit about 10 mm apart, so a ripple starting from zero
-/// covers nothing for its first frames and the impact goes unseen.
-const START_RADIUS_MM: f32 = 24.0;
-/// A ripple is white and blown out while it is still small, and takes on its color as
-/// it spreads. WHITE_MM is how far the front travels over that change, so it also sets
-/// how long the hit reads as the bright part.
-const WHITE_MM: f32 = 180.0;
-const HIT_BOOST: f32 = 4.5;
 
 /// Hue range drops pick from. Cool and narrow, so overlapping rings can average their
 /// hues directly without wrapping past 0.

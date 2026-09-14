@@ -47,6 +47,7 @@
 //! ```
 
 use triangel_shared::mel::{level_to_wire, norm_to_wire, MelFrame, LEVEL_DB_FLOOR, MEL_BANDS};
+use triangel_shared::tuning::ear::*;
 
 use crate::audio::{FFT_SIZE, SAMPLE_RATE_HZ};
 
@@ -87,57 +88,8 @@ const EXTREME_COUNT: usize = 5;
 /// Frames between reference recomputations (~256 ms).
 const REFRESH_FRAMES: u32 = 8;
 
-/// How fast a reference follows its recomputed target, up and down.
-const REF_RISE: f32 = 0.5;
-const REF_FALL: f32 = 0.06;
-
-/// History behind the band reference, ~3 s.
-const BAND_WINDOW_FRAMES: usize = 94;
-
-/// History behind the level reference, ~7.5 s. Longer than the band window so loud
-/// and quiet passages still read differently rather than both being scaled to fill.
-const LEVEL_WINDOW_FRAMES: usize = 234;
-
-/// dB below the shared ceiling that maps to 0 - the visible depth of the spectrum.
-const BAND_VISIBLE_RANGE_DB: f32 = 26.0;
-
-/// How far each band is scaled to its own range rather than the shared one. 0 keeps
-/// exact relative loudness, 1 gives every band its full range.
-const PER_BAND_MIX: f32 = 0.45;
-
-/// History behind each band's own reference, ~1.5 s.
-const BAND_OWN_WINDOW_FRAMES: usize = 48;
-
-/// Floor on one band's measured span, so a steady band is not stretched to fill.
-const BAND_MIN_SPAN_DB: f32 = 8.0;
-
-/// Summed rise across all bands that maps to a full-scale flux reading.
-const FLUX_FULL_DB: f32 = 120.0;
-
 /// Bands averaged for the raw bass level: 40-100 Hz, the kick and the bass line.
 const BASS_BANDS: usize = 3;
-
-/// Lift applied per octave, cancelling music's rolloff with frequency.
-const TILT_DB_PER_OCTAVE: f32 = 2.0;
-
-/// Band the tilt pivots around: below it bands are cut, above it lifted.
-const TILT_PIVOT_BAND: f32 = 8.0;
-
-/// Absolute level a band needs before it is normalized at all, and the range it fades
-/// in over. The `n` console command reports where the bands sit, for setting these.
-const GATE_FLOOR_DB: f32 = -100.0;
-const GATE_KNEE_DB:  f32 = 10.0;
-
-/// Floor on the level reference's span, so a silent room's noise floor is not
-/// stretched to full scale.
-const LEVEL_MIN_SPAN_DB: f32 = 6.0;
-
-/// Power-law shaping: expands the top, compresses the bottom.
-const POWER_LAW: f32 = 1.4;
-
-/// Per-band smoothing envelope: fast rise, slower fall.
-const BAND_ATTACK: f32 = 0.6;
-const BAND_DECAY: f32  = 0.25;
 
 /// Rolling low/high reference over the last `N` frames: the `EXTREME_COUNT`th lowest
 /// and highest values in the window. A new extreme joins its group immediately but only

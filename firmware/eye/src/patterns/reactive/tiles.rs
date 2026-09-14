@@ -1,6 +1,7 @@
 use crate::audio::Audio;
 use crate::led::map::{Led, WORLD_CENTROID_X, WORLD_CENTROID_Y};
 use crate::patterns::{Frame, ReactivePattern, hsv};
+use triangel_shared::tuning::tiles::*;
 
 /// Tiles are numbered by board id, 1 to 25. Index 0 is unused.
 const TILES: usize = 26;
@@ -9,20 +10,6 @@ const TILES: usize = 26;
 const NEIGHBOR_MM: f32 = 75.0;
 /// A triangle has at most three edge neighbors.
 const MAX_NEIGHBORS: usize = 3;
-
-/// How long a lit tile takes to fade out, and the delay between rings as a hit spreads.
-const FADE_MS: f32 = 800.0;
-const RING_STEP_MS: u32 = 60;
-/// A drop holds every tile at full before it starts to fade, and fades far more slowly
-/// than a beat, so the whole triangle sits lit for a moment rather than flashing past.
-const DROP_HOLD_MS: f32 = 700.0;
-const DROP_FADE_MS: f32 = 2500.0;
-/// Fraction of a tile's whole life it spends turning from white to its color, and the
-/// extra brightness over that same moment.
-const WHITE_FRAC: f32 = 0.15;
-const HIT_BOOST: f32 = 1.5;
-/// Tiles a hit reaches beyond the first: none on a light beat, up to this on a full one.
-const GROW_EXTRA: f32 = 8.0;
 
 /// Colors a hit can take. Saturation eases back toward blue and violet, which otherwise
 /// drive one channel and read dim.

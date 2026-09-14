@@ -3,6 +3,7 @@ use core::f32::consts::PI;
 use crate::audio::Audio;
 use crate::led::map::{Led, LED_COUNT};
 use crate::patterns::{Frame, ReactivePattern, hsv};
+use triangel_shared::tuning::spiderweb::*;
 
 /// The tile outlines line up into straight rows running edge to edge across the fixture,
 /// nine in each of three directions: horizontal, and the two slants at 60 degrees. Where
@@ -14,25 +15,6 @@ const MAX_LINES: usize = LINES_PER_FAMILY * 3;
 const DIR_TOLERANCE: f32 = 12.0 * PI / 180.0;
 /// LEDs in one row share an offset to within this; neighboring rows are 12 mm apart.
 const ROW_MERGE_MM: f32 = 1.0;
-
-/// The whole web glows at this level between beats.
-const BASE_LEVEL: f32 = 0.08;
-/// How far a beat lifts that glow, and how long it takes to settle back. A beat takes the
-/// background to BASE_LEVEL * (1 + PULSE_DEPTH), so the web breathes with the music.
-const PULSE_DEPTH: f32 = 1.5;
-const PULSE_MS: f32 = 300.0;
-
-/// How long a lit line burns white, and how much brighter it is over that moment.
-const HEAD_MS: f32 = 90.0;
-const HEAD_BOOST: f32 = 1.5;
-/// How long a lit line takes to fade back down to the background.
-const FADE_MS: f32 = 2800.0;
-/// Lines a beat lights beyond the first: none on a light beat, up to this on a full one.
-const EXTRA_LINES: f32 = 2.0;
-
-/// A drop lights every line at once, holds, then fades slowly.
-const DROP_HOLD_MS: f32 = 700.0;
-const DROP_FADE_MS: f32 = 2500.0;
 
 /// Silk colors: mostly white, with pale blue, lavender and violet. Three of the six are
 /// white, so half of all lit lines are.
