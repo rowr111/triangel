@@ -16,9 +16,6 @@ pub mod beat {
     pub const FLUX_AVG_RATE: f32 = 0.02;
     /// Shortest gap between beats.
     pub const BEAT_REFRACTORY_MS: u32 = 100;
-    /// Gaps accepted as a beat when measuring tempo.
-    pub const BEAT_MIN_MS: f32 = 250.0;
-    pub const BEAT_MAX_MS: f32 = 1200.0;
 }
 
 /// Per-band onsets, used by Raindrop's trigger and Spectrum's hits.
@@ -42,20 +39,15 @@ pub mod drop_detect {
     pub const DROP_DB: f32 = 6.0;
     /// Give up on a breakdown after this long with no drop.
     pub const BREAKDOWN_MAX_MS: u32 = 90_000;
-    /// Breakdown length at which the build reaches full.
-    pub const BUILD_FULL_MS: f32 = 16_000.0;
 }
 
-/// Overall loudness, and when Auto switches to the sound patterns.
+/// When Auto switches to the sound patterns.
 pub mod level {
     /// Loudness that counts as music playing, in dBFS.
     pub const ACTIVITY_LOUD_DBFS: f32 = -45.0;
     /// Loud time before Auto switches to sound patterns, and quiet time before it switches back.
     pub const ACTIVITY_ARM_MS: f32 = 30_000.0;
     pub const ACTIVITY_RELEASE_MS: f32 = 30_000.0;
-    /// dBFS range mapped onto 0-1 for the absolute level.
-    pub const RENDER_DB_FLOOR: f32 = -70.0;
-    pub const RENDER_DB_CEIL: f32 = -20.0;
 }
 
 pub mod spectrum {
