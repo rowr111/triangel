@@ -75,10 +75,8 @@ const ACTIVITY_THRESHOLD: f32 = 0.02;
 const ACTIVITY_ATTACK: f32 = 0.8;
 const ACTIVITY_DECAY: f32  = 0.4;
 
-// --- Normalization / shaping constants ---
-// These are a FIRST PASS, modeled on the blinky-badge (log domain, adaptive
-// floor/ceiling, pow 1.4) and audio-reactive-led-strip (fast-attack/slow-decay
-// gain follower). Expect to tune them once real mic audio is flowing.
+// --- Normalization ---
+// The values meant for tuning come from `triangel_shared::tuning::ear`.
 
 /// Samples gathered at each end of the window. The reference is the last of them, so a
 /// lone spike - a knock on the desk, a slammed door - displaces one entry and cannot

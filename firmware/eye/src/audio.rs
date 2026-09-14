@@ -249,17 +249,6 @@ impl AudioReceiver {
             .clamp(0.0, 1.0)
     }
 
-    /// Absolute loudness in dBFS. Add 120 for dB SPL.
-    #[allow(dead_code)]
-    pub fn smoothed_dbfs(&self) -> f32 {
-        self.state.smoothed_dbfs
-    }
-
-    #[allow(dead_code)]
-    pub fn current_mel(&self) -> [f32; MEL_BANDS] {
-        self.state.mel
-    }
-
     pub fn is_active(&self) -> bool {
         self.state.activity
     }

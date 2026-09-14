@@ -58,20 +58,8 @@ const CORE_WHITEN: f32 = 0.5;  // how far the core washes toward white from the 
 // turn - the order matters, since every run of three neighbors has to work as a set.
 const FAMILIES: usize = 6;
 
-// 80s airbrush, light and chalky.
-#[allow(dead_code)] // whichever palette PALETTE is not pointing at
-const TRAPPER_KEEPER: [[(f32, f32, f32); 2]; FAMILIES] = [
-    [(355.0, 0.53, 0.97), (356.0, 0.34, 0.98)], // coral    -> pink
-    [( 93.0, 0.59, 0.68), ( 93.0, 0.36, 0.80)], // sage     -> light green
-    [( 40.0, 0.90, 0.82), ( 40.0, 0.63, 0.94)], // amber    -> gold
-    [(207.0, 0.66, 0.91), (208.0, 0.41, 0.95)], // sky blue -> pale blue
-    [(286.0, 0.42, 0.89), (286.0, 0.27, 0.93)], // lavender -> lilac
-    [(171.0, 1.00, 0.70), (171.0, 0.85, 1.00)], // teal     -> electric cyan
-];
-
-// The same shape read as neon tube on black: saturated where it is lit, so the hue survives
-// on the strip instead of washing to white, and every stop near full brightness.
-#[allow(dead_code)]
+// Neon tube on black: saturated where it is lit, so the hue survives on the strip instead of
+// washing to white, and every stop near full brightness.
 const NEON: [[(f32, f32, f32); 2]; FAMILIES] = [
     [(318.0, 0.95, 1.00), (318.0, 0.55, 1.00)], // magenta
     [(272.0, 0.85, 0.95), (272.0, 0.45, 1.00)], // violet
@@ -81,7 +69,7 @@ const NEON: [[(f32, f32, f32); 2]; FAMILIES] = [
     [( 28.0, 0.95, 1.00), ( 35.0, 0.50, 1.00)], // orange
 ];
 
-// The palette in use - swap the right-hand side to audition the other one.
+// The palette in use.
 const PALETTE: [[(f32, f32, f32); 2]; FAMILIES] = NEON;
 const STEP_MS: u32 = 9_000; // how long the arms hold one set of families
 const FADE:    f32 = 0.35;  // fraction of that step spent crossfading to the next set
