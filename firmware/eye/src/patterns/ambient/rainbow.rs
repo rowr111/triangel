@@ -1,3 +1,4 @@
+use crate::patterns::glints::{GlintStyle, Glints};
 use crate::patterns::{Frame, Pattern, hsv, wrap360};
 use crate::led::geom::{DIST_C, THETA_C};
 use crate::led::map::{Led, WORLD_CX, WORLD_TOP, WORLD_BOT};
@@ -61,6 +62,16 @@ const IRID_PERIOD_MS: u32 = 9_000;
 const PASTEL_PERIOD_MS: u32 = 15_000;
 const PASTEL_SPAN_MM:   f32 = 300.0;
 
+// Glints: brief near-white flashes on single LEDs over the rainbow, landing mostly on the
+// brighter ones. Fewer tries than Shimmer since more of the rainbow is bright, so about as
+// many land.
+const GLINTS: GlintStyle = GlintStyle {
+    tries_per_sec: 10.0,
+    min_ms:        250, // fade time, picked per glint
+    max_ms:        450,
+    white:         0.75, // how far toward white a glint starts
+};
+
 // Orbit vertices: approximate corners of the point-down triangle (two top, one apex).
 const V_LEFT:  (f32, f32) = (10.0,                  WORLD_TOP);
 const V_RIGHT: (f32, f32) = (2.0 * WORLD_CX - 10.0, WORLD_TOP);
@@ -68,10 +79,21 @@ const V_APEX:  (f32, f32) = (WORLD_CX,              WORLD_BOT);
 
 pub struct RainbowX {
     pub speed: f32, // mm/s scroll rate (Horizontal); rotation uses the *_PERIOD_MS consts
+    glints: Glints,
+    last_ms: u32,
+}
+
+impl RainbowX {
+    pub fn new(speed: f32) -> Self {
+        RainbowX { speed, glints: Glints::new(0x3C6E_F372, GLINTS), last_ms: 0 }
+    }
 }
 
 impl Pattern for RainbowX {
     fn render(&mut self, leds: &[Led], t_ms: u32, out: &mut Frame) {
+        let dt_ms = t_ms.wrapping_sub(self.last_ms).min(100);
+        self.last_ms = t_ms;
+
         // Breathe: a bounded sinusoidal wobble added to the scroll/rotation phase so the
         // motion visibly eases faster then slower. Kept additive (not a speed multiply) so
         // the steady term below still folds cleanly to its period. Unit: hue cycles.
@@ -167,6 +189,8 @@ impl Pattern for RainbowX {
 
             out[i] = hsv(wrap360(hue), s, v);
         }
+
+        self.glints.update(t_ms, dt_ms, out);
     }
 }
 

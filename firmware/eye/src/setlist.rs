@@ -4,7 +4,7 @@ use crate::led::map::{Led, LED_COUNT, LED_MAP};
 use crate::patterns::transition::{self, TransitionStyle};
 use crate::audio::Audio;
 use crate::patterns::{Frame, Pattern, ReactivePattern};
-use crate::patterns::ambient::{effervesce::Effervesce, flame::ApexFlame, fubuki::Fubuki, rainbow::RainbowX, ricochet::Ricochet, shimmer::CenterShimmer, squall::Squall, uzumaki::Uzumaki};
+use crate::patterns::ambient::{drizzle::Drizzle, effervesce::Effervesce, flame::ApexFlame, fubuki::Fubuki, rainbow::RainbowX, ricochet::Ricochet, shimmer::CenterShimmer, squall::Squall, uzumaki::Uzumaki};
 use crate::patterns::reactive::{
     firework::Firework, raindrop::Raindrop, spectrum::Spectrum, spiderweb::Spiderweb, tiles::Tiles,
 };
@@ -44,18 +44,19 @@ fn ambient_patterns() -> Vec<Box<dyn Pattern>> {
         Box::new(ApexFlame::new(100.0, 80.0)),
         Box::new(Uzumaki::new()),
         Box::new(Effervesce::new()),
-        Box::new(RainbowX { speed: 60.0 }),
+        Box::new(RainbowX::new(60.0)),
         Box::new(Ricochet::new()),
+        Box::new(Drizzle::new()),
     ]
 }
 
 fn reactive_patterns() -> Vec<Box<dyn ReactivePattern>> {
     vec![
-        Box::new(Spiderweb::new(&LED_MAP)),
         Box::new(Tiles::new(&LED_MAP)),
         Box::new(Spectrum::new()),
         Box::new(Raindrop::new()),
         Box::new(Firework::new(&LED_MAP)),
+        Box::new(Spiderweb::new(&LED_MAP)),
     ]
 }
 

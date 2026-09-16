@@ -1,5 +1,7 @@
 pub mod ambient;
+pub mod glints;
 pub mod reactive;
+pub mod ripples;
 #[allow(dead_code)] // bench patterns, unused until one is added to a setlist by hand
 pub mod test;
 pub mod transition;
