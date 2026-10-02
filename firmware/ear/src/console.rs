@@ -504,7 +504,7 @@ fn spectrum(d: &Diag, tt: &ticktimer::Ticktimer, mic: &mut I2sAudio) {
     }
 }
 
-/// Fill the buffer with one second at the pipeline's 16 kHz, decimating as the
+/// Fill the buffer with one second at the pipeline's rate, decimating as the
 /// production path does. Integer-only per sample, so the drain keeps ahead of the
 /// mic and the recording stays contiguous.
 fn record(d: &Diag, mic: &mut I2sAudio, buf: &mut Vec<i16>) -> bool {

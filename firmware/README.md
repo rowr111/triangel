@@ -5,7 +5,7 @@ The triangel fixture is driven by two Baochip-1x chips running [Xous OS](https:/
 | Chip | Role |
 |---|---|
 | **eye** | Drives 600 WS2812 LEDs, handles controls, renders patterns |
-| **ear** | Captures audio, computes mel filterbank, streams data to eye over UART |
+| **ear** | Captures audio, runs a 24-band filterbank, streams the result to eye over UART |
 
 See [`eye/`](eye/) and [`ear/`](ear/) for crate-level documentation.
 
@@ -21,28 +21,29 @@ The fixture mounts in the corner of a room - an equilateral triangle cutting off
                 25
 ```
 
-Boards are numbered left-to-right, top-to-bottom by position. The data chain snakes for shortest inter-board wire lengths (~52 mm per jump). Baochip data wire attaches at **board 1** (top-left); chainIdx 0 = board 1, first LED.
+Boards are numbered left-to-right, top-to-bottom by position. The data path snakes for shortest inter-board wire lengths (~52 mm per jump) and is split into two chains, driven in parallel:
+
+| Chain | Eye pin | Enters at | Boards, in order | LEDs |
+|---|---|---|---|---|
+| 1 | PB4 | board 1 | 1-9, 16, 15, 14 | 288 |
+| 2 | PB5 | board 13 | 13, 12, 11, 10, 17-21, 24, 23, 22, 25 | 312 |
 
 ## Eye <-> ear communication
 
-The ear chip sends mel data to the eye chip over UART at ~30 fps. The wire frame format (51 bytes) is defined in [`shared/`](shared/) (`triangel-shared` crate):
+The ear sends one frame per 32 ms of audio (~31 fps) to the eye over a single UART wire. The frame carries 24 band levels, the overall loudness (absolute and relative to recent music), how sharply the spectrum just rose, and the bass level. The eye turns those into beats, drops, per-band onsets and the Auto sound-mode decision.
 
-| Offset | Size | Content |
-|---|---|---|
-| 0x00 | 1 byte | Sync byte `0xAA` |
-| 0x01-0x30 | 48 bytes | 24 x u16 little-endian mel bands |
-| 0x31 | 1 byte | Activity flag (0 = quiet, 1 = music active) |
-| 0x32 | 1 byte | XOR checksum of bytes 0x01-0x31 |
-
-The ear chip sets the activity flag based on sustained absolute energy exceeding a calibrated threshold - the eye uses this for Auto sound mode. The eye applies its own attack/decay envelope to the band values to produce a smoothed level for patterns; raw per-band values are also available for patterns that want custom smoothing.
+The baud rate and frame layout are defined once, in the [`shared/`](shared/) crate that both chips build against; see its README for the byte layout.
 
 ## Regenerating the LED map
 
-If the PCB geometry or board gap changes, regenerate `led_map.js` in the previewer then update `map.rs` in eye:
+If the PCB geometry or board gap changes:
 
 ```powershell
-# In triangel previewer/
+# 1. In "triangel previewer/": regenerate led_map.js
 node generate_map.js
 
-# Copy the output into firmware/eye/src/led/map.rs
+# 2. Copy the output into firmware/eye/src/led/map.rs
+
+# 3. In firmware/eye/: regenerate src/led/geom.rs from map.rs
+python tools/gen_geom.py
 ```

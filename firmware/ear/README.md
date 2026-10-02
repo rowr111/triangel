@@ -4,52 +4,62 @@ Audio processor firmware for the triangel fixture. Runs on a Baochip-1x under [X
 
 ## What this is
 
-The **ear** chip captures audio, computes a mel filterbank, and streams the result to the **eye** chip over UART at ~30 fps. The eye chip uses the mel band data to drive sound-reactive LED patterns.
+The **ear** chip captures audio, measures it in 24 frequency bands, and streams the result to the **eye** chip over UART at ~31 fps.
 
-Pipeline per frame (~32 ms):
+Pipeline per frame (32 ms):
 
 ```
-mic (I2S)  ──►  512-sample frame  ──►  24 bandpass filters  ──►  24 mel bands  ──►  UART TX  ──►  eye
+mic (I2S, 48 kHz)  ->  2:1 decimate  ->  768-sample frame  ->  24 bandpass filters  ->  normalize  ->  UART TX  ->  eye
 ```
 
-The 24 mel bands span 31–8000 Hz on a perceptual (mel) scale — lower bands are narrower in Hz to match how hearing works. This is the same structure as a hardware spectrum analyzer display, and it is built the same way: one bandpass filter per band, squaring and averaging each filter's output over the frame to get that band's energy. No FFT is involved, so there is no windowing and no frame-boundary reset — the filters run continuously. Each band value is u16 (0–65535), log-compressed and normalized against an adaptive ceiling that tracks the loudest band. An activity flag is also sent, set when sustained RMS energy exceeds a calibrated threshold; the eye uses this for Auto sound mode switching.
+The 24 bands span 40 Hz to 12 kHz, each a constant ratio above the last (about a third of an octave), so every band covers the same musical interval. It is built like a hardware spectrum analyzer: one bandpass filter per band, squaring and averaging each filter's output over the frame. No FFT is involved, so there is no windowing and the filters run continuously across frame boundaries.
 
-Every frame also carries an overall **level**, on a different scale from the bands on purpose: the bands are normalized so they give spectral shape but never go dark in a quiet room, while the level is absolute dBFS over `LEVEL_DB_FLOOR`..0 and does. Both chips convert through `level_to_wire` / `level_from_wire` in the shared crate. dB SPL is dBFS + 120.
+Each frame carries two kinds of value, on purpose:
+
+- **Bands** are normalized against recent music, so they give spectral shape but never go dark in a quiet room.
+- **Level** and **bass** are absolute dBFS, so they do. dB SPL is roughly dBFS + 120.
+
+It also carries the level normalized against recent loudness, and the spectral flux the eye uses for beat detection. The frame layout is in [`../shared/README.md`](../shared/README.md).
 
 ## Hardware
 
 | Thing | Detail |
 |---|---|
-| Chip | Baochip-1x - 350 MHz VexRiscv RV32-IMAC, 2 MB SRAM, 4 MB ReRAM |
-| Microphone | ICS43434 MEMS mic (JLCPCB C5656610), I2S slave |
-| Eye link | Pin 15 PB14 (UART2 TX) → eye pin 16 PB13 (UART2 RX), single wire + GND, 921600 baud |
+| Chip | Baochip-1x - 350 MHz VexRiscv RV32-IMAC, 2 MB SRAM, 4 MB ReRAM, no FPU |
+| Microphone | ICS43434 MEMS mic (JLCPCB C5656610), I2S slave, clocked by a BIO core: PB1 = BCLK, PB2 = SD, PB3 = WS |
+| Eye link | PB14 (UART2 TX, pin 15) -> eye PB13 (UART2 RX, pin 16), single wire + GND |
 
 ## Audio configuration
 
 | Setting | Value | Notes |
 |---|---|---|
-| Sample rate | 16 kHz | Nyquist limit for 8 kHz mel ceiling |
-| Bit depth | 24-bit | ICS43434 native; top 16 bits used |
-| Channels | Mono | IS_SELECT pin tied low on PCB = left channel |
-| Frame size | 512 samples | ~32 ms per frame, ~31 fps |
+| Mic sample rate | 48 kHz | Inside the ICS43434's high-performance range |
+| Pipeline sample rate | 24 kHz | 2:1 box-average decimation; 12 kHz Nyquist |
+| Bit depth | 24-bit | Top 16 bits used |
+| Channels | Mono | Select pin tied low on PCB = left channel |
+| Frame size | 768 samples | 32 ms per frame, ~31 fps |
+
+All of these derive from three constants at the top of [`src/audio.rs`](src/audio.rs).
 
 ## Project structure
 
 ```
 src/
-+-- main.rs       - entry point; audio capture → mel → UART loop
-+-- audio.rs      - AudioSource trait + I2sAudio: ICS43434 mic over I2S
-+-- mel.rs        - MelProcessor: 24 mel-spaced bandpass filters, log + normalize
-+-- uart_out.rs   - UartOut: encodes MelFrame and transmits to eye over UART
++-- main.rs       - entry point; capture -> filterbank -> UART loop
++-- audio.rs      - I2sAudio: ICS43434 mic through a BIO core
++-- i2s_bio.rs    - the BIO program that clocks the mic (generated)
++-- mel.rs        - MelProcessor: the 24-band filterbank and normalization
++-- uart_out.rs   - UartOut: sends each frame to the eye
++-- pins.rs       - pin assignments
 +-- diag.rs       - USB-serial output: boot stages, heartbeat, command input
 +-- console.rs    - mic diagnostic commands
 ```
 
-Wire protocol types shared between ear and eye live in [`../shared/`](../shared/) (`triangel-shared` crate).
+Code shared with the eye (frame format, tuning) lives in [`../shared/`](../shared/).
 
 ## Building
 
-Build via the Baochip VSCode extension (`buildMode: out-of-tree`). Audio comes from the ICS43434 MEMS mic over I2S.
+Build via the Baochip VSCode extension (`buildMode: out-of-tree`).
 
 ## Mic diagnostic console
 
@@ -68,6 +78,7 @@ Until the first keystroke the board prints a liveness line every 2 s naming the 
 | `t` | 1 s of statistics: min, max, DC offset, RMS |
 | `m` | Live level meter for 15 s |
 | `p` | Filterbank cost per frame against the frame budget |
+| `n` | Live normalization references and the level they scale |
 | `?` | Help |
 
-Commands run on the audio thread between frames, so the eye stops receiving mel frames while one is in progress - up to 15 s for `m`, 3 s or less for the rest. The eye decays to silence after 200 ms without a frame and recovers on its own; because its Auto-mode arm and release times are both 30 s, even the longest command will not flip it out of sound-reactive mode.
+`p`, `n` and `?` are answered without interrupting audio. The rest run on the audio thread between frames, so the eye stops receiving frames while one is in progress - up to 15 s for `m`, 3 s or less for the others. The eye decays to silence after 200 ms without a frame and recovers on its own; because its Auto-mode arm and release times are both 30 s, even the longest command will not flip it out of sound-reactive mode.

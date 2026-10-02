@@ -47,7 +47,7 @@ pub const FRAME_LEN: usize = 1 + MEL_BANDS * 2 + 2 + 2 + 2 + 2 + 1 + 1; // 59 by
 
 /// One frame of mel band data sent from the ear chip to the eye chip.
 ///
-/// Wire format (53 bytes, little-endian):
+/// Wire format (59 bytes, little-endian):
 ///
 /// ```text
 /// [0x00]        SYNC_BYTE (0xAA)
@@ -87,7 +87,7 @@ pub struct MelFrame {
 }
 
 impl MelFrame {
-    /// Serialise into a 53-byte wire buffer.
+    /// Serialise into a wire buffer.
     pub fn encode(&self, buf: &mut [u8; FRAME_LEN]) {
         buf[0] = SYNC_BYTE;
         for (i, &band) in self.bands.iter().enumerate() {
@@ -109,7 +109,7 @@ impl MelFrame {
         buf[FRAME_LEN - 1] = checksum;
     }
 
-    /// Parse a 53-byte wire buffer. Returns `None` if sync or checksum is wrong.
+    /// Parse a wire buffer. Returns `None` if sync or checksum is wrong.
     pub fn decode(buf: &[u8; FRAME_LEN]) -> Option<Self> {
         if buf[0] != SYNC_BYTE {
             return None;

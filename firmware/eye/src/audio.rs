@@ -12,7 +12,7 @@ use triangel_shared::tuning::{beat::*, drop_detect::*, level::*, onset::*};
 
 use crate::pins;
 
-// --- UART init status - written during init, read by AudioFill for debug display ---
+// UART link status, reported by the heartbeat.
 pub const STATUS_PENDING:    u8 = 0;
 pub const STATUS_CSR_FAIL:   u8 = 1;
 pub const STATUS_IFRAM_FAIL: u8 = 2;
@@ -67,7 +67,7 @@ pub fn stats() -> (u8, u32, u32, u8, f32, f32) {
 // half is our DMA ring: the UDMA engine writes incoming bytes into it continuously
 // (CFG_CONT wraps forever) and update() chases its write pointer once per render
 // frame. Reception is entirely hardware-side: a CPU-serviced byte interface cannot
-// keep up with 53-byte bursts at 1 Mbaud (10 us/byte) under a multitasking OS.
+// keep up with frame-sized bursts at 1 Mbaud (10 us/byte) under a multitasking OS.
 const RX_DMA_BUF_START: usize = 2048;
 const RX_DMA_BUF_LEN:   usize = 2048;
 

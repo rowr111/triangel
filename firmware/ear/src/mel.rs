@@ -2,7 +2,7 @@
 //!
 //! # What this does
 //!
-//! Every 32 ms the ear chip receives 512 audio samples from the microphone.
+//! Every 32 ms the ear chip receives one frame of audio samples from the microphone.
 //! This module converts those raw samples into a compact 24-number summary
 //! that describes how much energy is in each frequency region of the sound.
 //!
@@ -298,7 +298,7 @@ impl BandBank {
 /// Computes mel-frequency band energies and activity from raw audio samples.
 ///
 /// Create once at startup with `MelProcessor::new()`, then call `process()`
-/// on every incoming 512-sample frame.
+/// on every incoming frame.
 pub struct MelProcessor {
     /// The 24 mel-spaced bandpass filters and their per-frame energy accumulators.
     bank: BandBank,
@@ -363,7 +363,7 @@ impl MelProcessor {
     /// Live level reference (low, high) in dBFS, for the console readout.
     pub fn level_reference(&self) -> (f32, f32) { (self.level_ref.low, self.level_ref.high) }
 
-    /// Process one 512-sample audio frame and return a `MelFrame`.
+    /// Process one audio frame and return a `MelFrame`.
     ///
     /// Hot path (~30x/second), and allocation-free. Steps: broadband RMS for level
     /// and activity, the 24 bandpass filters, conversion to dB, a gated normalization

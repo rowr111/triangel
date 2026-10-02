@@ -208,7 +208,7 @@ mod i2s {
     }
 
     impl I2sAudio {
-        /// Block until a complete 512-sample frame is available, then return it.
+        /// Block until a complete frame is available, then return it.
         pub fn read_frame(&mut self) -> [i16; FFT_SIZE] {
             // Drop whatever queued while the caller processed the previous frame. Once
             // the FIFO fills the BIO discards new samples, so the eight sitting there
@@ -225,7 +225,7 @@ mod i2s {
                 let mut acc: i32 = 0;
                 for _ in 0..DECIMATE {
                     let Some(s) = self.try_read_sample() else {
-                        // Give up rather than pay the spin limit 1500 more times.
+                        // Give up rather than pay the spin limit for every remaining sample.
                         self.starved_frames = self.starved_frames.wrapping_add(1);
                         return out;
                     };
