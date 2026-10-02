@@ -10,15 +10,13 @@ use crate::pins;
 const NEC_ADDR_LO: u8 = 0x85;
 const NEC_ADDR_HI: u8 = 0xFE;
 
-// Command bytes from the 7-button remote.
+// Command bytes from the 7-button remote. The TV button (0x45) is unassigned.
 const IR_CMD_BRIGHTNESS_UP:   u8 = 0x43; // Up button
 const IR_CMD_BRIGHTNESS_DOWN: u8 = 0x44; // Down button
 const IR_CMD_PATTERN_NEXT:    u8 = 0x41; // Right button
 const IR_CMD_PATTERN_PREV:    u8 = 0x42; // Left button
 const IR_CMD_HOLD:            u8 = 0x40; // Center button
 const IR_CMD_GEAR:            u8 = 0x46; // Gear button -> cycle sound mode
-#[allow(dead_code)]
-const IR_CMD_TV:              u8 = 0x45; // TV button - spare (use TBD)
 
 // Diagnostic state reported by the heartbeat line.
 static CLOCK_HZ:        AtomicU32 = AtomicU32::new(0);
@@ -46,7 +44,6 @@ pub fn spawn(queue: EventQueue) {
         match NecCapture::new(pin) {
             Ok(capture) => {
                 CLOCK_HZ.store(capture.clock_hz(), Ordering::Relaxed);
-                log::info!("IR capture on BIO pin {} at {} Hz", pins::IR_BIO_PIN, capture.clock_hz());
                 diag.line(&format!(
                     "IR capture on BIO pin {} at {} Hz",
                     pins::IR_BIO_PIN,
@@ -55,10 +52,7 @@ pub fn spawn(queue: EventQueue) {
                 receive_loop(capture, queue, diag);
             }
             // Give up rather than panic: the d-pad still works without IR.
-            Err(e) => {
-                diag.line(&format!("IR NecCapture init FAILED: {:?}", e));
-                log::error!("IR NecCapture init failed: {:?}", e);
-            }
+            Err(e) => diag.line(&format!("IR NecCapture init FAILED: {:?}", e)),
         }
     });
 }
@@ -81,7 +75,6 @@ fn receive_loop(capture: NecCapture, queue: EventQueue, diag: Diag) -> ! {
             if addr_lo != NEC_ADDR_LO || addr_hi != NEC_ADDR_HI || (cmd ^ cmd_inv) != 0xFF {
                 REJECTED_FRAMES.fetch_add(1, Ordering::Relaxed);
                 diag.line(&format!("IR frame rejected: {:08x}", frame));
-                log::debug!("IR frame rejected: {:08x}", frame);
                 continue;
             }
             DECODED_FRAMES.fetch_add(1, Ordering::Relaxed);
@@ -103,7 +96,6 @@ fn map_ir_cmd(cmd: u8, queue: &EventQueue) {
         IR_CMD_PATTERN_PREV    => Some(InputEvent::PatternPrev),
         IR_CMD_HOLD            => Some(InputEvent::ToggleHold),
         IR_CMD_GEAR            => Some(InputEvent::CycleSoundMode),
-        // TV button spare
         _                      => None,
     };
     if let Some(ev) = event {

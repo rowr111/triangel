@@ -44,7 +44,6 @@ src/
 |   +-- transition.rs   - blends from one pattern to the next
 |   +-- ambient/        - patterns that ignore sound
 |   +-- reactive/       - patterns driven by sound
-|   +-- test/           - power-supply bench patterns, not in a setlist
 +-- input/
     +-- mod.rs          - InputEvent queue
     +-- buttons.rs      - d-pad and switch polling, debounce

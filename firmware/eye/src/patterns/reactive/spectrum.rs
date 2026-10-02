@@ -1,9 +1,10 @@
 use core::f32::consts::TAU;
 
-use crate::audio::{Audio, MEL_BANDS};
+use crate::audio::Audio;
 use crate::led::geom::{DIST_C, THETA_C};
 use crate::led::map::{Led, LED_COUNT};
 use crate::patterns::{Frame, ReactivePattern, lerp};
+use triangel_shared::mel::MEL_BANDS;
 use triangel_shared::tuning::spectrum::*;
 
 // Color runs as a ramp of RGB stops from the core to the rim, rather than a sweep of

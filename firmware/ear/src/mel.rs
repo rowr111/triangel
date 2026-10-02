@@ -1,4 +1,4 @@
-//! Third-octave filterbank and activity detection.
+//! Third-octave filterbank.
 //!
 //! # What this does
 //!
@@ -6,8 +6,8 @@
 //! This module converts those raw samples into a compact 24-number summary
 //! that describes how much energy is in each frequency region of the sound.
 //!
-//! The result is a `MelFrame` containing 24 band values (u16 each), one overall
-//! level, and an activity flag, which is then sent over UART to the eye chip.
+//! The result is a `MelFrame` containing 24 band values (u16 each) and the overall
+//! level, which is then sent over UART to the eye chip.
 //!
 //! # Relation to a spectrum analyzer
 //!
@@ -37,13 +37,13 @@
 //!
 //! ```text
 //! raw i16 samples
-//!   -> RMS for activity detection + overall level
+//!   -> RMS for the overall level
 //!   -> 24 third-octave bandpass filters, one second-order IIR section each
 //!   -> square and average each filter's output over the frame (band energy)
 //!   -> convert to dB (matches perceived loudness)
 //!   -> normalize against windowed references, gated by absolute level
 //!   -> power-law shaping + per-band fast-rise/slow-fall smoothing -> u16
-//!   -> MelFrame { bands: [u16; 24], level, activity }
+//!   -> MelFrame { bands: [u16; 24], level, .. }
 //! ```
 
 use triangel_shared::mel::{level_to_wire, norm_to_wire, MelFrame, LEVEL_DB_FLOOR, MEL_BANDS};
@@ -63,17 +63,9 @@ const BAND_LOW_HZ: f32 = 40.0;
 /// Highest frequency covered - the Nyquist limit at 24 kHz sampling.
 const BAND_HIGH_HZ: f32 = 12_000.0;
 
-// RMS threshold (0.0-1.0, normalized from i16) above which activity is flagged.
-// 0.02 corresponds to roughly -34 dBFS - loud enough to be intentional music
-// but quiet enough to catch soft passages.
-const ACTIVITY_THRESHOLD: f32 = 0.02;
-
-// Asymmetric envelope: fast attack, fast-ish decay.
-// Attack 0.8: the smoothed RMS jumps to a loud transient within a frame or two.
-// Decay 0.4: it falls back ~90% within ~5 frames (~160 ms), clearing between
-// sounds without flickering inside a single beat.
-const ACTIVITY_ATTACK: f32 = 0.8;
-const ACTIVITY_DECAY: f32  = 0.4;
+// How fast the smoothed RMS behind the level rises and falls, per frame.
+const LEVEL_ATTACK: f32 = 0.8;
+const LEVEL_DECAY: f32  = 0.4;
 
 // --- Normalization ---
 // The values meant for tuning come from `triangel_shared::tuning::ear`.
@@ -295,7 +287,7 @@ impl BandBank {
     }
 }
 
-/// Computes mel-frequency band energies and activity from raw audio samples.
+/// Computes mel-frequency band energies and the overall level from raw audio samples.
 ///
 /// Create once at startup with `MelProcessor::new()`, then call `process()`
 /// on every incoming frame.
@@ -303,8 +295,8 @@ pub struct MelProcessor {
     /// The 24 mel-spaced bandpass filters and their per-frame energy accumulators.
     bank: BandBank,
 
-    /// Exponentially-smoothed RMS level used for activity detection and the
-    /// overall level. Updated every frame with asymmetric attack/decay.
+    /// Exponentially-smoothed RMS behind the overall level. Updated every frame
+    /// with asymmetric attack/decay.
     smoothed_rms: f32,
 
     /// Shared reference, fed the loudest band's dB each frame. Holds the bands in
@@ -365,12 +357,12 @@ impl MelProcessor {
 
     /// Process one audio frame and return a `MelFrame`.
     ///
-    /// Hot path (~30x/second), and allocation-free. Steps: broadband RMS for level
-    /// and activity, the 24 bandpass filters, conversion to dB, a gated normalization
+    /// Hot path (~30x/second), and allocation-free. Steps: broadband RMS for the
+    /// level, the 24 bandpass filters, conversion to dB, a gated normalization
     /// against windowed references, power-law shaping, and per-band fast-rise/slow-fall
     /// smoothing.
     pub fn process(&mut self, samples: &[i16; FFT_SIZE]) -> MelFrame {
-        // --- Activity + overall level (broadband RMS, straight off the raw samples) ---
+        // --- Overall level (broadband RMS, straight off the raw samples) ---
         // RMS = sqrt(mean(sample^2)); i16 normalized to -1.0..1.0 by /32768.
         let rms = (samples
             .iter()
@@ -379,13 +371,12 @@ impl MelProcessor {
             / FFT_SIZE as f32)
             .sqrt();
         // Asymmetric smoothing: jump up fast on transients (attack), fall back
-        // slowly (decay) so activity and level don't flicker between beats.
+        // slowly (decay) so the level doesn't flicker between beats.
         if rms > self.smoothed_rms {
-            self.smoothed_rms += ACTIVITY_ATTACK * (rms - self.smoothed_rms);
+            self.smoothed_rms += LEVEL_ATTACK * (rms - self.smoothed_rms);
         } else {
-            self.smoothed_rms += ACTIVITY_DECAY * (rms - self.smoothed_rms);
+            self.smoothed_rms += LEVEL_DECAY * (rms - self.smoothed_rms);
         }
-        let activity = self.smoothed_rms > ACTIVITY_THRESHOLD;
         // RMS is already normalized to full scale, so dBFS needs no calibration.
         let dbfs = if self.smoothed_rms > 0.0 {
             20.0 * self.smoothed_rms.log10()
@@ -460,9 +451,6 @@ impl MelProcessor {
             bands[m] = (*sm * 65535.0) as u16;
         }
 
-        // FUTURE (2b): also compute the raw (non-normalized) bands and reductions
-        // (bass/mid/treble sums, onset/beat) here and add them to the MelFrame.
-
-        MelFrame { bands, level, level_norm, flux, bass, activity }
+        MelFrame { bands, level, level_norm, flux, bass }
     }
 }

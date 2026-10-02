@@ -6,8 +6,7 @@ use bao1x_hal::clocks::PERCLK_HZ;
 use bao1x_hal::udma::{Bank, DmaReg, Udma, Uart, UartReg};
 use bao1x_hal_service::UdmaGlobal;
 
-pub use triangel_shared::mel::MEL_BANDS;
-use triangel_shared::mel::{level_from_wire, norm_from_wire, EAR_UART_BAUD, FRAME_LEN, LEVEL_DB_FLOOR, MelFrame, SYNC_BYTE};
+use triangel_shared::mel::{level_from_wire, norm_from_wire, EAR_UART_BAUD, FRAME_LEN, LEVEL_DB_FLOOR, MEL_BANDS, MelFrame, SYNC_BYTE};
 use triangel_shared::tuning::{beat::*, drop_detect::*, level::*, onset::*};
 
 use crate::pins;
@@ -21,7 +20,6 @@ pub const STATUS_DMA_DONE:   u8 = 4;
 pub const STATUS_RECEIVING:  u8 = 5;
 pub static UART_STATUS:        AtomicU8  = AtomicU8::new(STATUS_PENDING);
 pub static UART_FIRST_BYTE:    AtomicU8  = AtomicU8::new(0);
-pub static UART_LAST_FRAME_MS: AtomicU32 = AtomicU32::new(0);
 /// Frames that decoded, and frames dropped on a bad sync or checksum. The pair tells
 /// a wrong-data link from a dead one.
 pub static UART_FRAMES_OK:     AtomicU32 = AtomicU32::new(0);
@@ -38,7 +36,7 @@ pub static DROP_REF_DB:        AtomicU32  = AtomicU32::new(0);
 
 /// Drop detector state for the diagnostic heartbeat: in a breakdown, drops detected,
 /// the bass level, and the reference it is judged against.
-#[allow(dead_code)] // only the bringup build's heartbeat reads it
+#[cfg(all(feature = "usb", not(feature = "previewer")))]
 pub fn drop_stats() -> (bool, u32, f32, f32) {
     (
         DROP_BREAKDOWN.load(Ordering::Relaxed),
@@ -50,7 +48,7 @@ pub fn drop_stats() -> (bool, u32, f32, f32) {
 
 /// Link state for the diagnostic heartbeat: status, frames decoded, frames dropped,
 /// the first byte ever seen, current dBFS, and current normalized level.
-#[allow(dead_code)] // only the bringup build's heartbeat reads it
+#[cfg(all(feature = "usb", not(feature = "previewer")))]
 pub fn stats() -> (u8, u32, u32, u8, f32, f32) {
     (
         UART_STATUS.load(Ordering::Relaxed),
@@ -196,12 +194,6 @@ pub struct AudioReceiver {
     // None if the UART never came up (sound-reactive then stays disabled; the LED loop
     // is unaffected).
     dma: Option<DmaRx>,
-}
-
-impl Default for AudioReceiver {
-    fn default() -> Self {
-        Self::new()
-    }
 }
 
 impl AudioReceiver {
@@ -404,8 +396,7 @@ impl AudioReceiver {
     }
 
     /// Apply a decoded frame: the 24 bands, the render level (light EMA), and the loud
-    /// flag. The frame's own activity flag is available but not consumed yet - the
-    /// eye's slow arm/release accumulator judges the level, unchanged from before.
+    /// flag the slow arm/release accumulator judges.
     fn apply_frame(&mut self, frame: &MelFrame, now_ms: u32) {
         for (i, &b) in frame.bands.iter().enumerate() {
             let v = b as f32 / 65535.0;
@@ -424,7 +415,6 @@ impl AudioReceiver {
         self.state.last_loud = self.state.smoothed_dbfs > ACTIVITY_LOUD_DBFS;
         self.state.last_update_ms = now_ms;
         UART_STATUS.store(STATUS_RECEIVING, Ordering::Relaxed);
-        UART_LAST_FRAME_MS.store(now_ms, Ordering::Relaxed);
         UART_FRAMES_OK.fetch_add(1, Ordering::Relaxed);
         UART_LAST_DBFS.store(self.state.smoothed_dbfs.to_bits(), Ordering::Relaxed);
         UART_LAST_NORM.store(self.state.level_norm.to_bits(), Ordering::Relaxed);
@@ -459,6 +449,7 @@ impl DmaRx {
 /// the mapped addresses. None if the UART never came up.
 fn init_audio_uart() -> Option<DmaRx> {
     let tt = ticktimer::Ticktimer::new().unwrap();
+    let diag = crate::diag::Diag::new();
     let iox = IoxHal::new();
     pins::setup_input_pin(&iox, pins::AUDIO_UART_RX_PORT, pins::AUDIO_UART_RX_PIN, IoxFunction::AF1, IoxEnable::Enable);
     UdmaGlobal::new().udma_clock_config(PeriphId::Uart2, true);
@@ -471,16 +462,16 @@ fn init_audio_uart() -> Option<DmaRx> {
     loop {
         if let Some(dma) = init_uart() {
             if attempt > 0 {
-                log::info!("audio UART init recovered after {} retries", attempt);
+                diag.line(&format!("audio UART init recovered after {} retries", attempt));
             }
             return Some(dma);
         }
         if attempt == 0 {
-            log::warn!("audio UART init failed (status {}); retrying", UART_STATUS.load(Ordering::Relaxed));
+            diag.line(&format!("audio UART init failed (status {}); retrying", UART_STATUS.load(Ordering::Relaxed)));
         }
         attempt += 1;
         if attempt >= MAX_INIT_ATTEMPTS {
-            log::error!("audio UART init failed after {} attempts; sound-reactive disabled", MAX_INIT_ATTEMPTS);
+            diag.line(&format!("audio UART init failed after {} attempts; sound-reactive disabled", MAX_INIT_ATTEMPTS));
             return None;
         }
         tt.sleep_ms(100).ok();
@@ -510,7 +501,6 @@ fn init_uart() -> Option<DmaRx> {
 
     let csr_virt   = csr_mem.as_ptr() as usize;
     let ifram_virt = ifram_mem.as_ptr() as usize;
-    let _ = (csr_mem, ifram_mem);
 
     let uart = unsafe {
         Uart::get_handle(csr_virt, bao1x_hal::board::APP_UART_IFRAM_ADDR, ifram_virt)

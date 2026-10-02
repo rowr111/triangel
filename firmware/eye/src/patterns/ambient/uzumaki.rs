@@ -60,7 +60,7 @@ const FAMILIES: usize = 6;
 
 // Neon tube on black: saturated where it is lit, so the hue survives on the strip instead of
 // washing to white, and every stop near full brightness.
-const NEON: [[(f32, f32, f32); 2]; FAMILIES] = [
+const PALETTE: [[(f32, f32, f32); 2]; FAMILIES] = [
     [(318.0, 0.95, 1.00), (318.0, 0.55, 1.00)], // magenta
     [(272.0, 0.85, 0.95), (272.0, 0.45, 1.00)], // violet
     [(212.0, 0.95, 1.00), (208.0, 0.50, 1.00)], // electric blue
@@ -69,8 +69,6 @@ const NEON: [[(f32, f32, f32); 2]; FAMILIES] = [
     [( 28.0, 0.95, 1.00), ( 35.0, 0.50, 1.00)], // orange
 ];
 
-// The palette in use.
-const PALETTE: [[(f32, f32, f32); 2]; FAMILIES] = NEON;
 const STEP_MS: u32 = 9_000; // how long the arms hold one set of families
 const FADE:    f32 = 0.35;  // fraction of that step spent crossfading to the next set
 

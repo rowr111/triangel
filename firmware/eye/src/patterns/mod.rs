@@ -1,7 +1,5 @@
 pub mod ambient;
 pub mod reactive;
-#[allow(dead_code)] // bench patterns, unused until one is added to a setlist by hand
-pub mod test;
 pub mod transition;
 
 use crate::audio::Audio;
@@ -21,34 +19,6 @@ pub trait Pattern: Send {
 /// silence included.
 pub trait ReactivePattern: Send {
     fn render(&mut self, leds: &[Led], t_ms: u32, audio: &Audio, out: &mut Frame);
-}
-
-// --- Envelope ---
-
-/// Attack/decay envelope for a reactive pattern that wants to rise and fall at its
-/// own rate. Hold one as a field and call `update()` each frame.
-#[allow(dead_code)]
-pub struct Envelope {
-    pub attack: f32,
-    pub decay:  f32,
-    value:      f32,
-}
-
-#[allow(dead_code)]
-impl Envelope {
-    pub fn new(attack: f32, decay: f32) -> Self {
-        Envelope { attack, decay, value: 0.0 }
-    }
-
-    /// Feed a new input sample (0.0-1.0), returns the smoothed value.
-    pub fn update(&mut self, input: f32) -> f32 {
-        if input > self.value {
-            self.value += self.attack * (input - self.value);
-        } else {
-            self.value = (self.value - self.decay).max(input).max(0.0);
-        }
-        self.value
-    }
 }
 
 // --- Shared math utilities ---

@@ -1,5 +1,4 @@
-//! USB-serial console for mic bringup. The ear's `log::info!` output is not
-//! reachable from a serial monitor - UART2 carries the audio link to the eye -
+//! USB-serial console for mic bringup. UART2 carries the audio link to the eye,
 //! so this is the only visibility into the firmware.
 
 use std::sync::atomic::{AtomicBool, AtomicU32, AtomicUsize, Ordering};

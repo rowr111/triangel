@@ -124,9 +124,6 @@ pub mod firework {
     /// Share of a spark's life spent white, and how much brighter it is then.
     pub const WHITE_FRAC: f32 = 0.22;
     pub const HIT_BOOST: f32 = 2.2;
-    /// White background level and how much it moves. 0 turns it off.
-    pub const WASH_BASE: f32 = 0.0;
-    pub const WASH_DEPTH: f32 = 0.0;
 }
 
 pub mod tiles {

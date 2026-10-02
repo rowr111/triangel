@@ -12,16 +12,6 @@ const MAX_SPARKS: usize = 192;
 /// Spots tried for each drop burst before settling for the farthest one found.
 const DROP_TRIES: usize = 12;
 
-/// A white churn under everything, on its own slow clock rather than the music, so the
-/// fixture is never empty between bursts. One sine per axis, each with its phase pushed
-/// around by a sine of the other axis at an off-integer ratio, so the two never line up
-/// and it turns over rather than sweeping across.
-const WASH_CELL_MM: f32 = 180.0;
-const WASH_PERIOD_MS: u32 = 9_000;
-const WASH2_PERIOD_MS: u32 = 6_100;
-const WASH_CROSS_Y: f32 = 0.83;
-const WASH_CROSS_X: f32 = 0.71;
-
 /// Firework colors. Saturation runs high for the warm hues where the LEDs can carry it,
 /// and is eased back toward blue and violet, which otherwise drive one channel and read
 /// dim rather than vivid.
@@ -37,7 +27,7 @@ fn nearest_d2(p: (f32, f32), others: &[(f32, f32)]) -> f32 {
     })
 }
 
-/// No spark owns this LED, so it keeps the background's white.
+/// No spark reaches this LED.
 const NO_OWNER: u8 = u8::MAX;
 
 struct Spark {
@@ -70,12 +60,6 @@ struct Live {
 pub struct Firework {
     rng:    u32,
     sparks: [Spark; MAX_SPARKS],
-    /// sin and cos of each axis' modulating term, which have no time in them and so are
-    /// computed once.
-    wy_sin: [f32; LED_COUNT],
-    wy_cos: [f32; LED_COUNT],
-    wx_sin: [f32; LED_COUNT],
-    wx_cos: [f32; LED_COUNT],
     /// Per-LED accumulation, so each spark touches only the LEDs near it rather than
     /// every LED testing itself against every spark.
     tot:   [f32; LED_COUNT],
@@ -84,18 +68,13 @@ pub struct Firework {
 }
 
 impl Firework {
-    pub fn new(leds: &[Led]) -> Self {
-        let k = TAU / WASH_CELL_MM;
+    pub fn new() -> Self {
         Firework {
             rng:    0x1234_5678,
             sparks: core::array::from_fn(|_| Spark {
                 x: 0.0, y: 0.0, vx: 0.0, vy: 0.0, hue: 0.0, sat: 0.0,
                 start_ms: 0, strength: 0.0, alive: false,
             }),
-            wy_sin: core::array::from_fn(|i| (leds[i].wy * k * WASH_CROSS_Y).sin()),
-            wy_cos: core::array::from_fn(|i| (leds[i].wy * k * WASH_CROSS_Y).cos()),
-            wx_sin: core::array::from_fn(|i| (leds[i].wx * k * WASH_CROSS_X).sin()),
-            wx_cos: core::array::from_fn(|i| (leds[i].wx * k * WASH_CROSS_X).cos()),
             tot:   [0.0; LED_COUNT],
             best:  [0.0; LED_COUNT],
             owner: [NO_OWNER; LED_COUNT],
@@ -232,26 +211,10 @@ impl ReactivePattern for Firework {
             n_live += 1;
         }
 
-        let wash1 = (t_ms % WASH_PERIOD_MS) as f32 / WASH_PERIOD_MS as f32 * TAU;
-        let wash2 = (t_ms % WASH2_PERIOD_MS) as f32 / WASH2_PERIOD_MS as f32 * TAU;
-        let (w1_sin, w1_cos) = wash1.sin_cos();
-        let (w2_sin, w2_cos) = wash2.sin_cos();
-        let wash_k = TAU / WASH_CELL_MM;
-
-        let Firework { wy_sin, wy_cos, wx_sin, wx_cos, tot, best, owner, .. } = self;
-
-        // Background into the accumulator. The outer sines cannot be factored out, since
-        // their arguments contain the modulating terms.
-        for (i, led) in leds.iter().enumerate() {
-            let mod_y = wy_sin[i] * w2_cos + wy_cos[i] * w2_sin;
-            let mod_x = wx_sin[i] * w1_cos + wx_cos[i] * w1_sin;
-            let churn = ((led.wx * wash_k + mod_y + wash1).sin()
-                + (led.wy * wash_k + mod_x + wash2).sin())
-                * 0.5;
-            tot[i] = WASH_BASE + WASH_DEPTH * churn;
-            best[i] = 0.0;
-            owner[i] = NO_OWNER;
-        }
+        let Firework { tot, best, owner, .. } = self;
+        tot.fill(0.0);
+        best.fill(0.0);
+        owner.fill(NO_OWNER);
 
         // Each spark touches only the LEDs in the grid cells it covers. The strongest
         // spark over an LED keeps its color, so overlapping bursts stay distinct.

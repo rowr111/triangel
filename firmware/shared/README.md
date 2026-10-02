@@ -6,7 +6,7 @@ Code both chips build against, so the **ear** (audio) and the **eye** (LEDs) can
 
 The ear sends one `MelFrame` per 32 ms of audio (~31 fps) over UART. Baud rate, band count and frame length are constants in [`src/mel.rs`](src/mel.rs) (`EAR_UART_BAUD`, `MEL_BANDS`, `FRAME_LEN`).
 
-### Wire format (59 bytes, little-endian)
+### Wire format (58 bytes, little-endian)
 
 | Offset | Size | Content |
 |---|---|---|
@@ -16,8 +16,7 @@ The ear sends one `MelFrame` per 32 ms of audio (~31 fps) over UART. Baud rate, 
 | 0x33-0x34 | 2 | `level_norm`: loudness relative to the recent loudest and quietest |
 | 0x35-0x36 | 2 | `flux`: how much the whole spectrum rose this frame |
 | 0x37-0x38 | 2 | `bass`: level of the lowest bands, absolute dBFS |
-| 0x39 | 1 | Activity flag (not used by the eye) |
-| 0x3A | 1 | XOR checksum of bytes 0x01-0x39 |
+| 0x39 | 1 | XOR checksum of bytes 0x01-0x38 |
 
 `bands` are normalized against recent music, so they show spectral shape but never go dark in a quiet room. `level` and `bass` are absolute, so they do. dB SPL is roughly dBFS + 120 with this microphone.
 

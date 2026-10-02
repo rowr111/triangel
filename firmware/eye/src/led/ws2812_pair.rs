@@ -32,7 +32,7 @@ const BUFFER_START: usize = 0x400;
 /// A BIO core's total memory, kernel code and pixel buffer together.
 const CORE_MEM_BYTES: usize = 4096;
 /// Longest chain a core's buffer can hold, at 4 bytes per LED.
-pub const MAX_LEDS: usize = (CORE_MEM_BYTES - BUFFER_START) / 4;
+const MAX_LEDS: usize = (CORE_MEM_BYTES - BUFFER_START) / 4;
 
 const LONGEST_CHAIN: usize =
     if CHAIN1_LED_COUNT > CHAIN2_LED_COUNT { CHAIN1_LED_COUNT } else { CHAIN2_LED_COUNT };

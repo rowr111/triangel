@@ -14,8 +14,7 @@ const TARGET_FRAME_MS: u64 = 1000 / 30; // ~33 ms -> 30 fps
 fn main() -> ! {
     // A panic anywhere (main or a thread) prints over USB serial before the
     // process dies; the USB server owns the message once sent, so it still
-    // reaches the host. Without this, panics are invisible: the log console
-    // is unavailable on this system build.
+    // reaches the host. Without this, panics are invisible.
     std::panic::set_hook(Box::new(|info| {
         diag::Diag::new().line(&format!("PANIC: {}", info));
     }));
@@ -26,14 +25,6 @@ fn main() -> ! {
     diag::stage(&boot_diag, 0);
     diag::spawn_heartbeat();
 
-    #[cfg(not(feature = "previewer"))]
-    log_server::init_wait().unwrap();
-    #[cfg(not(feature = "previewer"))]
-    log::set_max_level(log::LevelFilter::Info);
-    #[cfg(not(feature = "previewer"))]
-    log::info!("eye starting, PID {}", xous::process::id());
-    diag::stage(&boot_diag, 1);
-
     let tt = ticktimer::Ticktimer::new().unwrap();
 
     let hal = bao1x_hal_service::Hal::new();
@@ -41,16 +32,16 @@ fn main() -> ! {
 
     // Hardware / previewer output
     let mut led_out = led::LedOutput::new();
-    diag::stage(&boot_diag, 2);
+    diag::stage(&boot_diag, 1);
 
     // Audio receiver (continuous DMA into the UART's IFRAM ring; no interrupts, no threads)
     let mut audio = audio::AudioReceiver::new();
-    diag::stage(&boot_diag, 3);
+    diag::stage(&boot_diag, 2);
 
     // Input event queue (spawns button + IR threads)
     let event_queue = input::new_queue();
     input::spawn(event_queue.clone());
-    diag::stage(&boot_diag, 4);
+    diag::stage(&boot_diag, 3);
 
     // Setlist manager owns pattern cycling, brightness, sound mode
     let mut setlist = SetlistManager::new(tt.elapsed_ms() as u32);
@@ -58,9 +49,7 @@ fn main() -> ! {
     // Frame buffer - reused every frame to avoid allocation
     let mut frame = [[0u8; 3]; led::map::LED_COUNT];
 
-    #[cfg(not(feature = "previewer"))]
-    log::info!("entering render loop");
-    diag::stage(&boot_diag, 5);
+    diag::stage(&boot_diag, 4);
 
     // Absolute next-frame deadline - prevents timing drift across frames.
     let mut next_frame = tt.elapsed_ms();

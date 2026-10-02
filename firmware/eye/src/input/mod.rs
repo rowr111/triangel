@@ -36,7 +36,7 @@ static QUEUE_POISON_LOGGED: AtomicBool = AtomicBool::new(false);
 pub(crate) fn lock_queue(queue: &EventQueue) -> MutexGuard<'_, VecDeque<InputEvent>> {
     queue.lock().unwrap_or_else(|poisoned| {
         if !QUEUE_POISON_LOGGED.swap(true, Ordering::Relaxed) {
-            log::warn!("input event queue poisoned; recovering");
+            crate::diag::Diag::new().line("input event queue poisoned; recovering");
         }
         poisoned.into_inner()
     })

@@ -7,8 +7,6 @@ edition = "2021"
 utralib = { version = "0.1.27", optional = true, default-features = false }
 ticktimer = { package = "xous-api-ticktimer", version = "0.9.70" }
 xous = "0.9.70"
-log-server = { package = "xous-api-log", version = "0.1.69" }
-log = "0.4.14"
 bao1x-hal = { git = "https://github.com/betrusted-io/xous-core", rev = "aee40a797af372b6debf938d2902b03d1002e8a2", features = ["std"] }
 bao1x-api = { git = "https://github.com/betrusted-io/xous-core", rev = "aee40a797af372b6debf938d2902b03d1002e8a2" }
 bao1x-hal-service = { git = "https://github.com/betrusted-io/xous-core", rev = "aee40a797af372b6debf938d2902b03d1002e8a2" }

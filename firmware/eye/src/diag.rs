@@ -11,7 +11,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 /// Boot milestones, printed as reached and repeated in the heartbeat line so
 /// a monitor attached late can still see how far boot got.
 pub const STAGES: &[&str] =
-    &["main start", "log up", "led out up", "audio up", "input spawned", "render loop"];
+    &["main start", "led out up", "audio up", "input spawned", "render loop"];
 static STAGE: AtomicUsize = AtomicUsize::new(0);
 
 pub struct Diag {

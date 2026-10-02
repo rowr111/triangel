@@ -29,12 +29,6 @@ struct Inner {
     tt:  ticktimer::Ticktimer,
 }
 
-impl Default for LedOutput {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 impl LedOutput {
     #[cfg(not(feature = "previewer"))]
     pub fn new() -> Self {

@@ -33,21 +33,12 @@ pub fn norm_from_wire(norm: u16) -> f32 {
 }
 
 /// Wire frame length in bytes: 1 sync + MEL_BANDS*2 bands + 2 level + 2 level_norm
-/// + 2 flux + 2 bass + 1 activity + 1 checksum.
-pub const FRAME_LEN: usize = 1 + MEL_BANDS * 2 + 2 + 2 + 2 + 2 + 1 + 1; // 59 bytes
-
-// FUTURE (step 2b): the ear will also send less-processed views so patterns can
-// choose. Planned additions to MelFrame + the wire format, appended before the
-// checksum so decode stays forward-compatible if versioned:
-//   - raw_bands: [u16; MEL_BANDS]  -- log energy, lightly smoothed, NOT gain-normalized,
-//     so a pattern can show honest relative loudness and go dark when it is actually quiet.
-//   - reductions: e.g. bass/mid/treble sums and/or an onset/beat flag, computed on the
-//     ear to save the eye from recomputing them across 600 LEDs every frame.
-// Not added yet; `bands` (normalized) + `level` + `activity` is the 2a set.
+/// + 2 flux + 2 bass + 1 checksum.
+pub const FRAME_LEN: usize = 1 + MEL_BANDS * 2 + 2 + 2 + 2 + 2 + 1; // 58 bytes
 
 /// One frame of mel band data sent from the ear chip to the eye chip.
 ///
-/// Wire format (59 bytes, little-endian):
+/// Wire format (58 bytes, little-endian):
 ///
 /// ```text
 /// [0x00]        SYNC_BYTE (0xAA)
@@ -56,8 +47,7 @@ pub const FRAME_LEN: usize = 1 + MEL_BANDS * 2 + 2 + 2 + 2 + 2 + 1 + 1; // 59 by
 /// [0x33..0x34]  level_norm as u16 little-endian     (2 bytes)
 /// [0x35..0x36]  flux as u16 little-endian           (2 bytes)
 /// [0x37..0x38]  bass as u16 little-endian           (2 bytes)
-/// [0x39]        activity flag (0 = quiet, 1 = music active)
-/// [0x3A]        XOR checksum of bytes [0x01..0x39]
+/// [0x39]        XOR checksum of bytes [0x01..0x38]
 /// ```
 ///
 /// Different scales on purpose: `bands` are AGC-normalized, so they give spectral
@@ -73,17 +63,12 @@ pub const FRAME_LEN: usize = 1 + MEL_BANDS * 2 + 2 + 2 + 2 + 2 + 1 + 1; // 59 by
 /// `bass` is the lowest bands' level in dBFS, encoded like `level` and taken before any
 /// normalization. The bands above it cannot show the bass going away, since each one's
 /// reference sinks to meet the quiet.
-///
-/// The activity flag is set by the ear chip based on sustained absolute energy
-/// exceeding a calibrated threshold - the eye uses it for Auto sound mode without
-/// needing to reason about absolute levels itself.
 pub struct MelFrame {
     pub bands:      [u16; MEL_BANDS],
     pub level:      u16,
     pub level_norm: u16,
     pub flux:       u16,
     pub bass:       u16,
-    pub activity:   bool,
 }
 
 impl MelFrame {
@@ -104,7 +89,6 @@ impl MelFrame {
         buf[lvl_off + 5] = (self.flux >> 8)   as u8;
         buf[lvl_off + 6] = (self.bass & 0xFF) as u8;
         buf[lvl_off + 7] = (self.bass >> 8)   as u8;
-        buf[FRAME_LEN - 2] = self.activity as u8;
         let checksum = buf[1..FRAME_LEN - 1].iter().fold(0u8, |acc, &b| acc ^ b);
         buf[FRAME_LEN - 1] = checksum;
     }
@@ -128,7 +112,6 @@ impl MelFrame {
         let level_norm = (buf[lvl_off + 2] as u16) | ((buf[lvl_off + 3] as u16) << 8);
         let flux = (buf[lvl_off + 4] as u16) | ((buf[lvl_off + 5] as u16) << 8);
         let bass = (buf[lvl_off + 6] as u16) | ((buf[lvl_off + 7] as u16) << 8);
-        let activity = buf[FRAME_LEN - 2] != 0;
-        Some(MelFrame { bands, level, level_norm, flux, bass, activity })
+        Some(MelFrame { bands, level, level_norm, flux, bass })
     }
 }

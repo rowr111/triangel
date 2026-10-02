@@ -33,10 +33,6 @@ fn main() -> ! {
     d.line("=== ear ===");
     diag::stage(&d, 0);
 
-    log_server::init_wait().unwrap();
-    log::set_max_level(log::LevelFilter::Info);
-    log::info!("ear starting, PID {}", xous::process::id());
-
     let hal = bao1x_hal_service::Hal::new();
     hal.set_preemption(true);
     diag::stage(&d, 1);
@@ -54,8 +50,6 @@ fn main() -> ! {
     console::help(&d);
     console::spawn();
     diag::stage(&d, 4);
-
-    log::info!("ear ready");
 
     // Run the 24-band mel filterbank on each frame and send framed MelFrames to the eye.
     let mut processor = mel::MelProcessor::new();
