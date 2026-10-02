@@ -8,17 +8,17 @@ The installation runs two pattern setlists — ambient and sound-reactive — wi
 
 Two Baochip-1x chips run under [Xous OS](https://betrusted.io/xous-book/):
 
-- **eye** — drives the 600-LED WS2812 chain via a BIO co-processor core at 30 fps, manages pattern setlists, and handles all user input
-- **ear** — captures audio from an ICS43434 MEMS mic, computes a 24-band mel filterbank, and streams the result to the eye over UART at ~30 fps. The eye uses the mel band data to drive sound-reactive patterns.
+- **eye** — drives the 600 WS2812 LEDs as two chains in parallel, one BIO co-processor core each, at 30 fps; manages pattern setlists and handles all user input
+- **ear** — captures audio from an ICS43434 MEMS mic, measures it in 24 frequency bands, and streams the result to the eye over UART at ~31 fps. The eye uses the band levels to drive sound-reactive patterns.
 
 ## Repository structure
 
 | Directory | Contents |
 |---|---|
-| [`firmware/`](firmware/README.md) | Rust firmware for both chips and shared wire protocol types |
+| [`firmware/`](firmware/README.md) | Rust firmware for both chips and the code they share |
 | [`firmware/eye/`](firmware/eye/README.md) | Eye chip firmware — LED output, patterns, input handling |
-| [`firmware/ear/`](firmware/ear/README.md) | Ear chip firmware — audio capture, mel filterbank, UART output |
-| [`firmware/shared/`](firmware/shared/README.md) | Shared crate — mel frame wire protocol used by both chips |
+| [`firmware/ear/`](firmware/ear/README.md) | Ear chip firmware — audio capture, filterbank, UART output |
+| [`firmware/shared/`](firmware/shared/README.md) | Shared crate — the ear-to-eye frame format and the sound-reactive tuning |
 | [`triangel previewer/`](triangel%20previewer/README.md) | Browser-based LED simulator and desktop audio tools |
 | `hardware/` | KiCad PCB design files |
 | [`graphics/`](graphics/README.md) | Artwork, assembly sticker sheets, and the scripts that generate them |
