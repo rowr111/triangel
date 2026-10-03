@@ -1,22 +1,20 @@
 # Writing patterns
 
-A pattern is called once per frame with the position of every LED and the current time, and fills in a color per LED. There are two kinds, each with its own trait in `src/patterns/mod.rs`:
-
-- `Pattern` - ambient, ignores sound. Lives in `src/patterns/ambient/`.
-- `ReactivePattern` - also gets this frame's `Audio`. Lives in `src/patterns/reactive/`.
+A pattern implements the `Pattern` trait in `src/patterns/mod.rs`: called once per frame with the current time and this frame's `Audio`, it fills in a color per LED. Ambient patterns live in `src/patterns/ambient/` and ignore `audio`; sound-reactive ones live in `src/patterns/reactive/`.
 
 ## Minimal example
 
 ```rust
 // src/patterns/ambient/your_pattern.rs
-use crate::led::map::Led;
+use crate::audio::Audio;
+use crate::led::map::LED_MAP;
 use crate::patterns::{Frame, Pattern};
 
 pub struct YourPattern;
 
 impl Pattern for YourPattern {
-    fn render(&mut self, leds: &[Led], t_ms: u32, out: &mut Frame) {
-        for (i, led) in leds.iter().enumerate() {
+    fn render(&mut self, t_ms: u32, _audio: &Audio, out: &mut Frame) {
+        for (i, led) in LED_MAP.iter().enumerate() {
             // led.wx, led.wy - position in mm
             out[i] = [r, g, b];
         }
@@ -29,7 +27,9 @@ Then:
 1. Add `pub mod your_pattern;` to `src/patterns/ambient/mod.rs` (or `reactive/mod.rs`).
 2. Add `Box::new(YourPattern)` to `ambient_patterns()` (or `reactive_patterns()`) in `src/setlist.rs`.
 
-`out[i]` belongs to `leds[i]`. `t_ms` is a `u32` and wraps after 49.7 days, so compare times with `wrapping_sub`, never `<` or `>=`.
+`out[i]` belongs to `LED_MAP[i]`. `t_ms` is a `u32` and wraps after 49.7 days, so compare times with `wrapping_sub`, never `<` or `>=`.
+
+A pattern is only rendered while it is on screen or fading out, so time jumps when it comes back. Override `on_enter(&mut self, t_ms)` to reset whatever should start fresh each time it comes on screen; it runs before the first frame there.
 
 ## World coordinates
 
@@ -87,12 +87,6 @@ The chip has no floating-point hardware, so every `f32` operation is a library c
 The previewer caps at 30 fps and runs a few ms faster than the fixture, so it can show a pattern is too slow but can't confirm one is fast enough.
 
 ## Sound-reactive patterns
-
-```rust
-impl ReactivePattern for YourPattern {
-    fn render(&mut self, leds: &[Led], t_ms: u32, audio: &Audio, out: &mut Frame) { /* ... */ }
-}
-```
 
 `Audio` (`src/audio.rs`) is this frame's view of the sound:
 

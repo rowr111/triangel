@@ -4,7 +4,7 @@ use core::f32::consts::TAU;
 
 use super::{Frame, knuth_hash, smoothstep};
 use crate::led::geom::{BOARD_CENTER, BOARD_COUNT, DIST_C, DIST_C_MAX};
-use crate::led::map::{Led, WORLD_CENTROID_X, WORLD_CENTROID_Y};
+use crate::led::map::{Led, LED_MAP, WORLD_CENTROID_X, WORLD_CENTROID_Y};
 
 // Triangle centroid, from the shared world constants.
 const CENTER_X: f32 = WORLD_CENTROID_X;
@@ -33,9 +33,9 @@ pub enum TransitionStyle {
 
 /// Blend the outgoing frame into the incoming one. `out` holds the incoming (target)
 /// frame on entry; on return it holds the composited result. `progress` is 0.0->1.0.
-pub fn blend(style: TransitionStyle, leds: &[Led], progress: f32, from: &Frame, out: &mut Frame) {
+pub fn blend(style: TransitionStyle, progress: f32, from: &Frame, out: &mut Frame) {
     let ranks = board_spiral_ranks();
-    for (i, led) in leds.iter().enumerate() {
+    for (i, led) in LED_MAP.iter().enumerate() {
         let alpha = alpha_for(style, led, DIST_C[i], progress, DIST_C_MAX, ranks[led.board_id as usize]);
         out[i] = lerp_rgb(from[i], out[i], alpha);
     }

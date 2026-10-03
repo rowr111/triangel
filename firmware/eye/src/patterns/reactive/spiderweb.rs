@@ -2,8 +2,8 @@ use core::f32::consts::PI;
 
 use crate::audio::Audio;
 use crate::led::geom::{BOARD_COUNT, LEDS_PER_BOARD};
-use crate::led::map::{Led, LED_COUNT};
-use crate::patterns::{Frame, ReactivePattern, Rng, Shot, hsv};
+use crate::led::map::{Led, LED_COUNT, LED_MAP};
+use crate::patterns::{Frame, Pattern, Rng, Shot, hsv};
 use triangel_shared::tuning::spiderweb::*;
 
 /// The tile outlines line up into straight rows running edge to edge across the fixture,
@@ -44,7 +44,8 @@ pub struct Spiderweb {
 }
 
 impl Spiderweb {
-    pub fn new(leds: &[Led]) -> Self {
+    pub fn new() -> Self {
+        let leds = &LED_MAP;
         let normal: [(f32, f32); 3] = core::array::from_fn(|f| {
             let a = f as f32 * PI / 3.0;
             (-a.sin(), a.cos())
@@ -141,8 +142,8 @@ impl Spiderweb {
     }
 }
 
-impl ReactivePattern for Spiderweb {
-    fn render(&mut self, _leds: &[Led], t_ms: u32, audio: &Audio, out: &mut Frame) {
+impl Pattern for Spiderweb {
+    fn render(&mut self, t_ms: u32, audio: &Audio, out: &mut Frame) {
         if audio.drop {
             for li in 0..self.lines.len() {
                 self.fire(li, t_ms, 1.0, DROP_HOLD_MS, DROP_FADE_MS);

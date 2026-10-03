@@ -1,3 +1,4 @@
+use crate::audio::Audio;
 use crate::patterns::{Frame, Pattern, cycle, fold_ms, hash2, hsv, smoothstep, wrap360};
 use crate::led::map::{Led, LED_COUNT, LED_MAP};
 use core::f32::consts::{PI, TAU};
@@ -89,10 +90,9 @@ impl Effervesce {
 }
 
 impl Pattern for Effervesce {
-    fn render(&mut self, leds: &[Led], t_ms: u32, out: &mut Frame) {
+    fn render(&mut self, t_ms: u32, _audio: &Audio, out: &mut Frame) {
         // Precompute the live elements once per frame (derived purely from t_ms + hashes).
-        let elems: [Elem; ELEMENTS] = core::array::from_fn(|s| make_elem(s, t_ms, leds));
-
+        let elems: [Elem; ELEMENTS] = core::array::from_fn(|s| make_elem(s, t_ms));
 
         // Field hue drifts slowly through the wheel; kept as a wheel vector so it blends
         // continuously with the element colors below.
@@ -108,7 +108,7 @@ impl Pattern for Effervesce {
         // Per-frame rotation for the glitter, pairing with each LED's stored phasor.
         let (sh_sin, sh_cos) = (shimmer_t * SHIMMER_RATE).sin_cos();
 
-        for (i, led) in leds.iter().enumerate() {
+        for (i, led) in LED_MAP.iter().enumerate() {
             // Base field: a bright, saturated wash of the drifting hue, with a gentle swell.
             // Triangle wave (no trig): a smooth hump scrolling across the fixture.
             let p = (led.wx + led.wy) / SWELL_SPAN_MM - swell_t;
@@ -158,7 +158,7 @@ impl Pattern for Effervesce {
 
 /// Derive slot `s`'s current element from time and hashes (no mutable state). All the trig
 /// lives here (ELEMENTS times per frame), keeping the per-LED loop arithmetic-only.
-fn make_elem(s: usize, t_ms: u32, leds: &[Led]) -> Elem {
+fn make_elem(s: usize, t_ms: u32) -> Elem {
     // Per-slot random speed: each slot keeps its own fixed lifetime, so fast and slow shapes
     // coexist. A random phase offset keeps the slots from popping in sync.
     let slot_seed = hash2(s as u32 + 1, 0x5EED);
@@ -169,7 +169,7 @@ fn make_elem(s: usize, t_ms: u32, leds: &[Led]) -> Elem {
 
     // New hash each generation -> a fresh origin/shape/angle/color when the slot respawns.
     let seed = hash2(s as u32 + 1, gen);
-    let led  = &leds[(seed as usize) % leds.len()];
+    let led  = &LED_MAP[(seed as usize) % LED_COUNT];
     let kind = ((seed >> 8) % 3) as u8;
     let ang0 = ((seed >> 12) & 0xFFFF) as f32 / 65_536.0 * TAU;
     let dir  = if (seed >> 28) & 1 == 0 { 1.0 } else { -1.0 };

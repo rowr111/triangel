@@ -2,8 +2,8 @@ use core::f32::consts::TAU;
 
 use crate::audio::Audio;
 use crate::led::geom::{DIST_C, THETA_C};
-use crate::led::map::{Led, LED_COUNT};
-use crate::patterns::{Frame, ReactivePattern, cycle, lerp};
+use crate::led::map::LED_COUNT;
+use crate::patterns::{Frame, Pattern, cycle, lerp};
 use triangel_shared::mel::MEL_BANDS;
 use triangel_shared::tuning::spectrum::*;
 
@@ -69,8 +69,8 @@ impl Spectrum {
     }
 }
 
-impl ReactivePattern for Spectrum {
-    fn render(&mut self, _leds: &[Led], t_ms: u32, audio: &Audio, out: &mut Frame) {
+impl Pattern for Spectrum {
+    fn render(&mut self, t_ms: u32, audio: &Audio, out: &mut Frame) {
         // Loudness relative to recent music, not absolute: heavily compressed tracks
         // barely move the absolute level, so it would leave brightness nearly flat.
         let loud = QUIET_FLOOR + (1.0 - QUIET_FLOOR) * audio.level_norm;

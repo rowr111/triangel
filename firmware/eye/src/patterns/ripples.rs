@@ -1,4 +1,4 @@
-use crate::led::map::{Led, LED_COUNT};
+use crate::led::map::{LED_COUNT, LED_MAP};
 use crate::patterns::{Frame, Rng, free_or_oldest, hsv};
 
 /// A ripple lives for several seconds and a hard beat lands several at once, so the
@@ -93,9 +93,9 @@ impl Ripples {
 
     /// Pick where the next drop lands. Its position is a random LED, which keeps it on
     /// the fixture and favors the denser parts of it.
-    pub fn spot(&mut self, leds: &[Led]) -> Spot {
+    pub fn spot(&mut self) -> Spot {
         let pick = (self.rng.f32() * LED_COUNT as f32) as usize % LED_COUNT;
-        let (x, y) = (leds[pick].wx, leds[pick].wy);
+        let (x, y) = (LED_MAP[pick].wx, LED_MAP[pick].wy);
         let hue = HUE_MIN + self.rng.f32() * (HUE_MAX - HUE_MIN);
         Spot { x, y, hue }
     }
@@ -116,7 +116,7 @@ impl Ripples {
         };
     }
 
-    pub fn draw(&mut self, leds: &[Led], t_ms: u32, out: &mut Frame) {
+    pub fn draw(&mut self, t_ms: u32, out: &mut Frame) {
         let s = self.style;
         let blank = Ring {
             x: 0.0, y: 0.0, r: 0.0, u_inner: 0.0, u_outer: 0.0, amp: 0.0, hue: 0.0,
@@ -158,7 +158,7 @@ impl Ripples {
 
         let inv_reach = 1.0 / s.ripple_max_mm;
 
-        for (o, led) in out.iter_mut().zip(leds.iter()) {
+        for (o, led) in out.iter_mut().zip(LED_MAP.iter()) {
             let mut ripple = 0.0f32;
             let mut hue_acc = 0.0f32;
             let mut sat_acc = 0.0f32;

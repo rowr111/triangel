@@ -1,6 +1,7 @@
+use crate::audio::Audio;
 use crate::patterns::{Frame, Pattern, Rng, hsv, lerp, wrap360};
 use crate::led::grid::{self, CELL_MM};
-use crate::led::map::{Led, WORLD_TOP, WORLD_BOT, WORLD_CX, WORLD_CENTROID_Y, LED_COUNT};
+use crate::led::map::{WORLD_TOP, WORLD_BOT, WORLD_CX, WORLD_CENTROID_Y, LED_COUNT, LED_MAP};
 use crate::led::world::{WORLD_LEFT, WORLD_RIGHT};
 
 // Ricochet - up to a few comets loose inside the triangle, bouncing off the three walls like
@@ -9,7 +10,7 @@ use crate::led::world::{WORLD_LEFT, WORLD_RIGHT};
 // random pause, a fresh comet launches from a new spot in a new color. Sparse by design.
 //
 // Stateful (per-comet position/velocity/energy/trail, a shared spark pool), integrated over
-// real elapsed time and reset cleanly on re-entry. Rendered by SCATTER: each dot (head, trail
+// real elapsed time and reset each time it comes on screen. Rendered by SCATTER: each dot (head, trail
 // point, spark) splats only onto the LEDs in the nearby cells of a fixed spatial grid, instead
 // of testing every LED against every dot - the difference between 30 fps and a slideshow here.
 
@@ -46,8 +47,7 @@ const SPARK_R_MM:        f32   = 15.0;  // must exceed LED spacing (~10mm) or sp
 const SPARK_BRIGHT:      f32   = 2.5;   // >1 keeps sparks full-bright (white-hot like the ball) before fading
 const SPARK_GRAVITY:     f32   = 0.000_15; // gentle downward pull (mm/ms^2)
 
-const MAX_DT_MS:      f32 = 60.0; // clamp the integration step (guards against long gaps)
-const REENTRY_GAP_MS: u32 = 500;  // a render gap longer than this means we just (re)entered
+const MAX_DT_MS: f32 = 60.0; // clamp the integration step (guards against long gaps)
 
 // The three walls' inward unit normals (point-down, roughly equilateral). Left/right walls
 // use a top corner (WORLD_LEFT or WORLD_RIGHT, at WORLD_TOP) as their reference.
@@ -97,7 +97,6 @@ struct Dot {
 
 pub struct Ricochet {
     prev_ms: u32,
-    active:  bool,
     rng:     Rng,
     comets:  [Comet; MAX_COMETS],
     sparks:  [Spark; SPARK_POOL],
@@ -126,7 +125,6 @@ impl Ricochet {
         };
         Ricochet {
             prev_ms: 0,
-            active:  false,
             rng:     Rng::new(1),
             comets:  [comet; MAX_COMETS],
             sparks:  [Spark { x: 0.0, y: 0.0, vx: 0.0, vy: 0.0, life: 0.0, chue: 1.0, shue: 0.0 }; SPARK_POOL],
@@ -249,10 +247,10 @@ impl Ricochet {
     }
 
     /// Splat one dot onto the LEDs in the grid cells within its reach.
-    fn scatter(&mut self, leds: &[Led], d: &Dot) {
+    fn scatter(&mut self, d: &Dot) {
         let (acc_v, acc_x, acc_y) = (&mut self.acc_v, &mut self.acc_x, &mut self.acc_y);
         grid::for_each_near(d.x, d.y, d.reach, |k| {
-            let led = &leds[k];
+            let led = &LED_MAP[k];
             let dx = led.wx - d.x;
             let dy = led.wy - d.y;
             // Sharpen the edge so it reads as a solid ball, not a soft blob.
@@ -308,26 +306,25 @@ fn spawn_sparks(sparks: &mut [Spark; SPARK_POOL], rng: &mut Rng, c: &Comet, coun
 }
 
 impl Pattern for Ricochet {
-    fn render(&mut self, leds: &[Led], t_ms: u32, out: &mut Frame) {
-        // Real elapsed time since the last render; a long gap means we just (re)entered the
-        // pattern, so reseed, clear the sparks, and stagger the comets' first launches.
-        let reset = !self.active || t_ms.wrapping_sub(self.prev_ms) > REENTRY_GAP_MS;
-        let dt = if reset { 0.0 } else { t_ms.wrapping_sub(self.prev_ms) as f32 };
+    fn on_enter(&mut self, t_ms: u32) {
+        // Reseed, clear the sparks, and stagger the comets' first launches.
         self.prev_ms = t_ms;
-        if reset {
-            self.rng = Rng::new((t_ms ^ 0x9E37_79B9) | 1);
-            self.active = true;
-            for i in 0..MAX_COMETS {
-                self.comets[i].alive = false;
-                let delay = (self.rng.f32() * STAGGER_MS) as u32;
-                self.comets[i].respawn_at = t_ms.wrapping_add(delay);
-            }
-            self.comets[0].respawn_at = t_ms; // one comet right away
-            for s in self.sparks.iter_mut() {
-                s.life = 0.0;
-            }
+        self.rng = Rng::new((t_ms ^ 0x9E37_79B9) | 1);
+        for i in 0..MAX_COMETS {
+            self.comets[i].alive = false;
+            let delay = (self.rng.f32() * STAGGER_MS) as u32;
+            self.comets[i].respawn_at = t_ms.wrapping_add(delay);
         }
-        let dt = dt.min(MAX_DT_MS);
+        self.comets[0].respawn_at = t_ms; // one comet right away
+        for s in self.sparks.iter_mut() {
+            s.life = 0.0;
+        }
+    }
+
+    fn render(&mut self, t_ms: u32, _audio: &Audio, out: &mut Frame) {
+        // Real elapsed time since the last render.
+        let dt = (t_ms.wrapping_sub(self.prev_ms) as f32).min(MAX_DT_MS);
+        self.prev_ms = t_ms;
 
         // Advance / (re)launch each comet, then the sparks.
         for i in 0..MAX_COMETS {
@@ -387,15 +384,15 @@ impl Pattern for Ricochet {
         }
 
         // Clear the accumulators, scatter every dot onto its nearby LEDs, then resolve to color.
-        for k in 0..leds.len() {
+        for k in 0..LED_COUNT {
             self.acc_v[k] = 0.0;
             self.acc_x[k] = 0.0;
             self.acc_y[k] = 0.0;
         }
         for d in dots.iter().take(nd) {
-            self.scatter(leds, d);
+            self.scatter(d);
         }
-        for (k, slot) in out.iter_mut().take(leds.len()).enumerate() {
+        for (k, slot) in out.iter_mut().enumerate() {
             let v = self.acc_v[k].min(1.0);
             if v <= 0.0 {
                 *slot = [0, 0, 0];

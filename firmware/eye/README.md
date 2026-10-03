@@ -40,7 +40,7 @@ src/
 |   +-- geom.rs         - per-LED distances, angles and grid buckets (generated)
 |   +-- grid.rs         - spatial lookup: the LEDs near a point or segment
 +-- patterns/
-|   +-- mod.rs          - Pattern traits and shared helpers
+|   +-- mod.rs          - Pattern trait and shared helpers
 |   +-- transition.rs   - blends from one pattern to the next
 |   +-- glints.rs       - brief white flashes on single LEDs, shared by Shimmer and Rainbow
 |   +-- ripples.rs      - raindrop ring trains on black, shared by Raindrop and Drizzle

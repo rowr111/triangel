@@ -1,6 +1,7 @@
 use crate::led::geom::{BOARD_COUNT, BOARD_Y_RANGE, DIST_APEX};
 use crate::patterns::{Frame, Pattern, cycle, knuth_hash, phase_phasors, ramp, PHASE_STEPS};
-use crate::led::map::{Led, LED_MAP, WORLD_BOT, WORLD_CX, WORLD_H, LED_COUNT};
+use crate::audio::Audio;
+use crate::led::map::{LED_MAP, WORLD_BOT, WORLD_CX, WORLD_H, LED_COUNT};
 use core::f32::consts::{PI, TAU};
 
 // Tunables - dial these in the previewer. Each scales one ingredient of the flame;
@@ -151,7 +152,7 @@ fn q12(v: f32) -> i32 {
 }
 
 impl Pattern for ApexFlame {
-    fn render(&mut self, leds: &[Led], t_ms: u32, out: &mut Frame) {
+    fn render(&mut self, t_ms: u32, _audio: &Audio, out: &mut Frame) {
         // Fold each time term to its own period before the f32 cast (long-uptime precision).
         let wl2  = self.wavelength * SECOND_WAVELENGTH_RATIO;
         let spd2 = self.speed * SECOND_SPEED_RATIO;
@@ -209,7 +210,7 @@ impl Pattern for ApexFlame {
         };
         let flare_heat = (FLARE_HEAT_Q * flare_env) as i32;
 
-        for (i, led) in leds.iter().enumerate() {
+        for (i, led) in LED_MAP.iter().enumerate() {
             // Two interfering ripples so the wavefronts don't look mechanical.
             let w1 = (self.w1_sin[i] as i32 * b1_cos + self.w1_cos[i] as i32 * b1_sin) >> 12;
             let w2 = (self.w2_sin[i] as i32 * b2_cos + self.w2_cos[i] as i32 * b2_sin) >> 12;

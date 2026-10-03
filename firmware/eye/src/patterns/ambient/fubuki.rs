@@ -1,6 +1,7 @@
+use crate::audio::Audio;
 use crate::patterns::{Frame, Pattern, cycle, fold_ms, hash2, hsv, lerp, wrap360};
 use crate::led::grid::{self, CELL_MM};
-use crate::led::map::{Led, WORLD_TOP, WORLD_BOT, WORLD_H, WORLD_CX, LED_COUNT};
+use crate::led::map::{WORLD_TOP, WORLD_BOT, WORLD_H, WORLD_CX, LED_COUNT, LED_MAP};
 use core::f32::consts::TAU;
 
 // Fubuki (snowstorm) - a falling-snow ambient pattern that turns with the seasons. Flakes
@@ -10,8 +11,8 @@ use core::f32::consts::TAU;
 // gap): spring petals -> summer green -> autumn leaves -> winter snow -> back. The falling
 // thing and the pile take the season's colors.
 //
-// Holds only a tiny re-entry clock (so it restarts from empty each time you enter the
-// pattern); the season and fill level otherwise fall out of that clock. Flakes are a hashed
+// Holds only a clock that restarts from empty each time the pattern comes on screen; the
+// season and fill level fall out of that clock. Flakes are a hashed
 // emitter (like Effervesce). The per-LED hot loop is arithmetic + squared-distance flake dots
 // (no trig), so it stays cheap on the FP-less chip.
 
@@ -83,9 +84,7 @@ struct Flake {
 }
 
 pub struct Fubuki {
-    origin_ms: u32, // local-clock origin: t_ms when the current activation began
-    prev_ms:   u32, // t_ms of the previous render call, to detect a re-entry gap
-    active:    bool,
+    origin_ms: u32, // t_ms when the pattern last came on screen
     // Strongest flake reaching each LED this frame, and the color it carries. Rebuilt per
     // frame by scattering the flakes onto nearby LEDs.
     flake_e: [f32; LED_COUNT],
@@ -97,8 +96,6 @@ impl Fubuki {
     pub fn new() -> Self {
         Fubuki {
             origin_ms: 0,
-            prev_ms:   0,
-            active:    false,
             flake_e:   [0.0; LED_COUNT],
             flake_h:   [0.0; LED_COUNT],
             flake_s:   [0.0; LED_COUNT],
@@ -107,16 +104,12 @@ impl Fubuki {
 }
 
 impl Pattern for Fubuki {
-    fn render(&mut self, leds: &[Led], t_ms: u32, out: &mut Frame) {
-        // Restart the season cycle whenever we (re)enter the pattern - at boot, or when it's
-        // switched to. The pattern isn't rendered while off-screen, so a gap since the last
-        // render means we just came back; reset the local clock to start from an empty triangle.
-        const REENTRY_GAP_MS: u32 = 500;
-        if !self.active || t_ms.wrapping_sub(self.prev_ms) > REENTRY_GAP_MS {
-            self.origin_ms = t_ms;
-            self.active = true;
-        }
-        self.prev_ms = t_ms;
+    fn on_enter(&mut self, t_ms: u32) {
+        // Start the season cycle over from an empty triangle.
+        self.origin_ms = t_ms;
+    }
+
+    fn render(&mut self, t_ms: u32, _audio: &Audio, out: &mut Frame) {
         let local = t_ms.wrapping_sub(self.origin_ms);
 
         // Current season (rising) and the previous one (melting away) run at once near the
@@ -169,7 +162,7 @@ impl Pattern for Fubuki {
         fe_buf.fill(0.0);
         for f in &flakes {
             grid::for_each_near(f.x, f.y, reach, |k| {
-                let led = &leds[k];
+                let led = &LED_MAP[k];
                 let dx = led.wx - f.x;
                 let dy = led.wy - f.y;
                 let c = 1.0 - (dx * dx + dy * dy) / (FLAKE_R_MM * FLAKE_R_MM);
@@ -181,7 +174,7 @@ impl Pattern for Fubuki {
             });
         }
 
-        for (i, led) in leds.iter().enumerate() {
+        for (i, led) in LED_MAP.iter().enumerate() {
             // Per-LED texture + pulse (season-independent), shared by both piles.
             let hp = hash2(led.board_id as u32, led.local_idx as u32);
             let tex = 1.0 - PILE_TEXTURE * ((hp >> 9 & 0xFF) as f32 / 255.0);

@@ -9,7 +9,7 @@ use std::sync::{Arc, Mutex, MutexGuard};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::collections::VecDeque;
 
-use crate::setlist::{SetlistManager, SoundMode};
+use crate::setlist::{SetlistManager, SoundMode, Step};
 
 #[derive(Debug, Clone, Copy)]
 pub enum InputEvent {
@@ -52,8 +52,8 @@ pub fn apply_events(queue: &EventQueue, setlist: &mut SetlistManager, now_ms: u3
         match event {
             InputEvent::BrightnessUp      => setlist.adjust_brightness(1),
             InputEvent::BrightnessDown    => setlist.adjust_brightness(-1),
-            InputEvent::PatternNext       => setlist.step_next(now_ms, sound_active),
-            InputEvent::PatternPrev       => setlist.step_prev(now_ms, sound_active),
+            InputEvent::PatternNext       => setlist.step(Step::Next, now_ms, sound_active),
+            InputEvent::PatternPrev       => setlist.step(Step::Prev, now_ms, sound_active),
             InputEvent::ToggleHold        => setlist.toggle_hold(now_ms),
             InputEvent::SetSoundMode(m)   => setlist.sound_mode = m,
             InputEvent::CycleSoundMode    => setlist.sound_mode = setlist.sound_mode.next(),

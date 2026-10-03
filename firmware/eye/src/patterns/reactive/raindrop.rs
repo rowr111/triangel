@@ -1,7 +1,6 @@
 use crate::audio::Audio;
-use crate::led::map::Led;
 use crate::patterns::ripples::{RippleStyle, Ripples};
-use crate::patterns::{Frame, ReactivePattern};
+use crate::patterns::{Frame, Pattern};
 use triangel_shared::tuning::raindrop::*;
 
 const STYLE: RippleStyle = RippleStyle {
@@ -76,8 +75,8 @@ impl Raindrop {
     }
 
     /// Land a drop.
-    fn land(&mut self, leds: &[Led], t_ms: u32, strength: f32) {
-        let spot = self.ripples.spot(leds);
+    fn land(&mut self, t_ms: u32, strength: f32) {
+        let spot = self.ripples.spot();
         let rng = self.ripples.rng();
         let spacing = if self.beat_ms > 0.0 {
             let div = rng.pick(&DIVISIONS);
@@ -92,8 +91,8 @@ impl Raindrop {
     }
 }
 
-impl ReactivePattern for Raindrop {
-    fn render(&mut self, leds: &[Led], t_ms: u32, audio: &Audio, out: &mut Frame) {
+impl Pattern for Raindrop {
+    fn render(&mut self, t_ms: u32, audio: &Audio, out: &mut Frame) {
         let hit = audio.rise[..KICK_BANDS].iter().copied().fold(0.0f32, f32::max);
         let clear = t_ms.wrapping_sub(self.last_drop_ms) >= REFRACTORY_MS;
         if self.armed && hit >= TRIGGER && clear {
@@ -104,7 +103,7 @@ impl ReactivePattern for Raindrop {
             self.track_beat(t_ms);
             let burst = BURST_MIN + (strength * BURST_EXTRA) as usize;
             for _ in 0..burst {
-                self.land(leds, t_ms, 0.35 + 0.65 * strength);
+                self.land(t_ms, 0.35 + 0.65 * strength);
             }
         } else if hit < RELEASE {
             self.armed = true;
@@ -116,6 +115,6 @@ impl ReactivePattern for Raindrop {
             self.beat_ms = 0.0;
         }
 
-        self.ripples.draw(leds, t_ms, out);
+        self.ripples.draw(t_ms, out);
     }
 }

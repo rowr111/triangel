@@ -2,8 +2,8 @@ use core::f32::consts::TAU;
 
 use crate::audio::Audio;
 use crate::led::grid::{self, CELL_MM};
-use crate::led::map::{Led, LED_COUNT};
-use crate::patterns::{Frame, ReactivePattern, Rng, free_or_oldest, hsv};
+use crate::led::map::{LED_COUNT, LED_MAP};
+use crate::patterns::{Frame, Pattern, Rng, free_or_oldest, hsv};
 use triangel_shared::tuning::firework::*;
 
 /// Room for a drop's bursts on top of the sparks still flying from recent beats. Must stay
@@ -82,33 +82,33 @@ impl Firework {
     }
 
     /// A random LED's position, which keeps a burst on the fixture.
-    fn random_point(&mut self, leds: &[Led]) -> (f32, f32) {
+    fn random_point(&mut self) -> (f32, f32) {
         let pick = (self.rng.f32() * LED_COUNT as f32) as usize % LED_COUNT;
-        (leds[pick].wx, leds[pick].wy)
+        (LED_MAP[pick].wx, LED_MAP[pick].wy)
     }
 
     /// Burst at a random LED.
-    fn burst(&mut self, leds: &[Led], t_ms: u32, strength: f32, count: usize) {
-        let (x, y) = self.random_point(leds);
+    fn burst(&mut self, t_ms: u32, strength: f32, count: usize) {
+        let (x, y) = self.random_point();
         self.burst_at(x, y, t_ms, strength, count);
     }
 
     /// A drop: many full bursts at once, each placed at least DROP_SPACING_MM from the
     /// others already placed where one can be found, so together they fill the fixture.
-    fn drop_bursts(&mut self, leds: &[Led], t_ms: u32) {
+    fn drop_bursts(&mut self, t_ms: u32) {
         let count = BURST_MIN + BURST_EXTRA as usize;
         let min2 = DROP_SPACING_MM * DROP_SPACING_MM;
         let mut placed = [(0.0f32, 0.0f32); DROP_BURSTS];
         for k in 0..DROP_BURSTS {
             // Keep whichever spot is farthest from the bursts already placed, stopping as
             // soon as one clears the spacing.
-            let mut best = self.random_point(leds);
+            let mut best = self.random_point();
             let mut best_d2 = nearest_d2(best, &placed[..k]);
             for _ in 0..DROP_TRIES {
                 if best_d2 >= min2 {
                     break;
                 }
-                let p = self.random_point(leds);
+                let p = self.random_point();
                 let d2 = nearest_d2(p, &placed[..k]);
                 if d2 > best_d2 {
                     best = p;
@@ -146,13 +146,13 @@ impl Firework {
     }
 }
 
-impl ReactivePattern for Firework {
-    fn render(&mut self, leds: &[Led], t_ms: u32, audio: &Audio, out: &mut Frame) {
+impl Pattern for Firework {
+    fn render(&mut self, t_ms: u32, audio: &Audio, out: &mut Frame) {
         if audio.drop {
-            self.drop_bursts(leds, t_ms);
+            self.drop_bursts(t_ms);
         } else if audio.beat {
             let count = BURST_MIN + (audio.beat_strength * BURST_EXTRA) as usize;
-            self.burst(leds, t_ms, 0.4 + 0.6 * audio.beat_strength, count);
+            self.burst(t_ms, 0.4 + 0.6 * audio.beat_strength, count);
         }
 
         // Age the sparks and gather the live ones, retiring any that are spent.
@@ -195,8 +195,8 @@ impl ReactivePattern for Firework {
         // spark over an LED keeps its color, so overlapping bursts stay distinct.
         for (s, spark) in live[..n_live].iter().enumerate() {
             grid::for_each_near(spark.px, spark.py, spark.reach, |i| {
-                let dx = leds[i].wx - spark.px;
-                let dy = leds[i].wy - spark.py;
+                let dx = LED_MAP[i].wx - spark.px;
+                let dy = LED_MAP[i].wy - spark.py;
                 let u = dx * dx + dy * dy;
                 if u > spark.r2 {
                     return;

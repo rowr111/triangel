@@ -2,7 +2,8 @@ use crate::patterns::glints::{GlintStyle, Glints};
 use crate::patterns::{Frame, Pattern, Rng, cycle, tile_hash, TILE_HASH_STEPS};
 
 use crate::led::geom::{DIST_C, THETA_C};
-use crate::led::map::{Led, LED_COUNT, LED_MAP};
+use crate::audio::Audio;
+use crate::led::map::{LED_COUNT, LED_MAP};
 use core::f32::consts::TAU;
 
 // Radial shimmer: a wave ripples out from the center with brief glints flashing on its
@@ -166,7 +167,7 @@ fn hsv_q(h6: i32, v: i32) -> [u8; 3] {
 }
 
 impl Pattern for CenterShimmer {
-    fn render(&mut self, _leds: &[Led], t_ms: u32, out: &mut Frame) {
+    fn render(&mut self, t_ms: u32, _audio: &Audio, out: &mut Frame) {
         let dt_ms = t_ms.wrapping_sub(self.last_ms).min(100);
         self.last_ms = t_ms;
         self.advance_wave(t_ms, dt_ms);

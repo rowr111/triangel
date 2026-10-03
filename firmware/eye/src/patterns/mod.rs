@@ -11,18 +11,14 @@ use crate::led::map::Led;
 
 pub type Frame = [[u8; 3]; crate::led::map::LED_COUNT];
 
-/// A pattern in the ambient setlist.
+/// A pattern in either setlist. `out[i]` is the color of `LED_MAP[i]`. Ambient patterns
+/// ignore `audio`; sound-reactive ones have to look interesting at every level, silence
+/// included.
 pub trait Pattern: Send {
-    /// Render one frame into `out`.
-    /// `leds` - world-position metadata for each LED, indexed by chain position
-    /// `t_ms` - monotonic time in milliseconds
-    fn render(&mut self, leds: &[Led], t_ms: u32, out: &mut Frame);
-}
+    fn render(&mut self, t_ms: u32, audio: &Audio, out: &mut Frame);
 
-/// A pattern in the sound-reactive setlist. Has to look interesting at every level,
-/// silence included.
-pub trait ReactivePattern: Send {
-    fn render(&mut self, leds: &[Led], t_ms: u32, audio: &Audio, out: &mut Frame);
+    /// Called each time the pattern comes on screen, before its first frame there.
+    fn on_enter(&mut self, _t_ms: u32) {}
 }
 
 // --- Shared math utilities ---

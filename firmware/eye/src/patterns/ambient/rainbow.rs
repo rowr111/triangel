@@ -1,7 +1,8 @@
 use crate::patterns::glints::{GlintStyle, Glints};
 use crate::patterns::{Frame, Pattern, cycle, fold_ms, hsv, tile_hash, wrap360};
 use crate::led::geom::{DIST_C, THETA_C};
-use crate::led::map::Led;
+use crate::audio::Audio;
+use crate::led::map::LED_MAP;
 use core::f32::consts::TAU;
 
 // Rainbow - hue follows the angle around the centroid, so the whole wheel rotates.
@@ -47,7 +48,7 @@ impl Rainbow {
 }
 
 impl Pattern for Rainbow {
-    fn render(&mut self, leds: &[Led], t_ms: u32, out: &mut Frame) {
+    fn render(&mut self, t_ms: u32, _audio: &Audio, out: &mut Frame) {
         let dt_ms = t_ms.wrapping_sub(self.last_ms).min(100);
         self.last_ms = t_ms;
 
@@ -56,7 +57,7 @@ impl Pattern for Rainbow {
         let twinkle_t = fold_ms(t_ms, TWINKLE_RATE);
         let irid_ph = cycle(t_ms, IRID_PERIOD_MS) * TAU;
 
-        for (i, led) in leds.iter().enumerate() {
+        for (i, led) in LED_MAP.iter().enumerate() {
             let ripple = (DIST_C[i] / IRID_SPAN_MM * TAU - irid_ph).sin();
             let hue = (THETA_C[i] / TAU + spin) * 360.0 + IRIDESCENCE * IRID_DEG * ripple;
 

@@ -1,6 +1,7 @@
 use crate::patterns::{Frame, Pattern, Rng, cycle, knuth_hash, lerp, mix_rgb, phase_phasors, ramp, PHASE_STEPS};
 use crate::led::grid::{self, CELL_MM};
-use crate::led::map::{Led, WORLD_BOT, WORLD_CX, WORLD_H, WORLD_TOP, LED_COUNT, LED_MAP};
+use crate::audio::Audio;
+use crate::led::map::{WORLD_BOT, WORLD_CX, WORLD_H, WORLD_TOP, LED_COUNT, LED_MAP};
 use crate::led::world::{WORLD_HALF_W, WORLD_LEFT, WORLD_RIGHT};
 use core::f32::consts::{PI, TAU};
 
@@ -285,26 +286,24 @@ impl Squall {
 }
 
 impl Pattern for Squall {
-    fn render(&mut self, leds: &[Led], t_ms: u32, out: &mut Frame) {
+    fn on_enter(&mut self, t_ms: u32) {
+        // Re-anchor the timers so everything doesn't fire at once after time off screen.
+        for slot in &mut self.slots {
+            slot.gap_start_ms = t_ms;
+        }
+        for c in &mut self.clouds {
+            c.retarget_start_ms = t_ms;
+        }
+    }
+
+    fn render(&mut self, t_ms: u32, _audio: &Audio, out: &mut Frame) {
         let boil1 = cycle(t_ms, BOIL_PERIOD_MS) * TAU;
         let boil2 = cycle(t_ms, BOIL2_PERIOD_MS) * TAU;
         let foam_phase = cycle(t_ms, FOAM_PERIOD_MS) * TAU;
 
-        // Frame delta drives the cloud simulation. A long gap means this pattern was
-        // off-screen: re-anchor the timers so everything doesn't fire at once on re-entry.
+        // Frame delta drives the cloud simulation.
         let dt_s = match self.last_ms {
-            Some(last) => {
-                let dt_ms = t_ms.wrapping_sub(last);
-                if dt_ms > 1_000 {
-                    for slot in &mut self.slots {
-                        slot.gap_start_ms = t_ms;
-                    }
-                    for c in &mut self.clouds {
-                        c.retarget_start_ms = t_ms;
-                    }
-                }
-                (dt_ms as f32 / 1000.0).min(0.1)
-            }
+            Some(last) => (t_ms.wrapping_sub(last) as f32 / 1000.0).min(0.1),
             None => {
                 // First frame: anchor the strike countdowns so the storm opens quietly.
                 let Squall { slots, rng, .. } = self;
@@ -411,7 +410,7 @@ impl Pattern for Squall {
             bolt: bolt_buf,
             ..
         } = self;
-        for (i, led) in leds.iter().enumerate() {
+        for (i, led) in LED_MAP.iter().enumerate() {
             let bx = led.wx * boil_k;
             let by = led.wy * boil_k;
             let mod_y = by_sin[i] * b2_cos + by_cos[i] * b2_sin;
@@ -427,7 +426,7 @@ impl Pattern for Squall {
         // each bloom reaches, in slot order, so every LED sums them in the order it used to.
         for &(x, y, inv_r2, amp, ring, reach) in &blooms {
             grid::for_each_near(x, y, reach, |k| {
-                let led = &leds[k];
+                let led = &LED_MAP[k];
                 let q = ((led.wx - x).powi(2) + (led.wy - y).powi(2)) * inv_r2;
                 if q < 1.0 {
                     let filled = (1.0 - q) * (1.0 - q);
@@ -441,7 +440,7 @@ impl Pattern for Squall {
         // lobes overlap.
         for &(x, y, inv_r2, reach) in &lobes {
             grid::for_each_near(x, y, reach, |k| {
-                let led = &leds[k];
+                let led = &LED_MAP[k];
                 let q = ((led.wx - x).powi(2) + (led.wy - y).powi(2)) * inv_r2;
                 if q < 1.0 {
                     density_buf[k] += (1.0 - q) * (1.0 - q);
@@ -454,7 +453,7 @@ impl Pattern for Squall {
         let bolt_reach = (BOLT_CORE_MM * 3.0 / CELL_MM).ceil() as usize;
         for s in segs {
             grid::for_each_near_seg(s.a, s.b, bolt_reach, |k| {
-                let led = &leds[k];
+                let led = &LED_MAP[k];
                 let d2 = seg_d2(s, led.wx, led.wy);
                 if d2 < BOLT_CORE_MM * BOLT_CORE_MM * 9.0 {
                     let core = (BOLT_GAIN * (-d2 / (BOLT_CORE_MM * BOLT_CORE_MM)).exp()).min(1.0);
@@ -463,7 +462,7 @@ impl Pattern for Squall {
             });
         }
 
-        for (i, led) in leds.iter().enumerate() {
+        for (i, led) in LED_MAP.iter().enumerate() {
             let energy = energy_buf[i];
 
             // Water color, then froth where the crest breaks: hash-twinkled speckle.

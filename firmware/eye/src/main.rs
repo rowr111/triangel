@@ -6,7 +6,6 @@ mod patterns;
 mod pins;
 mod setlist;
 
-use led::map::LED_MAP;
 use setlist::SetlistManager;
 
 const TARGET_FRAME_MS: u64 = 1000 / 30; // ~33 ms -> 30 fps
@@ -73,7 +72,7 @@ fn main() -> ! {
         setlist.tick(frame_start as u32, sound_active);
 
         // Render current pattern (compositing any in-flight transition) into frame buffer
-        setlist.render(&LED_MAP, frame_start as u32, &snapshot, sound_active, &mut frame);
+        setlist.render(frame_start as u32, &snapshot, sound_active, &mut frame);
 
         // Apply global brightness
         let brightness = setlist.brightness();

@@ -1,6 +1,7 @@
 use crate::patterns::{Frame, Pattern, hsv, mix_rgb, smoothstep};
 use crate::led::geom::{DIST_C, DIST_C_MAX, THETA_C};
-use crate::led::map::{Led, LED_COUNT};
+use crate::audio::Audio;
+use crate::led::map::LED_COUNT;
 use core::f32::consts::TAU;
 
 // Uzumaki (spiral) - a hypnotist's disc in 80s airbrush colors: pale arms winding out of a
@@ -132,7 +133,7 @@ impl Uzumaki {
 }
 
 impl Pattern for Uzumaki {
-    fn render(&mut self, leds: &[Led], t_ms: u32, out: &mut Frame) {
+    fn render(&mut self, t_ms: u32, _audio: &Audio, out: &mut Frame) {
         // One revolution advances the phase by exactly ARMS bands, so folding time at ROT_MS
         // is exact: it shifts the band index by a whole ARMS and leaves the colors in place.
         let rot = ARMS as f32 * (t_ms % ROT_MS) as f32 / ROT_MS as f32;
@@ -154,7 +155,7 @@ impl Pattern for Uzumaki {
         let stripe_rgb = mix_rgb(avg, WHITE, STRIPE_WHITEN);
         let core_rgb   = mix_rgb(avg, WHITE, CORE_WHITEN);
 
-        for (i, slot) in out.iter_mut().take(leds.len()).enumerate() {
+        for (i, slot) in out.iter_mut().enumerate() {
             let ph = self.turn0[i] + wind * self.depth[i] - rot
                 + WOBBLE * (self.wob_s[i] * wob_c - self.wob_c[i] * wob_s);
             let n = ph as u32;         // floor: turn0's offset keeps ph positive

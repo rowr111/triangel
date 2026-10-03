@@ -1,7 +1,7 @@
 use crate::audio::Audio;
 use crate::led::geom::{BOARD_CENTER, BOARD_COUNT};
-use crate::led::map::{Led, WORLD_CENTROID_X, WORLD_CENTROID_Y};
-use crate::patterns::{Frame, ReactivePattern, Rng, Shot, hsv};
+use crate::led::map::{LED_MAP, WORLD_CENTROID_X, WORLD_CENTROID_Y};
+use crate::patterns::{Frame, Pattern, Rng, Shot, hsv};
 use triangel_shared::tuning::tiles::*;
 
 /// Tiles are numbered by board id, from 1. Index 0 is unused.
@@ -102,8 +102,8 @@ impl Tiles {
     }
 }
 
-impl ReactivePattern for Tiles {
-    fn render(&mut self, leds: &[Led], t_ms: u32, audio: &Audio, out: &mut Frame) {
+impl Pattern for Tiles {
+    fn render(&mut self, t_ms: u32, audio: &Audio, out: &mut Frame) {
         if audio.drop {
             self.light(self.center, t_ms, TILES - 1, 1.0, DROP_HOLD_MS, DROP_FADE_MS);
         } else if audio.beat {
@@ -123,7 +123,7 @@ impl ReactivePattern for Tiles {
             *c = hsv(s.hue, s.sat * (1.0 - young), v);
         }
 
-        for (o, led) in out.iter_mut().zip(leds.iter()) {
+        for (o, led) in out.iter_mut().zip(LED_MAP.iter()) {
             *o = color[led.board_id as usize];
         }
     }
