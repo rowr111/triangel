@@ -2,7 +2,7 @@ use core::f32::consts::PI;
 
 use crate::audio::Audio;
 use crate::led::map::{Led, LED_COUNT};
-use crate::patterns::{Frame, ReactivePattern, Rng, hsv};
+use crate::patterns::{Frame, ReactivePattern, Rng, Shot, hsv};
 use triangel_shared::tuning::spiderweb::*;
 
 /// The tile outlines line up into straight rows running edge to edge across the fixture,
@@ -20,19 +20,6 @@ const ROW_MERGE_MM: f32 = 1.0;
 /// white, so half of all lit lines are.
 const PALETTE: [(f32, f32); 6] =
     [(0.0, 0.0), (0.0, 0.0), (0.0, 0.0), (205.0, 0.30), (260.0, 0.32), (278.0, 0.50)];
-
-#[derive(Clone, Copy)]
-struct Shot {
-    start_ms: u32,
-    strength: f32,
-    hue:      f32,
-    sat:      f32,
-    hold_ms:  f32,
-    fade_ms:  f32,
-}
-
-const NO_SHOT: Shot =
-    Shot { start_ms: 0, strength: 0.0, hue: 0.0, sat: 0.0, hold_ms: 0.0, fade_ms: 0.0 };
 
 struct Line {
     family: usize,
@@ -118,7 +105,7 @@ impl Spiderweb {
             }
             rows.sort_unstable_by(|a, b| b.0.cmp(&a.0));
             for &(_, offset) in rows.iter().take(LINES_PER_FAMILY) {
-                lines.push(Line { family: f, offset, shots: [NO_SHOT; 2] });
+                lines.push(Line { family: f, offset, shots: [Shot::NONE; 2] });
             }
         }
 
@@ -145,11 +132,7 @@ impl Spiderweb {
         let (hue, sat) = self.rng.pick(&PALETTE);
         let line = &mut self.lines[li];
         let remaining = |s: &Shot| {
-            if s.strength <= 0.0 {
-                f32::MIN
-            } else {
-                s.hold_ms + s.fade_ms - t_ms.wrapping_sub(s.start_ms) as i32 as f32
-            }
+            if s.strength <= 0.0 { i32::MIN } else { s.end_ms().wrapping_sub(t_ms) as i32 }
         };
         let slot = if remaining(&line.shots[0]) <= remaining(&line.shots[1]) { 0 } else { 1 };
         line.shots[slot] = Shot { start_ms: t_ms, strength, hue, sat, hold_ms: hold, fade_ms: fade };
@@ -185,18 +168,7 @@ impl ReactivePattern for Spiderweb {
         for (c, line) in color.iter_mut().zip(self.lines.iter()) {
             let mut best = (0.0f32, 0.0f32, 0.0f32); // brightness, hue, saturation
             for shot in &line.shots {
-                if shot.strength <= 0.0 {
-                    continue;
-                }
-                let age = t_ms.wrapping_sub(shot.start_ms) as i32 as f32;
-                if age < 0.0 || age >= shot.hold_ms + shot.fade_ms {
-                    continue;
-                }
-                let fade = if age < shot.hold_ms {
-                    1.0
-                } else {
-                    1.0 - (age - shot.hold_ms) / shot.fade_ms
-                };
+                let Some((age, fade)) = shot.level(t_ms) else { continue };
                 let head = (1.0 - age / HEAD_MS).clamp(0.0, 1.0);
                 let v = (shot.strength * fade * fade * (1.0 + HEAD_BOOST * head)).min(1.0);
                 if v > best.0 {

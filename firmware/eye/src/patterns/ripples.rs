@@ -1,5 +1,5 @@
 use crate::led::map::{Led, LED_COUNT};
-use crate::patterns::{Frame, Rng, hsv};
+use crate::patterns::{Frame, Rng, free_or_oldest, hsv};
 
 /// A ripple lives for several seconds and a hard beat lands several at once, so the
 /// pool has to be deep or older ones get evicted while still crossing the fixture.
@@ -103,15 +103,7 @@ impl Ripples {
     /// Land a drop at `spot` with `count` rings `spacing` mm apart.
     pub fn land(&mut self, spot: Spot, t_ms: u32, strength: f32, spacing: f32, count: f32) {
         // Reuse the oldest slot when all are busy, so a new drop is never lost.
-        let slot = self.drops.iter().position(|d| !d.alive).unwrap_or_else(|| {
-            let mut oldest = 0;
-            for (i, d) in self.drops.iter().enumerate() {
-                if d.start_ms < self.drops[oldest].start_ms {
-                    oldest = i;
-                }
-            }
-            oldest
-        });
+        let slot = free_or_oldest(&self.drops, |d| !d.alive, |d| d.start_ms);
         self.drops[slot] = Drop {
             x: spot.x,
             y: spot.y,

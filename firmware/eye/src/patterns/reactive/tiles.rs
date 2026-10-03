@@ -1,6 +1,6 @@
 use crate::audio::Audio;
 use crate::led::map::{Led, WORLD_CENTROID_X, WORLD_CENTROID_Y};
-use crate::patterns::{Frame, ReactivePattern, Rng, hsv};
+use crate::patterns::{Frame, ReactivePattern, Rng, Shot, hsv};
 use triangel_shared::tuning::tiles::*;
 
 /// Tiles are numbered by board id, 1 to 25. Index 0 is unused.
@@ -25,15 +25,9 @@ pub struct Tiles {
     n_neighbors: [u8; TILES],
     /// The tile nearest the middle of the fixture, where a drop starts.
     center:      usize,
-    /// When each tile lights. It can sit a little in the future while a hit spreads, which
-    /// is what makes the outer rings wait their turn.
-    start_ms:    [u32; TILES],
-    strength:    [f32; TILES],
-    hue:         [f32; TILES],
-    sat:         [f32; TILES],
-    /// How long each tile holds at full, and then how long it takes to fade.
-    hold_ms:     [f32; TILES],
-    fade_ms:     [f32; TILES],
+    /// Each tile's current flash. Its start can sit a little in the future while a hit
+    /// spreads, which is what makes the outer rings wait their turn.
+    shots:       [Shot; TILES],
 }
 
 impl Tiles {
@@ -79,12 +73,7 @@ impl Tiles {
             neighbors,
             n_neighbors,
             center,
-            start_ms: [0; TILES],
-            strength: [0.0; TILES],
-            hue:      [0.0; TILES],
-            sat:      [0.0; TILES],
-            hold_ms:  [0.0; TILES],
-            fade_ms:  [FADE_MS; TILES],
+            shots: [Shot::NONE; TILES],
         }
     }
 
@@ -103,18 +92,12 @@ impl Tiles {
         while head < tail && lit < count {
             let t = queue[head] as usize;
             head += 1;
-            let start = t_ms.wrapping_add(ring[t] as u32 * RING_STEP_MS);
-            let end = start.wrapping_add((hold + fade) as u32);
-            let cur_end =
-                self.start_ms[t].wrapping_add((self.hold_ms[t] + self.fade_ms[t]) as u32);
-            let outlasts = self.strength[t] > 0.0 && cur_end.wrapping_sub(end) as i32 > 0;
+            let start_ms = t_ms.wrapping_add(ring[t] as u32 * RING_STEP_MS);
+            let new = Shot { start_ms, strength, hue, sat, hold_ms: hold, fade_ms: fade };
+            let cur = &mut self.shots[t];
+            let outlasts = cur.strength > 0.0 && cur.end_ms().wrapping_sub(new.end_ms()) as i32 > 0;
             if !outlasts {
-                self.start_ms[t] = start;
-                self.strength[t] = strength;
-                self.hue[t] = hue;
-                self.sat[t] = sat;
-                self.hold_ms[t] = hold;
-                self.fade_ms[t] = fade;
+                *cur = new;
             }
             lit += 1;
             for &n in &self.neighbors[t][..self.n_neighbors[t] as usize] {
@@ -142,18 +125,12 @@ impl ReactivePattern for Tiles {
         // Each tile's color once per frame; every LED then just reads its tile's.
         let mut color = [[0u8; 3]; TILES];
         for (t, c) in color.iter_mut().enumerate().skip(1) {
-            // Negative while the tile is still waiting for its ring.
-            let age = t_ms.wrapping_sub(self.start_ms[t]) as i32;
-            let (hold, fade_ms) = (self.hold_ms[t], self.fade_ms[t]);
-            if self.strength[t] <= 0.0 || age < 0 || age as f32 >= hold + fade_ms {
-                continue;
-            }
-            let age = age as f32;
-            // Full through the hold, then fading out.
-            let fade = if age < hold { 1.0 } else { 1.0 - (age - hold) / fade_ms };
-            let young = (1.0 - age / ((hold + fade_ms) * WHITE_FRAC)).clamp(0.0, 1.0);
-            let v = (self.strength[t] * fade * fade * (1.0 + HIT_BOOST * young)).min(1.0);
-            *c = hsv(self.hue[t], self.sat[t] * (1.0 - young), v);
+            // None while the tile is still waiting for its ring.
+            let s = &self.shots[t];
+            let Some((age, fade)) = s.level(t_ms) else { continue };
+            let young = (1.0 - age / ((s.hold_ms + s.fade_ms) * WHITE_FRAC)).clamp(0.0, 1.0);
+            let v = (s.strength * fade * fade * (1.0 + HIT_BOOST * young)).min(1.0);
+            *c = hsv(s.hue, s.sat * (1.0 - young), v);
         }
 
         for (o, led) in out.iter_mut().zip(leds.iter()) {

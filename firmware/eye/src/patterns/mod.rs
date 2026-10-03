@@ -132,6 +132,54 @@ pub fn tile_hash(led: &Led) -> u32 {
     (led.board_id as u32 * 7 + led.local_idx as u32 * 13) % TILE_HASH_STEPS
 }
 
+/// Index of the first slot `is_free` accepts, or else the one that started earliest.
+pub fn free_or_oldest<T>(slots: &[T], is_free: impl Fn(&T) -> bool, start_ms: impl Fn(&T) -> u32) -> usize {
+    slots.iter().position(&is_free).unwrap_or_else(|| {
+        let mut oldest = 0;
+        for (i, s) in slots.iter().enumerate() {
+            if start_ms(s) < start_ms(&slots[oldest]) {
+                oldest = i;
+            }
+        }
+        oldest
+    })
+}
+
+/// One flash on a line or tile: lit at `start_ms`, full for `hold_ms`, then fading out
+/// over `fade_ms`.
+#[derive(Clone, Copy)]
+pub struct Shot {
+    pub start_ms: u32,
+    pub strength: f32,
+    pub hue:      f32,
+    pub sat:      f32,
+    pub hold_ms:  f32,
+    pub fade_ms:  f32,
+}
+
+impl Shot {
+    pub const NONE: Shot =
+        Shot { start_ms: 0, strength: 0.0, hue: 0.0, sat: 0.0, hold_ms: 0.0, fade_ms: 0.0 };
+
+    /// Age in ms and brightness 0-1, full through the hold and then falling to 0. None while
+    /// unlit, not started yet, or finished.
+    pub fn level(&self, t_ms: u32) -> Option<(f32, f32)> {
+        if self.strength <= 0.0 {
+            return None;
+        }
+        let age = t_ms.wrapping_sub(self.start_ms) as i32 as f32;
+        if age < 0.0 || age >= self.hold_ms + self.fade_ms {
+            return None;
+        }
+        let fade = if age < self.hold_ms { 1.0 } else { 1.0 - (age - self.hold_ms) / self.fade_ms };
+        Some((age, fade))
+    }
+
+    pub fn end_ms(&self) -> u32 {
+        self.start_ms.wrapping_add((self.hold_ms + self.fade_ms) as u32)
+    }
+}
+
 /// xorshift32. Each pattern seeds its own, so its sequence is fixed.
 #[derive(Clone, Copy)]
 pub struct Rng(u32);

@@ -3,7 +3,7 @@ use core::f32::consts::TAU;
 use crate::audio::Audio;
 use crate::led::grid::{self, CELL_MM};
 use crate::led::map::{Led, LED_COUNT};
-use crate::patterns::{Frame, ReactivePattern, Rng, hsv};
+use crate::patterns::{Frame, ReactivePattern, Rng, free_or_oldest, hsv};
 use triangel_shared::tuning::firework::*;
 
 /// Room for a drop's bursts on top of the sparks still flying from recent beats. Must stay
@@ -81,18 +81,6 @@ impl Firework {
         }
     }
 
-    fn free_slot(&self) -> usize {
-        self.sparks.iter().position(|s| !s.alive).unwrap_or_else(|| {
-            let mut oldest = 0;
-            for (i, s) in self.sparks.iter().enumerate() {
-                if s.start_ms < self.sparks[oldest].start_ms {
-                    oldest = i;
-                }
-            }
-            oldest
-        })
-    }
-
     /// A random LED's position, which keeps a burst on the fixture.
     fn random_point(&mut self, leds: &[Led]) -> (f32, f32) {
         let pick = (self.rng.f32() * LED_COUNT as f32) as usize % LED_COUNT;
@@ -142,7 +130,7 @@ impl Firework {
             let angle = offset + step * k as f32 + (self.rng.f32() - 0.5) * step;
             let speed = SPEED_MIN + self.rng.f32() * (SPEED_MAX - SPEED_MIN);
             let (sn, cs) = angle.sin_cos();
-            let slot = self.free_slot();
+            let slot = free_or_oldest(&self.sparks, |s| !s.alive, |s| s.start_ms);
             self.sparks[slot] = Spark {
                 x,
                 y,
