@@ -44,6 +44,13 @@ rustup override set 1.90.0   # in the xous-core checkout and in this repo's root
 cargo xtask install-toolkit  # in the xous-core checkout
 ```
 
+Install the pre-commit hook, which runs the checks in `.pre-commit-config.yaml` before each commit (needs Python):
+
+```powershell
+pip install pre-commit
+pre-commit install   # in this repo's root
+```
+
 Build and flash with the Baochip VS Code extension: out-of-tree, kernel mode manual, kernel files from each chip's `xous_build` folder. Never use ci-sync; it replaces the kernels built in the root README's "Building the kernels".
 
 ## Regenerating the LED map
