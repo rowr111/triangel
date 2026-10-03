@@ -1,3 +1,4 @@
+pub mod drizzle;
 pub mod effervesce;
 pub mod flame;
 pub mod fubuki;

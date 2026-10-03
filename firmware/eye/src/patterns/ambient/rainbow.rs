@@ -1,3 +1,4 @@
+use crate::patterns::glints::{GlintStyle, Glints};
 use crate::patterns::{Frame, Pattern, hsv, wrap360};
 use crate::led::geom::{DIST_C, THETA_C};
 use crate::led::map::Led;
@@ -24,10 +25,32 @@ const IRID_SPAN_MM:   f32 = 70.0;
 const IRID_DEG:       f32 = 55.0;
 const IRID_PERIOD_MS: u32 = 9_000;
 
-pub struct Rainbow;
+// Glints: brief near-white flashes on single LEDs over the rainbow, landing mostly on the
+// brighter ones. Fewer tries than Shimmer since more of the rainbow is bright, so about as
+// many land.
+const GLINTS: GlintStyle = GlintStyle {
+    tries_per_sec: 10.0,
+    min_ms:        250, // fade time, picked per glint
+    max_ms:        450,
+    white:         0.75, // how far toward white a glint starts
+};
+
+pub struct Rainbow {
+    glints:  Glints,
+    last_ms: u32,
+}
+
+impl Rainbow {
+    pub fn new() -> Self {
+        Rainbow { glints: Glints::new(0x3C6E_F372, GLINTS), last_ms: 0 }
+    }
+}
 
 impl Pattern for Rainbow {
     fn render(&mut self, leds: &[Led], t_ms: u32, out: &mut Frame) {
+        let dt_ms = t_ms.wrapping_sub(self.last_ms).min(100);
+        self.last_ms = t_ms;
+
         // Each time term is folded to its own period before the f32 cast: raw t_ms loses
         // sub-frame precision after hours of uptime.
         let breathe_ph = (t_ms % BREATHE_PERIOD_MS) as f32 / BREATHE_PERIOD_MS as f32 * TAU;
@@ -47,5 +70,7 @@ impl Pattern for Rainbow {
 
             out[i] = hsv(wrap360(hue), 1.0, 1.0 - TWINKLE * dip);
         }
+
+        self.glints.update(t_ms, dt_ms, out);
     }
 }

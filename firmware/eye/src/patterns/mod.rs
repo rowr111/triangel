@@ -1,5 +1,7 @@
 pub mod ambient;
+pub mod glints;
 pub mod reactive;
+pub mod ripples;
 pub mod transition;
 
 use crate::audio::Audio;
