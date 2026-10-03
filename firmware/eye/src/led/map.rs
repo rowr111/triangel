@@ -31,13 +31,6 @@ pub struct Led {
     pub chain_idx: u16,
 }
 
-impl Led {
-    /// Euclidean distance in mm from this LED to a world point (x, y).
-    pub fn dist_to(&self, x: f32, y: f32) -> f32 {
-        ((self.wx - x).powi(2) + (self.wy - y).powi(2)).sqrt()
-    }
-}
-
 pub static LED_MAP: [Led; LED_COUNT] = [
     Led { wx: 93.072, wy: 6.0, board_id: 1, local_idx: 1, chain_idx: 0 },
     Led { wx: 82.737, wy: 6.0, board_id: 1, local_idx: 2, chain_idx: 1 },

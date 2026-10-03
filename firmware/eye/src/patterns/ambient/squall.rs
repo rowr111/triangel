@@ -1,16 +1,11 @@
 use crate::patterns::{Frame, Pattern, Rng, cycle, knuth_hash, lerp, mix_rgb, phase_phasors, ramp, PHASE_STEPS};
 use crate::led::grid::{self, CELL_MM};
 use crate::led::map::{Led, WORLD_BOT, WORLD_CX, WORLD_H, WORLD_TOP, LED_COUNT, LED_MAP};
+use crate::led::world::{WORLD_HALF_W, WORLD_LEFT, WORLD_RIGHT};
 use core::f32::consts::{PI, TAU};
 
 // Tunables - dial these in the previewer. The pattern has no top or bottom: every
 // layer is isotropic, like open ocean seen from a plane or a cloud deck from below.
-
-// Horizontal bounds: map.rs publishes only vertical extents, but the fixture is an
-// equilateral point-down triangle, so the top edge half-span is WORLD_H / sqrt(3).
-const WORLD_HALF_W: f32 = 248.0;
-const WORLD_LEFT:   f32 = WORLD_CX - WORLD_HALF_W;
-const WORLD_RIGHT:  f32 = WORLD_CX + WORLD_HALF_W;
 
 // Water floor: resting level on the ramp plus a slow in-place boil so the dark
 // stretches between blooms never sit static.

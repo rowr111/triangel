@@ -1,5 +1,5 @@
 use crate::patterns::{Frame, Pattern, hsv, mix_rgb, smoothstep};
-use crate::led::geom::{DIST_C, THETA_C};
+use crate::led::geom::{DIST_C, DIST_C_MAX, THETA_C};
 use crate::led::map::{Led, LED_COUNT};
 use core::f32::consts::TAU;
 
@@ -98,8 +98,7 @@ impl Uzumaki {
         // Log depth: bands laid out on it are a fixed ratio wider than the one inside them,
         // so they grow as they sweep out. R0_MM flattens the curve near the center, where
         // otherwise the bands would pack in tighter than the LEDs can show.
-        let rmax = DIST_C.iter().fold(0.0f32, |m, &d| m.max(d));
-        let inv_span = 1.0 / (1.0 + rmax / R0_MM).ln();
+        let inv_span = 1.0 / (1.0 + DIST_C_MAX / R0_MM).ln();
         let depth: [f32; LED_COUNT] =
             core::array::from_fn(|i| (1.0 + DIST_C[i] / R0_MM).ln() * inv_span);
 

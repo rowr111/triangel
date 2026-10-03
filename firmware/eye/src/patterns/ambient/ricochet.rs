@@ -1,6 +1,7 @@
 use crate::patterns::{Frame, Pattern, Rng, hsv, lerp, wrap360};
 use crate::led::grid::{self, CELL_MM};
 use crate::led::map::{Led, WORLD_TOP, WORLD_BOT, WORLD_CX, WORLD_CENTROID_Y, LED_COUNT};
+use crate::led::world::{WORLD_LEFT, WORLD_RIGHT};
 
 // Ricochet - up to a few comets loose inside the triangle, bouncing off the three walls like
 // Pong and dragging fading trails. Each bounce throws off a little shower of sparks and costs
@@ -48,10 +49,8 @@ const SPARK_GRAVITY:     f32   = 0.000_15; // gentle downward pull (mm/ms^2)
 const MAX_DT_MS:      f32 = 60.0; // clamp the integration step (guards against long gaps)
 const REENTRY_GAP_MS: u32 = 500;  // a render gap longer than this means we just (re)entered
 
-// Triangle: the two top corners' x, and the three walls' inward unit normals (point-down,
-// roughly equilateral). Left/right walls use a top corner (at WORLD_TOP) as their reference.
-const V_LEFT_X:  f32 = 10.0;
-const V_RIGHT_X: f32 = 2.0 * WORLD_CX - 10.0;
+// The three walls' inward unit normals (point-down, roughly equilateral). Left/right walls
+// use a top corner (WORLD_LEFT or WORLD_RIGHT, at WORLD_TOP) as their reference.
 const N_TOP:   (f32, f32) = (0.0, 1.0);
 const N_LEFT:  (f32, f32) = (0.866_025_4, -0.5);
 const N_RIGHT: (f32, f32) = (-0.866_025_4, -0.5);
@@ -143,9 +142,9 @@ impl Ricochet {
         let edge = (self.rng.f32() * 3.0) as usize;
         let t = 0.12 + self.rng.f32() * 0.76; // stay off the corners
         let (ex, ey, n) = match edge {
-            0 => (lerp(V_LEFT_X, V_RIGHT_X, t), WORLD_TOP, N_TOP),
-            1 => (lerp(V_LEFT_X, WORLD_CX, t), lerp(WORLD_TOP, WORLD_BOT, t), N_LEFT),
-            _ => (lerp(V_RIGHT_X, WORLD_CX, t), lerp(WORLD_TOP, WORLD_BOT, t), N_RIGHT),
+            0 => (lerp(WORLD_LEFT, WORLD_RIGHT, t), WORLD_TOP, N_TOP),
+            1 => (lerp(WORLD_LEFT, WORLD_CX, t), lerp(WORLD_TOP, WORLD_BOT, t), N_LEFT),
+            _ => (lerp(WORLD_RIGHT, WORLD_CX, t), lerp(WORLD_TOP, WORLD_BOT, t), N_RIGHT),
         };
         let ang = n.1.atan2(n.0) + (self.rng.f32() - 0.5) * 2.0 * ENTRY_SPREAD;
         let hue = self.rng.f32() * 360.0;
@@ -272,8 +271,8 @@ impl Ricochet {
 fn wall_dists(x: f32, y: f32) -> (f32, f32, f32) {
     (
         y - WORLD_TOP,
-        (x - V_LEFT_X) * N_LEFT.0 + (y - WORLD_TOP) * N_LEFT.1,
-        (x - V_RIGHT_X) * N_RIGHT.0 + (y - WORLD_TOP) * N_RIGHT.1,
+        (x - WORLD_LEFT) * N_LEFT.0 + (y - WORLD_TOP) * N_LEFT.1,
+        (x - WORLD_RIGHT) * N_RIGHT.0 + (y - WORLD_TOP) * N_RIGHT.1,
     )
 }
 

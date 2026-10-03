@@ -1,10 +1,11 @@
 use crate::audio::Audio;
+use crate::led::geom::{BOARD_CENTER, BOARD_COUNT};
 use crate::led::map::{Led, WORLD_CENTROID_X, WORLD_CENTROID_Y};
 use crate::patterns::{Frame, ReactivePattern, Rng, Shot, hsv};
 use triangel_shared::tuning::tiles::*;
 
-/// Tiles are numbered by board id, 1 to 25. Index 0 is unused.
-const TILES: usize = 26;
+/// Tiles are numbered by board id, from 1. Index 0 is unused.
+const TILES: usize = BOARD_COUNT + 1;
 /// Tiles sharing an edge sit 60 mm apart center to center and ones sharing only a corner
 /// 103 mm, so anything closer than this is an edge neighbor.
 const NEIGHBOR_MM: f32 = 75.0;
@@ -18,7 +19,7 @@ const PALETTE: [(f32, f32); 5] =
 
 /// Whole triangles lighting on the beat. A light beat lights one tile; a harder one
 /// spreads from it through the neighboring tiles a ring at a time; a drop spreads from the
-/// middle until all 25 are lit.
+/// middle until every tile is lit.
 pub struct Tiles {
     rng:         Rng,
     neighbors:   [[u8; MAX_NEIGHBORS]; TILES],
@@ -31,19 +32,8 @@ pub struct Tiles {
 }
 
 impl Tiles {
-    pub fn new(leds: &[Led]) -> Self {
-        let mut sum = [(0.0f32, 0.0f32, 0u32); TILES];
-        for led in leds {
-            let t = &mut sum[led.board_id as usize];
-            t.0 += led.wx;
-            t.1 += led.wy;
-            t.2 += 1;
-        }
-        let centers: [(f32, f32); TILES] = core::array::from_fn(|t| {
-            let (x, y, n) = sum[t];
-            if n == 0 { (0.0, 0.0) } else { (x / n as f32, y / n as f32) }
-        });
-
+    pub fn new() -> Self {
+        let centers = &BOARD_CENTER;
         let mut neighbors = [[0u8; MAX_NEIGHBORS]; TILES];
         let mut n_neighbors = [0u8; TILES];
         let near2 = NEIGHBOR_MM * NEIGHBOR_MM;

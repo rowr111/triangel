@@ -1,6 +1,7 @@
 use core::f32::consts::PI;
 
 use crate::audio::Audio;
+use crate::led::geom::{BOARD_COUNT, LEDS_PER_BOARD};
 use crate::led::map::{Led, LED_COUNT};
 use crate::patterns::{Frame, ReactivePattern, Rng, Shot, hsv};
 use triangel_shared::tuning::spiderweb::*;
@@ -51,7 +52,8 @@ impl Spiderweb {
         let across = |f: usize, led: &Led| normal[f].0 * led.wx + normal[f].1 * led.wy;
 
         // Which LED sits at each position on each tile, for finding an LED's neighbors.
-        let mut at = [[u16::MAX; 26]; 26];
+        // Positions run from 1, with a spare slot past the last so its neighbor reads empty.
+        let mut at = [[u16::MAX; LEDS_PER_BOARD + 2]; BOARD_COUNT + 1];
         for (i, led) in leds.iter().enumerate() {
             at[led.board_id as usize][led.local_idx as usize] = i as u16;
         }
@@ -60,7 +62,7 @@ impl Spiderweb {
         let mut family = [u8::MAX; LED_COUNT];
         for (i, led) in leds.iter().enumerate() {
             let (b, l) = (led.board_id as usize, led.local_idx as usize);
-            if l == 0 || l + 1 >= 26 {
+            if l == 0 || l + 1 >= LEDS_PER_BOARD + 2 {
                 continue;
             }
             let (p, n) = (at[b][l - 1], at[b][l + 1]);

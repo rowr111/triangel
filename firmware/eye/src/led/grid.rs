@@ -30,15 +30,8 @@ fn for_each_in_cells(gx0: usize, gx1: usize, gy0: usize, gy1: usize, f: &mut imp
 
 /// Call `f` with each LED index within `reach` cells of the world point (x, y). `reach` must
 /// cover the dot's radius, or LEDs it touches will be missed.
-pub fn for_each_near(x: f32, y: f32, reach: usize, mut f: impl FnMut(usize)) {
-    let (cx, cy) = (col(x), row(y));
-    for_each_in_cells(
-        cx.saturating_sub(reach),
-        (cx + reach).min(COLS - 1),
-        cy.saturating_sub(reach),
-        (cy + reach).min(ROWS - 1),
-        &mut f,
-    );
+pub fn for_each_near(x: f32, y: f32, reach: usize, f: impl FnMut(usize)) {
+    for_each_near_seg((x, y), (x, y), reach, f);
 }
 
 /// Call `f` with each LED index in the cells spanning segment a-b, widened by `reach`. Covers

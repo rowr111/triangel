@@ -52,7 +52,7 @@ fn ambient_patterns() -> Vec<Box<dyn Pattern>> {
 
 fn reactive_patterns() -> Vec<Box<dyn ReactivePattern>> {
     vec![
-        Box::new(Tiles::new(&LED_MAP)),
+        Box::new(Tiles::new()),
         Box::new(Spectrum::new()),
         Box::new(Raindrop::new()),
         Box::new(Firework::new()),

@@ -1,6 +1,7 @@
 pub mod geom;
 pub mod grid;
 pub mod map;
+pub mod world;
 #[cfg(not(feature = "previewer"))]
 mod ws2812_pair;
 

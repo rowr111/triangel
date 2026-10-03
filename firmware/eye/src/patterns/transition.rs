@@ -3,7 +3,7 @@ use std::sync::OnceLock;
 use core::f32::consts::TAU;
 
 use super::{Frame, knuth_hash, smoothstep};
-use crate::led::geom::DIST_C;
+use crate::led::geom::{BOARD_CENTER, BOARD_COUNT, DIST_C, DIST_C_MAX};
 use crate::led::map::{Led, WORLD_CENTROID_X, WORLD_CENTROID_Y};
 
 // Triangle centroid, from the shared world constants.
@@ -34,10 +34,9 @@ pub enum TransitionStyle {
 /// Blend the outgoing frame into the incoming one. `out` holds the incoming (target)
 /// frame on entry; on return it holds the composited result. `progress` is 0.0->1.0.
 pub fn blend(style: TransitionStyle, leds: &[Led], progress: f32, from: &Frame, out: &mut Frame) {
-    let maxd = max_center_dist(leds);
-    let ranks = board_spiral_ranks(leds);
+    let ranks = board_spiral_ranks();
     for (i, led) in leds.iter().enumerate() {
-        let alpha = alpha_for(style, led, DIST_C[i], progress, maxd, ranks[led.board_id as usize]);
+        let alpha = alpha_for(style, led, DIST_C[i], progress, DIST_C_MAX, ranks[led.board_id as usize]);
         out[i] = lerp_rgb(from[i], out[i], alpha);
     }
 }
@@ -82,48 +81,23 @@ fn alpha_for(
     }
 }
 
-fn dist_to_center(led: &Led) -> f32 {
-    led.dist_to(CENTER_X, CENTER_Y)
+/// Per-board switch order for the spiral wipe, indexed by `board_id`, each a normalized
+/// rank in [0, 1] (0 = first/innermost, 1 = last/outermost). Computed once. All LEDs on a
+/// board share its rank, so a whole triangle flips together.
+fn board_spiral_ranks() -> &'static [f32; BOARD_COUNT + 1] {
+    static RANKS: OnceLock<[f32; BOARD_COUNT + 1]> = OnceLock::new();
+    RANKS.get_or_init(compute_spiral_ranks)
 }
 
-/// Farthest LED distance from the centroid, computed once (geometry is fixed). Used to
-/// normalize the radial wipes so they always complete regardless of where the center is.
-fn max_center_dist(leds: &[Led]) -> f32 {
-    static MAX: OnceLock<f32> = OnceLock::new();
-    *MAX.get_or_init(|| leds.iter().map(dist_to_center).fold(0.0_f32, f32::max))
-}
-
-/// Per-board switch order for the spiral wipe, indexed by `board_id` (1..=25), each a
-/// normalized rank in [0, 1] (0 = first/innermost, 1 = last/outermost). Computed once.
-/// All LEDs on a board share its rank, so a whole triangle flips together.
-fn board_spiral_ranks(leds: &[Led]) -> &'static [f32; 26] {
-    static RANKS: OnceLock<[f32; 26]> = OnceLock::new();
-    RANKS.get_or_init(|| compute_spiral_ranks(leds))
-}
-
-fn compute_spiral_ranks(leds: &[Led]) -> [f32; 26] {
-    // Accumulate each board's centroid from its LEDs.
-    let mut sx = [0.0f32; 26];
-    let mut sy = [0.0f32; 26];
-    let mut n  = [0u32; 26];
-    for led in leds {
-        let b = led.board_id as usize;
-        sx[b] += led.wx;
-        sy[b] += led.wy;
-        n[b]  += 1;
-    }
-
+fn compute_spiral_ranks() -> [f32; BOARD_COUNT + 1] {
     // Per board: radius + angle from the design centroid. Track the radius span so we can
     // normalize it for the spiral key.
     let mut polar: Vec<(usize, f32, f32)> = Vec::new(); // (board_id, radius, angle)
     let mut rmin = f32::MAX;
     let mut rmax = 0.0f32;
-    for b in 1..26 {
-        if n[b] == 0 {
-            continue;
-        }
-        let dx = sx[b] / n[b] as f32 - CENTER_X;
-        let dy = sy[b] / n[b] as f32 - CENTER_Y;
+    for (b, &(x, y)) in BOARD_CENTER.iter().enumerate().skip(1) {
+        let dx = x - CENTER_X;
+        let dy = y - CENTER_Y;
         let r = (dx * dx + dy * dy).sqrt();
         rmin = rmin.min(r);
         rmax = rmax.max(r);
@@ -139,7 +113,7 @@ fn compute_spiral_ranks(leds: &[Led]) -> [f32; 26] {
     keyed.sort_by(|x, y| x.1.total_cmp(&y.1));
 
     // Normalize sorted position to a [0, 1] rank.
-    let mut ranks = [0.0f32; 26];
+    let mut ranks = [0.0f32; BOARD_COUNT + 1];
     let last = (keyed.len().max(2) - 1) as f32;
     for (pos, &(b, _)) in keyed.iter().enumerate() {
         ranks[b] = pos as f32 / last;

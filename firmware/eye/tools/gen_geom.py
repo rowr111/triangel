@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Generate src/led/geom.rs: per-LED distances and angles from fixed points on the fixture.
+"""Generate src/led/geom.rs: per-LED distances and angles from fixed points on the fixture,
+per-board centers and heights, and the spatial grid buckets.
 
 Reads the world constants and LED positions out of src/led/map.rs so the geometry has one
 source of truth. Re-run if map.rs changes.
@@ -19,6 +20,7 @@ OUT = ROOT / "src" / "led" / "geom.rs"
 
 PER_LINE = 6
 IDX_PER_LINE = 16
+PAIRS_PER_LINE = 3
 
 
 def const(src: str, name: str, ty: str = "f32") -> float:
@@ -34,7 +36,7 @@ def as_f32(v: float) -> float:
 
 
 def dist_f32(dx: float, dy: float) -> float:
-    """Mirror map.rs `dist_to`, rounding to f32 at each step so the value matches the device."""
+    """sqrt(dx^2 + dy^2), rounding to f32 at each step so the value matches f32 math on the device."""
     d2 = as_f32(as_f32(dx * dx) + as_f32(dy * dy))
     return as_f32(math.sqrt(d2))
 
@@ -53,27 +55,22 @@ def lit(v: float) -> str:
     return s
 
 
-def emit(name: str, doc: str, values: list[str]) -> list[str]:
-    lines = [f"/// {doc}", f"pub static {name}: [f32; LED_COUNT] = ["]
-    for start in range(0, len(values), PER_LINE):
-        lines.append("    " + ", ".join(values[start : start + PER_LINE]) + ",")
-    lines += ["];", ""]
-    return lines
-
-
-def emit_u16(name: str, ty: str, doc: str, values: list[int]) -> list[str]:
+def emit(name: str, ty: str, doc: str, values: list[str], per_line: int) -> list[str]:
     lines = [f"/// {doc}", f"pub static {name}: {ty} = ["]
-    for start in range(0, len(values), IDX_PER_LINE):
-        lines.append("    " + ", ".join(str(v) for v in values[start : start + IDX_PER_LINE]) + ",")
+    for start in range(0, len(values), per_line):
+        lines.append("    " + ", ".join(values[start : start + per_line]) + ",")
     lines += ["];", ""]
     return lines
 
 
-def buckets(leds: list[tuple[str, str]], cell_mm: float, cols: int, rows: int):
+def pair(a: float, b: float) -> str:
+    return f"({lit(a)}, {lit(b)})"
+
+
+def buckets(leds, cell_mm: float, cols: int, rows: int):
     """Group LED indices by grid cell, mirroring the bucketing in grid.rs."""
     cells: list[list[int]] = [[] for _ in range(cols * rows)]
-    for i, (wx_s, wy_s) in enumerate(leds):
-        wx, wy = as_f32(float(wx_s)), as_f32(float(wy_s))
+    for i, (wx, wy, _, _) in enumerate(leds):
         cx = min(int(as_f32(wx / cell_mm)), cols - 1)
         cy = min(int(as_f32(wy / cell_mm)), rows - 1)
         cells[cy * cols + cx].append(i)
@@ -83,6 +80,25 @@ def buckets(leds: list[tuple[str, str]], cell_mm: float, cols: int, rows: int):
         flat.extend(cell)
         start.append(len(flat))
     return start, flat
+
+
+def boards(leds, board_count: int):
+    """Per-board center and (lowest, highest) wy, indexed by board id with index 0 unused.
+    Sums run in LED order in f32, as the Rust code that used to compute them did."""
+    sx = [0.0] * (board_count + 1)
+    sy = [0.0] * (board_count + 1)
+    n = [0] * (board_count + 1)
+    y_range = [(0.0, 0.0)] + [(math.inf, -math.inf)] * board_count
+    for wx, wy, board, _ in leds:
+        sx[board] = as_f32(sx[board] + wx)
+        sy[board] = as_f32(sy[board] + wy)
+        n[board] += 1
+        lo, hi = y_range[board]
+        y_range[board] = (min(lo, wy), max(hi, wy))
+    center = [(0.0, 0.0)] + [
+        (as_f32(sx[b] / n[b]), as_f32(sy[b] / n[b])) for b in range(1, board_count + 1)
+    ]
+    return center, y_range
 
 
 def main() -> None:
@@ -100,50 +116,64 @@ def main() -> None:
     centroid_x = cx
     centroid_y = as_f32(top + as_f32(as_f32(bot - top) / 3.0))
 
-    leds = re.findall(r"Led\s*\{\s*wx:\s*([-0-9.]+),\s*wy:\s*([-0-9.]+)", src)
-    if not leds:
+    found = re.findall(
+        r"Led\s*\{\s*wx:\s*([-0-9.]+),\s*wy:\s*([-0-9.]+),\s*board_id:\s*(\d+),\s*local_idx:\s*(\d+)",
+        src,
+    )
+    if not found:
         raise SystemExit(f"no LED entries found in {MAP}")
+    leds = [(as_f32(float(x)), as_f32(float(y)), int(b), int(l)) for x, y, b, l in found]
+    board_count = max(b for _, _, b, _ in leds)
+    leds_per_board = max(l for _, _, _, l in leds)
+    if board_count * leds_per_board != len(leds):
+        raise SystemExit(f"{len(leds)} LEDs is not {board_count} boards x {leds_per_board}")
 
     dist_c, theta_c, dist_apex = [], [], []
-    for wx_s, wy_s in leds:
-        wx, wy = as_f32(float(wx_s)), as_f32(float(wy_s))
-
+    for wx, wy, _, _ in leds:
         dx, dy = as_f32(wx - centroid_x), as_f32(wy - centroid_y)
-        dist_c.append(lit(dist_f32(dx, dy)))
-        theta_c.append(lit(math.atan2(dy, dx)))
+        dist_c.append(dist_f32(dx, dy))
+        theta_c.append(math.atan2(dy, dx))
 
         ax, ay = as_f32(wx - cx), as_f32(wy - bot)
-        dist_apex.append(lit(dist_f32(ax, ay)))
+        dist_apex.append(dist_f32(ax, ay))
 
     cell_start, cell_leds = buckets(leds, cell_mm, cols, rows)
+    center, y_range = boards(leds, board_count)
+    per_board = "[(f32, f32); BOARD_COUNT + 1]"
 
     body = "\n".join(
         [
             "// Auto-generated by tools/gen_geom.py from map.rs - do not edit by hand.",
-            "// Per-LED geometry and the spatial grid buckets.",
+            "// Per-LED and per-board geometry and the spatial grid buckets.",
             "",
             "use super::grid::{COLS, ROWS};",
             "use super::map::LED_COUNT;",
             "",
-            *emit("DIST_C", "Distance in mm from the fixture centroid.", dist_c),
-            *emit("THETA_C", "Angle in radians from the fixture centroid.", theta_c),
-            *emit("DIST_APEX", "Distance in mm from the apex, the triangle's low point.", dist_apex),
-            *emit_u16(
-                "CELL_START",
-                "[u16; COLS * ROWS + 1]",
-                "Where each grid cell's run begins in CELL_LEDS.",
-                cell_start,
-            ),
-            *emit_u16(
-                "CELL_LEDS",
-                "[u16; LED_COUNT]",
-                "LED indices grouped by grid cell, ascending within each cell.",
-                cell_leds,
-            ),
+            "/// Boards on the fixture, numbered from 1, and LEDs on each, numbered from 1.",
+            f"pub const BOARD_COUNT: usize = {board_count};",
+            f"pub const LEDS_PER_BOARD: usize = {leds_per_board};",
+            "",
+            "/// Farthest LED from the fixture centroid, in mm.",
+            f"pub const DIST_C_MAX: f32 = {lit(max(dist_c))};",
+            "",
+            *emit("DIST_C", "[f32; LED_COUNT]", "Distance in mm from the fixture centroid.",
+                  [lit(v) for v in dist_c], PER_LINE),
+            *emit("THETA_C", "[f32; LED_COUNT]", "Angle in radians from the fixture centroid.",
+                  [lit(v) for v in theta_c], PER_LINE),
+            *emit("DIST_APEX", "[f32; LED_COUNT]", "Distance in mm from the apex, the triangle's low point.",
+                  [lit(v) for v in dist_apex], PER_LINE),
+            *emit("BOARD_CENTER", per_board, "Each board's center (mean LED position), by board id. Index 0 is unused.",
+                  [pair(*c) for c in center], PAIRS_PER_LINE),
+            *emit("BOARD_Y_RANGE", per_board, "Each board's lowest and highest LED wy, by board id. Index 0 is unused.",
+                  [pair(*r) for r in y_range], PAIRS_PER_LINE),
+            *emit("CELL_START", "[u16; COLS * ROWS + 1]", "Where each grid cell's run begins in CELL_LEDS.",
+                  [str(v) for v in cell_start], IDX_PER_LINE),
+            *emit("CELL_LEDS", "[u16; LED_COUNT]", "LED indices grouped by grid cell, ascending within each cell.",
+                  [str(v) for v in cell_leds], IDX_PER_LINE),
         ]
     )
     OUT.write_text(body, encoding="utf-8")
-    print(f"Wrote {OUT} ({len(leds)} LEDs, {cols}x{rows} grid)")
+    print(f"Wrote {OUT} ({len(leds)} LEDs, {board_count} boards, {cols}x{rows} grid)")
 
 
 if __name__ == "__main__":

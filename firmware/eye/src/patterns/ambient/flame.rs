@@ -1,4 +1,4 @@
-use crate::led::geom::DIST_APEX;
+use crate::led::geom::{BOARD_COUNT, BOARD_Y_RANGE, DIST_APEX};
 use crate::patterns::{Frame, Pattern, cycle, knuth_hash, phase_phasors, ramp, PHASE_STEPS};
 use crate::led::map::{Led, LED_MAP, WORLD_BOT, WORLD_CX, WORLD_H, LED_COUNT};
 use core::f32::consts::{PI, TAU};
@@ -111,7 +111,6 @@ impl ApexFlame {
         let hash = |i: usize| knuth_hash(LED_MAP[i].chain_idx as u32);
         let k1_of = |i: usize| (hash(i) % PHASE_STEPS as u32) as usize;
         let k2_of = |i: usize| ((hash(i) >> 16) % PHASE_STEPS as u32) as usize; // decorrelated second phase
-        let extents = board_y_extents(&LED_MAP);
         ApexFlame {
             speed,
             wavelength,
@@ -134,7 +133,7 @@ impl ApexFlame {
                 // triangle so each tile fades from hot at its own bottom to cool at its top.
                 let led = &LED_MAP[i];
                 let height = (WORLD_BOT - led.wy) / WORLD_H; // 0 at the bottom tip, 1 at the top row
-                let (y_min, y_max) = extents[led.board_id as usize];
+                let (y_min, y_max) = BOARD_Y_RANGE[led.board_id as usize];
                 let local_height = (y_max - led.wy) / (y_max - y_min).max(1.0);
                 q(height * COOL_TILT + local_height * TILE_TILT)
             }),
@@ -201,7 +200,7 @@ impl Pattern for ApexFlame {
 
         // Tile flare-up: one hash-picked tile per period surges fast and settles slowly.
         let flare_phase = cycle(t_ms, FLARE_PERIOD_MS);
-        let flare_board = 1 + (knuth_hash(t_ms / FLARE_PERIOD_MS) >> 8) % 25;
+        let flare_board = 1 + (knuth_hash(t_ms / FLARE_PERIOD_MS) >> 8) % BOARD_COUNT as u32;
         let flare_env = if flare_phase < FLARE_LEN {
             let fp = flare_phase / FLARE_LEN;
             (fp * 6.0).min(1.0) * (1.0 - fp)
@@ -264,18 +263,6 @@ impl Pattern for ApexFlame {
             out[i] = self.ramp_lut[(heat.clamp(0, ONE) >> (12 - RAMP_BITS)) as usize];
         }
     }
-}
-
-/// Per-board vertical extent (min wy, max wy) indexed by board_id (1..=25). Drives the
-/// per-tile gradient for both orientations.
-fn board_y_extents(leds: &[Led]) -> [(f32, f32); 26] {
-    let mut ext = [(f32::MAX, f32::MIN); 26];
-    for led in leds {
-        let b = led.board_id as usize;
-        ext[b].0 = ext[b].0.min(led.wy);
-        ext[b].1 = ext[b].1.max(led.wy);
-    }
-    ext
 }
 
 /// Blackbody-ish heat ramp: coal-ember -> deep red -> orange -> bright yellow -> white ->
