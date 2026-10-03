@@ -1,5 +1,5 @@
 use crate::led::map::LED_COUNT;
-use crate::patterns::Frame;
+use crate::patterns::{Frame, Rng};
 
 const MAX_GLINTS: usize = 24;
 
@@ -26,7 +26,7 @@ struct Glint {
 /// Shimmer and Rainbow. The pattern draws its frame first, then calls `update` over it.
 pub struct Glints {
     style:  GlintStyle,
-    rng:    u32,
+    rng:    Rng,
     glints: [Glint; MAX_GLINTS],
     tries:  f32, // fractional tries carried to the next frame
 }
@@ -35,23 +35,10 @@ impl Glints {
     pub fn new(seed: u32, style: GlintStyle) -> Self {
         Glints {
             style,
-            rng: seed,
+            rng: Rng::new(seed),
             glints: [Glint { led: 0, start_ms: 0, life_ms: 0 }; MAX_GLINTS],
             tries: 0.0,
         }
-    }
-
-    fn next_rng(&mut self) -> u32 {
-        let mut x = self.rng;
-        x ^= x << 13;
-        x ^= x >> 17;
-        x ^= x << 5;
-        self.rng = x;
-        x
-    }
-
-    fn randf(&mut self) -> f32 {
-        (self.next_rng() >> 8) as f32 / 16_777_216.0
     }
 
     /// Land new glints, most on the brightest LEDs, then lift every live one toward white.
@@ -60,15 +47,15 @@ impl Glints {
         self.tries += dt_ms as f32 * s.tries_per_sec / 1000.0;
         while self.tries >= 1.0 {
             self.tries -= 1.0;
-            let led = (self.randf() * LED_COUNT as f32) as usize % LED_COUNT;
+            let led = (self.rng.f32() * LED_COUNT as f32) as usize % LED_COUNT;
             let [r, g, b] = out[led];
             let lit = r.max(g).max(b) as f32 / 255.0;
-            if self.randf() >= lit {
+            if self.rng.f32() >= lit {
                 continue;
             }
             let free = self.glints.iter().position(|gl| t_ms.wrapping_sub(gl.start_ms) >= gl.life_ms);
             if let Some(slot) = free {
-                let life_ms = s.min_ms + (self.randf() * (s.max_ms - s.min_ms) as f32) as u32;
+                let life_ms = s.min_ms + (self.rng.f32() * (s.max_ms - s.min_ms) as f32) as u32;
                 self.glints[slot] = Glint { led: led as u16, start_ms: t_ms, life_ms };
             }
         }

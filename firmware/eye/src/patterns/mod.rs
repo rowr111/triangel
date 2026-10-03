@@ -4,6 +4,8 @@ pub mod reactive;
 pub mod ripples;
 pub mod transition;
 
+use core::f32::consts::TAU;
+
 use crate::audio::Audio;
 use crate::led::map::Led;
 
@@ -69,5 +71,97 @@ pub fn wrap360(h: f32) -> f32 {
         h + 360.0
     } else {
         h
+    }
+}
+
+/// Smooth 0-1 ramp; `t` is clamped to 0-1 first.
+pub fn smoothstep(t: f32) -> f32 {
+    let t = t.clamp(0.0, 1.0);
+    t * t * (3.0 - 2.0 * t)
+}
+
+pub fn mix_rgb(a: [f32; 3], b: [f32; 3], t: f32) -> [f32; 3] {
+    [lerp(a[0], b[0], t), lerp(a[1], b[1], t), lerp(a[2], b[2], t)]
+}
+
+/// Color at `t` along a ramp of (position, color) stops, positions rising from 0 to 1.
+pub fn ramp(stops: &[(f32, [f32; 3])], t: f32) -> [f32; 3] {
+    let t = t.clamp(0.0, 1.0);
+    for pair in stops.windows(2) {
+        let (t0, c0) = pair[0];
+        let (t1, c1) = pair[1];
+        if t <= t1 {
+            return mix_rgb(c0, c1, (t - t0) / (t1 - t0));
+        }
+    }
+    stops[stops.len() - 1].1
+}
+
+/// Where `t_ms` sits in a repeating period, 0-1. Folding first keeps f32 precise after
+/// hours of uptime.
+pub fn cycle(t_ms: u32, period_ms: u32) -> f32 {
+    (t_ms % period_ms) as f32 / period_ms as f32
+}
+
+/// `t_ms` folded to one period of a `rate` in rad/ms, for `sin(t * rate + ...)`. The
+/// period is rounded to whole ms, which leaves a seam far under a degree.
+pub fn fold_ms(t_ms: u32, rate: f32) -> f32 {
+    let period = (TAU / rate) as u32;
+    (t_ms % period.max(1)) as f32
+}
+
+/// Bit-mix hash of two u32s into a scrambled u32.
+pub fn hash2(a: u32, b: u32) -> u32 {
+    let mut h = a.wrapping_mul(0x9E37_79B1) ^ b.wrapping_mul(0x85EB_CA77);
+    h ^= h >> 15;
+    h = h.wrapping_mul(0x27D4_EB2F);
+    h ^= h >> 13;
+    h
+}
+
+/// Knuth's multiplicative hash: spreads consecutive inputs far apart.
+pub fn knuth_hash(x: u32) -> u32 {
+    x.wrapping_mul(2654435761)
+}
+
+/// Distinct values `tile_hash` can take.
+pub const TILE_HASH_STEPS: u32 = 97;
+
+/// Cheap per-LED value from its tile and position on the tile, 0..TILE_HASH_STEPS.
+pub fn tile_hash(led: &Led) -> u32 {
+    (led.board_id as u32 * 7 + led.local_idx as u32 * 13) % TILE_HASH_STEPS
+}
+
+/// xorshift32. Each pattern seeds its own, so its sequence is fixed.
+#[derive(Clone, Copy)]
+pub struct Rng(u32);
+
+impl Rng {
+    pub const fn new(seed: u32) -> Self {
+        Rng(seed)
+    }
+
+    pub fn next_u32(&mut self) -> u32 {
+        let mut x = self.0;
+        x ^= x << 13;
+        x ^= x >> 17;
+        x ^= x << 5;
+        self.0 = x;
+        x
+    }
+
+    /// Uniform in [0, 1).
+    pub fn f32(&mut self) -> f32 {
+        (self.next_u32() >> 8) as f32 / 16_777_216.0
+    }
+
+    /// Uniform whole number in [min, max).
+    pub fn range_u32(&mut self, min: u32, max: u32) -> u32 {
+        min + self.next_u32() % (max - min)
+    }
+
+    /// One entry of `items`, uniformly.
+    pub fn pick<T: Copy>(&mut self, items: &[T]) -> T {
+        items[(self.f32() * items.len() as f32) as usize % items.len()]
     }
 }

@@ -3,7 +3,7 @@ use core::f32::consts::TAU;
 use crate::audio::Audio;
 use crate::led::grid::{self, CELL_MM};
 use crate::led::map::{Led, LED_COUNT};
-use crate::patterns::{Frame, ReactivePattern, hsv};
+use crate::patterns::{Frame, ReactivePattern, Rng, hsv};
 use triangel_shared::tuning::firework::*;
 
 /// Room for a drop's bursts on top of the sparks still flying from recent beats. Must stay
@@ -58,7 +58,7 @@ struct Live {
 /// Fireworks. Each beat bursts at one point and throws a shower of sparks outward,
 /// white at the burst, settling into one color as they fly, drooping and fading out.
 pub struct Firework {
-    rng:    u32,
+    rng:    Rng,
     sparks: [Spark; MAX_SPARKS],
     /// Per-LED accumulation, so each spark touches only the LEDs near it rather than
     /// every LED testing itself against every spark.
@@ -70,7 +70,7 @@ pub struct Firework {
 impl Firework {
     pub fn new() -> Self {
         Firework {
-            rng:    0x1234_5678,
+            rng:    Rng::new(0x1234_5678),
             sparks: core::array::from_fn(|_| Spark {
                 x: 0.0, y: 0.0, vx: 0.0, vy: 0.0, hue: 0.0, sat: 0.0,
                 start_ms: 0, strength: 0.0, alive: false,
@@ -79,19 +79,6 @@ impl Firework {
             best:  [0.0; LED_COUNT],
             owner: [NO_OWNER; LED_COUNT],
         }
-    }
-
-    fn next_rng(&mut self) -> u32 {
-        let mut x = self.rng;
-        x ^= x << 13;
-        x ^= x >> 17;
-        x ^= x << 5;
-        self.rng = x;
-        x
-    }
-
-    fn randf(&mut self) -> f32 {
-        (self.next_rng() >> 8) as f32 / 16_777_216.0
     }
 
     fn free_slot(&self) -> usize {
@@ -108,7 +95,7 @@ impl Firework {
 
     /// A random LED's position, which keeps a burst on the fixture.
     fn random_point(&mut self, leds: &[Led]) -> (f32, f32) {
-        let pick = (self.randf() * LED_COUNT as f32) as usize % LED_COUNT;
+        let pick = (self.rng.f32() * LED_COUNT as f32) as usize % LED_COUNT;
         (leds[pick].wx, leds[pick].wy)
     }
 
@@ -147,13 +134,13 @@ impl Firework {
 
     /// Throw `count` sparks outward from (x, y) in one color.
     fn burst_at(&mut self, x: f32, y: f32, t_ms: u32, strength: f32, count: usize) {
-        let (hue, sat) = PALETTE[(self.randf() * PALETTE.len() as f32) as usize % PALETTE.len()];
+        let (hue, sat) = self.rng.pick(&PALETTE);
         // Spread the sparks around the circle rather than leaving them to clump.
         let step = TAU / count as f32;
-        let offset = self.randf() * TAU;
+        let offset = self.rng.f32() * TAU;
         for k in 0..count {
-            let angle = offset + step * k as f32 + (self.randf() - 0.5) * step;
-            let speed = SPEED_MIN + self.randf() * (SPEED_MAX - SPEED_MIN);
+            let angle = offset + step * k as f32 + (self.rng.f32() - 0.5) * step;
+            let speed = SPEED_MIN + self.rng.f32() * (SPEED_MAX - SPEED_MIN);
             let (sn, cs) = angle.sin_cos();
             let slot = self.free_slot();
             self.sparks[slot] = Spark {

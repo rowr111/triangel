@@ -2,7 +2,7 @@ use std::sync::OnceLock;
 
 use core::f32::consts::TAU;
 
-use super::Frame;
+use super::{Frame, knuth_hash, smoothstep};
 use crate::led::geom::DIST_C;
 use crate::led::map::{Led, WORLD_CENTROID_X, WORLD_CENTROID_Y};
 
@@ -136,7 +136,7 @@ fn compute_spiral_ranks(leds: &[Led]) -> [f32; 26] {
         .iter()
         .map(|&(b, r, a)| (b, a + (r - rmin) / span * SPIRAL_TURNS * TAU))
         .collect();
-    keyed.sort_by(|x, y| x.1.partial_cmp(&y.1).unwrap_or(core::cmp::Ordering::Equal));
+    keyed.sort_by(|x, y| x.1.total_cmp(&y.1));
 
     // Normalize sorted position to a [0, 1] rank.
     let mut ranks = [0.0f32; 26];
@@ -149,13 +149,8 @@ fn compute_spiral_ranks(leds: &[Led]) -> [f32; 26] {
 
 /// Deterministic per-LED value in [0, 1), spread by a cheap hash of the chain index.
 fn hash01(led: &Led) -> f32 {
-    let h = (led.chain_idx as u32).wrapping_mul(2654435761) ^ 0x9E37_79B9;
+    let h = knuth_hash(led.chain_idx as u32) ^ 0x9E37_79B9;
     (h % 1000) as f32 / 1000.0
-}
-
-fn smoothstep(t: f32) -> f32 {
-    let t = t.clamp(0.0, 1.0);
-    t * t * (3.0 - 2.0 * t)
 }
 
 fn lerp_rgb(a: [u8; 3], b: [u8; 3], t: f32) -> [u8; 3] {

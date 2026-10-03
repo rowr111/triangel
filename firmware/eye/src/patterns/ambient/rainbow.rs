@@ -1,5 +1,5 @@
 use crate::patterns::glints::{GlintStyle, Glints};
-use crate::patterns::{Frame, Pattern, hsv, wrap360};
+use crate::patterns::{Frame, Pattern, cycle, fold_ms, hsv, tile_hash, wrap360};
 use crate::led::geom::{DIST_C, THETA_C};
 use crate::led::map::Led;
 use core::f32::consts::TAU;
@@ -51,22 +51,17 @@ impl Pattern for Rainbow {
         let dt_ms = t_ms.wrapping_sub(self.last_ms).min(100);
         self.last_ms = t_ms;
 
-        // Each time term is folded to its own period before the f32 cast: raw t_ms loses
-        // sub-frame precision after hours of uptime.
-        let breathe_ph = (t_ms % BREATHE_PERIOD_MS) as f32 / BREATHE_PERIOD_MS as f32 * TAU;
-        let breathe = BREATHE * BREATHE_DEPTH * breathe_ph.sin();
-        let spin = (t_ms % SPIN_PERIOD_MS) as f32 / SPIN_PERIOD_MS as f32 + breathe;
-        let twinkle_period = (TAU / TWINKLE_RATE) as u32;
-        let twinkle_t = (t_ms % twinkle_period.max(1)) as f32;
-        let irid_ph = (t_ms % IRID_PERIOD_MS) as f32 / IRID_PERIOD_MS as f32 * TAU;
+        let breathe = BREATHE * BREATHE_DEPTH * (cycle(t_ms, BREATHE_PERIOD_MS) * TAU).sin();
+        let spin = cycle(t_ms, SPIN_PERIOD_MS) + breathe;
+        let twinkle_t = fold_ms(t_ms, TWINKLE_RATE);
+        let irid_ph = cycle(t_ms, IRID_PERIOD_MS) * TAU;
 
         for (i, led) in leds.iter().enumerate() {
             let ripple = (DIST_C[i] / IRID_SPAN_MM * TAU - irid_ph).sin();
             let hue = (THETA_C[i] / TAU + spin) * 360.0 + IRIDESCENCE * IRID_DEG * ripple;
 
             // A fade that circulates each tile: the phase ramps with local_idx.
-            let hash = (led.board_id as u32 * 7 + led.local_idx as u32 * 13) % 97;
-            let dip = 0.5 - 0.5 * (twinkle_t * TWINKLE_RATE + hash as f32).sin();
+            let dip = 0.5 - 0.5 * (twinkle_t * TWINKLE_RATE + tile_hash(led) as f32).sin();
 
             out[i] = hsv(wrap360(hue), 1.0, 1.0 - TWINKLE * dip);
         }

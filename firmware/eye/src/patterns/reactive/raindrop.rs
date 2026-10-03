@@ -78,14 +78,15 @@ impl Raindrop {
     /// Land a drop.
     fn land(&mut self, leds: &[Led], t_ms: u32, strength: f32) {
         let spot = self.ripples.spot(leds);
+        let rng = self.ripples.rng();
         let spacing = if self.beat_ms > 0.0 {
-            let div = DIVISIONS[(self.ripples.randf() * DIVISIONS.len() as f32) as usize % DIVISIONS.len()];
+            let div = rng.pick(&DIVISIONS);
             (RIPPLE_SPEED * self.beat_ms * div)
                 .clamp(SPACING_LOCKED_MIN_MM, SPACING_LOCKED_MAX_MM)
         } else {
-            SPACING_MIN_MM + self.ripples.randf() * (SPACING_MAX_MM - SPACING_MIN_MM)
+            SPACING_MIN_MM + rng.f32() * (SPACING_MAX_MM - SPACING_MIN_MM)
         };
-        let count = RINGS_MIN + self.ripples.randf() * (RINGS_MAX - RINGS_MIN);
+        let count = RINGS_MIN + rng.f32() * (RINGS_MAX - RINGS_MIN);
         self.ripples.land(spot, t_ms, strength, spacing, count);
         self.last_drop_ms = t_ms;
     }

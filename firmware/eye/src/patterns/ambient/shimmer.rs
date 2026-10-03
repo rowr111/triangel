@@ -1,5 +1,5 @@
 use crate::patterns::glints::{GlintStyle, Glints};
-use crate::patterns::{Frame, Pattern};
+use crate::patterns::{Frame, Pattern, Rng, cycle, tile_hash, TILE_HASH_STEPS};
 
 use crate::led::geom::{DIST_C, THETA_C};
 use crate::led::map::{Led, LED_COUNT, LED_MAP};
@@ -32,15 +32,11 @@ const SPEED_CHANGE_MAX_MS: u32 = 14_000;
 const SPEED_EASE_MS:       i32 = 2_000; // roughly how long the glide takes
 
 // Glints: brief near-white flashes on single LEDs, landing mostly on the bright crests.
-const GLINT_TRIES_PER_SEC: f32   = 14.0; // each lands only as likely as its LED is bright, so about half do
-const GLINT_MIN_MS:        u32   = 250;  // fade time, picked per glint
-const GLINT_MAX_MS:        u32   = 450;
-const GLINT_WHITE:         f32   = 0.75; // how far toward white a glint starts
 const GLINTS: GlintStyle = GlintStyle {
-    tries_per_sec: GLINT_TRIES_PER_SEC,
-    min_ms:        GLINT_MIN_MS,
-    max_ms:        GLINT_MAX_MS,
-    white:         GLINT_WHITE,
+    tries_per_sec: 14.0, // each lands only as likely as its LED is bright, so about half do
+    min_ms:        250,  // fade time, picked per glint
+    max_ms:        450,
+    white:         0.75, // how far toward white a glint starts
 };
 
 // Vibrant cool hue arc, in degrees. Saturation is full (rainbow-level); the hue ping-pongs
@@ -63,9 +59,6 @@ const SPIRAL_TWIST:     f32 = 0.004;  // most hue cycles added per mm of radius 
 const SPIRAL_PERIOD_MS: u32 = 12_000; // one full rotation of the pinwheel
 const TWIST_PERIOD_MS:  u32 = 45_000; // one full swing of the winding, one way and back
 
-// Distinct values the per-LED hash can take.
-const HASH_STEPS: usize = 97;
-
 pub struct CenterShimmer {
     pub speed:      f32, // mm/s outward wave propagation, the base the speed drifts around
     pub wavelength: f32, // mm per cycle
@@ -84,7 +77,7 @@ pub struct CenterShimmer {
     speed_target_q8: i32,
     speed_pick_ms:   u32, // when the target was last picked, and the wait until the next
     speed_gap_ms:    u32,
-    rng: u32,
+    rng: Rng,
     glints: Glints,
     last_ms: u32,
 }
@@ -97,9 +90,7 @@ impl CenterShimmer {
             ring_pos: core::array::from_fn(|i| (DIST_C[i] / wavelength * 65536.0) as u32),
             hue_base: core::array::from_fn(|i| {
                 // Per-LED hue scatter from a board/local index hash.
-                let led = &LED_MAP[i];
-                let hash = (led.board_id as u32 * 7 + led.local_idx as u32 * 13) % HASH_STEPS as u32;
-                let hn = hash as f32 / HASH_STEPS as f32; // 0..1 per-LED
+                let hn = tile_hash(&LED_MAP[i]) as f32 / TILE_HASH_STEPS as f32; // 0..1 per-LED
                 // Radial gradient + per-LED scatter + the spiral's SPIRAL_ARMS sectors.
                 let p = DIST_C[i] / RADIAL_SPAN_MM
                     + (hn - 0.5) * HASH_JITTER
@@ -118,7 +109,7 @@ impl CenterShimmer {
             speed_target_q8: (speed * 256.0) as i32,
             speed_pick_ms: 0,
             speed_gap_ms: 0,
-            rng: 0x6A09_E667,
+            rng: Rng::new(0x6A09_E667),
             glints: Glints::new(0xBB67_AE85, GLINTS),
             last_ms: 0,
         };
@@ -128,33 +119,20 @@ impl CenterShimmer {
         s
     }
 
-    fn next_rng(&mut self) -> u32 {
-        let mut x = self.rng;
-        x ^= x << 13;
-        x ^= x >> 17;
-        x ^= x << 5;
-        self.rng = x;
-        x
-    }
-
-    fn randf(&mut self) -> f32 {
-        (self.next_rng() >> 8) as f32 / 16_777_216.0
-    }
-
     /// A new ring's brightness at its darkest, 0-255.
     fn random_dark(&mut self) -> u8 {
-        ((DARK_MIN + self.randf() * (DARK_MAX - DARK_MIN)) * 255.0) as u8
+        ((DARK_MIN + self.rng.f32() * (DARK_MAX - DARK_MIN)) * 255.0) as u8
     }
 
     /// Glide the speed toward its target, picking a new one when the wait is up, then move
     /// the wave on and give each ring that started at the center its own darkness.
     fn advance_wave(&mut self, t_ms: u32, dt_ms: u32) {
         if t_ms.wrapping_sub(self.speed_pick_ms) >= self.speed_gap_ms {
-            let m = SPEED_MIN + self.randf() * (SPEED_MAX - SPEED_MIN);
+            let m = SPEED_MIN + self.rng.f32() * (SPEED_MAX - SPEED_MIN);
             self.speed_target_q8 = (self.speed * m * 256.0) as i32;
             self.speed_pick_ms = t_ms;
             self.speed_gap_ms = SPEED_CHANGE_MIN_MS
-                + (self.randf() * (SPEED_CHANGE_MAX_MS - SPEED_CHANGE_MIN_MS) as f32) as u32;
+                + (self.rng.f32() * (SPEED_CHANGE_MAX_MS - SPEED_CHANGE_MIN_MS) as f32) as u32;
         }
         self.speed_q8 += (self.speed_target_q8 - self.speed_q8) * dt_ms as i32 / SPEED_EASE_MS;
 
@@ -201,7 +179,7 @@ impl Pattern for CenterShimmer {
         // How tightly the arms wind right now, swinging between SPIRAL_TWIST one way and the
         // other. Cycles per mm x2^20.
         let twist = (SPIRAL_TWIST
-            * ((t_ms % TWIST_PERIOD_MS) as f32 / TWIST_PERIOD_MS as f32 * TAU).sin()
+            * (cycle(t_ms, TWIST_PERIOD_MS) * TAU).sin()
             * 1_048_576.0) as i32;
 
         for (i, o) in out.iter_mut().enumerate() {

@@ -1,4 +1,4 @@
-use crate::patterns::{Frame, Pattern, hsv};
+use crate::patterns::{Frame, Pattern, hsv, mix_rgb, smoothstep};
 use crate::led::geom::{DIST_C, THETA_C};
 use crate::led::map::{Led, LED_COUNT};
 use core::f32::consts::TAU;
@@ -111,7 +111,7 @@ impl Uzumaki {
             turn0: core::array::from_fn(|i| ARMS as f32 * THETA_C[i] / TAU + 2.0 * ARMS as f32),
             wob_s: core::array::from_fn(|i| THETA_C[i].sin()),
             wob_c: core::array::from_fn(|i| THETA_C[i].cos()),
-            eye:   core::array::from_fn(|i| 1.0 - smoothstep((depth[i] / EYE_FRAC).min(1.0))),
+            eye:   core::array::from_fn(|i| 1.0 - smoothstep(depth[i] / EYE_FRAC)),
             deep:   core::array::from_fn(|k| stop(PALETTE[k][0])),
             bright: core::array::from_fn(|k| stop(PALETTE[k][1])),
             depth,
@@ -123,7 +123,7 @@ impl Uzumaki {
     fn arm_stops(&self, t_ms: u32) -> [([f32; 3], [f32; 3]); ARMS] {
         let cyc = (t_ms % (FAMILIES as u32 * STEP_MS)) as f32 / STEP_MS as f32;
         let idx = cyc as usize;
-        let mix = smoothstep(((cyc - idx as f32 - (1.0 - FADE)) / FADE).clamp(0.0, 1.0));
+        let mix = smoothstep((cyc - idx as f32 - (1.0 - FADE)) / FADE);
         core::array::from_fn(|j| {
             let a = (idx + j) % FAMILIES;
             let b = (a + 1) % FAMILIES;
@@ -166,10 +166,10 @@ impl Pattern for Uzumaki {
             // where the halo is lit and easing to the paler stop as it dims into the gap. The
             // deep stop goes next to the line because that is the part actually seen lit.
             let (deep, bright) = &stops[n as usize % ARMS];
-            let glow = 1.0 - smoothstep(((s - STRIPE_HALF) * INV_GLOW_W).clamp(0.0, 1.0));
+            let glow = 1.0 - smoothstep((s - STRIPE_HALF) * INV_GLOW_W);
             let v = GAP_LEVEL + (1.0 - GAP_LEVEL) * glow;
             let body = mix_rgb(*bright, *deep, glow);
-            let st = smoothstep(((STRIPE_HALF - s) * INV_STRIPE_SOFT).clamp(0.0, 1.0));
+            let st = smoothstep((STRIPE_HALF - s) * INV_STRIPE_SOFT);
             let mut c = mix_rgb([body[0] * v, body[1] * v, body[2] * v], stripe_rgb, st);
 
             // Near the center the bands are finer than the LED spacing, so fade them into the
@@ -188,13 +188,4 @@ impl Pattern for Uzumaki {
 fn stop(c: (f32, f32, f32)) -> [f32; 3] {
     let rgb = hsv(c.0, c.1, c.2);
     [rgb[0] as f32, rgb[1] as f32, rgb[2] as f32]
-}
-
-fn mix_rgb(a: [f32; 3], b: [f32; 3], t: f32) -> [f32; 3] {
-    [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t]
-}
-
-/// Smooth 0-1 ramp. Expects `t` already clamped to 0-1.
-fn smoothstep(t: f32) -> f32 {
-    t * t * (3.0 - 2.0 * t)
 }

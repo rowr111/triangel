@@ -3,7 +3,7 @@ use core::f32::consts::TAU;
 use crate::audio::Audio;
 use crate::led::geom::{DIST_C, THETA_C};
 use crate::led::map::{Led, LED_COUNT};
-use crate::patterns::{Frame, ReactivePattern, lerp};
+use crate::patterns::{Frame, ReactivePattern, cycle, lerp};
 use triangel_shared::mel::MEL_BANDS;
 use triangel_shared::tuning::spectrum::*;
 
@@ -55,9 +55,7 @@ pub struct Spectrum {
 impl Spectrum {
     pub fn new() -> Self {
         let mut order: [usize; LED_COUNT] = core::array::from_fn(|i| i);
-        order.sort_unstable_by(|&a, &b| {
-            DIST_C[a].partial_cmp(&DIST_C[b]).unwrap_or(core::cmp::Ordering::Equal)
-        });
+        order.sort_unstable_by(|&a, &b| DIST_C[a].total_cmp(&DIST_C[b]));
         let mut band_pos = [0.0f32; LED_COUNT];
         let span = (MEL_BANDS - 1) as f32 / LED_COUNT as f32;
         for (rank, &i) in order.iter().enumerate() {
@@ -77,7 +75,7 @@ impl ReactivePattern for Spectrum {
         // barely move the absolute level, so it would leave brightness nearly flat.
         let loud = QUIET_FLOOR + (1.0 - QUIET_FLOOR) * audio.level_norm;
         // Rotate the ripple once per period. Wrapping the clock first keeps f32 exact.
-        let w = (t_ms % SWIRL_PERIOD_MS) as f32 / SWIRL_PERIOD_MS as f32 * TAU;
+        let w = cycle(t_ms, SWIRL_PERIOD_MS) * TAU;
         let (ws, wc) = w.sin_cos();
         let slot = (t_ms / PALETTE_MS) as usize % PALETTES.len();
         let within = t_ms % PALETTE_MS;
@@ -87,7 +85,7 @@ impl ReactivePattern for Spectrum {
         } else {
             0.0
         };
-        let flow = (t_ms % FLOW_PERIOD_MS) as f32 / FLOW_PERIOD_MS as f32 * 2.0;
+        let flow = cycle(t_ms, FLOW_PERIOD_MS) * 2.0;
         let (from, to) = (&PALETTES[slot], &PALETTES[(slot + 1) % PALETTES.len()]);
         // Where the change front has reached, in band positions. It starts and ends off
         // the ends so the sweep clears the whole fixture.

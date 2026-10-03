@@ -1,6 +1,6 @@
 use crate::audio::Audio;
 use crate::led::map::{Led, WORLD_CENTROID_X, WORLD_CENTROID_Y};
-use crate::patterns::{Frame, ReactivePattern, hsv};
+use crate::patterns::{Frame, ReactivePattern, Rng, hsv};
 use triangel_shared::tuning::tiles::*;
 
 /// Tiles are numbered by board id, 1 to 25. Index 0 is unused.
@@ -20,7 +20,7 @@ const PALETTE: [(f32, f32); 5] =
 /// spreads from it through the neighboring tiles a ring at a time; a drop spreads from the
 /// middle until all 25 are lit.
 pub struct Tiles {
-    rng:         u32,
+    rng:         Rng,
     neighbors:   [[u8; MAX_NEIGHBORS]; TILES],
     n_neighbors: [u8; TILES],
     /// The tile nearest the middle of the fixture, where a drop starts.
@@ -70,12 +70,12 @@ impl Tiles {
                     + (centers[a].1 - WORLD_CENTROID_Y).powi(2);
                 let db = (centers[b].0 - WORLD_CENTROID_X).powi(2)
                     + (centers[b].1 - WORLD_CENTROID_Y).powi(2);
-                da.partial_cmp(&db).unwrap_or(core::cmp::Ordering::Equal)
+                da.total_cmp(&db)
             })
             .unwrap_or(1);
 
         Tiles {
-            rng: 0x5EED_1234,
+            rng: Rng::new(0x5EED_1234),
             neighbors,
             n_neighbors,
             center,
@@ -88,25 +88,12 @@ impl Tiles {
         }
     }
 
-    fn next_rng(&mut self) -> u32 {
-        let mut x = self.rng;
-        x ^= x << 13;
-        x ^= x >> 17;
-        x ^= x << 5;
-        self.rng = x;
-        x
-    }
-
-    fn randf(&mut self) -> f32 {
-        (self.next_rng() >> 8) as f32 / 16_777_216.0
-    }
-
     /// Light `count` tiles outward from `seed`, nearest first. Tiles are visited breadth
     /// first, so each ring is scheduled RING_STEP_MS after the one inside it. A tile that
     /// is already lit for longer than this would light it is left alone, so the beats
     /// straight after a drop cannot cut the drop's long fade short.
     fn light(&mut self, seed: usize, t_ms: u32, count: usize, strength: f32, hold: f32, fade: f32) {
-        let (hue, sat) = PALETTE[(self.randf() * PALETTE.len() as f32) as usize % PALETTE.len()];
+        let (hue, sat) = self.rng.pick(&PALETTE);
         let mut ring = [u8::MAX; TILES];
         let mut queue = [0u8; TILES];
         let (mut head, mut tail) = (0, 1);
@@ -147,7 +134,7 @@ impl ReactivePattern for Tiles {
         if audio.drop {
             self.light(self.center, t_ms, TILES - 1, 1.0, DROP_HOLD_MS, DROP_FADE_MS);
         } else if audio.beat {
-            let seed = 1 + (self.randf() * (TILES - 1) as f32) as usize % (TILES - 1);
+            let seed = 1 + (self.rng.f32() * (TILES - 1) as f32) as usize % (TILES - 1);
             let count = 1 + (audio.beat_strength * GROW_EXTRA) as usize;
             self.light(seed, t_ms, count, 0.5 + 0.5 * audio.beat_strength, 0.0, FADE_MS);
         }

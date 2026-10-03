@@ -1,5 +1,5 @@
 use crate::led::geom::DIST_APEX;
-use crate::patterns::{Frame, Pattern, lerp, phase_phasors, PHASE_STEPS};
+use crate::patterns::{Frame, Pattern, cycle, knuth_hash, phase_phasors, ramp, PHASE_STEPS};
 use crate::led::map::{Led, LED_MAP, WORLD_BOT, WORLD_CX, WORLD_H, LED_COUNT};
 use core::f32::consts::{PI, TAU};
 
@@ -108,7 +108,7 @@ impl ApexFlame {
         // Two flicker phases per LED from an integer hash of the chain index
         // (transition.rs's sparkle trick): a linear phase step along the chain would read as
         // a coherent sweep across the fixture instead of random flicker.
-        let hash = |i: usize| (LED_MAP[i].chain_idx as u32).wrapping_mul(2654435761);
+        let hash = |i: usize| knuth_hash(LED_MAP[i].chain_idx as u32);
         let k1_of = |i: usize| (hash(i) % PHASE_STEPS as u32) as usize;
         let k2_of = |i: usize| ((hash(i) >> 16) % PHASE_STEPS as u32) as usize; // decorrelated second phase
         let extents = board_y_extents(&LED_MAP);
@@ -160,13 +160,13 @@ impl Pattern for ApexFlame {
         let p2_ms = (wl2 / spd2 * 1000.0) as u32;
         let t1_s = (t_ms % p1_ms.max(1)) as f32 / 1000.0;
         let t2_s = (t_ms % p2_ms.max(1)) as f32 / 1000.0;
-        let flick_phase   = (t_ms % FLICKER_PERIOD_MS) as f32 / FLICKER_PERIOD_MS as f32 * TAU;
-        let flick2_phase  = (t_ms % FLICKER2_PERIOD_MS) as f32 / FLICKER2_PERIOD_MS as f32 * TAU;
-        let breathe_phase = (t_ms % BREATHE_PERIOD_MS) as f32 / BREATHE_PERIOD_MS as f32 * TAU;
+        let flick_phase   = cycle(t_ms, FLICKER_PERIOD_MS) * TAU;
+        let flick2_phase  = cycle(t_ms, FLICKER2_PERIOD_MS) * TAU;
+        let breathe_phase = cycle(t_ms, BREATHE_PERIOD_MS) * TAU;
         let breathe = q12(1.0 - BREATHE_DEPTH * (0.5 + 0.5 * breathe_phase.sin()));
         // The smoke's climb, in turns x65536.
         let smoke_rise = ((t_ms % SMOKE_RISE_PERIOD_MS) * 65536 / SMOKE_RISE_PERIOD_MS) as u16;
-        let smoke_meander = (t_ms % SMOKE_MEANDER_PERIOD_MS) as f32 / SMOKE_MEANDER_PERIOD_MS as f32 * TAU;
+        let smoke_meander = cycle(t_ms, SMOKE_MEANDER_PERIOD_MS) * TAU;
 
         // Per-frame rotation angles for the two waves, the two flicker sines and the smoke
         // wiggle. Each pairs with a per-LED phasor below, replacing a sin call per LED with
@@ -185,9 +185,8 @@ impl Pattern for ApexFlame {
         let mut embers = [(0i32, 0i32, 0i32); EMBER_COUNT]; // (x, y in 1/16 mm, heat Q12)
         for (k, ember) in embers.iter_mut().enumerate() {
             let period = EMBER_PERIOD_MS + k as u32 * EMBER_STAGGER_MS;
-            let cycle = t_ms / period;
-            let phase = (t_ms % period) as f32 / period as f32;
-            let h = cycle.wrapping_mul(2654435761) ^ (k as u32).wrapping_mul(0x9E37_79B9);
+            let phase = cycle(t_ms, period);
+            let h = knuth_hash(t_ms / period) ^ (k as u32).wrapping_mul(0x9E37_79B9);
             let y0 = WORLD_BOT - 6.0 - ((h >> 8) % 130) as f32;
             let half_w = (WORLD_BOT - y0) / WORLD_H * 250.0; // triangle half-width at y0
             let x0 = WORLD_CX + ((h % 201) as f32 - 100.0) / 100.0 * half_w;
@@ -201,9 +200,8 @@ impl Pattern for ApexFlame {
         }
 
         // Tile flare-up: one hash-picked tile per period surges fast and settles slowly.
-        let flare_cycle = t_ms / FLARE_PERIOD_MS;
-        let flare_phase = (t_ms % FLARE_PERIOD_MS) as f32 / FLARE_PERIOD_MS as f32;
-        let flare_board = 1 + (flare_cycle.wrapping_mul(2654435761) >> 8) % 25;
+        let flare_phase = cycle(t_ms, FLARE_PERIOD_MS);
+        let flare_board = 1 + (knuth_hash(t_ms / FLARE_PERIOD_MS) >> 8) % 25;
         let flare_env = if flare_phase < FLARE_LEN {
             let fp = flare_phase / FLARE_LEN;
             (fp * 6.0).min(1.0) * (1.0 - fp)
@@ -294,18 +292,6 @@ fn fire_ramp(heat: f32) -> [u8; 3] {
         (0.90, [255.0, 255.0, 200.0]), // white
         (1.00, [170.0, 210.0, 255.0]), // blue-white hottest core
     ];
-    let h = heat.clamp(0.0, 1.0);
-    for pair in STOPS.windows(2) {
-        let (h0, c0) = pair[0];
-        let (h1, c1) = pair[1];
-        if h <= h1 {
-            let t = (h - h0) / (h1 - h0);
-            return [
-                lerp(c0[0], c1[0], t) as u8,
-                lerp(c0[1], c1[1], t) as u8,
-                lerp(c0[2], c1[2], t) as u8,
-            ];
-        }
-    }
-    [170, 210, 255]
+    let c = ramp(&STOPS, heat);
+    [c[0] as u8, c[1] as u8, c[2] as u8]
 }

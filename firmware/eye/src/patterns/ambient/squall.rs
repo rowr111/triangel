@@ -1,4 +1,4 @@
-use crate::patterns::{Frame, Pattern, lerp, phase_phasors, PHASE_STEPS};
+use crate::patterns::{Frame, Pattern, Rng, cycle, knuth_hash, lerp, mix_rgb, phase_phasors, ramp, PHASE_STEPS};
 use crate::led::grid::{self, CELL_MM};
 use crate::led::map::{Led, WORLD_BOT, WORLD_CX, WORLD_H, WORLD_TOP, LED_COUNT, LED_MAP};
 use core::f32::consts::{PI, TAU};
@@ -122,7 +122,7 @@ struct StrikeSlot {
 pub struct Squall {
     clouds:  [Cloud; CLOUD_COUNT],
     slots:   [StrikeSlot; BOLT_SLOTS],
-    rng:     u32,
+    rng:     Rng,
     last_ms: Option<u32>, // previous frame time; None until the first render
     // Phasors for the boil's two inner sines. Their arguments are a fixed per-LED term plus a
     // per-frame one, so rotating these replaces two of the four sin calls per LED.
@@ -138,18 +138,18 @@ pub struct Squall {
 
 impl Squall {
     pub fn new() -> Self {
-        let mut rng = 0x5EED_5EA5u32; // fixed seed keeps runs reproducible
+        let mut rng = Rng::new(0x5EED_5EA5); // fixed seed keeps runs reproducible
         let clouds = core::array::from_fn(|_| {
-            let x = lerp(WORLD_LEFT, WORLD_RIGHT, rand_f(&mut rng));
-            let y = lerp(WORLD_TOP, WORLD_BOT, rand_f(&mut rng));
-            let ang = rand_f(&mut rng) * TAU;
-            let speed = lerp(CLOUD_SPEED_MIN, CLOUD_SPEED_MAX, rand_f(&mut rng));
+            let x = lerp(WORLD_LEFT, WORLD_RIGHT, rng.f32());
+            let y = lerp(WORLD_TOP, WORLD_BOT, rng.f32());
+            let ang = rng.f32() * TAU;
+            let speed = lerp(CLOUD_SPEED_MIN, CLOUD_SPEED_MAX, rng.f32());
             let (vx, vy) = (ang.cos() * speed, ang.sin() * speed);
             Cloud {
                 x, y, vx, vy, tvx: vx, tvy: vy,
                 retarget_start_ms: 0,
                 retarget_len_ms:   0,
-                seed: xorshift(&mut rng),
+                seed: rng.next_u32(),
             }
         });
         let slots = core::array::from_fn(|_| StrikeSlot {
@@ -180,12 +180,12 @@ impl Squall {
         let ease = (CLOUD_TURN_RATE * dt_s).min(1.0);
         for c in clouds.iter_mut() {
             if t_ms.wrapping_sub(c.retarget_start_ms) >= c.retarget_len_ms {
-                let ang = rand_f(rng) * TAU;
-                let speed = lerp(CLOUD_SPEED_MIN, CLOUD_SPEED_MAX, rand_f(rng));
+                let ang = rng.f32() * TAU;
+                let speed = lerp(CLOUD_SPEED_MIN, CLOUD_SPEED_MAX, rng.f32());
                 c.tvx = ang.cos() * speed;
                 c.tvy = ang.sin() * speed;
                 c.retarget_start_ms = t_ms;
-                c.retarget_len_ms = roll_range(rng, CLOUD_RETARGET_MIN_MS, CLOUD_RETARGET_MAX_MS);
+                c.retarget_len_ms = rng.range_u32(CLOUD_RETARGET_MIN_MS, CLOUD_RETARGET_MAX_MS);
             }
             c.vx += (c.tvx - c.vx) * ease;
             c.vy += (c.tvy - c.vy) * ease;
@@ -211,7 +211,7 @@ impl Squall {
                 self.slots[k].strike = None;
                 self.slots[k].gap_start_ms = t_ms;
                 self.slots[k].gap_len_ms =
-                    roll_range(&mut self.rng, STRIKE_GAP_MIN_MS, STRIKE_GAP_MAX_MS);
+                    self.rng.range_u32(STRIKE_GAP_MIN_MS, STRIKE_GAP_MAX_MS);
             }
             if self.slots[k].strike.is_none()
                 && t_ms.wrapping_sub(self.slots[k].gap_start_ms) >= self.slots[k].gap_len_ms
@@ -226,17 +226,17 @@ impl Squall {
     /// strokes: the first lands the moment the leader completes, then the lit path
     /// stutters through up to four more irregularly spaced pulses.
     fn ignite(&mut self, t_ms: u32) -> Strike {
-        let a = xorshift(&mut self.rng) as usize % CLOUD_COUNT;
+        let a = self.rng.next_u32() as usize % CLOUD_COUNT;
         let (cx, cy) = (self.clouds[a].x, self.clouds[a].y);
         let bolt = self.walk_bolt(cx, cy);
         let complete = (bolt.len as u32 - 1) * BOLT_STEP_MS;
         let n = BOLT_PULSES_MIN
-            + xorshift(&mut self.rng) as usize % (BOLT_PULSES_MAX - BOLT_PULSES_MIN + 1);
+            + self.rng.next_u32() as usize % (BOLT_PULSES_MAX - BOLT_PULSES_MIN + 1);
         let mut pulse_ms = [u32::MAX; BOLT_PULSES_MAX];
         let mut at = complete;
         for p in pulse_ms.iter_mut().take(n) {
             *p = at;
-            at += 60 + xorshift(&mut self.rng) % 360; // uneven stutter, new every strike
+            at += 60 + self.rng.next_u32() % 360; // uneven stutter, new every strike
         }
         Strike { start_ms: t_ms, bolt, pulse_ms }
     }
@@ -250,7 +250,7 @@ impl Squall {
         let i0 = (((cx - WORLD_CX) / LATTICE_SIDE + (5 - r0) as f32 / 2.0).round() as i32)
             .clamp(0, 5 - r0);
         let segs = BOLT_SEGS_MIN
-            + xorshift(&mut self.rng) as usize % (BOLT_SEGS_MAX - BOLT_SEGS_MIN + 1);
+            + self.rng.next_u32() as usize % (BOLT_SEGS_MAX - BOLT_SEGS_MIN + 1);
 
         let (mut r, mut i) = (r0, i0);
         let mut pts = [(0.0f32, 0.0f32); BOLT_SEGS_MAX + 1];
@@ -276,7 +276,7 @@ impl Squall {
             if n == 0 {
                 break; // cornered at the canvas edge - the bolt ends here
             }
-            let (nr, ni) = cand[xorshift(&mut self.rng) as usize % n];
+            let (nr, ni) = cand[self.rng.next_u32() as usize % n];
             let (nx, ny) = lattice_pos(nr, ni);
             let (dx, dy) = (nx - pts[len - 1].0, ny - pts[len - 1].1);
             let d = (dx * dx + dy * dy).sqrt();
@@ -291,10 +291,9 @@ impl Squall {
 
 impl Pattern for Squall {
     fn render(&mut self, leds: &[Led], t_ms: u32, out: &mut Frame) {
-        // Fold each time term to its own period before the f32 cast (long-uptime precision).
-        let boil1 = (t_ms % BOIL_PERIOD_MS) as f32 / BOIL_PERIOD_MS as f32 * TAU;
-        let boil2 = (t_ms % BOIL2_PERIOD_MS) as f32 / BOIL2_PERIOD_MS as f32 * TAU;
-        let foam_phase = (t_ms % FOAM_PERIOD_MS) as f32 / FOAM_PERIOD_MS as f32 * TAU;
+        let boil1 = cycle(t_ms, BOIL_PERIOD_MS) * TAU;
+        let boil2 = cycle(t_ms, BOIL2_PERIOD_MS) * TAU;
+        let foam_phase = cycle(t_ms, FOAM_PERIOD_MS) * TAU;
 
         // Frame delta drives the cloud simulation. A long gap means this pattern was
         // off-screen: re-anchor the timers so everything doesn't fire at once on re-entry.
@@ -316,7 +315,7 @@ impl Pattern for Squall {
                 let Squall { slots, rng, .. } = self;
                 for slot in slots.iter_mut() {
                     slot.gap_start_ms = t_ms;
-                    slot.gap_len_ms = roll_range(rng, STRIKE_GAP_MIN_MS, STRIKE_GAP_MAX_MS);
+                    slot.gap_len_ms = rng.range_u32(STRIKE_GAP_MIN_MS, STRIKE_GAP_MAX_MS);
                 }
                 0.0
             }
@@ -331,9 +330,8 @@ impl Pattern for Squall {
         let mut blooms = [(0.0f32, 0.0f32, 0.0f32, 0.0f32, 0.0f32, 0usize); BLOOM_SLOTS];
         for (k, b) in blooms.iter_mut().enumerate() {
             let period = BLOOM_PERIOD_MS + k as u32 * BLOOM_STAGGER_MS;
-            let cycle = t_ms / period;
-            let p = (t_ms % period) as f32 / period as f32;
-            let h = cycle.wrapping_mul(2654435761) ^ (k as u32).wrapping_mul(0x9E37_79B9);
+            let p = cycle(t_ms, period);
+            let h = knuth_hash(t_ms / period) ^ (k as u32).wrapping_mul(0x9E37_79B9);
             let y = WORLD_TOP + ((h >> 10) % 1000) as f32 / 1000.0 * WORLD_H;
             let hw = (WORLD_BOT - y) / WORLD_H * WORLD_HALF_W + 40.0; // triangle width at y
             let x = WORLD_CX + ((h % 1000) as f32 / 1000.0 * 2.0 - 1.0) * hw;
@@ -351,8 +349,8 @@ impl Pattern for Squall {
                 let h = c.seed ^ (j as u32).wrapping_mul(0x9E37_79B9);
                 let orbit_p = 9_000 + h % 7_000;
                 let breathe_p = 3_500 + (h >> 8) % 3_000;
-                let orbit = (t_ms % orbit_p) as f32 / orbit_p as f32 * TAU + (h >> 16) as f32;
-                let breathe = (t_ms % breathe_p) as f32 / breathe_p as f32 * TAU + (h >> 12) as f32;
+                let orbit = cycle(t_ms, orbit_p) * TAU + (h >> 16) as f32;
+                let breathe = cycle(t_ms, breathe_p) * TAU + (h >> 12) as f32;
                 let off = CLOUD_LOBE_OFF_MM * (0.35 + 0.65 * ((h >> 4) % 100) as f32 / 100.0);
                 let r = CLOUD_LOBE_R_MM * (1.0 + CLOUD_BREATHE * breathe.sin());
                 lobes[ci * CLOUD_LOBES + j] = (
@@ -474,23 +472,22 @@ impl Pattern for Squall {
             let energy = energy_buf[i];
 
             // Water color, then froth where the crest breaks: hash-twinkled speckle.
-            let mut c = water_ramp(energy);
+            let mut c = ramp(&WATER_RAMP, energy);
             let excess = ((energy - FOAM_THRESH) * FOAM_GAIN).clamp(0.0, 1.0);
             if excess > 0.0 {
-                let h = (led.chain_idx as u32).wrapping_mul(2654435761);
-                let k = (h % PHASE_STEPS as u32) as usize;
+                let k = (knuth_hash(led.chain_idx as u32) % PHASE_STEPS as u32) as usize;
                 let tw = (ph_sin[k] * fp_cos + ph_cos[k] * fp_sin) * 0.5 + 0.5;
-                c = mix(c, FOAM_COLOR, excess * tw * tw);
+                c = mix_rgb(c, FOAM_COLOR, excess * tw * tw);
             }
 
             let density = density_buf[i].min(1.0);
-            c = mix(c, CLOUD_COLOR, density * CLOUD_BRIGHT);
+            c = mix_rgb(c, CLOUD_COLOR, density * CLOUD_BRIGHT);
 
             // The overdrive saturates the spatial falloff, so the LED rows straddling the line
             // hit true full white while the pulse envelope keeps its whole flicker depth.
             let bolt = bolt_buf[i];
             if bolt > 0.0 {
-                c = mix(c, FLASH_COLOR, bolt);
+                c = mix_rgb(c, FLASH_COLOR, bolt);
             }
 
             out[i] = [c[0] as u8, c[1] as u8, c[2] as u8];
@@ -500,19 +497,19 @@ impl Pattern for Squall {
 
 /// Re-enter just off a random edge, aimed at a random point in the canvas middle so
 /// every entrance takes a fresh heading but always comes back on stage.
-fn respawn(c: &mut Cloud, rng: &mut u32, t_ms: u32) {
-    let along = rand_f(rng);
-    let (x, y) = match xorshift(rng) % 4 {
+fn respawn(c: &mut Cloud, rng: &mut Rng, t_ms: u32) {
+    let along = rng.f32();
+    let (x, y) = match rng.next_u32() % 4 {
         0 => (lerp(WORLD_LEFT, WORLD_RIGHT, along), WORLD_TOP - CLOUD_MARGIN_MM + 1.0),
         1 => (lerp(WORLD_LEFT, WORLD_RIGHT, along), WORLD_BOT + CLOUD_MARGIN_MM - 1.0),
         2 => (WORLD_LEFT - CLOUD_MARGIN_MM + 1.0, lerp(WORLD_TOP, WORLD_BOT, along)),
         _ => (WORLD_RIGHT + CLOUD_MARGIN_MM - 1.0, lerp(WORLD_TOP, WORLD_BOT, along)),
     };
-    let tx = lerp(WORLD_LEFT, WORLD_RIGHT, 0.25 + 0.5 * rand_f(rng));
-    let ty = lerp(WORLD_TOP, WORLD_BOT, 0.25 + 0.5 * rand_f(rng));
+    let tx = lerp(WORLD_LEFT, WORLD_RIGHT, 0.25 + 0.5 * rng.f32());
+    let ty = lerp(WORLD_TOP, WORLD_BOT, 0.25 + 0.5 * rng.f32());
     let (dx, dy) = (tx - x, ty - y);
     let len = (dx * dx + dy * dy).sqrt().max(1.0);
-    let speed = lerp(CLOUD_SPEED_MIN, CLOUD_SPEED_MAX, rand_f(rng));
+    let speed = lerp(CLOUD_SPEED_MIN, CLOUD_SPEED_MAX, rng.f32());
     c.x = x;
     c.y = y;
     c.vx = dx / len * speed;
@@ -520,36 +517,20 @@ fn respawn(c: &mut Cloud, rng: &mut u32, t_ms: u32) {
     c.tvx = c.vx;
     c.tvy = c.vy;
     c.retarget_start_ms = t_ms;
-    c.retarget_len_ms = roll_range(rng, CLOUD_RETARGET_MIN_MS, CLOUD_RETARGET_MAX_MS);
+    c.retarget_len_ms = rng.range_u32(CLOUD_RETARGET_MIN_MS, CLOUD_RETARGET_MAX_MS);
 }
 
 /// Storm-water ramp: deep blue-black up through turquoise to foam white. A swell
 /// crest falls off white -> aqua -> turquoise -> blue over its upper half, while
 /// the resting floor keeps a moody navy-blue depth.
-fn water_ramp(e: f32) -> [f32; 3] {
-    const STOPS: [(f32, [f32; 3]); 6] = [
-        (0.00, [2.0, 8.0, 31.0]),      // deep blue-black
-        (0.32, [9.0, 37.0, 97.0]),     // navy-blue
-        (0.58, [17.0, 84.0, 149.0]),   // ocean blue
-        (0.78, [33.0, 144.0, 169.0]),  // teal-turquoise
-        (0.91, [150.0, 215.0, 222.0]), // pale aqua
-        (1.00, [240.0, 249.0, 251.0]), // foam white
-    ];
-    let e = e.clamp(0.0, 1.0);
-    for pair in STOPS.windows(2) {
-        let (e0, c0) = pair[0];
-        let (e1, c1) = pair[1];
-        if e <= e1 {
-            let t = (e - e0) / (e1 - e0);
-            return mix(c0, c1, t);
-        }
-    }
-    STOPS[STOPS.len() - 1].1
-}
-
-fn mix(a: [f32; 3], b: [f32; 3], t: f32) -> [f32; 3] {
-    [lerp(a[0], b[0], t), lerp(a[1], b[1], t), lerp(a[2], b[2], t)]
-}
+const WATER_RAMP: [(f32, [f32; 3]); 6] = [
+    (0.00, [2.0, 8.0, 31.0]),      // deep blue-black
+    (0.32, [9.0, 37.0, 97.0]),     // navy-blue
+    (0.58, [17.0, 84.0, 149.0]),   // ocean blue
+    (0.78, [33.0, 144.0, 169.0]),  // teal-turquoise
+    (0.91, [150.0, 215.0, 222.0]), // pale aqua
+    (1.00, [240.0, 249.0, 251.0]), // foam white
+];
 
 /// World position of lattice vertex (row, index): row 0 is the wide top edge, row 5
 /// the bottom apex; row r holds 6-r vertices centered on WORLD_CX.
@@ -558,7 +539,6 @@ fn lattice_pos(r: i32, i: i32) -> (f32, f32) {
     (x, LATTICE_TOP_Y + r as f32 * LATTICE_ROW_H)
 }
 
-/// Squared distance from (x, y) to the segment a-b.
 /// One lit bolt side, with the direction terms of the distance test hoisted off the per-LED
 /// path - they depend only on the segment.
 #[derive(Clone, Copy)]
@@ -581,27 +561,9 @@ impl Seg {
     }
 }
 
+/// Squared distance from (x, y) to the segment.
 fn seg_d2(s: &Seg, x: f32, y: f32) -> f32 {
     let t = (((x - s.a.0) * s.ex + (y - s.a.1) * s.ey) / s.len2).clamp(0.0, 1.0);
     let (dx, dy) = (x - s.a.0 - s.ex * t, y - s.a.1 - s.ey * t);
     dx * dx + dy * dy
-}
-
-fn xorshift(state: &mut u32) -> u32 {
-    let mut x = *state;
-    x ^= x << 13;
-    x ^= x >> 17;
-    x ^= x << 5;
-    *state = x;
-    x
-}
-
-/// Uniform random f32 in [0, 1).
-fn rand_f(state: &mut u32) -> f32 {
-    (xorshift(state) >> 8) as f32 / 16_777_216.0
-}
-
-/// Uniform random duration in [min_ms, max_ms).
-fn roll_range(rng: &mut u32, min_ms: u32, max_ms: u32) -> u32 {
-    min_ms + xorshift(rng) % (max_ms - min_ms)
 }

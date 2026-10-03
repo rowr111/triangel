@@ -52,7 +52,14 @@ These constants, plus `WORLD_CENTROID_X` / `WORLD_CENTROID_Y`, are in `crate::le
 // src/patterns/mod.rs
 hsv(h, s, v) -> [u8; 3]     // h: 0-360, s/v: 0-1
 lerp(a, b, t) -> f32
+mix_rgb(a, b, t)            // lerp per channel, f32 RGB
+ramp(&stops, t)             // color along (position, color) stops
+smoothstep(t) -> f32        // clamped to 0-1
 wrap360(h) -> f32           // hue into 0-360, for inputs within one turn of range
+cycle(t_ms, period_ms)      // 0-1 position in a repeating period
+fold_ms(t_ms, rate)         // t_ms folded to one period of a rad/ms rate
+hash2(a, b), knuth_hash(x), tile_hash(led)
+Rng::new(seed)              // .f32(), .next_u32(), .range_u32(min, max), .pick(&items)
 phase_phasors()             // see Performance
 ```
 

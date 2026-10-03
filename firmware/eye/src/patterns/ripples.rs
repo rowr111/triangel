@@ -1,5 +1,5 @@
 use crate::led::map::{Led, LED_COUNT};
-use crate::patterns::{Frame, hsv};
+use crate::patterns::{Frame, Rng, hsv};
 
 /// A ripple lives for several seconds and a hard beat lands several at once, so the
 /// pool has to be deep or older ones get evicted while still crossing the fixture.
@@ -69,7 +69,7 @@ struct Ring {
 /// Drops rippling out across black water, shared by Raindrop and Drizzle. The pattern
 /// decides when a drop lands; this draws it.
 pub struct Ripples {
-    rng:   u32,
+    rng:   Rng,
     style: RippleStyle,
     drops: [Drop; MAX_DROPS],
 }
@@ -77,7 +77,7 @@ pub struct Ripples {
 impl Ripples {
     pub fn new(seed: u32, style: RippleStyle) -> Self {
         Ripples {
-            rng: seed,
+            rng: Rng::new(seed),
             style,
             drops: core::array::from_fn(|_| Drop {
                 x: 0.0, y: 0.0, start_ms: 0, strength: 0.0, hue: HUE_MIN,
@@ -86,25 +86,17 @@ impl Ripples {
         }
     }
 
-    fn next_rng(&mut self) -> u32 {
-        let mut x = self.rng;
-        x ^= x << 13;
-        x ^= x >> 17;
-        x ^= x << 5;
-        self.rng = x;
-        x
-    }
-
-    pub fn randf(&mut self) -> f32 {
-        (self.next_rng() >> 8) as f32 / 16_777_216.0
+    /// The generator drops are placed with, for patterns picking their own drop sizes.
+    pub fn rng(&mut self) -> &mut Rng {
+        &mut self.rng
     }
 
     /// Pick where the next drop lands. Its position is a random LED, which keeps it on
     /// the fixture and favors the denser parts of it.
     pub fn spot(&mut self, leds: &[Led]) -> Spot {
-        let pick = (self.randf() * LED_COUNT as f32) as usize % LED_COUNT;
+        let pick = (self.rng.f32() * LED_COUNT as f32) as usize % LED_COUNT;
         let (x, y) = (leds[pick].wx, leds[pick].wy);
-        let hue = HUE_MIN + self.randf() * (HUE_MAX - HUE_MIN);
+        let hue = HUE_MIN + self.rng.f32() * (HUE_MAX - HUE_MIN);
         Spot { x, y, hue }
     }
 

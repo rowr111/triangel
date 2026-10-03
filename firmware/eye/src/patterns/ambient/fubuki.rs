@@ -1,4 +1,4 @@
-use crate::patterns::{Frame, Pattern, hsv, lerp, wrap360};
+use crate::patterns::{Frame, Pattern, cycle, fold_ms, hash2, hsv, lerp, wrap360};
 use crate::led::grid::{self, CELL_MM};
 use crate::led::map::{Led, WORLD_TOP, WORLD_BOT, WORLD_H, WORLD_CX, LED_COUNT};
 use core::f32::consts::TAU;
@@ -142,7 +142,7 @@ impl Pattern for Fubuki {
         let jscale_p = 4.0 * fp * (1.0 - fp);
 
         // Folded time for the settled-snow pulse.
-        let pulse_t = (local % ((TAU / PILE_PULSE_RATE) as u32).max(1)) as f32;
+        let pulse_t = fold_ms(local, PILE_PULSE_RATE);
 
         // Color turn: over COLOR_SPAN starting at COLOR_START, the new season takes over as a
         // rising fraction `nf` - the sky tint crossfades, and each falling flake individually
@@ -229,7 +229,7 @@ fn make_flake(i: usize, t_ms: u32, fill_y: f32, prev: &Season, new: &Season, nf:
     let period = FALL_MIN_MS + sseed % (FALL_MAX_MS - FALL_MIN_MS);
     let local  = t_ms.wrapping_add(sseed % period);
     let gen    = local / period;
-    let fp     = (local % period) as f32 / period as f32; // 0 at top -> 1 at the pile surface
+    let fp     = cycle(local, period); // 0 at top -> 1 at the pile surface
 
     // Fresh spawn each generation: x across the top, a sway phase, a season color.
     let g       = hash2(i as u32 + 1, gen);
@@ -262,13 +262,4 @@ fn blend_hue(base: f32, target: f32, t: f32) -> f32 {
         diff += 360.0;
     }
     base + diff * t
-}
-
-/// Bit-mix hash of two u32s into a scrambled u32.
-fn hash2(a: u32, b: u32) -> u32 {
-    let mut h = a.wrapping_mul(0x9E37_79B1) ^ b.wrapping_mul(0x85EB_CA77);
-    h ^= h >> 15;
-    h = h.wrapping_mul(0x27D4_EB2F);
-    h ^= h >> 13;
-    h
 }

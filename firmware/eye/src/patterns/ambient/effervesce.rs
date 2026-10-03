@@ -1,4 +1,4 @@
-use crate::patterns::{Frame, Pattern, hsv, wrap360};
+use crate::patterns::{Frame, Pattern, cycle, fold_ms, hash2, hsv, smoothstep, wrap360};
 use crate::led::map::{Led, LED_COUNT, LED_MAP};
 use core::f32::consts::{PI, TAU};
 
@@ -96,17 +96,14 @@ impl Pattern for Effervesce {
 
         // Field hue drifts slowly through the wheel; kept as a wheel vector so it blends
         // continuously with the element colors below.
-        let base_hue = (t_ms % HUE_DRIFT_MS) as f32 / HUE_DRIFT_MS as f32 * 360.0;
+        let base_hue = cycle(t_ms, HUE_DRIFT_MS) * 360.0;
         let (base_shue, base_chue) = base_hue.to_radians().sin_cos();
 
         // Drifting brightness swell (scroll offset, 0..1).
-        let swell_t = (t_ms % SWELL_MS) as f32 / SWELL_MS as f32;
+        let swell_t = cycle(t_ms, SWELL_MS);
 
-        // Glitter time, folded to one flicker period (rounded; the seam is sub-degree).
-        let shimmer_t = {
-            let period = (TAU / SHIMMER_RATE) as u32;
-            (t_ms % period.max(1)) as f32
-        };
+        // Glitter time, folded to one flicker period.
+        let shimmer_t = fold_ms(t_ms, SHIMMER_RATE);
 
         // Per-frame rotation for the glitter, pairing with each LED's stored phasor.
         let (sh_sin, sh_cos) = (shimmer_t * SHIMMER_RATE).sin_cos();
@@ -117,7 +114,7 @@ impl Pattern for Effervesce {
             let p = (led.wx + led.wy) / SWELL_SPAN_MM - swell_t;
             let frac = p - p.floor();
             let tri = 1.0 - (2.0 * frac - 1.0).abs();
-            let sw = tri * tri * (3.0 - 2.0 * tri); // smoothstep the triangle
+            let sw = smoothstep(tri);
             let mut s = BASE_SAT;
             let mut v = BASE_VAL + SWELL * sw * (1.0 - BASE_VAL);
 
@@ -253,13 +250,4 @@ fn line_intensity(dx: f32, dy: f32, cs: f32, sn: f32) -> f32 {
 /// Rotate a unit vector by +60 degrees (constant-coefficient, no trig).
 fn rot60(c: f32, s: f32) -> (f32, f32) {
     (c * COS60 - s * SIN60, s * COS60 + c * SIN60)
-}
-
-/// Bit-mix hash of two u32s into a scrambled u32.
-fn hash2(a: u32, b: u32) -> u32 {
-    let mut h = a.wrapping_mul(0x9E37_79B1) ^ b.wrapping_mul(0x85EB_CA77);
-    h ^= h >> 15;
-    h = h.wrapping_mul(0x27D4_EB2F);
-    h ^= h >> 13;
-    h
 }

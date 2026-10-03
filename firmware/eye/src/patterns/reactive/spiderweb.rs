@@ -2,7 +2,7 @@ use core::f32::consts::PI;
 
 use crate::audio::Audio;
 use crate::led::map::{Led, LED_COUNT};
-use crate::patterns::{Frame, ReactivePattern, hsv};
+use crate::patterns::{Frame, ReactivePattern, Rng, hsv};
 use triangel_shared::tuning::spiderweb::*;
 
 /// The tile outlines line up into straight rows running edge to edge across the fixture,
@@ -46,7 +46,7 @@ struct Line {
 /// line lights at once, burns white, then settles into its color and fades back down to
 /// the glow. A drop lights every line at once.
 pub struct Spiderweb {
-    rng:      u32,
+    rng:      Rng,
     lines:    Vec<Line>,
     /// Which line each LED sits on.
     led_line: [u8; LED_COUNT],
@@ -103,7 +103,7 @@ impl Spiderweb {
                 .filter(|&(_, &fam)| fam as usize == f)
                 .map(|(led, _)| across(f, led))
                 .collect();
-            offs.sort_unstable_by(|a, b| a.partial_cmp(b).unwrap_or(core::cmp::Ordering::Equal));
+            offs.sort_unstable_by(|a, b| a.total_cmp(b));
             let mut rows: Vec<(usize, f32)> = Vec::new();
             let mut run = (0usize, 0.0f32, f32::MIN);
             for o in offs {
@@ -136,26 +136,13 @@ impl Spiderweb {
             led_line[i] = best.0 as u8;
         }
 
-        Spiderweb { rng: 0x5157_3EB0, lines, led_line, pulse_ms: 0, pulse: 0.0 }
-    }
-
-    fn next_rng(&mut self) -> u32 {
-        let mut x = self.rng;
-        x ^= x << 13;
-        x ^= x >> 17;
-        x ^= x << 5;
-        self.rng = x;
-        x
-    }
-
-    fn randf(&mut self) -> f32 {
-        (self.next_rng() >> 8) as f32 / 16_777_216.0
+        Spiderweb { rng: Rng::new(0x5157_3EB0), lines, led_line, pulse_ms: 0, pulse: 0.0 }
     }
 
     /// Light line `li`, replacing whichever of its two shots will finish sooner, so a long
     /// drop survives the beats that follow it.
     fn fire(&mut self, li: usize, t_ms: u32, strength: f32, hold: f32, fade: f32) {
-        let (hue, sat) = PALETTE[(self.randf() * PALETTE.len() as f32) as usize % PALETTE.len()];
+        let (hue, sat) = self.rng.pick(&PALETTE);
         let line = &mut self.lines[li];
         let remaining = |s: &Shot| {
             if s.strength <= 0.0 {
@@ -178,7 +165,7 @@ impl ReactivePattern for Spiderweb {
         } else if audio.beat {
             let count = 1 + (audio.beat_strength * EXTRA_LINES) as usize;
             for _ in 0..count {
-                let li = (self.randf() * self.lines.len() as f32) as usize % self.lines.len();
+                let li = (self.rng.f32() * self.lines.len() as f32) as usize % self.lines.len();
                 self.fire(li, t_ms, 0.5 + 0.5 * audio.beat_strength, 0.0, FADE_MS);
             }
         }
