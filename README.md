@@ -23,24 +23,17 @@ Two Baochip-1x chips run under [Xous OS](https://betrusted.io/xous-book/):
 | `hardware/` | KiCad PCB design files |
 | [`graphics/`](graphics/README.md) | Artwork, assembly sticker sheets, and the scripts that generate them |
 
-## Building the ear kernel (UART2 freed)
+## Building the kernels (UART2 freed)
 
-The ear sends audio-level data to the eye over hardware UART2, but a stock Xous
-build gives UART2 to the log server's debug console. Building with the `gdb-stub`
-feature compiles that out, freeing UART2 for the ear->eye link. The extension's
-ci-sync kernels don't have this, so the ear uses a locally built kernel in manual
-kernel mode.
+The ear-to-eye link uses UART2 on both chips, but a stock Xous kernel gives UART2 to its
+log console. Building with the `gdb-stub` feature leaves it free. CI kernels don't have
+it, so both chips use a locally built kernel in manual kernel mode.
 
-From the xous-core checkout (on `dev`):
+From a xous-core checkout:
 
-1. Build the dabao kernel with UART2 freed:
-
-       cargo xtask dabao --feature gdb-stub
-
-2. Copy the resulting `loader.uf2` and `xous.uf2` into `firmware/ear/xous_build/`.
-
-3. Build and flash the ear firmware with the VSCode extension (manual kernel mode
-   uses the kernel you just copied).
+1. `cargo xtask dabao --feature gdb-stub`
+2. Copy `loader.uf2` and `xous.uf2` from `target/riscv32imac-unknown-xous-elf/release/`
+   into both `firmware/eye/xous_build/` and `firmware/ear/xous_build/`.
 
 ## Regenerating the I2S mic driver for different pins
 

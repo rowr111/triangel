@@ -34,6 +34,18 @@ The ear sends one frame per 32 ms of audio (~31 fps) to the eye over a single UA
 
 The baud rate and frame layout are defined once, in the [`shared/`](shared/) crate that both chips build against; see its README for the byte layout.
 
+## Building
+
+Rust stays at 1.90.0: the Xous library that `install-toolkit` downloads only works with the version it was built for. One-time setup:
+
+```powershell
+rustup toolchain install 1.90.0
+rustup override set 1.90.0   # in the xous-core checkout and in this repo's root
+cargo xtask install-toolkit  # in the xous-core checkout
+```
+
+Build and flash with the Baochip VS Code extension: out-of-tree, kernel mode manual, kernel files from each chip's `xous_build` folder. Never use ci-sync; it replaces the kernels built in the root README's "Building the kernels".
+
 ## Regenerating the LED map
 
 If the PCB geometry or board gap changes:
