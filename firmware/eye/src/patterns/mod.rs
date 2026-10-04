@@ -128,12 +128,18 @@ pub fn tile_hash(led: &Led) -> u32 {
     (led.board_id as u32 * 7 + led.local_idx as u32 * 13) % TILE_HASH_STEPS
 }
 
-/// Index of the first slot `is_free` accepts, or else the one that started earliest.
-pub fn free_or_oldest<T>(slots: &[T], is_free: impl Fn(&T) -> bool, start_ms: impl Fn(&T) -> u32) -> usize {
+/// Index of the first slot `is_free` accepts, or else the one that started longest ago.
+pub fn free_or_oldest<T>(
+    slots: &[T],
+    now_ms: u32,
+    is_free: impl Fn(&T) -> bool,
+    start_ms: impl Fn(&T) -> u32,
+) -> usize {
+    let age = |s: &T| now_ms.wrapping_sub(start_ms(s));
     slots.iter().position(&is_free).unwrap_or_else(|| {
         let mut oldest = 0;
         for (i, s) in slots.iter().enumerate() {
-            if start_ms(s) < start_ms(&slots[oldest]) {
+            if age(s) > age(&slots[oldest]) {
                 oldest = i;
             }
         }

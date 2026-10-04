@@ -103,7 +103,7 @@ impl Ripples {
     /// Land a drop at `spot` with `count` rings `spacing` mm apart.
     pub fn land(&mut self, spot: Spot, t_ms: u32, strength: f32, spacing: f32, count: f32) {
         // Reuse the oldest slot when all are busy, so a new drop is never lost.
-        let slot = free_or_oldest(&self.drops, |d| !d.alive, |d| d.start_ms);
+        let slot = free_or_oldest(&self.drops, t_ms, |d| !d.alive, |d| d.start_ms);
         self.drops[slot] = Drop {
             x: spot.x,
             y: spot.y,

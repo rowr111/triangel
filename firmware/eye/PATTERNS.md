@@ -60,7 +60,7 @@ cycle(t_ms, period_ms)      // 0-1 position in a repeating period
 fold_ms(t_ms, rate)         // t_ms folded to one period of a rad/ms rate
 hash2(a, b), knuth_hash(x), tile_hash(led)
 Rng::new(seed)              // .f32(), .next_u32(), .range_u32(min, max), .pick(&items)
-free_or_oldest(slots, is_free, start_ms)  // a free slot in a pool, else the oldest
+free_or_oldest(slots, now_ms, is_free, start_ms)  // a free slot in a pool, else the oldest
 Shot                        // a flash held then faded; .level(t_ms), .end_ms()
 phase_phasors()             // see Performance
 ```

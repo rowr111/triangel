@@ -330,7 +330,7 @@ impl Pattern for Ricochet {
         for i in 0..MAX_COMETS {
             if self.comets[i].alive {
                 self.step_comet(i, dt, t_ms);
-            } else if t_ms >= self.comets[i].respawn_at {
+            } else if t_ms.wrapping_sub(self.comets[i].respawn_at) as i32 >= 0 {
                 self.launch(i);
             }
         }
