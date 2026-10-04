@@ -6,28 +6,23 @@ use triangel_shared::tuning::tiles::*;
 
 /// Tiles are numbered by board id, from 1. Index 0 is unused.
 const TILES: usize = BOARD_COUNT + 1;
-/// Tiles sharing an edge sit 60 mm apart center to center and ones sharing only a corner
-/// 103 mm, so anything closer than this is an edge neighbor.
+/// Tile centers are 60 mm apart across a shared edge and 103 mm across a shared corner.
 const NEIGHBOR_MM: f32 = 75.0;
-/// A triangle has at most three edge neighbors.
 const MAX_NEIGHBORS: usize = 3;
 
-/// Colors a hit can take. Saturation eases back toward blue and violet, which otherwise
-/// drive one channel and read dim.
+/// (hue, sat). The cooler hues are less saturated, or they would look dim.
 const PALETTE: [(f32, f32); 5] =
     [(275.0, 0.75), (200.0, 0.80), (330.0, 0.88), (40.0, 0.95), (160.0, 0.82)];
 
-/// Whole triangles lighting on the beat. A light beat lights one tile; a harder one
-/// spreads from it through the neighboring tiles a ring at a time; a drop spreads from the
-/// middle until every tile is lit.
+/// Whole tiles light on the beat. A light beat lights one tile, a harder one spreads to
+/// its neighbors ring by ring, and a drop spreads from the middle to every tile.
 pub struct Tiles {
     rng:         Rng,
     neighbors:   [[u8; MAX_NEIGHBORS]; TILES],
     n_neighbors: [u8; TILES],
     /// The tile nearest the middle of the fixture, where a drop starts.
     center:      usize,
-    /// Each tile's current flash. Its start can sit a little in the future while a hit
-    /// spreads, which is what makes the outer rings wait their turn.
+    /// Each tile's current flash. Outer rings start a little in the future.
     shots:       [Shot; TILES],
 }
 
@@ -67,10 +62,9 @@ impl Tiles {
         }
     }
 
-    /// Light `count` tiles outward from `seed`, nearest first. Tiles are visited breadth
-    /// first, so each ring is scheduled RING_STEP_MS after the one inside it. A tile that
-    /// is already lit for longer than this would light it is left alone, so the beats
-    /// straight after a drop cannot cut the drop's long fade short.
+    /// Lights `count` tiles outward from `seed`, each ring RING_STEP_MS after the last. A
+    /// tile whose current flash would outlast the new one keeps it, so beats do not cut a
+    /// drop's long fade short.
     fn light(&mut self, seed: usize, t_ms: u32, count: usize, strength: f32, hold: f32, fade: f32) {
         let (hue, sat) = self.rng.pick(&PALETTE);
         let mut ring = [u8::MAX; TILES];
@@ -112,10 +106,9 @@ impl Pattern for Tiles {
             self.light(seed, t_ms, count, 0.5 + 0.5 * audio.beat_strength, 0.0, FADE_MS);
         }
 
-        // Each tile's color once per frame; every LED then just reads its tile's.
+        // One color per tile, shared by all its LEDs.
         let mut color = [[0u8; 3]; TILES];
         for (t, c) in color.iter_mut().enumerate().skip(1) {
-            // None while the tile is still waiting for its ring.
             let s = &self.shots[t];
             let Some((age, fade)) = s.level(t_ms) else { continue };
             let young = (1.0 - age / ((s.hold_ms + s.fade_ms) * WHITE_FRAC)).clamp(0.0, 1.0);

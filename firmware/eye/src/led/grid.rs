@@ -1,8 +1,7 @@
 use super::geom::{CELL_LEDS, CELL_START};
 
-// Spatial index over the fixture: LED indices bucketed into fixed cells, so a dot can splat
-// onto the LEDs near it instead of every LED testing itself against every dot. The buckets
-// themselves are generated into geom.rs by tools/gen_geom.py.
+// LEDs grouped into square cells, for finding the ones near a point. The cell tables in
+// geom.rs come from tools/gen_geom.py; rerun it if the constants below change.
 
 pub const CELL_MM: f32 = 48.0;
 pub const COLS: usize = 12;
@@ -28,14 +27,13 @@ fn for_each_in_cells(gx0: usize, gx1: usize, gy0: usize, gy1: usize, f: &mut imp
     }
 }
 
-/// Call `f` with each LED index within `reach` cells of the world point (x, y). `reach` must
-/// cover the dot's radius, or LEDs it touches will be missed.
+/// Calls `f` with each LED index within `reach` cells of (x, y).
 pub fn for_each_near(x: f32, y: f32, reach: usize, f: impl FnMut(usize)) {
     for_each_near_seg((x, y), (x, y), reach, f);
 }
 
-/// Call `f` with each LED index in the cells spanning segment a-b, widened by `reach`. Covers
-/// a superset of the segment's neighbourhood, so callers still test each LED's true distance.
+/// Calls `f` with each LED index in the box of cells around segment a-b, widened by
+/// `reach`. That is more than the LEDs near the segment, so callers still check distance.
 pub fn for_each_near_seg(a: (f32, f32), b: (f32, f32), reach: usize, mut f: impl FnMut(usize)) {
     let (cx0, cx1) = (col(a.0.min(b.0)), col(a.0.max(b.0)));
     let (cy0, cy1) = (row(a.1.min(b.1)), row(a.1.max(b.1)));

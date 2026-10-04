@@ -4,53 +4,44 @@ use crate::led::grid::{self, CELL_MM};
 use crate::led::map::{WORLD_TOP, WORLD_BOT, WORLD_CX, WORLD_CENTROID_Y, LED_COUNT, LED_MAP};
 use crate::led::world::{WORLD_LEFT, WORLD_RIGHT};
 
-// Ricochet - up to a few comets loose inside the triangle, bouncing off the three walls like
-// Pong and dragging fading trails. Each bounce throws off a little shower of sparks and costs
-// the comet energy, so it shrinks and dims with every hit until it fizzles out - then, after a
-// random pause, a fresh comet launches from a new spot in a new color. Sparse by design.
-//
-// Stateful (per-comet position/velocity/energy/trail, a shared spark pool), integrated over
-// real elapsed time and reset each time it comes on screen. Rendered by SCATTER: each dot (head, trail
-// point, spark) splats only onto the LEDs in the nearby cells of a fixed spatial grid, instead
-// of testing every LED against every dot - the difference between 30 fps and a slideshow here.
+// Ricochet: a few comets bounce around inside the triangle on black, trailing tails. Each
+// bounce throws sparks and costs energy; a spent comet relaunches after a pause.
 
-// ============================== Tuning knobs ==============================
-
-const MAX_COMETS:     usize = 4;    // most comets alive at once
-const RESPAWN_MIN_MS: u32 = 500;    // pause after a comet dies before it relaunches
+const MAX_COMETS:     usize = 4;
+const RESPAWN_MIN_MS: u32 = 500;    // pause before a dead comet relaunches
 const RESPAWN_MAX_MS: u32 = 2500;
-const STAGGER_MS:     f32 = 3000.0; // spread of the comets' first launches on entry
+const STAGGER_MS:     f32 = 3000.0; // spread of the first launches on entry
 
-const SPEED_MIN_MM_S: f32 = 50.0;  // slowest comet (each picks its own speed in this range)
-const SPEED_MAX_MM_S: f32 = 200.0; // fastest comet
-const ENERGY_DECAY:   f32 = 0.8;   // energy multiplier per bounce (lower = dies sooner)
-const ENERGY_MIN:     f32 = 0.1;   // below this the comet fizzles and (later) relaunches
-const BOUNCE_PERTURB: f32 = 0.15;  // random angle nudge (rad) per bounce, so it never loops
-const ENTRY_SPREAD:   f32 = 0.9;   // max angle (rad) off straight-in when entering from a wall
+const SPEED_MIN_MM_S: f32 = 50.0;  // each comet picks a speed in this range
+const SPEED_MAX_MM_S: f32 = 200.0;
+const ENERGY_DECAY:   f32 = 0.8;   // energy kept per bounce
+const ENERGY_MIN:     f32 = 0.1;   // below this the comet dies
+const BOUNCE_PERTURB: f32 = 0.15;  // random turn (rad) per bounce, so paths never loop
+const ENTRY_SPREAD:   f32 = 0.9;   // most a launch can angle (rad) off straight in
 
-const HEAD_R_MIN_MM: f32 = 50.0;  // radius of the fastest comet (small, streaky)
-const HEAD_R_MAX_MM: f32 = 95.0;  // radius of the slowest comet (big, lumbering)
-const EDGE_SHARP:  f32   = 2.0;   // >1 sharpens the dot edge (a defined ball, less blobby)
-const TRAIL_LEN:   usize = 24;    // trail history length per comet
-const TRAIL_R_MM:  f32   = 18.0;  // tail width just behind the ball (narrows toward the tip)
-const TAIL_TAPER:  f32   = 0.8;   // how much the tail narrows from head to tip (0 = even width)
-const BASE_SAT:    f32   = 0.85;  // comet color saturation
-const HEAD_WHITEN: f32   = 0.7;   // bright cores desaturate toward white (the glint)
+const HEAD_R_MIN_MM: f32 = 50.0;  // radius of the fastest comet
+const HEAD_R_MAX_MM: f32 = 95.0;  // radius of the slowest comet
+const EDGE_SHARP:  f32   = 2.0;   // above 1 sharpens the dot edge
+const TRAIL_LEN:   usize = 24;    // trail points per comet
+const TRAIL_R_MM:  f32   = 18.0;  // tail radius just behind the head
+const TAIL_TAPER:  f32   = 0.8;   // how much the tail narrows toward its tip
+const BASE_SAT:    f32   = 0.85;
+const HEAD_WHITEN: f32   = 0.7;   // how far bright cores go toward white
 
-const SPARK_POOL:        usize = 28;    // max sparks alive at once (shared by all comets)
-const SPARKS_PER_BOUNCE: f32   = 10.0;  // sparks flung per bounce at full energy (scales down)
-const SPARK_SPEED_FRAC:  f32   = 1.5;   // spark launch speed as a fraction of the ball's speed
-const SPARK_DRAG:        f32   = 0.0025;// per-ms velocity drag - sparks fly out, then slow down
-const SPARK_FAN:         f32   = 1.5;   // half-angle (rad) sparks fan out as they spray off the wall
-const SPARK_LIFE_MS:     f32   = 900.0; // spark lifetime
-const SPARK_R_MM:        f32   = 15.0;  // must exceed LED spacing (~10mm) or sparks fall between LEDs
-const SPARK_BRIGHT:      f32   = 2.5;   // >1 keeps sparks full-bright (white-hot like the ball) before fading
-const SPARK_GRAVITY:     f32   = 0.000_15; // gentle downward pull (mm/ms^2)
+const SPARK_POOL:        usize = 28;    // sparks alive at once, shared by all comets
+const SPARKS_PER_BOUNCE: f32   = 10.0;  // at full energy
+const SPARK_SPEED_FRAC:  f32   = 1.5;   // spark speed, relative to the comet's
+const SPARK_DRAG:        f32   = 0.0025;// fraction of velocity lost per ms
+const SPARK_FAN:         f32   = 1.5;   // half-angle (rad) of the spray
+const SPARK_LIFE_MS:     f32   = 900.0;
+const SPARK_R_MM:        f32   = 15.0;  // must exceed the LED spacing (about 10 mm)
+const SPARK_BRIGHT:      f32   = 2.5;   // above 1 holds sparks at full brightness before fading
+const SPARK_GRAVITY:     f32   = 0.000_15; // downward pull (mm/ms^2)
 
-const MAX_DT_MS: f32 = 60.0; // clamp the integration step (guards against long gaps)
+const MAX_DT_MS: f32 = 60.0; // longest time step
 
-// The three walls' inward unit normals (point-down, roughly equilateral). Left/right walls
-// use a top corner (WORLD_LEFT or WORLD_RIGHT, at WORLD_TOP) as their reference.
+// The three walls' inward unit normals. The left and right walls are measured from their
+// top corners.
 const N_TOP:   (f32, f32) = (0.0, 1.0);
 const N_LEFT:  (f32, f32) = (0.866_025_4, -0.5);
 const N_RIGHT: (f32, f32) = (-0.866_025_4, -0.5);
@@ -58,16 +49,16 @@ const N_RIGHT: (f32, f32) = (-0.866_025_4, -0.5);
 #[derive(Clone, Copy)]
 struct Comet {
     alive:      bool,
-    entering:   bool, // flying in from outside the wall - no bouncing until fully inside
-    respawn_at: u32, // t_ms to launch when not alive
+    entering:   bool, // still coming in from outside the wall, so no bouncing yet
+    respawn_at: u32, // when to launch, if not alive
     x:      f32,
     y:      f32,
     vx:     f32,
     vy:     f32,
     energy: f32,
     hue:    f32,
-    radius: f32, // head-ball radius at full energy (set from speed at launch: fast = small)
-    speed:  f32, // velocity magnitude (mm/ms), constant over life; sparks inherit it
+    radius: f32, // head radius at full energy
+    speed:  f32, // mm/ms
     trail:      [(f32, f32); TRAIL_LEN],
     trail_head: usize,
 }
@@ -78,21 +69,21 @@ struct Spark {
     y:    f32,
     vx:   f32,
     vy:   f32,
-    life: f32,  // 1 at birth -> 0 dead
-    chue: f32,  // color as a wheel vector, inherited from the comet
+    life: f32,  // 1 at birth, 0 when dead
+    chue: f32,  // cos and sin of the hue angle
     shue: f32,
 }
 
-// A soft round dot to draw: center, 1/radius^2, brightness weight, and color as a wheel vector.
+// A round dot to draw: a comet head, a trail point or a spark.
 #[derive(Clone, Copy)]
 struct Dot {
     x:      f32,
     y:      f32,
     inv_r2: f32,
-    w:      f32,
+    w:      f32, // brightness
     chue:   f32,
     shue:   f32,
-    reach:  usize, // how many grid cells out to splat (from the dot's radius)
+    reach:  usize, // radius in grid cells
 }
 
 pub struct Ricochet {
@@ -100,7 +91,7 @@ pub struct Ricochet {
     rng:     Rng,
     comets:  [Comet; MAX_COMETS],
     sparks:  [Spark; SPARK_POOL],
-    // Per-LED accumulators (brightness + color as a wheel vector), reused each frame.
+    // Per-LED brightness and hue-vector sums for this frame.
     acc_v: [f32; LED_COUNT],
     acc_x: [f32; LED_COUNT],
     acc_y: [f32; LED_COUNT],
@@ -134,8 +125,7 @@ impl Ricochet {
         }
     }
 
-    /// Launch comet `i`: enter from a random point on a random wall, aimed inward, at full
-    /// energy in a new color.
+    /// Launches comet `i` inward from a random point on a random wall, in a new color.
     fn launch(&mut self, i: usize) {
         let edge = (self.rng.f32() * 3.0) as usize;
         let t = 0.12 + self.rng.f32() * 0.76; // stay off the corners
@@ -146,11 +136,11 @@ impl Ricochet {
         };
         let ang = n.1.atan2(n.0) + (self.rng.f32() - 0.5) * 2.0 * ENTRY_SPREAD;
         let hue = self.rng.f32() * 360.0;
-        // One draw sets both speed and size: fast comets are small and streaky, slow ones big.
+        // Fast comets are small, slow ones big.
         let speed_frac = self.rng.f32();
         let sp = (SPEED_MIN_MM_S + speed_frac * (SPEED_MAX_MM_S - SPEED_MIN_MM_S)) / 1000.0;
         let radius = lerp(HEAD_R_MAX_MM, HEAD_R_MIN_MM, speed_frac);
-        // Start one ball-radius OUTSIDE the wall, aimed inward, so it drifts into frame.
+        // Start one radius outside the wall.
         let px = ex - n.0 * radius;
         let py = ey - n.1 * radius;
         let c = &mut self.comets[i];
@@ -170,8 +160,7 @@ impl Ricochet {
         }
     }
 
-    /// Advance comet `i` by `dt` ms, reflecting off any wall it crosses (shedding sparks and
-    /// energy each bounce). Schedules a relaunch once it's spent.
+    /// Moves comet `i` by `dt` ms, bouncing it off any wall it crosses.
     fn step_comet(&mut self, i: usize, dt: f32, t_ms: u32) {
         let Ricochet { comets, sparks, rng, .. } = self;
         let c = &mut comets[i];
@@ -179,7 +168,6 @@ impl Ricochet {
         c.y += c.vy * dt;
 
         if c.entering {
-            // Flying in from outside the wall - don't bounce until the center is fully inside.
             let (d0, d1, d2) = wall_dists(c.x, c.y);
             if d0 >= 0.0 && d1 >= 0.0 && d2 >= 0.0 {
                 c.entering = false;
@@ -200,31 +188,27 @@ impl Ricochet {
                     break;
                 }
 
-                // Push back to the wall, mirror the velocity across its normal.
+                // Move back to the wall and reflect the velocity.
                 c.x += -md * n.0;
                 c.y += -md * n.1;
                 let vn = c.vx * n.0 + c.vy * n.1;
                 c.vx -= 2.0 * vn * n.0;
                 c.vy -= 2.0 * vn * n.1;
 
-                // Random nudge so the path never falls into a boring loop.
                 let a = (rng.f32() - 0.5) * 2.0 * BOUNCE_PERTURB;
                 let (sa, ca) = a.sin_cos();
                 let (vx, vy) = (c.vx, c.vy);
                 c.vx = vx * ca - vy * sa;
                 c.vy = vx * sa + vy * ca;
 
-                // Spray sparks off the impact, then lose energy.
                 spawn_sparks(sparks, rng, c, (SPARKS_PER_BOUNCE * c.energy) as usize, n);
                 c.energy *= ENERGY_DECAY;
             }
         }
 
-        // Record the head into the trail ring.
         c.trail_head = (c.trail_head + 1) % TRAIL_LEN;
         c.trail[c.trail_head] = (c.x, c.y);
 
-        // Fizzled out -> schedule a relaunch after a random pause.
         if c.energy < ENERGY_MIN {
             c.alive = false;
             let delay = RESPAWN_MIN_MS + (rng.f32() * (RESPAWN_MAX_MS - RESPAWN_MIN_MS) as f32) as u32;
@@ -233,7 +217,7 @@ impl Ricochet {
     }
 
     fn update_sparks(&mut self, dt: f32) {
-        let drag = (1.0 - SPARK_DRAG * dt).max(0.0); // fly out, then slow down
+        let drag = (1.0 - SPARK_DRAG * dt).max(0.0);
         for s in self.sparks.iter_mut() {
             if s.life > 0.0 {
                 s.vy += SPARK_GRAVITY * dt;
@@ -246,14 +230,13 @@ impl Ricochet {
         }
     }
 
-    /// Splat one dot onto the LEDs in the grid cells within its reach.
+    /// Adds one dot to the LEDs it covers.
     fn scatter(&mut self, d: &Dot) {
         let (acc_v, acc_x, acc_y) = (&mut self.acc_v, &mut self.acc_x, &mut self.acc_y);
         grid::for_each_near(d.x, d.y, d.reach, |k| {
             let led = &LED_MAP[k];
             let dx = led.wx - d.x;
             let dy = led.wy - d.y;
-            // Sharpen the edge so it reads as a solid ball, not a soft blob.
             let c = ((1.0 - (dx * dx + dy * dy) * d.inv_r2) * EDGE_SHARP).min(1.0);
             if c > 0.0 {
                 let cw = c * d.w;
@@ -274,23 +257,21 @@ fn wall_dists(x: f32, y: f32) -> (f32, f32, f32) {
     )
 }
 
-/// Spray up to `count` sparks off comet `c`'s impact: spread along the contact (the ball's
-/// width at the wall) and fanned out along the inward normal `n`, in the comet's color.
+/// Sprays up to `count` sparks from comet `c`, fanned around the wall's inward normal `n`.
 fn spawn_sparks(sparks: &mut [Spark; SPARK_POOL], rng: &mut Rng, c: &Comet, count: usize, n: (f32, f32)) {
     let radius = c.radius * (0.25 + 0.75 * c.energy);
     let (shue, chue) = c.hue.to_radians().sin_cos();
-    let base = n.1.atan2(n.0); // inward normal - sparks spray into the triangle
+    let base = n.1.atan2(n.0);
     let mut spawned = 0;
     for s in sparks.iter_mut() {
         if spawned >= count {
             break;
         }
         if s.life <= 0.0 {
-            // Spawn on the ball's inward-facing edge (not its buried center) and fly outward,
-            // so the spark starts in clear space instead of inside the ball's bright core.
+            // Start on the comet's edge, so the spark is not hidden inside the bright head.
             let ang = base + (rng.f32() - 0.5) * 2.0 * SPARK_FAN;
             let (dx, dy) = (ang.cos(), ang.sin());
-            let sp = c.speed * SPARK_SPEED_FRAC * (0.7 + rng.f32() * 0.6); // ~the ball's speed
+            let sp = c.speed * SPARK_SPEED_FRAC * (0.7 + rng.f32() * 0.6);
             *s = Spark {
                 x: c.x + dx * radius,
                 y: c.y + dy * radius,
@@ -307,7 +288,7 @@ fn spawn_sparks(sparks: &mut [Spark; SPARK_POOL], rng: &mut Rng, c: &Comet, coun
 
 impl Pattern for Ricochet {
     fn on_enter(&mut self, t_ms: u32) {
-        // Reseed, clear the sparks, and stagger the comets' first launches.
+        // Reseed, clear the sparks, and stagger the first launches.
         self.prev_ms = t_ms;
         self.rng = Rng::new((t_ms ^ 0x9E37_79B9) | 1);
         for i in 0..MAX_COMETS {
@@ -322,11 +303,9 @@ impl Pattern for Ricochet {
     }
 
     fn render(&mut self, t_ms: u32, _audio: &Audio, out: &mut Frame) {
-        // Real elapsed time since the last render.
         let dt = (t_ms.wrapping_sub(self.prev_ms) as f32).min(MAX_DT_MS);
         self.prev_ms = t_ms;
 
-        // Advance / (re)launch each comet, then the sparks.
         for i in 0..MAX_COMETS {
             if self.comets[i].alive {
                 self.step_comet(i, dt, t_ms);
@@ -336,7 +315,7 @@ impl Pattern for Ricochet {
         }
         self.update_sparks(dt);
 
-        // Gather this frame's dots (each comet's head + trail, plus live sparks).
+        // This frame's dots: each comet's head and trail, then the live sparks.
         let mut dots = [Dot { x: 0.0, y: 0.0, inv_r2: 0.0, w: 0.0, chue: 0.0, shue: 0.0, reach: 0 }; MAX_COMETS * TRAIL_LEN + SPARK_POOL];
         let mut nd = 0;
         for i in 0..MAX_COMETS {
@@ -348,13 +327,13 @@ impl Pattern for Ricochet {
             let radius = self.comets[i].radius;
             let head = self.comets[i].trail_head;
             for j in 0..TRAIL_LEN {
-                let idx = (head + TRAIL_LEN - j) % TRAIL_LEN; // j = 0 is the head (newest)
+                let idx = (head + TRAIL_LEN - j) % TRAIL_LEN; // j = 0 is the head
                 let (tx, ty) = self.comets[i].trail[idx];
                 let f = j as f32 / TRAIL_LEN as f32;
                 let (r, w) = if j == 0 {
-                    (radius * (0.25 + 0.75 * energy), energy) // the ball
+                    (radius * (0.25 + 0.75 * energy), energy)
                 } else {
-                    (TRAIL_R_MM * (1.0 - TAIL_TAPER * f), (1.0 - f) * energy) // the narrowing tail
+                    (TRAIL_R_MM * (1.0 - TAIL_TAPER * f), (1.0 - f) * energy)
                 };
                 dots[nd] = Dot {
                     x: tx,
@@ -374,7 +353,7 @@ impl Pattern for Ricochet {
                     x: s.x,
                     y: s.y,
                     inv_r2: 1.0 / (SPARK_R_MM * SPARK_R_MM),
-                    w: (s.life * SPARK_BRIGHT).min(1.0), // full-bright, then fades over the last stretch
+                    w: (s.life * SPARK_BRIGHT).min(1.0),
                     chue: s.chue,
                     shue: s.shue,
                     reach: (SPARK_R_MM / CELL_MM).ceil() as usize,
@@ -383,7 +362,6 @@ impl Pattern for Ricochet {
             }
         }
 
-        // Clear the accumulators, scatter every dot onto its nearby LEDs, then resolve to color.
         for k in 0..LED_COUNT {
             self.acc_v[k] = 0.0;
             self.acc_x[k] = 0.0;
@@ -399,7 +377,7 @@ impl Pattern for Ricochet {
                 continue;
             }
             let hue = self.acc_y[k].atan2(self.acc_x[k]).to_degrees();
-            let sat = BASE_SAT * (1.0 - v * v * HEAD_WHITEN); // bright cores glint white
+            let sat = BASE_SAT * (1.0 - v * v * HEAD_WHITEN);
             *slot = hsv(wrap360(hue), sat, v);
         }
     }

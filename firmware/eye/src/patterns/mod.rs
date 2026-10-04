@@ -12,8 +12,7 @@ use crate::led::map::Led;
 pub type Frame = [[u8; 3]; crate::led::map::LED_COUNT];
 
 /// A pattern in either setlist. `out[i]` is the color of `LED_MAP[i]`. Ambient patterns
-/// ignore `audio`; sound-reactive ones have to look interesting at every level, silence
-/// included.
+/// ignore `audio`.
 pub trait Pattern: Send {
     fn render(&mut self, t_ms: u32, audio: &Audio, out: &mut Frame);
 
@@ -21,13 +20,11 @@ pub trait Pattern: Send {
     fn on_enter(&mut self, _t_ms: u32) {}
 }
 
-// --- Shared math utilities ---
-
-/// HSV -> RGB. h: 0-360, s/v: 0-1. Returns [r, g, b] each 0-255.
+/// HSV to RGB. h is 0-360, s and v are 0-1.
 pub fn hsv(h: f32, s: f32, v: f32) -> [u8; 3] {
     let h60 = h / 60.0;
     let f = |n: f32| -> f32 {
-        // n + h60 is inside [1, 11), so wrapping is at most one subtraction.
+        // n + h60 is in [1, 11), so one subtraction wraps it.
         let mut k = n + h60;
         if k >= 6.0 {
             k -= 6.0;
@@ -39,11 +36,11 @@ pub fn hsv(h: f32, s: f32, v: f32) -> [u8; 3] {
 
 pub fn lerp(a: f32, b: f32, t: f32) -> f32 { a + (b - a) * t }
 
-/// Steps the patterns' hashes quantize a 0..TAU phase offset into, 0.01 rad each.
+/// Number of phase offsets in `phase_phasors`, 0.01 rad apart, covering 0..TAU.
 pub const PHASE_STEPS: usize = 628;
 
-/// sin and cos of every hash-quantized phase offset, for rotating a per-LED phasor by a
-/// per-frame angle instead of calling sin per LED.
+/// sin and cos of each phase offset. With sin and cos of the frame's angle, they give
+/// sin(offset + angle) without a sin call per LED.
 pub fn phase_phasors() -> &'static ([f32; PHASE_STEPS], [f32; PHASE_STEPS]) {
     static T: std::sync::OnceLock<([f32; PHASE_STEPS], [f32; PHASE_STEPS])> =
         std::sync::OnceLock::new();
@@ -59,7 +56,7 @@ pub fn phase_phasors() -> &'static ([f32; PHASE_STEPS], [f32; PHASE_STEPS]) {
     })
 }
 
-/// Wrap a hue into [0, 360). Exact for inputs within one turn of range.
+/// Wraps a hue into [0, 360). The input must be within one turn of that range.
 pub fn wrap360(h: f32) -> f32 {
     if h >= 360.0 {
         h - 360.0
@@ -93,20 +90,18 @@ pub fn ramp(stops: &[(f32, [f32; 3])], t: f32) -> [f32; 3] {
     stops[stops.len() - 1].1
 }
 
-/// Where `t_ms` sits in a repeating period, 0-1. Folding first keeps f32 precise after
-/// hours of uptime.
+/// Where `t_ms` sits in a repeating period, 0-1.
 pub fn cycle(t_ms: u32, period_ms: u32) -> f32 {
     (t_ms % period_ms) as f32 / period_ms as f32
 }
 
-/// `t_ms` folded to one period of a `rate` in rad/ms, for `sin(t * rate + ...)`. The
-/// period is rounded to whole ms, which leaves a seam far under a degree.
+/// `t_ms` wrapped to one period of a `rate` in rad/ms, for `sin(t * rate + ...)`.
 pub fn fold_ms(t_ms: u32, rate: f32) -> f32 {
     let period = (TAU / rate) as u32;
     (t_ms % period.max(1)) as f32
 }
 
-/// Bit-mix hash of two u32s into a scrambled u32.
+/// Hash of two u32s.
 pub fn hash2(a: u32, b: u32) -> u32 {
     let mut h = a.wrapping_mul(0x9E37_79B1) ^ b.wrapping_mul(0x85EB_CA77);
     h ^= h >> 15;
@@ -123,7 +118,7 @@ pub fn knuth_hash(x: u32) -> u32 {
 /// Distinct values `tile_hash` can take.
 pub const TILE_HASH_STEPS: u32 = 97;
 
-/// Cheap per-LED value from its tile and position on the tile, 0..TILE_HASH_STEPS.
+/// Per-LED value from its tile and position on the tile, 0..TILE_HASH_STEPS.
 pub fn tile_hash(led: &Led) -> u32 {
     (led.board_id as u32 * 7 + led.local_idx as u32 * 13) % TILE_HASH_STEPS
 }
@@ -147,8 +142,7 @@ pub fn free_or_oldest<T>(
     })
 }
 
-/// One flash on a line or tile: lit at `start_ms`, full for `hold_ms`, then fading out
-/// over `fade_ms`.
+/// One flash: full brightness for `hold_ms` from `start_ms`, then fading over `fade_ms`.
 #[derive(Clone, Copy)]
 pub struct Shot {
     pub start_ms: u32,
@@ -163,8 +157,7 @@ impl Shot {
     pub const NONE: Shot =
         Shot { start_ms: 0, strength: 0.0, hue: 0.0, sat: 0.0, hold_ms: 0.0, fade_ms: 0.0 };
 
-    /// Age in ms and brightness 0-1, full through the hold and then falling to 0. None while
-    /// unlit, not started yet, or finished.
+    /// Age in ms and brightness 0-1, or None if unlit, not started yet, or finished.
     pub fn level(&self, t_ms: u32) -> Option<(f32, f32)> {
         if self.strength <= 0.0 {
             return None;

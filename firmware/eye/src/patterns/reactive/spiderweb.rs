@@ -6,39 +6,34 @@ use crate::led::map::{Led, LED_COUNT, LED_MAP};
 use crate::patterns::{Frame, Pattern, Rng, Shot, hsv};
 use triangel_shared::tuning::spiderweb::*;
 
-/// The tile outlines line up into straight rows running edge to edge across the fixture,
-/// nine in each of three directions: horizontal, and the two slants at 60 degrees. Where
-/// two tiles meet their outlines run side by side, so those count as two separate lines.
+/// The tile outlines form straight lines across the fixture, nine in each of three
+/// directions: horizontal and the two 60-degree slants.
 const LINES_PER_FAMILY: usize = 9;
 const MAX_LINES: usize = LINES_PER_FAMILY * 3;
-/// An LED's direction, from the two LEDs either side of it on its tile, has to be this
-/// close to one of the three to count. Corners turn a sharp angle and fail it.
+/// How close an LED's direction must be to one of the three. Corner LEDs fail it.
 const DIR_TOLERANCE: f32 = 12.0 * PI / 180.0;
 /// LEDs in one row share an offset to within this; neighboring rows are 12 mm apart.
 const ROW_MERGE_MM: f32 = 1.0;
 
-/// Silk colors: mostly white, with pale blue, lavender and violet. Three of the six are
-/// white, so half of all lit lines are.
+/// (hue, sat): half white, plus pale blue, lavender and violet.
 const PALETTE: [(f32, f32); 6] =
     [(0.0, 0.0), (0.0, 0.0), (0.0, 0.0), (205.0, 0.30), (260.0, 0.32), (278.0, 0.50)];
 
 struct Line {
     family: usize,
     offset: f32,
-    /// The current shot and the one before, both drawn, so a line lit again while still
-    /// glowing keeps whichever is brighter rather than dropping back first.
+    /// The latest two shots; the brighter one shows.
     shots:  [Shot; 2],
 }
 
-/// A spider web. It rests at a faint glow that pulses up on each beat; on the beat a whole
-/// line lights at once, burns white, then settles into its color and fades back down to
-/// the glow. A drop lights every line at once.
+/// A faint web that pulses on each beat. A beat lights whole lines, white at first, then
+/// fading through their color; a drop lights every line.
 pub struct Spiderweb {
     rng:      Rng,
     lines:    Vec<Line>,
-    /// Which line each LED sits on.
+    /// Which line each LED is on.
     led_line: [u8; LED_COUNT],
-    /// When the last beat landed and how hard, for the background pulse.
+    /// When the last beat landed and how hard.
     pulse_ms: u32,
     pulse:    f32,
 }
@@ -52,8 +47,8 @@ impl Spiderweb {
         });
         let across = |f: usize, led: &Led| normal[f].0 * led.wx + normal[f].1 * led.wy;
 
-        // Which LED sits at each position on each tile, for finding an LED's neighbors.
-        // Positions run from 1, with a spare slot past the last so its neighbor reads empty.
+        // Which LED is at each position on each tile. Positions start at 1, and there is a
+        // spare empty slot past the last.
         let mut at = [[u16::MAX; LEDS_PER_BOARD + 2]; BOARD_COUNT + 1];
         for (i, led) in leds.iter().enumerate() {
             at[led.board_id as usize][led.local_idx as usize] = i as u16;
@@ -83,8 +78,8 @@ impl Spiderweb {
             }
         }
 
-        // Rows are the LEDs of one direction sharing an offset. The largest nine in each
-        // direction are the lines; anything smaller is a corner that slipped through.
+        // Group each direction's LEDs into rows by offset. The nine largest rows are the
+        // lines; smaller ones are stray corner LEDs.
         let mut lines = Vec::new();
         for f in 0..3 {
             let mut offs: Vec<f32> = leds
@@ -112,8 +107,7 @@ impl Spiderweb {
             }
         }
 
-        // Every LED joins whichever line runs closest to it. That takes in the corners,
-        // which sit where lines cross.
+        // Every LED, corners included, joins the line nearest to it.
         let mut led_line = [0u8; LED_COUNT];
         for (i, led) in leds.iter().enumerate() {
             let mut best = (0usize, f32::MAX);
@@ -129,8 +123,8 @@ impl Spiderweb {
         Spiderweb { rng: Rng::new(0x5157_3EB0), lines, led_line, pulse_ms: 0, pulse: 0.0 }
     }
 
-    /// Light line `li`, replacing whichever of its two shots will finish sooner, so a long
-    /// drop survives the beats that follow it.
+    /// Lights line `li`, replacing whichever of its two shots ends sooner, so a long drop
+    /// shot outlasts the beats after it.
     fn fire(&mut self, li: usize, t_ms: u32, strength: f32, hold: f32, fade: f32) {
         let (hue, sat) = self.rng.pick(&PALETTE);
         let line = &mut self.lines[li];
@@ -160,13 +154,12 @@ impl Pattern for Spiderweb {
             self.pulse = if audio.drop { 1.0 } else { 0.5 + 0.5 * audio.beat_strength };
         }
 
-        // The background swells on the beat and settles back.
+        // Background glow, brighter just after a beat.
         let since = t_ms.wrapping_sub(self.pulse_ms) as f32;
         let swell = self.pulse * (1.0 - since / PULSE_MS).max(0.0).powi(2);
         let base = BASE_LEVEL * (1.0 + PULSE_DEPTH * swell);
 
-        // Every LED on a line shares its brightness, so each line's color is worked out
-        // once and copied to its LEDs.
+        // One color per line, shared by all its LEDs.
         let mut color = [[0u8; 3]; MAX_LINES];
         for (c, line) in color.iter_mut().zip(self.lines.iter()) {
             let mut best = (0.0f32, 0.0f32, 0.0f32); // brightness, hue, saturation
@@ -178,8 +171,7 @@ impl Pattern for Spiderweb {
                     best = (v, shot.hue, shot.sat * (1.0 - head));
                 }
             }
-            // A lit line rises out of the background and settles back into it, taking on
-            // its color only as far as it is lit, so the glow underneath stays white.
+            // Saturation follows the lift, so the background glow stays white.
             let (lift, hue, sat) = best;
             *c = hsv(hue, sat * lift, (base + (1.0 - base) * lift).min(1.0));
         }

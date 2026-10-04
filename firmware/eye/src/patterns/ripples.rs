@@ -1,16 +1,13 @@
 use crate::led::map::{LED_COUNT, LED_MAP};
 use crate::patterns::{Frame, Rng, free_or_oldest, hsv};
 
-/// A ripple lives for several seconds and a hard beat lands several at once, so the
-/// pool has to be deep or older ones get evicted while still crossing the fixture.
+/// Enough that a drop is rarely replaced while its ripple is still crossing the fixture.
 const MAX_DROPS: usize = 18;
 
-/// Hue range drops pick from. Cool and narrow, so overlapping rings can average their
-/// hues directly without wrapping past 0.
+/// Hue range for drops. Narrow, so overlapping rings can average their hues directly.
 const HUE_MIN: f32 = 170.0;
 const HUE_MAX: f32 = 250.0;
-/// Saturation is held back because a fully saturated blue drives only the blue channel
-/// and reads dim.
+/// Below 1 because a fully saturated blue lights only the blue channel and looks dim.
 const DROP_SAT: f32 = 0.62;
 
 /// How a pattern's ripples look.
@@ -44,7 +41,7 @@ struct Drop {
     strength: f32,
     hue:      f32,
     spacing:  f32,
-    /// Distance from the leading edge to the tail of this drop's ring train.
+    /// Distance from the leading edge back to the last ring.
     train:    f32,
     alive:    bool,
 }
@@ -57,10 +54,10 @@ struct Ring {
     r:           f32,
     u_inner:     f32,
     u_outer:     f32,
-    /// Already carries the drop's gain and its young boost.
+    /// Includes the drop's gain and the boost while it is young.
     amp:         f32,
     hue:         f32,
-    /// Already carries the palette saturation and the fade out of white.
+    /// Saturation: 0 while the ripple is still white, rising to DROP_SAT.
     sat_w:       f32,
     inv_spacing: f32,
     inv_train:   f32,
@@ -86,13 +83,12 @@ impl Ripples {
         }
     }
 
-    /// The generator drops are placed with, for patterns picking their own drop sizes.
+    /// The generator drops are placed with, for patterns to pick their drop sizes from.
     pub fn rng(&mut self) -> &mut Rng {
         &mut self.rng
     }
 
-    /// Pick where the next drop lands. Its position is a random LED, which keeps it on
-    /// the fixture and favors the denser parts of it.
+    /// Where the next drop lands: at a random LED, so always on the fixture.
     pub fn spot(&mut self) -> Spot {
         let pick = (self.rng.f32() * LED_COUNT as f32) as usize % LED_COUNT;
         let (x, y) = (LED_MAP[pick].wx, LED_MAP[pick].wy);
@@ -100,9 +96,8 @@ impl Ripples {
         Spot { x, y, hue }
     }
 
-    /// Land a drop at `spot` with `count` rings `spacing` mm apart.
+    /// Lands a drop at `spot` with `count` rings `spacing` mm apart.
     pub fn land(&mut self, spot: Spot, t_ms: u32, strength: f32, spacing: f32, count: f32) {
-        // Reuse the oldest slot when all are busy, so a new drop is never lost.
         let slot = free_or_oldest(&self.drops, t_ms, |d| !d.alive, |d| d.start_ms);
         self.drops[slot] = Drop {
             x: spot.x,
@@ -122,8 +117,6 @@ impl Ripples {
             x: 0.0, y: 0.0, r: 0.0, u_inner: 0.0, u_outer: 0.0, amp: 0.0, hue: 0.0,
             sat_w: 0.0, inv_spacing: 0.0, inv_train: 0.0,
         };
-        // Gather only the live drops, so the per-LED loop walks one tight array with no
-        // liveness check and no second lookup.
         let mut live = [blank; MAX_DROPS];
         let mut n_live = 0;
         for drop in self.drops.iter_mut() {
@@ -143,8 +136,6 @@ impl Ripples {
                 r,
                 u_inner: inner * inner,
                 u_outer: r * r,
-                // The young boost and the palette saturation fold in here rather than
-                // being multiplied again for every LED.
                 amp: drop.strength
                     * (s.gain_base + s.gain_hit * drop.strength)
                     * (1.0 + s.hit_boost * young),
@@ -166,19 +157,15 @@ impl Ripples {
                 let dx = led.wx - ring.x;
                 let dy = led.wy - ring.y;
                 let u = dx * dx + dy * dy;
-                // Reject on squared distance, so the square root only runs for the
-                // LEDs actually inside this drop's train.
                 if u > ring.u_outer || u < ring.u_inner {
                     continue;
                 }
                 let d = u.sqrt();
-                // Distance behind the leading edge: 0 at the front, `train` at the tail.
+                // Distance behind the leading edge.
                 let q = ring.r - d;
-                // Half a cell of offset puts a crest exactly on the leading edge,
-                // rather than a trough.
+                // The 0.5 puts a crest on the leading edge.
                 let cell = q * ring.inv_spacing + 0.5;
-                // The reject above leaves q at zero or more, so truncating is the same
-                // as flooring and far cheaper on a chip with no floating-point unit.
+                // q is never negative here, so the cast is a floor.
                 let frac = cell - (cell as u32) as f32;
                 // Triangle wave, squared for a sharper crest.
                 let crest = 1.0 - (2.0 * frac - 1.0).abs();

@@ -4,46 +4,40 @@ use crate::audio::Audio;
 use crate::led::map::{LED_MAP, WORLD_BOT, WORLD_CX, WORLD_H, LED_COUNT};
 use core::f32::consts::{PI, TAU};
 
-// Tunables - dial these in the previewer. Each scales one ingredient of the flame;
-// pushing one toward zero removes that ingredient.
-const SECOND_WAVE_STRENGTH:    f32 = 0.5;  // interference wave amplitude vs the primary
-const SECOND_WAVELENGTH_RATIO: f32 = 1.7;  // second wave's wavelength vs primary (incommensurate)
-const SECOND_SPEED_RATIO:      f32 = 0.63; // second wave's speed vs primary
-const WAVE_FLOOR:   f32 = 0.35; // wave troughs still glow - a fire's base never goes black
-const HEAT_BIAS:    f32 = 0.45; // warms the whole flame so the base idles white-hot
-const COOL_TILT:    f32 = 0.35;  // world tilt: heat subtracted by the top row - offsets each
-                                // row's range cooler without crushing its variance
-const TILE_TILT:    f32 = 0.25; // per-tile tilt: subtracted at each triangle's own top edge,
-                                // so every tile carries its own bottom-to-top fade
-const FLICKER_DEPTH: f32 = 0.35; // bipolar: spikes above 1.0 push wavecrests into white/blue
-const FLICKER_PERIOD_MS:  u32 = 628; // two incommensurate periods so the flicker
-const FLICKER2_PERIOD_MS: u32 = 401; // reads as noise, not a synchronized wobble
+const SECOND_WAVE_STRENGTH:    f32 = 0.5;  // second wave's amplitude, relative to the first
+const SECOND_WAVELENGTH_RATIO: f32 = 1.7;  // second wave's wavelength, relative to the first
+const SECOND_SPEED_RATIO:      f32 = 0.63; // second wave's speed, relative to the first
+const WAVE_FLOOR:   f32 = 0.35; // brightness left in the wave troughs
+const HEAT_BIAS:    f32 = 0.45; // heat added everywhere
+const COOL_TILT:    f32 = 0.35;  // heat taken off at the top of the fixture
+const TILE_TILT:    f32 = 0.25; // heat taken off at the top of each tile
+const FLICKER_DEPTH: f32 = 0.35; // flicker swing around 1.0
+const FLICKER_PERIOD_MS:  u32 = 628; // two unrelated periods, so the flicker
+const FLICKER2_PERIOD_MS: u32 = 401; // looks like noise
 const BREATHE_DEPTH: f32 = 0.15; // slow whole-flame swell
 const BREATHE_PERIOD_MS: u32 = 3_700;
-// Smoke: a drifting nested-sine field; where it crosses its threshold band, heat is
-// occluded into dark wisps that rise through the flame and meander sideways.
-const SMOKE_DARKEN:  f32 = 0.7;   // how black a wisp's core gets (0 = no smoke)
+// Smoke: dark wisps that rise through the flame and wander sideways.
+const SMOKE_DARKEN:  f32 = 0.7;   // how dark a wisp's core gets
 const SMOKE_BAND_MM: f32 = 250.0; // vertical spacing between wisps
-const SMOKE_MEANDER: f32 = 2.0;   // sideways wiggle depth (radians of the field)
+const SMOKE_MEANDER: f32 = 2.0;   // sideways wiggle depth, in radians
 const SMOKE_MEANDER_MM: f32 = 300.0; // horizontal wavelength of the wiggle
-const SMOKE_EDGE0: f32 = 0.72; // field value where a wisp starts fading in...
-const SMOKE_EDGE1: f32 = 0.88; // ...and where its core is fully dark
-const SMOKE_RISE_PERIOD_MS:    u32 = 5_100; // wisps climb one band spacing per period
+const SMOKE_EDGE0: f32 = 0.72; // field value where a wisp starts
+const SMOKE_EDGE1: f32 = 0.88; // field value where it is fully dark
+const SMOKE_RISE_PERIOD_MS:    u32 = 5_100; // time to climb one band spacing
 const SMOKE_MEANDER_PERIOD_MS: u32 = 8_900;
-// Occasional events - hash-scheduled and deterministic, so previews are reproducible.
-const EMBER_COUNT: usize = 5;        // ember flights aloft at once
-const EMBER_PERIOD_MS:  u32 = 2_600; // base flight time; each slot staggers longer
-const EMBER_STAGGER_MS: u32 = 977;   // per-slot period offset (keeps respawns unsynced)
-const EMBER_RISE_MM:   f32 = 260.0;  // how far an ember climbs before fading out
+// Embers and tile flares
+const EMBER_COUNT: usize = 5;        // embers in flight at once
+const EMBER_PERIOD_MS:  u32 = 2_600; // base flight time
+const EMBER_STAGGER_MS: u32 = 977;   // added per slot, so they respawn out of step
+const EMBER_RISE_MM:   f32 = 260.0;  // how far an ember climbs
 const EMBER_WOBBLE_MM: f32 = 25.0;   // sideways drift while rising
-const EMBER_RADIUS_MM: f32 = 28.0;   // glow blob radius
-const EMBER_HEAT:      f32 = 0.55;   // heat added at the blob center
-const FLARE_PERIOD_MS: u32 = 8_300;  // one hash-picked tile flares up per period
-const FLARE_LEN:  f32 = 0.25;        // flare duration as a fraction of its period
+const EMBER_RADIUS_MM: f32 = 28.0;
+const EMBER_HEAT:      f32 = 0.55;   // heat added at the ember's center
+const FLARE_PERIOD_MS: u32 = 8_300;  // one random tile flares per period
+const FLARE_LEN:  f32 = 0.25;        // flare length, as a fraction of the period
 const FLARE_HEAT: f32 = 0.3;         // heat added across the flaring tile
 
-// Everything worked out per LED is integer math; the chip has no floating-point unit.
-// Values below marked Q12 are x4096, so 4096 is 1.0.
+// Q12 values are x4096, so 4096 is 1.0.
 const ONE: i32 = 4096;
 /// The two waves' weights in their mix, Q12.
 const MIX1_Q: i32 = (4096.0 / (1.0 + SECOND_WAVE_STRENGTH)) as i32;
@@ -53,19 +47,18 @@ const HEAT_BIAS_Q: i32 = (HEAT_BIAS * 4096.0) as i32;
 const FLICKER_HALF_Q: i32 = (FLICKER_DEPTH * 0.5 * 4096.0) as i32;
 const SMOKE_DARKEN_Q: i32 = (SMOKE_DARKEN * 4096.0) as i32;
 const SMOKE_EDGE0_Q: i32 = (SMOKE_EDGE0 * 4096.0) as i32;
-/// Scales the field's distance past SMOKE_EDGE0 so SMOKE_EDGE1 lands on 1.0, Q12.
+/// Maps SMOKE_EDGE0..SMOKE_EDGE1 onto 0..1, Q12.
 const SMOKE_EDGE_SCALE_Q: i32 = (4096.0 / (SMOKE_EDGE1 - SMOKE_EDGE0)) as i32;
 /// SMOKE_MEANDER in turns x65536.
 const SMOKE_MEANDER_TURNS: i32 = (SMOKE_MEANDER / TAU * 65536.0) as i32;
 const FLARE_HEAT_Q: f32 = FLARE_HEAT * 4096.0;
 const EMBER_HEAT_Q: f32 = EMBER_HEAT * 4096.0;
-/// Ember radius in sixteenths of a millimeter, its square, and 1/radius^2 scaled so a
-/// distance^2 lands in Q12.
+/// Ember radius in 1/16 mm, its square, and 1/radius^2 scaled to give Q12.
 const EMBER_R_Q4: i32 = (EMBER_RADIUS_MM * 16.0) as i32;
 const EMBER_R2_Q8: i32 = EMBER_R_Q4 * EMBER_R_Q4;
 const EMBER_INV_R2: i32 = (4096 << 16) / EMBER_R2_Q8;
 
-/// Sine table entries per turn. Phases are turns x65536, so the top bits index it.
+/// Sine table entries per turn; a phase in turns x65536 indexes it by its top bits.
 const SIN_BITS: u32 = 10;
 const SIN_STEPS: usize = 1 << SIN_BITS;
 /// Fire ramp table entries across heat 0..1, plus one for exactly 1.0.
@@ -73,27 +66,25 @@ const RAMP_BITS: u32 = 10;
 const RAMP_STEPS: usize = (1 << RAMP_BITS) + 1;
 
 pub struct ApexFlame {
-    pub speed:      f32, // mm/s outward, primary wave
-    pub wavelength: f32, // mm per cycle, primary wave
-    // Each wave's per-LED phase as a phasor. Both wave arguments are a fixed per-LED term plus
-    // a per-frame one, so rotating these by the frame's angle replaces a sin call per LED. Q12.
+    pub speed:      f32, // mm/s outward, first wave
+    pub wavelength: f32, // mm per cycle, first wave
+    // sin and cos of each LED's phase in the two waves, Q12.
     w1_sin: [i16; LED_COUNT],
     w1_cos: [i16; LED_COUNT],
     w2_sin: [i16; LED_COUNT],
     w2_cos: [i16; LED_COUNT],
-    // The same trick for each LED's two flicker phases, Q12.
+    // The same for its two flicker phases, Q12.
     f1_sin: [i16; LED_COUNT],
     f1_cos: [i16; LED_COUNT],
     f2_sin: [i16; LED_COUNT],
     f2_cos: [i16; LED_COUNT],
-    // The smoke wiggle's per-LED phase by horizontal position, Q12, and the field's
-    // per-LED phase by height, in turns x65536.
+    // The smoke wiggle's phase by x, Q12, and the smoke field's phase by y, in turns x65536.
     m_sin:   [i16; LED_COUNT],
     m_cos:   [i16; LED_COUNT],
     smoke_y: [u16; LED_COUNT],
-    // Each LED's world height and tile cooling, fixed by where it sits. Q12.
+    // Heat taken off for the LED's height in the fixture and in its tile, Q12.
     cooling: [i16; LED_COUNT],
-    // Position in sixteenths of a millimeter, for the ember distances.
+    // Position in 1/16 mm.
     x_q4: [i16; LED_COUNT],
     y_q4: [i16; LED_COUNT],
     sin_lut:  [i16; SIN_STEPS],
@@ -106,12 +97,11 @@ impl ApexFlame {
         let k2 = TAU / (wavelength * SECOND_WAVELENGTH_RATIO);
         let q = |v: f32| (v * 4096.0).round() as i16;
         let (fl_sin, fl_cos) = phase_phasors();
-        // Two flicker phases per LED from an integer hash of the chain index
-        // (transition.rs's sparkle trick): a linear phase step along the chain would read as
-        // a coherent sweep across the fixture instead of random flicker.
+        // Two hashed flicker phases per LED; phases stepping along the chain would look
+        // like a sweep.
         let hash = |i: usize| knuth_hash(LED_MAP[i].chain_idx as u32);
         let k1_of = |i: usize| (hash(i) % PHASE_STEPS as u32) as usize;
-        let k2_of = |i: usize| ((hash(i) >> 16) % PHASE_STEPS as u32) as usize; // decorrelated second phase
+        let k2_of = |i: usize| ((hash(i) >> 16) % PHASE_STEPS as u32) as usize;
         ApexFlame {
             speed,
             wavelength,
@@ -129,11 +119,8 @@ impl ApexFlame {
                 (LED_MAP[i].wy / SMOKE_BAND_MM * 65536.0) as u32 as u16
             }),
             cooling: core::array::from_fn(|i| {
-                // Subtractive cooling, two layers: world height so each row of triangles is
-                // its own temperature band, plus a per-tile gradient that resets on every
-                // triangle so each tile fades from hot at its own bottom to cool at its top.
                 let led = &LED_MAP[i];
-                let height = (WORLD_BOT - led.wy) / WORLD_H; // 0 at the bottom tip, 1 at the top row
+                let height = (WORLD_BOT - led.wy) / WORLD_H; // 0 at the apex, 1 at the top row
                 let (y_min, y_max) = BOARD_Y_RANGE[led.board_id as usize];
                 let local_height = (y_max - led.wy) / (y_max - y_min).max(1.0);
                 q(height * COOL_TILT + local_height * TILE_TILT)
@@ -153,7 +140,7 @@ fn q12(v: f32) -> i32 {
 
 impl Pattern for ApexFlame {
     fn render(&mut self, t_ms: u32, _audio: &Audio, out: &mut Frame) {
-        // Fold each time term to its own period before the f32 cast (long-uptime precision).
+        // Each time term wraps at its own period first, so the f32 stays precise.
         let wl2  = self.wavelength * SECOND_WAVELENGTH_RATIO;
         let spd2 = self.speed * SECOND_SPEED_RATIO;
         let p1_ms = (self.wavelength / self.speed * 1000.0) as u32;
@@ -164,13 +151,10 @@ impl Pattern for ApexFlame {
         let flick2_phase  = cycle(t_ms, FLICKER2_PERIOD_MS) * TAU;
         let breathe_phase = cycle(t_ms, BREATHE_PERIOD_MS) * TAU;
         let breathe = q12(1.0 - BREATHE_DEPTH * (0.5 + 0.5 * breathe_phase.sin()));
-        // The smoke's climb, in turns x65536.
-        let smoke_rise = ((t_ms % SMOKE_RISE_PERIOD_MS) * 65536 / SMOKE_RISE_PERIOD_MS) as u16;
+        let smoke_rise = ((t_ms % SMOKE_RISE_PERIOD_MS) * 65536 / SMOKE_RISE_PERIOD_MS) as u16; // turns x65536
         let smoke_meander = cycle(t_ms, SMOKE_MEANDER_PERIOD_MS) * TAU;
 
-        // Per-frame rotation angles for the two waves, the two flicker sines and the smoke
-        // wiggle. Each pairs with a per-LED phasor below, replacing a sin call per LED with
-        // multiply-adds.
+        // sin and cos of this frame's angle for the waves, the flicker and the smoke wiggle.
         let (b1_sin, b1_cos) = (-t1_s * self.speed * (TAU / self.wavelength)).sin_cos();
         let (b2_sin, b2_cos) = (-t2_s * spd2 * (TAU / wl2)).sin_cos();
         let (f1_sin, f1_cos) = flick_phase.sin_cos();
@@ -180,8 +164,7 @@ impl Pattern for ApexFlame {
         let (f1_sin, f1_cos, f2_sin, f2_cos) = (q12(f1_sin), q12(f1_cos), q12(f2_sin), q12(f2_cos));
         let (m_sin, m_cos) = (q12(m_sin), q12(m_cos));
 
-        // Ember flights: each slot is a scheduled, deterministic arc - spawn inside the
-        // triangle's width low down, rise with a sideways wobble, fade out (sin envelope).
+        // Embers start low inside the triangle, rise with a wobble and fade.
         let mut embers = [(0i32, 0i32, 0i32); EMBER_COUNT]; // (x, y in 1/16 mm, heat Q12)
         for (k, ember) in embers.iter_mut().enumerate() {
             let period = EMBER_PERIOD_MS + k as u32 * EMBER_STAGGER_MS;
@@ -199,7 +182,7 @@ impl Pattern for ApexFlame {
             );
         }
 
-        // Tile flare-up: one hash-picked tile per period surges fast and settles slowly.
+        // One random tile per period flares up fast and settles slowly.
         let flare_phase = cycle(t_ms, FLARE_PERIOD_MS);
         let flare_board = 1 + (knuth_hash(t_ms / FLARE_PERIOD_MS) >> 8) % BOARD_COUNT as u32;
         let flare_env = if flare_phase < FLARE_LEN {
@@ -211,19 +194,17 @@ impl Pattern for ApexFlame {
         let flare_heat = (FLARE_HEAT_Q * flare_env) as i32;
 
         for (i, led) in LED_MAP.iter().enumerate() {
-            // Two interfering ripples so the wavefronts don't look mechanical.
             let w1 = (self.w1_sin[i] as i32 * b1_cos + self.w1_cos[i] as i32 * b1_sin) >> 12;
             let w2 = (self.w2_sin[i] as i32 * b2_cos + self.w2_cos[i] as i32 * b2_sin) >> 12;
             let wave = (((w1 * MIX1_Q + w2 * MIX2_Q) >> 12) + ONE) >> 1;
             let wave = WAVE_FLOOR_Q + (((ONE - WAVE_FLOOR_Q) * wave) >> 12);
 
-            // Smoke field: rising bands whose vertical position wiggles sideways; where
-            // the field crosses its threshold band, heat is occluded into a dark wisp.
+            // Smoke: rising bands that wiggle sideways, dark where the field is near its peak.
             let wiggle = (self.m_sin[i] as i32 * m_cos + self.m_cos[i] as i32 * m_sin) >> 12;
             let turn = self.smoke_y[i]
                 .wrapping_add(smoke_rise)
                 .wrapping_add(((wiggle * SMOKE_MEANDER_TURNS) >> 12) as u16);
-            // Sine table read with a straight line between neighboring entries.
+            // Sine table lookup, interpolated between entries.
             let step = (turn >> (16 - SIN_BITS)) as usize;
             let s0 = self.sin_lut[step] as i32;
             let s1 = self.sin_lut[(step + 1) & (SIN_STEPS - 1)] as i32;
@@ -231,17 +212,14 @@ impl Pattern for ApexFlame {
             let sine = s0 + (((s1 - s0) * part) >> (16 - SIN_BITS));
             let field = (sine + ONE) >> 1;
             let wisp = (((field - SMOKE_EDGE0_Q) * SMOKE_EDGE_SCALE_Q) >> 12).clamp(0, ONE);
-            let wisp = (((wisp * wisp) >> 12) * (3 * ONE - 2 * wisp)) >> 12; // soft edges
+            let wisp = (((wisp * wisp) >> 12) * (3 * ONE - 2 * wisp)) >> 12; // smoothstep
             let smoke = ONE - ((SMOKE_DARKEN_Q * wisp) >> 12);
 
-            // Two flicker sines per LED, bipolar around 1.0 so crests can overshoot into
-            // the white/blue ramp top.
             let fl1 = (self.f1_sin[i] as i32 * f1_cos + self.f1_cos[i] as i32 * f1_sin) >> 12;
             let fl2 = (self.f2_sin[i] as i32 * f2_cos + self.f2_cos[i] as i32 * f2_sin) >> 12;
             let flicker = ONE + ((FLICKER_HALF_Q * (fl1 + fl2)) >> 12);
 
-            // Occasional events: any nearby ember blobs plus the flaring tile. A box check
-            // skips the embers nowhere near this LED.
+            // Nearby embers and the flaring tile.
             let mut event_heat = 0i32;
             for &(ex, ey, heat) in &embers {
                 let dx = self.x_q4[i] as i32 - ex;
@@ -266,19 +244,15 @@ impl Pattern for ApexFlame {
     }
 }
 
-/// Blackbody-ish heat ramp: coal-ember -> deep red -> orange -> bright yellow -> white ->
-/// blue-white. The floor is a dim ember rather than pure black, so cooled tops and smoke
-/// wisps glow as dark coals instead of switching fully off. With the height cooling this
-/// puts blue-white at the flame's base and a red flameout at the top rows, like a real flame.
-/// Read through `ramp_lut`, built from this once.
+/// Color for a heat in 0..1. The coolest stop is a dim ember, not black.
 fn fire_ramp(heat: f32) -> [u8; 3] {
     const STOPS: [(f32, [f32; 3]); 6] = [
-        (0.00, [25.0, 3.0, 0.0]),      // dim coal-ember floor (never fully off)
+        (0.00, [25.0, 3.0, 0.0]),      // dim ember
         (0.30, [180.0, 10.0, 0.0]),    // deep red
         (0.55, [255.0, 110.0, 0.0]),   // orange
         (0.75, [255.0, 230.0, 40.0]),  // bright yellow
         (0.90, [255.0, 255.0, 200.0]), // white
-        (1.00, [170.0, 210.0, 255.0]), // blue-white hottest core
+        (1.00, [170.0, 210.0, 255.0]), // blue-white
     ];
     let c = ramp(&STOPS, heat);
     [c[0] as u8, c[1] as u8, c[2] as u8]

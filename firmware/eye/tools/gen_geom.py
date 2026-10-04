@@ -1,9 +1,6 @@
 #!/usr/bin/env python3
-"""Generate src/led/geom.rs: per-LED distances and angles from fixed points on the fixture,
-per-board centers and heights, and the spatial grid buckets.
-
-Reads the world constants and LED positions out of src/led/map.rs so the geometry has one
-source of truth. Re-run if map.rs changes.
+"""Generate src/led/geom.rs from src/led/map.rs and the grid constants in src/led/grid.rs.
+Rerun if either changes.
 
     python tools/gen_geom.py
 """
@@ -36,13 +33,13 @@ def as_f32(v: float) -> float:
 
 
 def dist_f32(dx: float, dy: float) -> float:
-    """sqrt(dx^2 + dy^2), rounding to f32 at each step so the value matches f32 math on the device."""
+    """sqrt(dx^2 + dy^2), rounded to f32 at each step as the chip would."""
     d2 = as_f32(as_f32(dx * dx) + as_f32(dy * dy))
     return as_f32(math.sqrt(d2))
 
 
 def lit(v: float) -> str:
-    """Shortest Rust f32 literal that still parses back to exactly this value."""
+    """Shortest Rust f32 literal that parses back to exactly this value."""
     target = as_f32(v)
     s = repr(target)
     for digits in range(1, 10):
@@ -68,7 +65,7 @@ def pair(a: float, b: float) -> str:
 
 
 def buckets(leds, cell_mm: float, cols: int, rows: int):
-    """Group LED indices by grid cell, mirroring the bucketing in grid.rs."""
+    """Group LED indices by grid cell, the way grid.rs looks them up."""
     cells: list[list[int]] = [[] for _ in range(cols * rows)]
     for i, (wx, wy, _, _) in enumerate(leds):
         cx = min(int(as_f32(wx / cell_mm)), cols - 1)
@@ -83,8 +80,7 @@ def buckets(leds, cell_mm: float, cols: int, rows: int):
 
 
 def boards(leds, board_count: int):
-    """Per-board center and (lowest, highest) wy, indexed by board id with index 0 unused.
-    Sums run in LED order in f32, as the Rust code that used to compute them did."""
+    """Per-board center and (lowest, highest) wy, indexed by board id with index 0 unused."""
     sx = [0.0] * (board_count + 1)
     sy = [0.0] * (board_count + 1)
     n = [0] * (board_count + 1)
@@ -112,7 +108,7 @@ def main() -> None:
     cx = const(src, "WORLD_CX")
     top = const(src, "WORLD_TOP")
     bot = const(src, "WORLD_BOT")
-    # Mirrors WORLD_CENTROID_X / WORLD_CENTROID_Y in map.rs.
+    # Must match WORLD_CENTROID_X and WORLD_CENTROID_Y in map.rs.
     centroid_x = cx
     centroid_y = as_f32(top + as_f32(as_f32(bot - top) / 3.0))
 

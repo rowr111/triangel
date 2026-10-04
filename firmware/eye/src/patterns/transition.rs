@@ -6,33 +6,27 @@ use super::{Frame, knuth_hash, smoothstep};
 use crate::led::geom::{BOARD_CENTER, BOARD_COUNT, DIST_C, DIST_C_MAX};
 use crate::led::map::{Led, LED_MAP, WORLD_CENTROID_X, WORLD_CENTROID_Y};
 
-// Triangle centroid, from the shared world constants.
 const CENTER_X: f32 = WORLD_CENTROID_X;
 const CENTER_Y: f32 = WORLD_CENTROID_Y;
 
-// Width of the soft reveal band for radial wipes, and the soft edge for sparkle (as a
-// fraction of progress). Both just shape how hard/soft the transition front looks.
-const FEATHER_MM: f32 = 60.0;
-const SPARKLE_EDGE: f32 = 0.15;
+const FEATHER_MM: f32 = 60.0;   // width of the soft edge on radial wipes
+const SPARKLE_EDGE: f32 = 0.15; // time each LED takes to change, as a fraction of progress
 
-// Spiral wipe: how many turns the arm winds from center to edge (tightness), and how many
-// tiles are mid-transition at once (soft per-board edge, as a fraction of progress).
-const SPIRAL_TURNS: f32 = 1.5;
-const SPIRAL_EDGE: f32 = 0.12;
+const SPIRAL_TURNS: f32 = 1.5; // turns the spiral makes from center to edge
+const SPIRAL_EDGE: f32 = 0.12; // time each tile takes to change, as a fraction of progress
 
 #[derive(Clone, Copy)]
 pub enum TransitionStyle {
-    Crossfade,     // uniform fade of the whole frame, outgoing -> incoming
-    RadialOut,     // blooms from the centroid outward
-    RadialIn,      // collapses from the edges into the centroid
-    Sparkle,       // each LED crosses at its own random moment
-    RadialSparkle, // radial front, but raggedy/dissolving rather than a clean ring
-    SpiralOut,     // one triangle at a time, spiraling out from the center
-    SpiralIn,      // one triangle at a time, spiraling in toward the center
+    Crossfade,     // the whole frame fades at once
+    RadialOut,     // from the center outward
+    RadialIn,      // from the edges inward
+    Sparkle,       // each LED changes at its own random moment
+    RadialSparkle, // from the center outward, with a ragged edge
+    SpiralOut,     // one tile at a time, spiraling out from the center
+    SpiralIn,      // one tile at a time, spiraling in to the center
 }
 
-/// Blend the outgoing frame into the incoming one. `out` holds the incoming (target)
-/// frame on entry; on return it holds the composited result. `progress` is 0.0->1.0.
+/// Blends `from` into `out`, which holds the incoming frame on entry. `progress` is 0-1.
 pub fn blend(style: TransitionStyle, progress: f32, from: &Frame, out: &mut Frame) {
     let ranks = board_spiral_ranks();
     for (i, led) in LED_MAP.iter().enumerate() {
@@ -41,8 +35,8 @@ pub fn blend(style: TransitionStyle, progress: f32, from: &Frame, out: &mut Fram
     }
 }
 
-/// Per-LED mix factor: 0.0 = fully outgoing, 1.0 = fully incoming. `dist_c` is the LED's
-/// distance from the centroid, read from the generated table by the caller.
+/// Mix for one LED: 0 is the outgoing frame, 1 the incoming. `dist_c` is the LED's
+/// distance from the center.
 fn alpha_for(
     style: TransitionStyle,
     led: &Led,
@@ -81,17 +75,13 @@ fn alpha_for(
     }
 }
 
-/// Per-board switch order for the spiral wipe, indexed by `board_id`, each a normalized
-/// rank in [0, 1] (0 = first/innermost, 1 = last/outermost). Computed once. All LEDs on a
-/// board share its rank, so a whole triangle flips together.
+/// Each tile's place in the spiral order by `board_id`, 0 (first, innermost) to 1 (last).
 fn board_spiral_ranks() -> &'static [f32; BOARD_COUNT + 1] {
     static RANKS: OnceLock<[f32; BOARD_COUNT + 1]> = OnceLock::new();
     RANKS.get_or_init(compute_spiral_ranks)
 }
 
 fn compute_spiral_ranks() -> [f32; BOARD_COUNT + 1] {
-    // Per board: radius + angle from the design centroid. Track the radius span so we can
-    // normalize it for the spiral key.
     let mut polar: Vec<(usize, f32, f32)> = Vec::new(); // (board_id, radius, angle)
     let mut rmin = f32::MAX;
     let mut rmax = 0.0f32;
@@ -104,7 +94,7 @@ fn compute_spiral_ranks() -> [f32; BOARD_COUNT + 1] {
         polar.push((b, r, dy.atan2(dx)));
     }
 
-    // Spiral key: angle plus a radius term so the arm both rotates and grows outward.
+    // Sort by angle plus a term that grows with radius, which orders the tiles along a spiral.
     let span = (rmax - rmin).max(1.0);
     let mut keyed: Vec<(usize, f32)> = polar
         .iter()
@@ -112,7 +102,6 @@ fn compute_spiral_ranks() -> [f32; BOARD_COUNT + 1] {
         .collect();
     keyed.sort_by(|x, y| x.1.total_cmp(&y.1));
 
-    // Normalize sorted position to a [0, 1] rank.
     let mut ranks = [0.0f32; BOARD_COUNT + 1];
     let last = (keyed.len().max(2) - 1) as f32;
     for (pos, &(b, _)) in keyed.iter().enumerate() {
@@ -121,7 +110,7 @@ fn compute_spiral_ranks() -> [f32; BOARD_COUNT + 1] {
     ranks
 }
 
-/// Deterministic per-LED value in [0, 1), spread by a cheap hash of the chain index.
+/// Per-LED value in [0, 1) from a hash of the chain index.
 fn hash01(led: &Led) -> f32 {
     let h = knuth_hash(led.chain_idx as u32) ^ 0x9E37_79B9;
     (h % 1000) as f32 / 1000.0

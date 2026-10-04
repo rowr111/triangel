@@ -5,33 +5,27 @@ use crate::audio::Audio;
 use crate::led::map::LED_MAP;
 use core::f32::consts::TAU;
 
-// Rainbow - hue follows the angle around the centroid, so the whole wheel rotates.
+// Rainbow: hue follows the angle around the center, and the wheel rotates.
 
 // Effect strengths, 0.0 (off) to 1.0 (full).
-const TWINKLE:     f32 = 0.7; // swirl of fading around each triangle tile
-const BREATHE:     f32 = 0.5; // rotation eases like a tide
-const IRIDESCENCE: f32 = 0.2; // drifting hue ripple - oil-on-water shimmer
+const TWINKLE:     f32 = 0.7; // a fade that circles each tile
+const BREATHE:     f32 = 0.5; // the rotation speeds up and slows down
+const IRIDESCENCE: f32 = 0.2; // a hue ripple moving outward
 
-const SPIN_PERIOD_MS: u32 = 20_000; // one full rotation of the wheel
+const SPIN_PERIOD_MS: u32 = 20_000; // one full rotation
 
-// Breathe: depth of the speed wobble as a fraction of a hue cycle, over this period.
-const BREATHE_DEPTH:     f32 = 0.15;
+const BREATHE_DEPTH:     f32 = 0.15; // as a fraction of a hue cycle
 const BREATHE_PERIOD_MS: u32 = 18_000;
 
-const TWINKLE_RATE: f32 = 0.0026; // rad/ms; ~2.4 s per cycle
+const TWINKLE_RATE: f32 = 0.0026; // rad/ms, about 2.4 s per cycle
 
-// Iridescence: a concentric hue ripple drifting outward. Ring spacing, max hue swing,
-// drift time.
-const IRID_SPAN_MM:   f32 = 70.0;
-const IRID_DEG:       f32 = 55.0;
+const IRID_SPAN_MM:   f32 = 70.0; // ring spacing
+const IRID_DEG:       f32 = 55.0; // most the hue shifts
 const IRID_PERIOD_MS: u32 = 9_000;
 
-// Glints: brief near-white flashes on single LEDs over the rainbow, landing mostly on the
-// brighter ones. Fewer tries than Shimmer since more of the rainbow is bright, so about as
-// many land.
 const GLINTS: GlintStyle = GlintStyle {
     tries_per_sec: 10.0,
-    min_ms:        250, // fade time, picked per glint
+    min_ms:        250, // fade time
     max_ms:        450,
     white:         0.75, // how far toward white a glint starts
 };
@@ -61,7 +55,6 @@ impl Pattern for Rainbow {
             let ripple = (DIST_C[i] / IRID_SPAN_MM * TAU - irid_ph).sin();
             let hue = (THETA_C[i] / TAU + spin) * 360.0 + IRIDESCENCE * IRID_DEG * ripple;
 
-            // A fade that circulates each tile: the phase ramps with local_idx.
             let dip = 0.5 - 0.5 * (twinkle_t * TWINKLE_RATE + tile_hash(led) as f32).sin();
 
             out[i] = hsv(wrap360(hue), 1.0, 1.0 - TWINKLE * dip);

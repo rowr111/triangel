@@ -5,128 +5,117 @@ use crate::led::map::{WORLD_BOT, WORLD_CX, WORLD_H, WORLD_TOP, LED_COUNT, LED_MA
 use crate::led::world::{WORLD_HALF_W, WORLD_LEFT, WORLD_RIGHT};
 use core::f32::consts::{PI, TAU};
 
-// Tunables - dial these in the previewer. The pattern has no top or bottom: every
-// layer is isotropic, like open ocean seen from a plane or a cloud deck from below.
-
-// Water floor: resting level on the ramp plus a slow in-place boil so the dark
-// stretches between blooms never sit static.
+// Water floor: the resting level, plus a slow boil in place.
 const WATER_FLOOR: f32 = 0.40;
 const BOIL_DEPTH:  f32 = 0.10;
-const BOIL_CELL_MM: f32 = 140.0;    // spatial scale of the churn
-const BOIL_PERIOD_MS:  u32 = 4_900; // two incommensurate phases so the churn
-const BOIL2_PERIOD_MS: u32 = 3_100; // reads as boiling, not a sweep
-const BOIL_CROSS_Y: f32 = 0.83; // frequency of each axis' modulating sine, relative to the
-const BOIL_CROSS_X: f32 = 0.71; // cell scale - off-integer so the two never lock together
+const BOIL_CELL_MM: f32 = 140.0;    // size of the churn
+const BOIL_PERIOD_MS:  u32 = 4_900; // two unrelated periods, so it boils
+const BOIL2_PERIOD_MS: u32 = 3_100; // rather than sweeps
+const BOIL_CROSS_Y: f32 = 0.83; // each axis' modulating sine, relative to the cell size;
+const BOIL_CROSS_X: f32 = 0.71; // off-integer so the two never line up
 
-// Upwellings: hash-scheduled blooms that swell out of the dark, spread, and dissolve,
-// peak brightness falling as the radius grows so the energy feels like it diffuses.
+// Upwellings: blooms that swell out of the dark, spread and dissolve.
 const BLOOM_SLOTS: usize = 8;
-const BLOOM_PERIOD_MS:  u32 = 4_600; // base lifetime; each slot staggers longer
-const BLOOM_STAGGER_MS: u32 = 733;   // per-slot period offset keeps respawns unsynced
-const BLOOM_R0_MM: f32 = 45.0;  // radius at birth...
-const BLOOM_R1_MM: f32 = 175.0; // ...and at full spread
+const BLOOM_PERIOD_MS:  u32 = 4_600; // base lifetime
+const BLOOM_STAGGER_MS: u32 = 733;   // added per slot, so they respawn out of step
+const BLOOM_R0_MM: f32 = 45.0;  // radius at birth
+const BLOOM_R1_MM: f32 = 175.0; // radius at full spread
 const BLOOM_PEAK:  f32 = 0.6;   // energy a young bloom adds at its center
-const BLOOM_RIM:   f32 = 0.55;  // 0 = fades in place; 1 = dies as an expanding ring
+const BLOOM_RIM:   f32 = 0.55;  // 0 fades in place, 1 dies as an expanding ring
 
-// Whitecaps: hash-twinkled froth where bloom energy crests past the threshold.
+// Whitecaps: twinkling froth where the energy passes the threshold.
 const FOAM_THRESH: f32 = 0.8;
 const FOAM_GAIN:   f32 = 2.5;      // how fast froth saturates past the threshold
 const FOAM_PERIOD_MS: u32 = 530;   // twinkle period
 
-// Clouds: pale drifting masses with real state - position and velocity, easing toward
-// a new random heading at random intervals, exiting one edge to re-enter at another.
+// Clouds: pale masses that drift, turn toward a new heading now and then, and come back
+// in from another edge after leaving.
 const CLOUD_COUNT: usize = 3;
-const CLOUD_LOBES: usize = 3;        // overlapping soft lobes keep the outline indistinct
-const CLOUD_SPEED_MIN: f32 = 12.0;   // mm/s drift
+const CLOUD_LOBES: usize = 3;        // overlapping soft lobes per cloud
+const CLOUD_SPEED_MIN: f32 = 12.0;   // mm/s
 const CLOUD_SPEED_MAX: f32 = 40.0;
-const CLOUD_TURN_RATE: f32 = 0.8;    // 1/s - how quickly velocity eases toward its target
-const CLOUD_RETARGET_MIN_MS: u32 = 3_000; // how long a heading holds before wandering
+const CLOUD_TURN_RATE: f32 = 0.8;    // 1/s, how fast velocity eases to its target
+const CLOUD_RETARGET_MIN_MS: u32 = 3_000; // how long a heading holds
 const CLOUD_RETARGET_MAX_MS: u32 = 9_000;
 const CLOUD_LOBE_R_MM:   f32 = 90.0;
 const CLOUD_LOBE_OFF_MM: f32 = 60.0; // lobe orbit radius around the cloud center
-const CLOUD_BREATHE: f32 = 0.3;      // lobe radius swing while breathing
-const CLOUD_BRIGHT:  f32 = 0.7;      // cover opacity at full density
-const CLOUD_MARGIN_MM: f32 = 170.0;  // how far past an edge before re-entering elsewhere
+const CLOUD_BREATHE: f32 = 0.3;      // lobe radius swing
+const CLOUD_BRIGHT:  f32 = 0.7;      // opacity at full density
+const CLOUD_MARGIN_MM: f32 = 170.0;  // how far past an edge before re-entering
 
-// Lightning: pure white bolts streaking along the tile lattice - the path builds one
-// tile side at a time and stays fully lit; on reaching its endpoint it stutters
-// through flickering return-stroke pulses, then dies to dark. A few independent
-// slots roll their own irregular gaps, so bolts occasionally overlap.
-const BOLT_SLOTS: usize = 2;
-const STRIKE_GAP_MIN_MS: u32 = 4_000;  // per slot; overall cadence scales with BOLT_SLOTS
+// Lightning: a white bolt builds along the tile edges one side at a time, flickers
+// through a few return strokes, then dies.
+const BOLT_SLOTS: usize = 2;         // bolts that can be alive at once
+const STRIKE_GAP_MIN_MS: u32 = 4_000;  // per slot
 const STRIKE_GAP_MAX_MS: u32 = 14_000;
-const BOLT_SEGS_MIN: usize = 3;      // bolt length range, in tile edges walked
+const BOLT_SEGS_MIN: usize = 3;      // bolt length, in tile sides
 const BOLT_SEGS_MAX: usize = 8;
-const BOLT_STEP_MS: u32 = 150;       // leader advances one tile side per step
-const FLICKER_FADE_MS: f32 = 180.0;  // decay of each full-path return-stroke pulse
-const BOLT_PULSES_MIN: usize = 2;    // return strokes per strike...
-const BOLT_PULSES_MAX: usize = 5;    // ...rolled fresh each time, irregularly spaced
-const BOLT_TAIL_MS: u32 = 1_400;     // fade-out allowance after the final pulse
-const BOLT_CORE_MM: f32 = 12.0;      // catches the two LED rows straddling a tile edge
-const BOLT_GAIN: f32 = 1.6;          // spatial overdrive: near-line LEDs saturate to full white
+const BOLT_STEP_MS: u32 = 150;       // time per tile side while building
+const FLICKER_FADE_MS: f32 = 180.0;  // decay of each return stroke
+const BOLT_PULSES_MIN: usize = 2;    // return strokes per strike
+const BOLT_PULSES_MAX: usize = 5;
+const BOLT_TAIL_MS: u32 = 1_400;     // fade-out time after the last stroke
+const BOLT_CORE_MM: f32 = 12.0;      // reaches the two LED rows either side of a tile edge
+const BOLT_GAIN: f32 = 1.6;          // LEDs near the line saturate to full white
 
-// Tile-corner lattice the bolts walk: vertex row r (0 = wide top edge, 5 = bottom apex)
-// holds 6-r vertices centered on WORLD_CX. Side and row height include the inter-tile
-// gap, matching the previewer's board grid to within a few mm.
+// Tile-corner lattice the bolts walk: row r (0 = top edge, 5 = apex) holds 6-r vertices
+// centered on WORLD_CX. Side and row height include the gap between tiles.
 const LATTICE_TOP_Y: f32 = 1.0;
 const LATTICE_ROW_H: f32 = 89.0;
 const LATTICE_SIDE:  f32 = 103.5;
-// Six lattice neighbors as (row, index) deltas: left, right, and the four diagonals.
+// Neighbors as (row, index) steps: left, right, and the four diagonals.
 const LATTICE_NEIGHBORS: [(i32, i32); 6] = [(0, -1), (0, 1), (-1, 0), (-1, 1), (1, -1), (1, 0)];
 
 const FOAM_COLOR:  [f32; 3] = [235.0, 245.0, 250.0];
 const CLOUD_COLOR: [f32; 3] = [168.0, 178.0, 196.0]; // pale blue-gray
-const FLASH_COLOR: [f32; 3] = [255.0, 255.0, 255.0]; // lightning is pure white
+const FLASH_COLOR: [f32; 3] = [255.0, 255.0, 255.0];
 
 struct Cloud {
     x:   f32,
     y:   f32,
     vx:  f32,
     vy:  f32,
-    tvx: f32, // target velocity the current one eases toward
+    tvx: f32, // target velocity
     tvy: f32,
     retarget_start_ms: u32,
     retarget_len_ms:   u32,
-    seed: u32, // decorrelates this cloud's lobe motion from its siblings
+    seed: u32, // makes this cloud's lobes move differently from the others'
 }
 
-/// A bolt's path: a walk along the tile lattice, at most BOLT_SEGS_MAX edges long.
+/// A bolt's path along the tile lattice.
 struct Bolt {
     pts: [(f32, f32); BOLT_SEGS_MAX + 1],
-    len: usize, // points in use (edges walked + 1)
+    len: usize, // points in use
 }
 
 struct Strike {
     start_ms: u32,
     bolt:     Bolt,
-    // Return-stroke onsets relative to start_ms; the first is the moment the leader
-    // completes its walk. u32::MAX marks an unused slot.
+    // When each return stroke starts, from start_ms; the first is when the bolt finishes
+    // building. u32::MAX marks an unused slot.
     pulse_ms: [u32; BOLT_PULSES_MAX],
 }
 
-/// One independent lightning scheduler: its own irregular gap countdown and at most
-/// one bolt in flight. Slots sometimes land close together - overlapping streaks.
+/// One lightning scheduler: a gap countdown and at most one bolt.
 struct StrikeSlot {
     strike:       Option<Strike>,
     gap_start_ms: u32,
     gap_len_ms:   u32,
 }
 
-/// Boiling sea under a storm: dark water bubbling with upwellings, pale clouds drifting
-/// on wandering headings, and sparse lightning. Stateful (cloud simulation plus a seeded
-/// PRNG) unlike the hash-scheduled ambients, so headings genuinely change over time.
+/// A night storm seen from above: dark water boiling with upwellings, pale clouds
+/// drifting, and sparse lightning.
 pub struct Squall {
     clouds:  [Cloud; CLOUD_COUNT],
     slots:   [StrikeSlot; BOLT_SLOTS],
     rng:     Rng,
-    last_ms: Option<u32>, // previous frame time; None until the first render
-    // Phasors for the boil's two inner sines. Their arguments are a fixed per-LED term plus a
-    // per-frame one, so rotating these replaces two of the four sin calls per LED.
+    last_ms: Option<u32>, // None until the first render
+    // sin and cos of the per-LED part of the boil's two inner sines.
     by_sin: [f32; LED_COUNT],
     by_cos: [f32; LED_COUNT],
     bx_sin: [f32; LED_COUNT],
     bx_cos: [f32; LED_COUNT],
-    // Per-LED totals for this frame, filled by the scatter passes.
+    // Per-LED totals for this frame.
     energy:  [f32; LED_COUNT],
     density: [f32; LED_COUNT],
     bolt:    [f32; LED_COUNT],
@@ -134,7 +123,7 @@ pub struct Squall {
 
 impl Squall {
     pub fn new() -> Self {
-        let mut rng = Rng::new(0x5EED_5EA5); // fixed seed keeps runs reproducible
+        let mut rng = Rng::new(0x5EED_5EA5);
         let clouds = core::array::from_fn(|_| {
             let x = lerp(WORLD_LEFT, WORLD_RIGHT, rng.f32());
             let y = lerp(WORLD_TOP, WORLD_BOT, rng.f32());
@@ -169,8 +158,7 @@ impl Squall {
         }
     }
 
-    /// Advance the drift simulation: ease each cloud toward its target velocity, pick a
-    /// new target at irregular intervals, and re-enter from a fresh edge once fully off.
+    /// Moves the clouds, retargets their headings, and respawns any that have left.
     fn update_clouds(&mut self, t_ms: u32, dt_s: f32) {
         let Squall { clouds, rng, .. } = self;
         let ease = (CLOUD_TURN_RATE * dt_s).min(1.0);
@@ -195,8 +183,7 @@ impl Squall {
         }
     }
 
-    /// Per slot: retire a bolt whose last side has fully faded, then ignite the next
-    /// once that slot's irregular gap elapses.
+    /// Per slot: clears a bolt that has faded, and starts the next once its gap is over.
     fn update_strikes(&mut self, t_ms: u32) {
         for k in 0..BOLT_SLOTS {
             let expired = self.slots[k].strike.as_ref().is_some_and(|s| {
@@ -218,9 +205,7 @@ impl Squall {
         }
     }
 
-    /// Anchor a new bolt to a random cloud, walk its lattice path, and roll its return
-    /// strokes: the first lands the moment the leader completes, then the lit path
-    /// stutters through up to four more irregularly spaced pulses.
+    /// Starts a bolt at a random cloud and picks its path and return-stroke times.
     fn ignite(&mut self, t_ms: u32) -> Strike {
         let a = self.rng.next_u32() as usize % CLOUD_COUNT;
         let (cx, cy) = (self.clouds[a].x, self.clouds[a].y);
@@ -232,15 +217,13 @@ impl Squall {
         let mut at = complete;
         for p in pulse_ms.iter_mut().take(n) {
             *p = at;
-            at += 60 + self.rng.next_u32() % 360; // uneven stutter, new every strike
+            at += 60 + self.rng.next_u32() % 360;
         }
         Strike { start_ms: t_ms, bolt, pulse_ms }
     }
 
-    /// Random-walk a bolt along the tile lattice, starting at the vertex nearest the
-    /// flashing cloud. Each hop must keep moving forward (positive dot with the incoming
-    /// heading): straight ahead or a gentle 60-degree turn, never the backtrack or the
-    /// double-back alongside it. A cornered walk ends early - a streak out of sky.
+    /// Random walk along the lattice from the vertex nearest (cx, cy). Each hop goes
+    /// straight on or turns 60 degrees, never back; the walk ends early if it is cornered.
     fn walk_bolt(&mut self, cx: f32, cy: f32) -> Bolt {
         let r0 = (((cy - LATTICE_TOP_Y) / LATTICE_ROW_H).round() as i32).clamp(0, 5);
         let i0 = (((cx - WORLD_CX) / LATTICE_SIDE + (5 - r0) as f32 / 2.0).round() as i32)
@@ -252,7 +235,7 @@ impl Squall {
         let mut pts = [(0.0f32, 0.0f32); BOLT_SEGS_MAX + 1];
         pts[0] = lattice_pos(r, i);
         let mut len = 1;
-        let (mut hx, mut hy) = (0.0f32, 0.0f32); // incoming unit heading; unset on first hop
+        let (mut hx, mut hy) = (0.0f32, 0.0f32); // heading of the last hop
         for _ in 0..segs {
             let mut cand = [(0i32, 0i32); 6];
             let mut n = 0;
@@ -270,7 +253,7 @@ impl Squall {
                 }
             }
             if n == 0 {
-                break; // cornered at the canvas edge - the bolt ends here
+                break;
             }
             let (nr, ni) = cand[self.rng.next_u32() as usize % n];
             let (nx, ny) = lattice_pos(nr, ni);
@@ -287,7 +270,7 @@ impl Squall {
 
 impl Pattern for Squall {
     fn on_enter(&mut self, t_ms: u32) {
-        // Re-anchor the timers so everything doesn't fire at once after time off screen.
+        // Restart the timers so they do not all fire at once after time off screen.
         for slot in &mut self.slots {
             slot.gap_start_ms = t_ms;
         }
@@ -301,11 +284,10 @@ impl Pattern for Squall {
         let boil2 = cycle(t_ms, BOIL2_PERIOD_MS) * TAU;
         let foam_phase = cycle(t_ms, FOAM_PERIOD_MS) * TAU;
 
-        // Frame delta drives the cloud simulation.
         let dt_s = match self.last_ms {
             Some(last) => (t_ms.wrapping_sub(last) as f32 / 1000.0).min(0.1),
             None => {
-                // First frame: anchor the strike countdowns so the storm opens quietly.
+                // First frame: start every gap now, so no bolt fires straight away.
                 let Squall { slots, rng, .. } = self;
                 for slot in slots.iter_mut() {
                     slot.gap_start_ms = t_ms;
@@ -318,9 +300,8 @@ impl Pattern for Squall {
         self.update_clouds(t_ms, dt_s);
         self.update_strikes(t_ms);
 
-        // Bloom slots: each period, a slot hash-picks a spot near the triangle and lives
-        // one bloom there - radius grows birth-to-death while a sin envelope swells and
-        // fades the energy. (x, y, 1/r^2, amplitude, ring blend, grid reach) per slot.
+        // One bloom per slot per period, at a hashed spot: (x, y, 1/r^2, amplitude, ring
+        // blend, grid reach).
         let mut blooms = [(0.0f32, 0.0f32, 0.0f32, 0.0f32, 0.0f32, 0usize); BLOOM_SLOTS];
         for (k, b) in blooms.iter_mut().enumerate() {
             let period = BLOOM_PERIOD_MS + k as u32 * BLOOM_STAGGER_MS;
@@ -334,8 +315,7 @@ impl Pattern for Squall {
             *b = (x, y, 1.0 / (r * r), BLOOM_PEAK * (p * PI).sin(), BLOOM_RIM * p, reach);
         }
 
-        // Cloud lobes, flattened across clouds: each orbits its cloud center and breathes
-        // its radius on seed-derived periods, so the silhouette slowly morphs.
+        // Every cloud's lobes, each orbiting its cloud center and changing radius:
         // (x, y, 1/r^2, grid reach).
         let mut lobes = [(0.0f32, 0.0f32, 0.0f32, 0usize); CLOUD_COUNT * CLOUD_LOBES];
         for (ci, c) in self.clouds.iter().enumerate() {
@@ -356,24 +336,21 @@ impl Pattern for Squall {
             }
         }
 
-        // Active bolt segments with envelopes (a, b, envelope). While the leader crawls,
-        // every side it has reached stays fully lit, so the bolt visibly builds. Once
-        // the walk completes, the whole path shares the return-stroke envelope:
-        // full-white pops dipping between pulses, dying out after the last one.
+        // The lit sides of every live bolt, each with its brightness.
         let mut segs = [Seg::ZERO; BOLT_SLOTS * BOLT_SEGS_MAX];
         let mut n_segs = 0;
         for slot in &self.slots {
             let Some(s) = &slot.strike else { continue };
             let el = t_ms.wrapping_sub(s.start_ms);
             if el < s.pulse_ms[0] {
-                // Leader phase: every side reached so far holds at full strength.
+                // Building: every side reached so far is fully lit.
                 let reached = (el / BOLT_STEP_MS) as usize + 1;
                 for w in s.bolt.pts[..(reached + 1).min(s.bolt.len)].windows(2) {
                     segs[n_segs] = Seg::new(w[0], w[1], 1.0);
                     n_segs += 1;
                 }
             } else {
-                // Flicker phase: every fired pulse decays; the loudest one wins.
+                // Flickering: each return stroke decays, and the brightest one shows.
                 let mut env = 0.0f32;
                 for &p in &s.pulse_ms {
                     if el >= p {
@@ -390,16 +367,14 @@ impl Pattern for Squall {
         }
         let segs = &segs[..n_segs];
 
-        // Per-frame rotation angles for the boil's inner sines, and the cell scale as one
-        // multiply rather than a divide plus a multiply per LED.
         let boil_k = TAU / BOIL_CELL_MM;
         let (b1_sin, b1_cos) = boil1.sin_cos();
         let (b2_sin, b2_cos) = boil2.sin_cos();
         let (fp_sin, fp_cos) = foam_phase.sin_cos();
         let (ph_sin, ph_cos) = phase_phasors();
 
-        // Boiling floor, seeded into the energy buffer. The inner sines come from the phasor
-        // tables; the outer two can't factor, since their arguments contain the inner results.
+        // Boiling floor. The inner sines come from the tables; the outer two cannot, since
+        // their arguments contain the inner results.
         let Squall {
             by_sin,
             by_cos,
@@ -421,9 +396,7 @@ impl Pattern for Squall {
             bolt_buf[i] = 0.0;
         }
 
-        // Upwellings: a young bloom is a filled swell; the rim blend morphs it toward a ring as
-        // it ages, so it dies ghosting outward instead of switching off. Scattered onto the LEDs
-        // each bloom reaches, in slot order, so every LED sums them in the order it used to.
+        // Upwellings: a young bloom is a filled disc that turns into a ring as it ages.
         for &(x, y, inv_r2, amp, ring, reach) in &blooms {
             grid::for_each_near(x, y, reach, |k| {
                 let led = &LED_MAP[k];
@@ -436,8 +409,7 @@ impl Pattern for Squall {
             });
         }
 
-        // Cloud cover, scattered the same way: pale mass over the water, saturating where
-        // lobes overlap.
+        // Cloud cover, densest where lobes overlap.
         for &(x, y, inv_r2, reach) in &lobes {
             grid::for_each_near(x, y, reach, |k| {
                 let led = &LED_MAP[k];
@@ -448,8 +420,7 @@ impl Pattern for Squall {
             });
         }
 
-        // Lightning: pure white along the lit tile sides, scattered onto the narrow ribbon of
-        // cells each side passes through. Taking the max means visit order does not matter.
+        // Lightning along the lit tile sides. Where bolts overlap the brighter one wins.
         let bolt_reach = (BOLT_CORE_MM * 3.0 / CELL_MM).ceil() as usize;
         for s in segs {
             grid::for_each_near_seg(s.a, s.b, bolt_reach, |k| {
@@ -465,7 +436,7 @@ impl Pattern for Squall {
         for (i, led) in LED_MAP.iter().enumerate() {
             let energy = energy_buf[i];
 
-            // Water color, then froth where the crest breaks: hash-twinkled speckle.
+            // Water color, then twinkling froth above the threshold.
             let mut c = ramp(&WATER_RAMP, energy);
             let excess = ((energy - FOAM_THRESH) * FOAM_GAIN).clamp(0.0, 1.0);
             if excess > 0.0 {
@@ -477,8 +448,6 @@ impl Pattern for Squall {
             let density = density_buf[i].min(1.0);
             c = mix_rgb(c, CLOUD_COLOR, density * CLOUD_BRIGHT);
 
-            // The overdrive saturates the spatial falloff, so the LED rows straddling the line
-            // hit true full white while the pulse envelope keeps its whole flicker depth.
             let bolt = bolt_buf[i];
             if bolt > 0.0 {
                 c = mix_rgb(c, FLASH_COLOR, bolt);
@@ -489,8 +458,7 @@ impl Pattern for Squall {
     }
 }
 
-/// Re-enter just off a random edge, aimed at a random point in the canvas middle so
-/// every entrance takes a fresh heading but always comes back on stage.
+/// Puts the cloud just off a random edge, heading for a random point near the middle.
 fn respawn(c: &mut Cloud, rng: &mut Rng, t_ms: u32) {
     let along = rng.f32();
     let (x, y) = match rng.next_u32() % 4 {
@@ -514,9 +482,7 @@ fn respawn(c: &mut Cloud, rng: &mut Rng, t_ms: u32) {
     c.retarget_len_ms = rng.range_u32(CLOUD_RETARGET_MIN_MS, CLOUD_RETARGET_MAX_MS);
 }
 
-/// Storm-water ramp: deep blue-black up through turquoise to foam white. A swell
-/// crest falls off white -> aqua -> turquoise -> blue over its upper half, while
-/// the resting floor keeps a moody navy-blue depth.
+/// Water color by energy.
 const WATER_RAMP: [(f32, [f32; 3]); 6] = [
     (0.00, [2.0, 8.0, 31.0]),      // deep blue-black
     (0.32, [9.0, 37.0, 97.0]),     // navy-blue
@@ -526,15 +492,13 @@ const WATER_RAMP: [(f32, [f32; 3]); 6] = [
     (1.00, [240.0, 249.0, 251.0]), // foam white
 ];
 
-/// World position of lattice vertex (row, index): row 0 is the wide top edge, row 5
-/// the bottom apex; row r holds 6-r vertices centered on WORLD_CX.
+/// World position of lattice vertex (row, index).
 fn lattice_pos(r: i32, i: i32) -> (f32, f32) {
     let x = WORLD_CX + (i as f32 - (5 - r) as f32 / 2.0) * LATTICE_SIDE;
     (x, LATTICE_TOP_Y + r as f32 * LATTICE_ROW_H)
 }
 
-/// One lit bolt side, with the direction terms of the distance test hoisted off the per-LED
-/// path - they depend only on the segment.
+/// One lit bolt side, with the per-segment terms of the distance test worked out once.
 #[derive(Clone, Copy)]
 struct Seg {
     a:    (f32, f32),

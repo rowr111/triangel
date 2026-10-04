@@ -6,20 +6,16 @@ use crate::led::map::{LED_COUNT, LED_MAP};
 use crate::patterns::{Frame, Pattern, Rng, free_or_oldest, hsv};
 use triangel_shared::tuning::firework::*;
 
-/// Room for a drop's bursts on top of the sparks still flying from recent beats. Must stay
-/// under 255, since each LED records which spark owns it in a byte.
+/// Must stay under 255: each LED stores the index of its strongest spark in a byte.
 const MAX_SPARKS: usize = 192;
-/// Spots tried for each drop burst before settling for the farthest one found.
+/// Spots tried for each drop burst before taking the farthest one found.
 const DROP_TRIES: usize = 12;
 
-/// Firework colors. Saturation runs high for the warm hues where the LEDs can carry it,
-/// and is eased back toward blue and violet, which otherwise drive one channel and read
-/// dim rather than vivid.
+/// (hue, sat). The cooler hues are less saturated, or they would look dim.
 const PALETTE: [(f32, f32); 5] =
     [(45.0, 0.95), (12.0, 0.97), (330.0, 0.90), (190.0, 0.82), (130.0, 0.88)];
 
-/// Squared distance from `p` to the nearest of `others`, or the largest value when there
-/// are none.
+/// Squared distance from `p` to the nearest of `others`, or f32::MAX if there are none.
 fn nearest_d2(p: (f32, f32), others: &[(f32, f32)]) -> f32 {
     others.iter().fold(f32::MAX, |m, q| {
         let (dx, dy) = (p.0 - q.0, p.1 - q.1);
@@ -42,7 +38,7 @@ struct Spark {
     alive:    bool,
 }
 
-/// One live spark reduced to what the splat needs.
+/// One live spark's position, size and color for this frame.
 #[derive(Clone, Copy)]
 struct Live {
     px:     f32,
@@ -55,13 +51,12 @@ struct Live {
     reach:  usize,
 }
 
-/// Fireworks. Each beat bursts at one point and throws a shower of sparks outward,
-/// white at the burst, settling into one color as they fly, drooping and fading out.
+/// Fireworks. Each beat throws a burst of sparks from one point; they start white, take
+/// on the burst's color, fall and fade.
 pub struct Firework {
     rng:    Rng,
     sparks: [Spark; MAX_SPARKS],
-    /// Per-LED accumulation, so each spark touches only the LEDs near it rather than
-    /// every LED testing itself against every spark.
+    /// Per LED: total brightness, the strongest spark's brightness, and its index.
     tot:   [f32; LED_COUNT],
     best:  [f32; LED_COUNT],
     owner: [u8; LED_COUNT],
@@ -81,27 +76,23 @@ impl Firework {
         }
     }
 
-    /// A random LED's position, which keeps a burst on the fixture.
+    /// A random LED's position.
     fn random_point(&mut self) -> (f32, f32) {
         let pick = (self.rng.f32() * LED_COUNT as f32) as usize % LED_COUNT;
         (LED_MAP[pick].wx, LED_MAP[pick].wy)
     }
 
-    /// Burst at a random LED.
     fn burst(&mut self, t_ms: u32, strength: f32, count: usize) {
         let (x, y) = self.random_point();
         self.burst_at(x, y, t_ms, strength, count);
     }
 
-    /// A drop: many full bursts at once, each placed at least DROP_SPACING_MM from the
-    /// others already placed where one can be found, so together they fill the fixture.
+    /// A drop: many full bursts at once, kept DROP_SPACING_MM apart where possible.
     fn drop_bursts(&mut self, t_ms: u32) {
         let count = BURST_MIN + BURST_EXTRA as usize;
         let min2 = DROP_SPACING_MM * DROP_SPACING_MM;
         let mut placed = [(0.0f32, 0.0f32); DROP_BURSTS];
         for k in 0..DROP_BURSTS {
-            // Keep whichever spot is farthest from the bursts already placed, stopping as
-            // soon as one clears the spacing.
             let mut best = self.random_point();
             let mut best_d2 = nearest_d2(best, &placed[..k]);
             for _ in 0..DROP_TRIES {
@@ -120,10 +111,10 @@ impl Firework {
         }
     }
 
-    /// Throw `count` sparks outward from (x, y) in one color.
+    /// Throws `count` sparks outward from (x, y) in one color.
     fn burst_at(&mut self, x: f32, y: f32, t_ms: u32, strength: f32, count: usize) {
         let (hue, sat) = self.rng.pick(&PALETTE);
-        // Spread the sparks around the circle rather than leaving them to clump.
+        // One spark per equal slice of the circle, so they do not clump.
         let step = TAU / count as f32;
         let offset = self.rng.f32() * TAU;
         for k in 0..count {
@@ -155,7 +146,6 @@ impl Pattern for Firework {
             self.burst(t_ms, 0.4 + 0.6 * audio.beat_strength, count);
         }
 
-        // Age the sparks and gather the live ones, retiring any that are spent.
         let blank = Live {
             px: 0.0, py: 0.0, r2: 0.0, inv_r2: 0.0, amp: 0.0, hue: 0.0, sat: 0.0, reach: 0,
         };
@@ -191,8 +181,7 @@ impl Pattern for Firework {
         best.fill(0.0);
         owner.fill(NO_OWNER);
 
-        // Each spark touches only the LEDs in the grid cells it covers. The strongest
-        // spark over an LED keeps its color, so overlapping bursts stay distinct.
+        // An LED takes the color of its strongest spark, so overlapping bursts stay distinct.
         for (s, spark) in live[..n_live].iter().enumerate() {
             grid::for_each_near(spark.px, spark.py, spark.reach, |i| {
                 let dx = LED_MAP[i].wx - spark.px;

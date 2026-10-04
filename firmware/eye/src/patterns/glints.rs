@@ -6,9 +6,9 @@ const MAX_GLINTS: usize = 24;
 /// How a pattern's glints look.
 #[derive(Clone, Copy)]
 pub struct GlintStyle {
-    /// Tries per second. Each lands only as likely as its LED is bright.
+    /// Tries per second. A try on a brighter LED is likelier to land.
     pub tries_per_sec: f32,
-    /// Fade time range, picked per glint.
+    /// Fade time range.
     pub min_ms: u32,
     pub max_ms: u32,
     /// How far toward white a glint starts.
@@ -22,8 +22,8 @@ struct Glint {
     life_ms:  u32,
 }
 
-/// Brief near-white flashes on single LEDs, landing mostly on the brightest ones, shared by
-/// Shimmer and Rainbow. The pattern draws its frame first, then calls `update` over it.
+/// Brief near-white flashes on single LEDs, mostly the bright ones. The pattern draws its
+/// frame first, then calls `update` on it.
 pub struct Glints {
     style:  GlintStyle,
     rng:    Rng,
@@ -41,7 +41,7 @@ impl Glints {
         }
     }
 
-    /// Land new glints, most on the brightest LEDs, then lift every live one toward white.
+    /// Starts new glints, then blends every live one toward white.
     pub fn update(&mut self, t_ms: u32, dt_ms: u32, out: &mut Frame) {
         let s = self.style;
         self.tries += dt_ms as f32 * s.tries_per_sec / 1000.0;
