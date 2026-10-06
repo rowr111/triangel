@@ -12,8 +12,7 @@ pub const LEVEL_DB_FLOOR: f32 = -90.0;
 
 /// Encode dBFS for the wire. Both chips go through this so they cannot disagree.
 pub fn level_to_wire(dbfs: f32) -> u16 {
-    let t = ((dbfs - LEVEL_DB_FLOOR) / -LEVEL_DB_FLOOR).clamp(0.0, 1.0);
-    (t * 65535.0) as u16
+    norm_to_wire((dbfs - LEVEL_DB_FLOOR) / -LEVEL_DB_FLOOR)
 }
 
 /// Decode a wire level back to absolute dBFS.
@@ -75,43 +74,75 @@ impl MelFrame {
     /// Serialise into a wire buffer.
     pub fn encode(&self, buf: &mut [u8; FRAME_LEN]) {
         buf[0] = SYNC_BYTE;
-        for (i, &band) in self.bands.iter().enumerate() {
-            let off = 1 + i * 2;
-            buf[off]     = (band & 0xFF) as u8;
-            buf[off + 1] = (band >> 8)   as u8;
+        let words = self.bands.iter().chain([&self.level, &self.level_norm, &self.flux, &self.bass]);
+        for (bytes, word) in buf[1..FRAME_LEN - 1].chunks_exact_mut(2).zip(words) {
+            bytes.copy_from_slice(&word.to_le_bytes());
         }
-        let lvl_off = 1 + MEL_BANDS * 2;
-        buf[lvl_off]     = (self.level & 0xFF) as u8;
-        buf[lvl_off + 1] = (self.level >> 8)   as u8;
-        buf[lvl_off + 2] = (self.level_norm & 0xFF) as u8;
-        buf[lvl_off + 3] = (self.level_norm >> 8)   as u8;
-        buf[lvl_off + 4] = (self.flux & 0xFF) as u8;
-        buf[lvl_off + 5] = (self.flux >> 8)   as u8;
-        buf[lvl_off + 6] = (self.bass & 0xFF) as u8;
-        buf[lvl_off + 7] = (self.bass >> 8)   as u8;
-        let checksum = buf[1..FRAME_LEN - 1].iter().fold(0u8, |acc, &b| acc ^ b);
-        buf[FRAME_LEN - 1] = checksum;
+        buf[FRAME_LEN - 1] = checksum(buf);
     }
 
     /// Parse a wire buffer. Returns `None` if sync or checksum is wrong.
     pub fn decode(buf: &[u8; FRAME_LEN]) -> Option<Self> {
-        if buf[0] != SYNC_BYTE {
+        if buf[0] != SYNC_BYTE || buf[FRAME_LEN - 1] != checksum(buf) {
             return None;
         }
-        let expected = buf[1..FRAME_LEN - 1].iter().fold(0u8, |acc, &b| acc ^ b);
-        if buf[FRAME_LEN - 1] != expected {
-            return None;
-        }
-        let mut bands = [0u16; MEL_BANDS];
-        for (i, band) in bands.iter_mut().enumerate() {
-            let off = 1 + i * 2;
-            *band = (buf[off] as u16) | ((buf[off + 1] as u16) << 8);
-        }
-        let lvl_off = 1 + MEL_BANDS * 2;
-        let level = (buf[lvl_off] as u16) | ((buf[lvl_off + 1] as u16) << 8);
-        let level_norm = (buf[lvl_off + 2] as u16) | ((buf[lvl_off + 3] as u16) << 8);
-        let flux = (buf[lvl_off + 4] as u16) | ((buf[lvl_off + 5] as u16) << 8);
-        let bass = (buf[lvl_off + 6] as u16) | ((buf[lvl_off + 7] as u16) << 8);
-        Some(MelFrame { bands, level, level_norm, flux, bass })
+        let word = |i: usize| u16::from_le_bytes([buf[1 + i * 2], buf[2 + i * 2]]);
+        Some(MelFrame {
+            bands:      std::array::from_fn(word),
+            level:      word(MEL_BANDS),
+            level_norm: word(MEL_BANDS + 1),
+            flux:       word(MEL_BANDS + 2),
+            bass:       word(MEL_BANDS + 3),
+        })
     }
+}
+
+/// What one byte did to a `FrameAssembler`.
+pub enum Fed {
+    /// No complete frame yet.
+    Pending,
+    Frame(MelFrame),
+    /// A full frame's worth of bytes failed its checksum.
+    Bad,
+}
+
+/// Rebuilds `MelFrame`s from the UART byte stream, one byte at a time.
+pub struct FrameAssembler {
+    buf: [u8; FRAME_LEN],
+    pos: usize,
+}
+
+impl Default for FrameAssembler {
+    fn default() -> Self {
+        Self { buf: [0; FRAME_LEN], pos: 0 }
+    }
+}
+
+impl FrameAssembler {
+    pub fn feed(&mut self, byte: u8) -> Fed {
+        if self.pos == 0 {
+            // Hunt for the sync byte; ignore anything else.
+            if byte == SYNC_BYTE {
+                self.buf[0] = byte;
+                self.pos = 1;
+            }
+            return Fed::Pending;
+        }
+        self.buf[self.pos] = byte;
+        self.pos += 1;
+        if self.pos < FRAME_LEN {
+            return Fed::Pending;
+        }
+        // Full frame collected. Reset for the next one, then validate.
+        self.pos = 0;
+        match MelFrame::decode(&self.buf) {
+            Some(frame) => Fed::Frame(frame),
+            None => Fed::Bad,
+        }
+    }
+}
+
+/// XOR of every byte between the sync byte and the checksum byte.
+fn checksum(buf: &[u8; FRAME_LEN]) -> u8 {
+    buf[1..FRAME_LEN - 1].iter().fold(0, |acc, &b| acc ^ b)
 }

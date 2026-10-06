@@ -6,7 +6,8 @@ use bao1x_hal::clocks::PERCLK_HZ;
 use bao1x_hal::udma::{Bank, DmaReg, Udma, Uart, UartReg};
 use bao1x_hal_service::UdmaGlobal;
 
-use triangel_shared::mel::{level_from_wire, norm_from_wire, EAR_UART_BAUD, FRAME_LEN, LEVEL_DB_FLOOR, MEL_BANDS, MelFrame, SYNC_BYTE};
+use triangel_shared::mel::{level_from_wire, norm_from_wire, EAR_UART_BAUD, Fed, FrameAssembler, LEVEL_DB_FLOOR, MEL_BANDS, MelFrame};
+use triangel_shared::follow;
 use triangel_shared::tuning::{beat::*, drop_detect::*, level::*, onset::*};
 
 use crate::pins;
@@ -141,9 +142,8 @@ struct AudioState {
     loud_ms:        f32,  // leaky accumulator of net loud time, 0..=ACTIVITY_ARM_MS
     last_tick_ms:   u32,
     last_update_ms: u32,
-    // Frame assembler (owned by the render loop): the partial frame and fill position.
-    frame_buf:      [u8; FRAME_LEN],
-    frame_pos:      usize,
+    // Frame assembler (owned by the render loop).
+    assembler:      FrameAssembler,
     first_byte_seen: bool,
 }
 
@@ -173,8 +173,7 @@ impl AudioState {
             loud_ms:        0.0,
             last_tick_ms:   0,
             last_update_ms: 0,
-            frame_buf:      [0u8; FRAME_LEN],
-            frame_pos:      0,
+            assembler:      FrameAssembler::default(),
             first_byte_seen: false,
         }
     }
@@ -213,8 +212,7 @@ impl AudioReceiver {
     /// received frame.
     fn detect_drop(&mut self, now_ms: u32) {
         let st = &mut self.state;
-        let rate = if st.bass_db > st.bass_env { BASS_ATTACK } else { BASS_DECAY };
-        st.bass_env += (st.bass_db - st.bass_env) * rate;
+        st.bass_env = follow(st.bass_env, st.bass_db, BASS_ATTACK, BASS_DECAY);
 
         if st.in_breakdown {
             let elapsed = now_ms.wrapping_sub(st.breakdown_since);
@@ -367,31 +365,18 @@ impl AudioReceiver {
     /// Feed one received byte into the frame assembler. Returns true when a complete,
     /// checksum-valid `MelFrame` was decoded and applied.
     fn feed_byte(&mut self, byte: u8, now_ms: u32) -> bool {
-        if self.state.frame_pos == 0 {
-            // Hunt for the sync byte; ignore anything else.
-            if byte == SYNC_BYTE {
-                self.state.frame_buf[0] = byte;
-                self.state.frame_pos = 1;
+        match self.state.assembler.feed(byte) {
+            Fed::Pending => false,
+            Fed::Frame(frame) => {
+                self.apply_frame(&frame, now_ms);
+                true
             }
-            return false;
-        }
-        self.state.frame_buf[self.state.frame_pos] = byte;
-        self.state.frame_pos += 1;
-        if self.state.frame_pos < FRAME_LEN {
-            return false;
-        }
-        // Full frame collected. Reset for the next one, then validate.
-        self.state.frame_pos = 0;
-        // Copy out of the state buffer so the borrow ends before apply_frame's &mut self.
-        let buf = self.state.frame_buf;
-        if let Some(frame) = MelFrame::decode(&buf) {
-            self.apply_frame(&frame, now_ms);
-            true
-        } else {
-            // Bad checksum (we locked onto a 0xAA inside the data). Drop it; the
-            // stream self-resyncs on the next real sync byte.
-            UART_FRAMES_BAD.fetch_add(1, Ordering::Relaxed);
-            false
+            Fed::Bad => {
+                // Bad checksum (we locked onto a 0xAA inside the data). Drop it; the
+                // stream self-resyncs on the next real sync byte.
+                UART_FRAMES_BAD.fetch_add(1, Ordering::Relaxed);
+                false
+            }
         }
     }
 

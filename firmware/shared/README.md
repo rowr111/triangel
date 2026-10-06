@@ -35,6 +35,8 @@ frame.encode(&mut buf);
 if let Some(frame) = MelFrame::decode(&buf) { /* ... */ }
 ```
 
+The eye receives a byte stream, not whole frames. `FrameAssembler::feed` takes one byte at a time, finds the sync byte, and returns a `MelFrame` each time one completes.
+
 ## `tuning` - sound-reactive tuning
 
 Every knob for beat, onset and drop detection, the Auto sound-mode switch, each reactive pattern, and the ear's normalization, in one file: [`src/tuning.rs`](src/tuning.rs). The `ear` section needs the ear reflashed; everything else only the eye.
