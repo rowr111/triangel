@@ -1,4 +1,4 @@
-pub mod mel;
+pub mod frame;
 pub mod tuning;
 
 /// Move `cur` one step toward `target`: by the fraction `up` when rising, `down` when falling.

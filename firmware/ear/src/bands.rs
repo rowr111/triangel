@@ -1,15 +1,15 @@
-//! Turns each frame of microphone samples into a `MelFrame`: the level in 24 frequency
+//! Turns each frame of microphone samples into a `BandFrame`: the level in 24 frequency
 //! bands from 40 Hz to 12 kHz, plus the overall level.
 //!
 //! Each band is a third of an octave wide: its edges are a fixed ratio apart, not a fixed
 //! number of Hz. Equal-width bands, or the mel scale, would put a kick drum near 50 Hz
 //! and a voice near 120 Hz in the same band. Here they land four bands apart.
 
-use triangel_shared::mel::{level_to_wire, norm_to_wire, MelFrame, LEVEL_DB_FLOOR, MEL_BANDS};
+use triangel_shared::frame::{level_to_wire, norm_to_wire, BandFrame, BAND_COUNT, LEVEL_DB_FLOOR};
 use triangel_shared::follow;
 use triangel_shared::tuning::ear::*;
 
-use crate::audio::{FFT_SIZE, SAMPLE_RATE_HZ};
+use crate::audio::{FRAME_SAMPLES, SAMPLE_RATE_HZ};
 
 /// Sample rate of the frames read_frame delivers, in Hz.
 const SAMPLE_RATE: f32 = SAMPLE_RATE_HZ as f32;
@@ -124,10 +124,10 @@ impl<const N: usize> RangeTracker<N> {
     }
 }
 
-/// Band edge `i` of the MEL_BANDS + 2 points between BAND_LOW_HZ and BAND_HIGH_HZ,
+/// Band edge `i` of the BAND_COUNT + 2 points between BAND_LOW_HZ and BAND_HIGH_HZ,
 /// each a constant ratio above the last.
 fn edge_hz(i: usize) -> f32 {
-    BAND_LOW_HZ * (BAND_HIGH_HZ / BAND_LOW_HZ).powf(i as f32 / (MEL_BANDS + 1) as f32)
+    BAND_LOW_HZ * (BAND_HIGH_HZ / BAND_LOW_HZ).powf(i as f32 / (BAND_COUNT + 1) as f32)
 }
 
 /// Fraction bits of the fixed-point coefficients and signal (the chip has no FPU).
@@ -182,9 +182,9 @@ impl Biquad {
 
 /// The 24 bandpass filters and one energy sum per band.
 struct BandBank {
-    filters: [Biquad; MEL_BANDS],
+    filters: [Biquad; BAND_COUNT],
     /// Sum of squared filter output per band since the last `take_energies`.
-    energy: [i64; MEL_BANDS],
+    energy: [i64; BAND_COUNT],
     /// Samples added to `energy`.
     count: u32,
 }
@@ -195,7 +195,7 @@ impl BandBank {
         let filters = std::array::from_fn(|m| {
             Biquad::bandpass(edge_hz(m + 1), edge_hz(m + 2) - edge_hz(m))
         });
-        Self { filters, energy: [0; MEL_BANDS], count: 0 }
+        Self { filters, energy: [0; BAND_COUNT], count: 0 }
     }
 
     /// Run one sample through every band and accumulate its squared output.
@@ -211,17 +211,17 @@ impl BandBank {
 
     /// Mean-square energy per band since the last call. Clears the sums but not the
     /// filter state, so the bands stay continuous across frames.
-    fn take_energies(&mut self) -> [f32; MEL_BANDS] {
+    fn take_energies(&mut self) -> [f32; BAND_COUNT] {
         let scale = self.count.max(1) as f32 * (1i64 << SIG_Q) as f32;
         let out = std::array::from_fn(|m| self.energy[m] as f32 / scale);
-        self.energy = [0; MEL_BANDS];
+        self.energy = [0; BAND_COUNT];
         self.count = 0;
         out
     }
 }
 
 /// Computes the band levels and the overall level from raw audio samples.
-pub struct MelProcessor {
+pub struct BandProcessor {
     bank: BandBank,
 
     /// Smoothed RMS behind the overall level.
@@ -232,26 +232,26 @@ pub struct MelProcessor {
     band_ref: RangeTracker<BAND_WINDOW_FRAMES>,
 
     /// Each band's own reference, so a quiet band still moves rather than sitting flat.
-    band_own: [RangeTracker<BAND_OWN_WINDOW_FRAMES>; MEL_BANDS],
+    band_own: [RangeTracker<BAND_OWN_WINDOW_FRAMES>; BAND_COUNT],
 
     /// Per-band dB lift that cancels music's natural rolloff with frequency.
-    tilt: [f32; MEL_BANDS],
+    tilt: [f32; BAND_COUNT],
 
     /// Quietest and loudest band of the last frame, for the console readout.
     band_lo: f32,
     band_hi: f32,
 
     /// Last frame's untilted band levels in dB, for the console readout.
-    last_db: [f32; MEL_BANDS],
+    last_db: [f32; BAND_COUNT],
 
     /// Reference for `level_norm`, fed the broadband dBFS each frame.
     level_ref: RangeTracker<LEVEL_WINDOW_FRAMES>,
 
     /// Per-band smoothed output, 0.0-1.0.
-    band_smooth: [f32; MEL_BANDS],
+    band_smooth: [f32; BAND_COUNT],
 }
 
-impl MelProcessor {
+impl BandProcessor {
     pub fn new() -> Self {
         Self {
             bank: BandBank::new(),
@@ -260,36 +260,36 @@ impl MelProcessor {
             band_own: std::array::from_fn(|_| RangeTracker::new()),
             tilt: {
                 let per_band =
-                    (BAND_HIGH_HZ / BAND_LOW_HZ).log2() / (MEL_BANDS + 1) as f32;
+                    (BAND_HIGH_HZ / BAND_LOW_HZ).log2() / (BAND_COUNT + 1) as f32;
                 std::array::from_fn(|m| {
                     TILT_DB_PER_OCTAVE * (m as f32 - TILT_PIVOT_BAND) * per_band
                 })
             },
             band_lo: 0.0,
             band_hi: 0.0,
-            last_db: [0.0; MEL_BANDS],
+            last_db: [0.0; BAND_COUNT],
             level_ref: RangeTracker::new(),
-            band_smooth: [0.0; MEL_BANDS],
+            band_smooth: [0.0; BAND_COUNT],
         }
     }
 
     /// Quietest and loudest band of the last frame, in dB, for the console readout.
-    pub fn band_reference(&self) -> (f32, f32) { (self.band_lo, self.band_hi) }
+    pub fn band_range(&self) -> (f32, f32) { (self.band_lo, self.band_hi) }
 
     /// Last frame's band levels in dB, before the tilt, for the console readout.
-    pub fn band_levels(&self) -> &[f32; MEL_BANDS] { &self.last_db }
+    pub fn band_levels(&self) -> &[f32; BAND_COUNT] { &self.last_db }
 
     /// Live level reference (low, high) in dBFS, for the console readout.
     pub fn level_reference(&self) -> (f32, f32) { (self.level_ref.low, self.level_ref.high) }
 
-    /// Turn one frame of samples into a `MelFrame`.
-    pub fn process(&mut self, samples: &[i16; FFT_SIZE]) -> MelFrame {
+    /// Turn one frame of samples into a `BandFrame`.
+    pub fn process(&mut self, samples: &[i16; FRAME_SAMPLES]) -> BandFrame {
         // Overall level: RMS of the raw samples, scaled to -1.0..1.0.
         let rms = (samples
             .iter()
             .map(|&s| (s as f32 / 32768.0).powi(2))
             .sum::<f32>()
-            / FFT_SIZE as f32)
+            / FRAME_SAMPLES as f32)
             .sqrt();
         // Rise fast and fall slowly, so the level does not flicker between beats.
         self.smoothed_rms = follow(self.smoothed_rms, rms, LEVEL_ATTACK, LEVEL_DECAY);
@@ -308,7 +308,7 @@ impl MelProcessor {
             self.bank.push((s as i32) << (SIG_Q - 15));
         }
         // Band energy in dB. The 1e-10 guards log(0) and floors silence at -100 dB.
-        let mut band_db = [0f32; MEL_BANDS];
+        let mut band_db = [0f32; BAND_COUNT];
         for (b, e) in band_db.iter_mut().zip(self.bank.take_energies()) {
             *b = 10.0 * (e + 1e-10).log10();
         }
@@ -339,7 +339,7 @@ impl MelProcessor {
         let shared_high = self.band_ref.high;
         let shared_low = shared_high - BAND_VISIBLE_RANGE_DB;
 
-        let mut bands = [0u16; MEL_BANDS];
+        let mut bands = [0u16; BAND_COUNT];
         for (m, &raw_db) in band_db.iter().enumerate() {
             let db = raw_db + self.tilt[m];
             let own = &mut self.band_own[m];
@@ -354,6 +354,6 @@ impl MelProcessor {
             bands[m] = norm_to_wire(*sm);
         }
 
-        MelFrame { bands, level, level_norm, flux, bass }
+        BandFrame { bands, level, level_norm, flux, bass }
     }
 }

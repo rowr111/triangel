@@ -2,7 +2,7 @@ use bao1x_api::IoxPort;
 
 // Audio UART (ear -> eye)
 // UART2 on the DABAO - the only UART exposed on the board.
-// PB14 = UART2_TX (ear transmits mel/level frames to the eye chip)
+// PB14 = UART2_TX (ear transmits band frames to the eye chip)
 // Wires to eye physical pin 16 = PB13 = UART2_RX. See uart_out.rs.
 // (The UART2 peripheral is selected by UartChannel::Uart2 in uart_out.rs; these set up its
 // pin.)

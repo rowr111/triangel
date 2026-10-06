@@ -1,4 +1,4 @@
-//! Sends each `MelFrame` to the eye over UART2: ear pin 15 (PB14, TX) to eye pin 16
+//! Sends each `BandFrame` to the eye over UART2: ear pin 15 (PB14, TX) to eye pin 16
 //! (PB13, RX), plus GND.
 
 use bao1x_api::iox::IoxHal;
@@ -6,9 +6,9 @@ use bao1x_api::{IoSetup, IoxDir, IoxDriveStrength, IoxEnable, IoxFunction, Perip
 use bao1x_hal::clocks::PERCLK_HZ;
 use bao1x_hal::udma::{Uart, UartChannel};
 use bao1x_hal_service::UdmaGlobal;
-use triangel_shared::mel::{EAR_UART_BAUD, FRAME_LEN, MelFrame};
+use triangel_shared::frame::{BandFrame, EAR_UART_BAUD, FRAME_LEN};
 
-/// Owns the UART TX peripheral and sends framed `MelFrame`s to the eye.
+/// Owns the UART TX peripheral and sends framed `BandFrame`s to the eye.
 pub struct UartOut {
     uart: Uart,
 }
@@ -40,8 +40,8 @@ impl UartOut {
         Self { uart }
     }
 
-    /// Encode and send one `MelFrame` to the eye.
-    pub fn send(&mut self, frame: &MelFrame) {
+    /// Encode and send one `BandFrame` to the eye.
+    pub fn send(&mut self, frame: &BandFrame) {
         let mut buf = [0u8; FRAME_LEN];
         frame.encode(&mut buf);
         self.uart.write(&buf);

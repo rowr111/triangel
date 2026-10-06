@@ -1,11 +1,11 @@
 /// Baud rate for the ear->eye UART link. Must match on both chips.
 pub const EAR_UART_BAUD: u32 = 1_000_000;
 
-/// Sync byte that starts every mel frame on the ear->eye UART wire.
+/// Sync byte that starts every frame on the ear->eye UART wire.
 pub const SYNC_BYTE: u8 = 0xAA;
 
-/// Number of mel frequency bands the ear chip computes.
-pub const MEL_BANDS: usize = 24;
+/// Number of frequency bands the ear chip computes.
+pub const BAND_COUNT: usize = 24;
 
 /// Quietest level the wire carries. LEVEL_DB_FLOOR..0 dBFS maps onto 0..=65535.
 pub const LEVEL_DB_FLOOR: f32 = -90.0;
@@ -31,11 +31,11 @@ pub fn norm_from_wire(norm: u16) -> f32 {
     norm as f32 / 65535.0
 }
 
-/// Wire frame length in bytes: 1 sync + MEL_BANDS*2 bands + 2 level + 2 level_norm
+/// Wire frame length in bytes: 1 sync + BAND_COUNT*2 bands + 2 level + 2 level_norm
 /// + 2 flux + 2 bass + 1 checksum.
-pub const FRAME_LEN: usize = 1 + MEL_BANDS * 2 + 2 + 2 + 2 + 2 + 1; // 58 bytes
+pub const FRAME_LEN: usize = 1 + BAND_COUNT * 2 + 2 + 2 + 2 + 2 + 1; // 58 bytes
 
-/// One frame of mel band data sent from the ear chip to the eye chip.
+/// One frame of band data sent from the ear chip to the eye chip.
 ///
 /// Wire format (58 bytes, little-endian):
 ///
@@ -62,15 +62,15 @@ pub const FRAME_LEN: usize = 1 + MEL_BANDS * 2 + 2 + 2 + 2 + 2 + 1; // 58 bytes
 /// `bass` is the lowest bands' level in dBFS, encoded like `level` and taken before any
 /// normalization. The bands above it cannot show the bass going away, since each one's
 /// reference sinks to meet the quiet.
-pub struct MelFrame {
-    pub bands:      [u16; MEL_BANDS],
+pub struct BandFrame {
+    pub bands:      [u16; BAND_COUNT],
     pub level:      u16,
     pub level_norm: u16,
     pub flux:       u16,
     pub bass:       u16,
 }
 
-impl MelFrame {
+impl BandFrame {
     /// Serialise into a wire buffer.
     pub fn encode(&self, buf: &mut [u8; FRAME_LEN]) {
         buf[0] = SYNC_BYTE;
@@ -87,12 +87,12 @@ impl MelFrame {
             return None;
         }
         let word = |i: usize| u16::from_le_bytes([buf[1 + i * 2], buf[2 + i * 2]]);
-        Some(MelFrame {
+        Some(BandFrame {
             bands:      std::array::from_fn(word),
-            level:      word(MEL_BANDS),
-            level_norm: word(MEL_BANDS + 1),
-            flux:       word(MEL_BANDS + 2),
-            bass:       word(MEL_BANDS + 3),
+            level:      word(BAND_COUNT),
+            level_norm: word(BAND_COUNT + 1),
+            flux:       word(BAND_COUNT + 2),
+            bass:       word(BAND_COUNT + 3),
         })
     }
 }
@@ -101,12 +101,12 @@ impl MelFrame {
 pub enum Fed {
     /// No complete frame yet.
     Pending,
-    Frame(MelFrame),
+    Frame(BandFrame),
     /// A full frame's worth of bytes failed its checksum.
     Bad,
 }
 
-/// Rebuilds `MelFrame`s from the UART byte stream, one byte at a time.
+/// Rebuilds `BandFrame`s from the UART byte stream, one byte at a time.
 pub struct FrameAssembler {
     buf: [u8; FRAME_LEN],
     pos: usize,
@@ -135,7 +135,7 @@ impl FrameAssembler {
         }
         // Full frame collected. Reset for the next one, then validate.
         self.pos = 0;
-        match MelFrame::decode(&self.buf) {
+        match BandFrame::decode(&self.buf) {
             Some(frame) => Fed::Frame(frame),
             None => Fed::Bad,
         }

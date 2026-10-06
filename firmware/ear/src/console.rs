@@ -7,7 +7,7 @@ use std::sync::atomic::{AtomicU32, Ordering};
 use crate::audio::FRAME_PERIOD_MS;
 
 use crate::audio::{DECIMATE, I2sAudio, RAW_RATE_HZ, SAMPLE_RATE_HZ};
-use triangel_shared::mel::MEL_BANDS;
+use triangel_shared::frame::BAND_COUNT;
 use crate::diag::{self, Diag};
 
 /// Raw FIFO words shown by `r`, and how many are printed per line.
@@ -70,10 +70,10 @@ const COMMAND_POLL_MS: usize = 20;
 static PENDING: AtomicU32 = AtomicU32::new(0);
 
 /// Latest filterbank cost in microseconds, published by the audio loop for `p`.
-static MEL_US: AtomicU32 = AtomicU32::new(0);
+static BANDS_US: AtomicU32 = AtomicU32::new(0);
 
 /// Publish the filterbank's per-frame cost so `p` can report it on demand.
-pub fn record_mel_time(us: u32) { MEL_US.store(us, Ordering::Relaxed); }
+pub fn record_bands_time(us: u32) { BANDS_US.store(us, Ordering::Relaxed); }
 
 /// Live normalization references and the level they scale, as f32 bits, for `n`.
 static REF_BAND_LO: AtomicU32 = AtomicU32::new(0);
@@ -82,10 +82,10 @@ static REF_LVL_LO:  AtomicU32 = AtomicU32::new(0);
 static REF_LVL_HI:  AtomicU32 = AtomicU32::new(0);
 static LAST_DBFS:   AtomicU32 = AtomicU32::new(0);
 static LAST_NORM:   AtomicU32 = AtomicU32::new(0);
-static BAND_DB: [AtomicU32; MEL_BANDS] = [const { AtomicU32::new(0) }; MEL_BANDS];
+static BAND_DB: [AtomicU32; BAND_COUNT] = [const { AtomicU32::new(0) }; BAND_COUNT];
 
 /// Publish the normalization references so `n` can report them on demand.
-pub fn record_bands(db: &[f32; MEL_BANDS]) {
+pub fn record_bands(db: &[f32; BAND_COUNT]) {
     for (slot, &v) in BAND_DB.iter().zip(db.iter()) {
         slot.store(v.to_bits(), Ordering::Relaxed);
     }
@@ -189,14 +189,14 @@ fn references(d: &Diag) {
 
 /// Report what the filterbank costs. Needs no mic, so the eye link keeps running.
 fn perf(d: &Diag) {
-    let us = MEL_US.load(Ordering::Relaxed);
+    let us = BANDS_US.load(Ordering::Relaxed);
     if us == 0 {
         d.line("no timing yet - the first batch of frames has not finished");
         return;
     }
     let ms = us as f32 / 1000.0;
     d.line(&format!(
-        "mel: {:.2} ms per frame, budget {} ms ({:.0}%)",
+        "bands: {:.2} ms per frame, budget {} ms ({:.0}%)",
         ms,
         FRAME_PERIOD_MS,
         ms / FRAME_PERIOD_MS as f32 * 100.0

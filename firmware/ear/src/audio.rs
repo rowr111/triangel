@@ -1,5 +1,5 @@
-/// Number of samples per audio frame - the block mel.rs reduces to one MelFrame.
-pub const FFT_SIZE: usize = 768;
+/// Number of samples per audio frame - the block bands.rs reduces to one BandFrame.
+pub const FRAME_SAMPLES: usize = 768;
 
 // Every sample rate in the firmware derives from the three numbers below, so changing
 // the BIO clock or the decimation cannot leave the filterbank tuned for a rate the
@@ -18,9 +18,9 @@ pub const DECIMATE: usize = 2;
 pub const RAW_RATE_HZ: u32 = BIO_QUANTUM_HZ / 2 / BCLK_PER_FRAME;
 /// The rate read_frame returns, after the box average that decimates each group.
 pub const SAMPLE_RATE_HZ: u32 = RAW_RATE_HZ / DECIMATE as u32;
-/// Wall-clock period of one FFT_SIZE frame - the budget everything downstream of
+/// Wall-clock period of one FRAME_SAMPLES frame - the budget everything downstream of
 /// read_frame has to fit inside before the next frame is ready.
-pub const FRAME_PERIOD_MS: u32 = FFT_SIZE as u32 * 1000 / SAMPLE_RATE_HZ;
+pub const FRAME_PERIOD_MS: u32 = FRAME_SAMPLES as u32 * 1000 / SAMPLE_RATE_HZ;
 
 // Integer division would quietly truncate a combination that does not divide evenly,
 // leaving the filterbank tuned for a rate that never occurs.
@@ -38,14 +38,14 @@ const _: () = assert!(RAW_RATE_HZ >= 23_000 && RAW_RATE_HZ <= 51_600);
 // left-channel sample per frame. The ICS43434 is the slave, mono (IS_SELECT tied
 // low = left channel). It runs at 48 kHz (BIO quantum 6.144 MHz -> 3.072 MHz BCLK
 // -> 64 BCLK/frame); read_frame downsamples 2:1 to the 24 kHz the filterbank
-// expects (see mel.rs SAMPLE_RATE).
+// expects (see bands.rs SAMPLE_RATE).
 //
 // The BIO pushes each sample to FIFO0 and read_frame polls it. The BIO checks for
 // room first and drops the sample when the FIFO is full, so the clock runs
 // continuously and samples are lost between frames rather than the mic being
 // stopped.
 mod i2s {
-    use super::{BIO_QUANTUM_HZ, DECIMATE, FFT_SIZE, RAW_RATE_HZ};
+    use super::{BIO_QUANTUM_HZ, DECIMATE, FRAME_SAMPLES, RAW_RATE_HZ};
     use bao1x_api::bio::*;
     use bao1x_api::bio_resources::*;
     use bao1x_api::{IoSetup, IoxDir, IoxFunction, IoxPort};
@@ -209,7 +209,7 @@ mod i2s {
 
     impl I2sAudio {
         /// Block until a complete frame is available, then return it.
-        pub fn read_frame(&mut self) -> [i16; FFT_SIZE] {
+        pub fn read_frame(&mut self) -> [i16; FRAME_SAMPLES] {
             // Drop whatever queued while the caller processed the previous frame. Once
             // the FIFO fills the BIO discards new samples, so the eight sitting there
             // are the oldest ones from whenever it filled; flushing starts the frame on
@@ -217,7 +217,7 @@ mod i2s {
             // gaps in the stream rather than the mic being stopped and restarted.
             self.flush();
 
-            let mut out = [0i16; FFT_SIZE];
+            let mut out = [0i16; FRAME_SAMPLES];
             for slot in out.iter_mut() {
                 // Downsample 48 kHz -> 24 kHz by averaging each group of DECIMATE
                 // samples. The box average doubles as a cheap anti-alias low-pass; a

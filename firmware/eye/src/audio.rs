@@ -6,7 +6,7 @@ use bao1x_hal::clocks::PERCLK_HZ;
 use bao1x_hal::udma::{Bank, DmaReg, Udma, Uart, UartReg};
 use bao1x_hal_service::UdmaGlobal;
 
-use triangel_shared::mel::{level_from_wire, norm_from_wire, EAR_UART_BAUD, Fed, FrameAssembler, LEVEL_DB_FLOOR, MEL_BANDS, MelFrame};
+use triangel_shared::frame::{level_from_wire, norm_from_wire, BandFrame, BAND_COUNT, EAR_UART_BAUD, Fed, FrameAssembler, LEVEL_DB_FLOOR};
 use triangel_shared::follow;
 use triangel_shared::tuning::{beat::*, drop_detect::*, level::*, onset::*};
 
@@ -106,10 +106,10 @@ fn cache_flush() {
 pub struct Audio {
     /// Loudness relative to recent music, 0.0-1.0.
     pub level_norm: f32,
-    /// The 24 mel bands, 0.0-1.0, low frequency first. Keep their shape when quiet.
-    pub bands:      [f32; MEL_BANDS],
+    /// The 24 bands, 0.0-1.0, low frequency first. Keep their shape when quiet.
+    pub bands:      [f32; BAND_COUNT],
     /// How far each band has just jumped above its own recent average, 0.0-1.0.
-    pub rise:       [f32; MEL_BANDS],
+    pub rise:       [f32; BAND_COUNT],
     /// True on the one frame a beat was detected, with how far past the threshold it
     /// reached in `beat_strength`.
     pub beat:          bool,
@@ -119,9 +119,9 @@ pub struct Audio {
 }
 
 struct AudioState {
-    mel:            [f32; MEL_BANDS],
-    band_fast:      [f32; MEL_BANDS],
-    band_slow:      [f32; MEL_BANDS],
+    bands:          [f32; BAND_COUNT],
+    band_fast:      [f32; BAND_COUNT],
+    band_slow:      [f32; BAND_COUNT],
     flux:           f32,
     flux_avg:       f32,
     beat_armed:     bool,
@@ -150,9 +150,9 @@ struct AudioState {
 impl AudioState {
     fn new() -> Self {
         AudioState {
-            mel:            [0.0; MEL_BANDS],
-            band_fast:      [0.0; MEL_BANDS],
-            band_slow:      [0.0; MEL_BANDS],
+            bands:          [0.0; BAND_COUNT],
+            band_fast:      [0.0; BAND_COUNT],
+            band_slow:      [0.0; BAND_COUNT],
             flux:           0.0,
             flux_avg:       0.0,
             beat_armed:     true,
@@ -262,7 +262,7 @@ impl AudioReceiver {
     fn detect_beat(&mut self, now_ms: u32) {
         let st = &mut self.state;
         st.flux_avg += (st.flux - st.flux_avg) * FLUX_AVG_RATE;
-        let low = st.mel[..KICK_BANDS].iter().sum::<f32>() / KICK_BANDS as f32;
+        let low = st.bands[..KICK_BANDS].iter().sum::<f32>() / KICK_BANDS as f32;
         let ratio = if low >= LOW_MIN && st.flux_avg > 1e-4 { st.flux / st.flux_avg } else { 0.0 };
 
         if st.beat_armed
@@ -280,7 +280,7 @@ impl AudioReceiver {
 
     /// The frame patterns render against.
     pub fn snapshot(&mut self) -> Audio {
-        let mut rise = [0.0; MEL_BANDS];
+        let mut rise = [0.0; BAND_COUNT];
         for (r, (fast, slow)) in rise
             .iter_mut()
             .zip(self.state.band_fast.iter().zip(self.state.band_slow.iter()))
@@ -296,7 +296,7 @@ impl AudioReceiver {
             drop,
             beat_strength: self.state.beat_strength,
             level_norm: self.state.level_norm,
-            bands:      self.state.mel,
+            bands:      self.state.bands,
             rise,
         }
     }
@@ -363,7 +363,7 @@ impl AudioReceiver {
     }
 
     /// Feed one received byte into the frame assembler. Returns true when a complete,
-    /// checksum-valid `MelFrame` was decoded and applied.
+    /// checksum-valid `BandFrame` was decoded and applied.
     fn feed_byte(&mut self, byte: u8, now_ms: u32) -> bool {
         match self.state.assembler.feed(byte) {
             Fed::Pending => false,
@@ -382,10 +382,10 @@ impl AudioReceiver {
 
     /// Apply a decoded frame: the 24 bands, the render level (light EMA), and the loud
     /// flag the slow arm/release accumulator judges.
-    fn apply_frame(&mut self, frame: &MelFrame, now_ms: u32) {
+    fn apply_frame(&mut self, frame: &BandFrame, now_ms: u32) {
         for (i, &b) in frame.bands.iter().enumerate() {
             let v = b as f32 / 65535.0;
-            self.state.mel[i] = v;
+            self.state.bands[i] = v;
             self.state.band_fast[i] += (v - self.state.band_fast[i]) * BAND_FAST;
             self.state.band_slow[i] += (v - self.state.band_slow[i]) * BAND_SLOW;
         }

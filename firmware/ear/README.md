@@ -48,7 +48,7 @@ src/
 +-- main.rs       - entry point; capture -> filterbank -> UART loop
 +-- audio.rs      - I2sAudio: ICS43434 mic through a BIO core
 +-- i2s_bio.rs    - the BIO program that clocks the mic (generated)
-+-- mel.rs        - MelProcessor: the 24-band filterbank and normalization
++-- bands.rs      - BandProcessor: the 24-band filterbank and normalization
 +-- uart_out.rs   - UartOut: sends each frame to the eye
 +-- pins.rs       - pin assignments
 +-- diag.rs       - USB-serial output: boot stages, heartbeat, command input

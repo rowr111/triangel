@@ -4,7 +4,7 @@ use crate::audio::Audio;
 use crate::led::geom::{DIST_C, THETA_C};
 use crate::led::map::LED_COUNT;
 use crate::patterns::{Frame, Pattern, cycle, lerp};
-use triangel_shared::mel::MEL_BANDS;
+use triangel_shared::frame::BAND_COUNT;
 use triangel_shared::tuning::spectrum::*;
 
 // Color ramps from the core to the rim. Every stop has its brightest channel at 255, so
@@ -31,7 +31,7 @@ const PALETTES: [[[f32; 3]; STOPS]; 6] = [
      [250.0, 240.0, 255.0]],
 ];
 /// Maps a band index onto the ramp.
-const BAND_TO_RAMP: f32 = 1.0 / (MEL_BANDS - 1) as f32;
+const BAND_TO_RAMP: f32 = 1.0 / (BAND_COUNT - 1) as f32;
 
 // Lobes in the slow ripple that rotates around the center.
 const LOBES: f32 = 3.0;
@@ -39,7 +39,7 @@ const LOBES: f32 = 3.0;
 /// The bands by distance from the center: bass at the core, treble at the rim. LEDs are
 /// ranked by distance and split evenly, so every band gets the same number of LEDs.
 pub struct Spectrum {
-    /// Fractional band index per LED, 0.0 to MEL_BANDS-1.
+    /// Fractional band index per LED, 0.0 to BAND_COUNT-1.
     band_pos: [f32; LED_COUNT],
     /// sin and cos of LOBES * theta.
     swirl_s: [f32; LED_COUNT],
@@ -51,7 +51,7 @@ impl Spectrum {
         let mut order: [usize; LED_COUNT] = core::array::from_fn(|i| i);
         order.sort_unstable_by(|&a, &b| DIST_C[a].total_cmp(&DIST_C[b]));
         let mut band_pos = [0.0f32; LED_COUNT];
-        let span = (MEL_BANDS - 1) as f32 / LED_COUNT as f32;
+        let span = (BAND_COUNT - 1) as f32 / LED_COUNT as f32;
         for (rank, &i) in order.iter().enumerate() {
             band_pos[i] = rank as f32 * span;
         }
@@ -80,7 +80,7 @@ impl Pattern for Spectrum {
         let (from, to) = (&PALETTES[slot], &PALETTES[(slot + 1) % PALETTES.len()]);
         // How far the palette change has spread, in band positions; it starts and ends
         // past the ends.
-        let front = mix * ((MEL_BANDS - 1) as f32 + 2.0 * FRONT_EDGE) - FRONT_EDGE;
+        let front = mix * ((BAND_COUNT - 1) as f32 + 2.0 * FRONT_EDGE) - FRONT_EDGE;
         let inv_edge = 1.0 / FRONT_EDGE;
 
         for (i, o) in out.iter_mut().enumerate() {
