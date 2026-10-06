@@ -29,7 +29,7 @@ Then:
 
 `out[i]` belongs to `LED_MAP[i]`. `t_ms` is a `u32` and wraps after 49.7 days, so compare times with `wrapping_sub`, never `<` or `>=`.
 
-A pattern is only rendered while it is on screen or fading out, so time jumps when it comes back. Override `on_enter(&mut self, t_ms)` to reset whatever should start fresh each time it comes on screen; it runs before the first frame there.
+A pattern is only rendered while it is on screen or fading out, so time jumps when it comes back. Override `on_enter(&mut self, t_ms)` to reset whatever should start fresh each time it comes on screen; it runs before the first frame after the pattern has been off screen for more than half a second.
 
 ## World coordinates
 

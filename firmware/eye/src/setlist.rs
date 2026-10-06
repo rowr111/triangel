@@ -16,6 +16,10 @@ const CYCLE_MS: u32 = 3 * 60 * 1_000; // 3 minutes
 const STEP_TRANSITION_MS:  u32 = 3000;
 const SOUND_TRANSITION_MS: u32 = 200;
 
+// A pattern not drawn for longer than this has left the screen, so it gets `on_enter`
+// when it is next drawn.
+const REENTRY_GAP_MS: u32 = 500;
+
 // Global brightness ladder: geometric steps (~1.7x each) so a d-pad press feels like an
 // even perceived change instead of lurching at the low end. Applied as a flat multiply
 // over the finished frame; the top level is 1.0 (full brightness, a no-op).
@@ -64,12 +68,28 @@ fn reactive_patterns() -> Vec<Box<dyn Pattern>> {
 
 struct Setlist {
     patterns: Vec<Box<dyn Pattern>>,
+    /// When each pattern was last drawn, if ever.
+    drawn_ms: Vec<Option<u32>>,
     idx:      usize,
 }
 
 impl Setlist {
+    fn new(patterns: Vec<Box<dyn Pattern>>) -> Self {
+        let drawn_ms = vec![None; patterns.len()];
+        Setlist { patterns, drawn_ms, idx: 0 }
+    }
+
     fn len(&self) -> usize {
         self.patterns.len()
+    }
+
+    /// Draw pattern `i`, telling it first if it has been off screen.
+    fn draw(&mut self, i: usize, t_ms: u32, audio: &Audio, out: &mut Frame) {
+        if self.drawn_ms[i].is_none_or(|last| t_ms.wrapping_sub(last) > REENTRY_GAP_MS) {
+            self.patterns[i].on_enter(t_ms);
+        }
+        self.drawn_ms[i] = Some(t_ms);
+        self.patterns[i].render(t_ms, audio, out);
     }
 
     fn step(&mut self, dir: Step) {
@@ -137,8 +157,6 @@ impl SoundMode {
 
 pub struct SetlistManager {
     setlists:          [Setlist; 2],
-    /// The pattern on screen last frame, so a change can be told to the new one.
-    shown:             Option<(SetlistKind, usize)>,
     last_cycle_ms:     u32,
     held:              bool,
     transition:        Option<Transition>,
@@ -154,10 +172,9 @@ impl SetlistManager {
     pub fn new(now_ms: u32) -> Self {
         SetlistManager {
             setlists:          [
-                Setlist { patterns: ambient_patterns(),  idx: 0 },
-                Setlist { patterns: reactive_patterns(), idx: 0 },
+                Setlist::new(ambient_patterns()),
+                Setlist::new(reactive_patterns()),
             ],
-            shown:             None,
             last_cycle_ms:     now_ms,
             held:              false,
             transition:        None,
@@ -208,22 +225,16 @@ impl SetlistManager {
             }
         }
 
-        // Live current pattern -> out, telling it first if it has just come on screen.
+        // Live current pattern -> out.
         let to_kind = SetlistKind::from_sound(sound_active);
         let to_idx  = self.list(to_kind).idx;
-        let to = &mut self.setlists[to_kind as usize].patterns[to_idx];
-        if self.shown != Some((to_kind, to_idx)) {
-            self.shown = Some((to_kind, to_idx));
-            to.on_enter(t_ms);
-        }
-        to.render(t_ms, audio, out);
+        self.setlists[to_kind as usize].draw(to_idx, t_ms, audio, out);
 
         // Composite the outgoing pattern over it while a transition is running.
         if let Some(tr) = self.transition {
             // max(1) guards against a zero-duration transition dividing by zero.
             let progress = t_ms.wrapping_sub(tr.start_ms) as f32 / tr.duration_ms.max(1) as f32;
-            let from = &mut self.setlists[tr.from_kind as usize].patterns[tr.from_idx];
-            from.render(t_ms, audio, &mut self.from_buf);
+            self.setlists[tr.from_kind as usize].draw(tr.from_idx, t_ms, audio, &mut self.from_buf);
             transition::blend(tr.style, progress, &self.from_buf, out);
         }
     }
