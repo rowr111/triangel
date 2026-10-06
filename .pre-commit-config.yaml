@@ -8,6 +8,27 @@ repos:
         files: ^firmware/
         pass_filenames: false
 
+      - id: clippy-eye-previewer
+        name: cargo clippy (eye, previewer)
+        language: system
+        entry: cargo clippy --manifest-path firmware/eye/Cargo.toml --features previewer -- -D warnings
+        files: ^firmware/
+        pass_filenames: false
+
+      - id: clippy-eye-bringup
+        name: cargo clippy (eye, bringup)
+        language: system
+        entry: cargo clippy --manifest-path firmware/eye/Cargo.toml --features bringup -- -D warnings
+        files: ^firmware/
+        pass_filenames: false
+
+      - id: clippy-eye-input-board
+        name: cargo clippy (eye, input-board)
+        language: system
+        entry: cargo clippy --manifest-path firmware/eye/Cargo.toml --features input-board -- -D warnings
+        files: ^firmware/
+        pass_filenames: false
+
       - id: clippy-ear
         name: cargo clippy (ear)
         language: system
