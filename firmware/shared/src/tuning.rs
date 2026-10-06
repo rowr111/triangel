@@ -50,6 +50,14 @@ pub mod level {
     pub const ACTIVITY_RELEASE_MS: f32 = 30_000.0;
 }
 
+/// When the ear stops sending.
+pub mod link {
+    /// No frame for this long counts as stopped.
+    pub const STOPPED_AFTER_MS: u32 = 200;
+    /// Once stopped, the bands and level fall to about a third in this many ms.
+    pub const STOPPED_FADE_MS: f32 = 300.0;
+}
+
 pub mod spectrum {
     /// Brightness in a quiet room.
     pub const QUIET_FLOOR: f32 = 0.20;

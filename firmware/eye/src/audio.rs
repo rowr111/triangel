@@ -8,7 +8,7 @@ use bao1x_hal_service::UdmaGlobal;
 
 use triangel_shared::frame::{level_from_wire, norm_from_wire, BandFrame, BAND_COUNT, EAR_UART_BAUD, Fed, FrameAssembler, LEVEL_DB_FLOOR};
 use triangel_shared::follow;
-use triangel_shared::tuning::{beat::*, drop_detect::*, level::*, onset::*};
+use triangel_shared::tuning::{beat::*, drop_detect::*, level::*, link::*, onset::*};
 
 use crate::pins;
 
@@ -142,6 +142,7 @@ struct AudioState {
     loud_ms:        f32,  // leaky accumulator of net loud time, 0..=ACTIVITY_ARM_MS
     last_tick_ms:   u32,
     last_update_ms: u32,
+    ear_stopped:    bool, // no frame for STOPPED_AFTER_MS; cleared by the next one
     // Frame assembler (owned by the render loop).
     assembler:      FrameAssembler,
     first_byte_seen: bool,
@@ -173,6 +174,7 @@ impl AudioState {
             loud_ms:        0.0,
             last_tick_ms:   0,
             last_update_ms: 0,
+            ear_stopped:    false,
             assembler:      FrameAssembler::default(),
             first_byte_seen: false,
         }
@@ -339,11 +341,25 @@ impl AudioReceiver {
 
         // No fresh frame for a while: the ear stopped sending - decay toward silence
         // and count the time as quiet.
-        if !got_frame && now_ms.wrapping_sub(self.state.last_update_ms) >= 200 {
+        if !got_frame && now_ms.wrapping_sub(self.state.last_update_ms) >= STOPPED_AFTER_MS {
             self.state.smoothed_dbfs =
                 (self.state.smoothed_dbfs - QUIET_DECAY_DB).max(LEVEL_DB_FLOOR);
             self.state.last_loud = false;
             self.state.last_update_ms = now_ms;
+            self.state.ear_stopped = true;
+        }
+
+        // Fade what the patterns see, so they go quiet instead of holding the last frame.
+        if self.state.ear_stopped {
+            let keep = (1.0 - dt_ms / STOPPED_FADE_MS).max(0.0);
+            let st = &mut self.state;
+            for ((band, fast), slow) in st.bands.iter_mut().zip(&mut st.band_fast).zip(&st.band_slow) {
+                *band *= keep;
+                // Toward the slow baseline, which is kept, so `rise` falls to zero now and
+                // does not jump when frames return.
+                *fast = slow + (*fast - slow) * keep;
+            }
+            st.level_norm *= keep;
         }
 
         // Leaky accumulator: fill 1:1 while loud, drain at ARM/RELEASE while quiet.
@@ -399,6 +415,7 @@ impl AudioReceiver {
         self.state.smoothed_dbfs = self.state.smoothed_dbfs * 0.6 + dbfs * 0.4;
         self.state.last_loud = self.state.smoothed_dbfs > ACTIVITY_LOUD_DBFS;
         self.state.last_update_ms = now_ms;
+        self.state.ear_stopped = false;
         UART_STATUS.store(STATUS_RECEIVING, Ordering::Relaxed);
         UART_FRAMES_OK.fetch_add(1, Ordering::Relaxed);
         UART_LAST_DBFS.store(self.state.smoothed_dbfs.to_bits(), Ordering::Relaxed);
