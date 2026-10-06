@@ -52,6 +52,7 @@ These constants, plus `WORLD_CENTROID_X` / `WORLD_CENTROID_Y`, are in `crate::le
 // src/patterns/mod.rs
 hsv(h, s, v) -> [u8; 3]     // h: 0-360, s/v: 0-1
 lerp(a, b, t) -> f32
+sin_sum(a_sin, a_cos, b_sin, b_cos)  // sin(a + b); see Performance
 mix_rgb(a, b, t)            // lerp per channel, f32 RGB
 ramp(&stops, t)             // color along (position, color) stops
 smoothstep(t) -> f32        // clamped to 0-1
@@ -80,7 +81,7 @@ The chip has no floating-point hardware, so every `f32` operation is a library c
 
 - Values fixed by LED position belong in `led::geom` or a table built in `new()`, not recomputed each frame.
 - Localized shapes scatter over `led::grid` rather than every LED testing every source.
-- `sin(per_led + per_frame)` factors into a rotation: store `sin`/`cos` of the per-LED part, rotate by the frame's angle, two multiply-adds instead of a `sin`. `phase_phasors()` covers hash-quantized offsets.
+- `sin(per_led + per_frame)` needs no `sin` per LED: store `sin`/`cos` of the per-LED part, take `sin`/`cos` of the frame's angle once, and combine them with `sin_sum`. `phase_phasors()` covers hash-quantized offsets.
 - Integer math per LED where possible, as Shimmer and Flame do: values in Q12 (x4096 = 1.0), lookup tables for curves and colors. A few float calls per frame are fine.
 - Wrap time to the term's period before converting to `f32` (`(t_ms % PERIOD_MS) as f32`): raw `t_ms` loses sub-frame precision after hours of uptime.
 

@@ -36,6 +36,11 @@ pub fn hsv(h: f32, s: f32, v: f32) -> [u8; 3] {
 
 pub fn lerp(a: f32, b: f32, t: f32) -> f32 { a + (b - a) * t }
 
+/// sin(a + b), from the sin and cos of each.
+pub fn sin_sum(a_sin: f32, a_cos: f32, b_sin: f32, b_cos: f32) -> f32 {
+    a_sin * b_cos + a_cos * b_sin
+}
+
 /// Number of phase offsets in `phase_phasors`, 0.01 rad apart, covering 0..TAU.
 pub const PHASE_STEPS: usize = 628;
 

@@ -1,5 +1,5 @@
 use crate::patterns::glints::{GlintStyle, Glints};
-use crate::patterns::{Frame, Pattern, cycle, fold_ms, hsv, tile_hash, wrap360};
+use crate::patterns::{Frame, Pattern, cycle, fold_ms, hsv, sin_sum, tile_hash, wrap360, TILE_HASH_STEPS};
 use crate::led::geom::{DIST_C, THETA_C};
 use crate::audio::Audio;
 use crate::led::map::{LED_COUNT, LED_MAP};
@@ -33,21 +33,24 @@ const GLINTS: GlintStyle = GlintStyle {
 pub struct Rainbow {
     glints:  Glints,
     last_ms: u32,
-    // Fixed per LED: its ripple angle (rad), its place on the hue wheel (0-1) and its
-    // twinkle phase (rad).
-    ripple_at:  [f32; LED_COUNT],
+    // Fixed per LED: sin and cos of its ripple angle, its place on the hue wheel (0-1)
+    // and its tile hash.
+    ripple_sin: [f32; LED_COUNT],
+    ripple_cos: [f32; LED_COUNT],
     hue_turn:   [f32; LED_COUNT],
-    twinkle_at: [f32; LED_COUNT],
+    tile:       [u8; LED_COUNT],
 }
 
 impl Rainbow {
     pub fn new() -> Self {
+        let ripple_at = |i: usize| DIST_C[i] / IRID_SPAN_MM * TAU;
         Rainbow {
             glints:     Glints::new(0x3C6E_F372, GLINTS),
             last_ms:    0,
-            ripple_at:  core::array::from_fn(|i| DIST_C[i] / IRID_SPAN_MM * TAU),
+            ripple_sin: core::array::from_fn(|i| ripple_at(i).sin()),
+            ripple_cos: core::array::from_fn(|i| ripple_at(i).cos()),
             hue_turn:   core::array::from_fn(|i| THETA_C[i] / TAU),
-            twinkle_at: core::array::from_fn(|i| tile_hash(&LED_MAP[i]) as f32),
+            tile:       core::array::from_fn(|i| tile_hash(&LED_MAP[i]) as u8),
         }
     }
 }
@@ -60,13 +63,16 @@ impl Pattern for Rainbow {
         let breathe = BREATHE * BREATHE_DEPTH * (cycle(t_ms, BREATHE_PERIOD_MS) * TAU).sin();
         let spin = cycle(t_ms, SPIN_PERIOD_MS) + breathe;
         let twinkle_ph = fold_ms(t_ms, TWINKLE_RATE) * TWINKLE_RATE;
-        let irid_ph = cycle(t_ms, IRID_PERIOD_MS) * TAU;
+        let (irid_sin, irid_cos) = (cycle(t_ms, IRID_PERIOD_MS) * TAU).sin_cos();
+        // The twinkle wave for each value a tile hash can take.
+        let twinkle: [f32; TILE_HASH_STEPS as usize] = core::array::from_fn(|k| (twinkle_ph + k as f32).sin());
 
         for (i, px) in out.iter_mut().enumerate() {
-            let ripple = (self.ripple_at[i] - irid_ph).sin();
+            // sin(ripple angle - ripple phase)
+            let ripple = sin_sum(self.ripple_sin[i], self.ripple_cos[i], -irid_sin, irid_cos);
             let hue = (self.hue_turn[i] + spin) * 360.0 + IRIDESCENCE * IRID_DEG * ripple;
 
-            let dip = 0.5 - 0.5 * (twinkle_ph + self.twinkle_at[i]).sin();
+            let dip = 0.5 - 0.5 * twinkle[self.tile[i] as usize];
 
             *px = hsv(wrap360(hue), 1.0, 1.0 - TWINKLE * dip);
         }

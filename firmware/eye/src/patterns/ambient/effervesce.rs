@@ -1,5 +1,5 @@
 use crate::audio::Audio;
-use crate::patterns::{Frame, Pattern, cycle, fold_ms, hash2, hsv, smoothstep, wrap360};
+use crate::patterns::{Frame, Pattern, cycle, fold_ms, hash2, hsv, sin_sum, smoothstep, wrap360};
 use crate::led::map::{Led, LED_COUNT, LED_MAP};
 use core::f32::consts::{PI, TAU};
 
@@ -113,7 +113,7 @@ impl Pattern for Effervesce {
             s *= 1.0 - WHITEN * e;
 
             // Glitter, cubed so only the peaks show.
-            let sh = self.ph_sin[i] * sh_cos + self.ph_cos[i] * sh_sin;
+            let sh = sin_sum(self.ph_sin[i], self.ph_cos[i], sh_sin, sh_cos);
             let spark = (0.5 + 0.5 * sh).powi(3);
             let g = SHIMMER * spark;
             v += (1.0 - v) * g;

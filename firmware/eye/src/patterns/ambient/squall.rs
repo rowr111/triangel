@@ -1,4 +1,4 @@
-use crate::patterns::{Frame, Pattern, Rng, cycle, knuth_hash, lerp, mix_rgb, phase_phasors, ramp, PHASE_STEPS};
+use crate::patterns::{Frame, Pattern, Rng, cycle, knuth_hash, lerp, mix_rgb, phase_phasors, ramp, sin_sum, PHASE_STEPS};
 use crate::led::grid::{self, CELL_MM};
 use crate::audio::Audio;
 use crate::led::map::{WORLD_BOT, WORLD_CX, WORLD_H, WORLD_TOP, LED_COUNT, LED_MAP};
@@ -388,8 +388,8 @@ impl Pattern for Squall {
         for (i, led) in LED_MAP.iter().enumerate() {
             let bx = led.wx * boil_k;
             let by = led.wy * boil_k;
-            let mod_y = by_sin[i] * b2_cos + by_cos[i] * b2_sin;
-            let mod_x = bx_sin[i] * b1_cos + bx_cos[i] * b1_sin;
+            let mod_y = sin_sum(by_sin[i], by_cos[i], b2_sin, b2_cos);
+            let mod_x = sin_sum(bx_sin[i], bx_cos[i], b1_sin, b1_cos);
             let boil = ((bx + mod_y + boil1).sin() + (by + mod_x + boil2).sin()) * 0.5;
             energy_buf[i] = WATER_FLOOR + BOIL_DEPTH * boil;
             density_buf[i] = 0.0;
@@ -441,7 +441,7 @@ impl Pattern for Squall {
             let excess = ((energy - FOAM_THRESH) * FOAM_GAIN).clamp(0.0, 1.0);
             if excess > 0.0 {
                 let k = (knuth_hash(led.chain_idx as u32) % PHASE_STEPS as u32) as usize;
-                let tw = (ph_sin[k] * fp_cos + ph_cos[k] * fp_sin) * 0.5 + 0.5;
+                let tw = sin_sum(ph_sin[k], ph_cos[k], fp_sin, fp_cos) * 0.5 + 0.5;
                 c = mix_rgb(c, FOAM_COLOR, excess * tw * tw);
             }
 

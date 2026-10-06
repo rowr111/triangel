@@ -1,5 +1,5 @@
 use crate::audio::Audio;
-use crate::patterns::{Frame, Pattern, cycle, fold_ms, hash2, hsv, lerp, wrap360};
+use crate::patterns::{Frame, Pattern, cycle, fold_ms, hash2, hsv, lerp, sin_sum, wrap360};
 use crate::led::grid::{self, CELL_MM};
 use crate::led::map::{WORLD_TOP, WORLD_BOT, WORLD_H, WORLD_CX, LED_COUNT, LED_MAP};
 use core::f32::consts::TAU;
@@ -78,10 +78,11 @@ pub struct Fubuki {
     flake_h: [f32; LED_COUNT],
     flake_s: [f32; LED_COUNT],
     // Fixed per LED, from a hash of its board and position: the hash, the pile brightness
-    // with its texture, the pulse phase (rad) and the ragged-edge offset (mm).
+    // with its texture, sin and cos of the pulse phase, and the ragged-edge offset (mm).
     led_hash:  [u32; LED_COUNT],
     pile_tex:  [f32; LED_COUNT],
-    pulse_at:  [f32; LED_COUNT],
+    pulse_sin: [f32; LED_COUNT],
+    pulse_cos: [f32; LED_COUNT],
     jitter_mm: [f32; LED_COUNT],
 }
 
@@ -89,6 +90,7 @@ impl Fubuki {
     pub fn new() -> Self {
         let led_hash: [u32; LED_COUNT] =
             core::array::from_fn(|i| hash2(LED_MAP[i].board_id as u32, LED_MAP[i].local_idx as u32));
+        let pulse_at = |hp: u32| (hp >> 17 & 0x1FF) as f32 / 512.0 * TAU;
         Fubuki {
             origin_ms: 0,
             flake_e:   [0.0; LED_COUNT],
@@ -96,7 +98,8 @@ impl Fubuki {
             flake_s:   [0.0; LED_COUNT],
             led_hash,
             pile_tex:  led_hash.map(|hp| PILE_VAL * (1.0 - PILE_TEXTURE * ((hp >> 9 & 0xFF) as f32 / 255.0))),
-            pulse_at:  led_hash.map(|hp| (hp >> 17 & 0x1FF) as f32 / 512.0 * TAU),
+            pulse_sin: led_hash.map(|hp| pulse_at(hp).sin()),
+            pulse_cos: led_hash.map(|hp| pulse_at(hp).cos()),
             jitter_mm: led_hash.map(|hp| ((hp >> 26) as f32 / 63.0 - 0.5) * 2.0 * FILL_JITTER_MM),
         }
     }
@@ -127,7 +130,7 @@ impl Pattern for Fubuki {
         let jscale_c = 4.0 * fc * (1.0 - fc);
         let jscale_p = 4.0 * fp * (1.0 - fp);
 
-        let pulse_ph = fold_ms(local, PILE_PULSE_RATE) * PILE_PULSE_RATE;
+        let (ph_sin, ph_cos) = (fold_ms(local, PILE_PULSE_RATE) * PILE_PULSE_RATE).sin_cos();
 
         // nf is how far the sky and the flakes have turned to the new season's colors.
         let nf = if first {
@@ -163,7 +166,9 @@ impl Pattern for Fubuki {
         for (i, led) in LED_MAP.iter().enumerate() {
             // Per-LED texture and pulse, shared by both piles.
             let hp = self.led_hash[i];
-            let pulse = 1.0 - PILE_PULSE * (0.5 - 0.5 * (pulse_ph + self.pulse_at[i]).sin());
+            // sin(pulse phase + this LED's phase)
+            let wave = sin_sum(ph_sin, ph_cos, self.pulse_sin[i], self.pulse_cos[i]);
+            let pulse = 1.0 - PILE_PULSE * (0.5 - 0.5 * wave);
             let pile_v = self.pile_tex[i] * pulse;
 
             // How far inside each pile this LED is; the jitter shrinks to 0 at empty and full.
