@@ -18,6 +18,7 @@ const ENERGY_DECAY:   f32 = 0.8;   // energy kept per bounce
 const ENERGY_MIN:     f32 = 0.1;   // below this the comet dies
 const BOUNCE_PERTURB: f32 = 0.15;  // random turn (rad) per bounce, so paths never loop
 const ENTRY_SPREAD:   f32 = 0.9;   // most a launch can angle (rad) off straight in
+const ENTRY_CLEAR_MM: f32 = 20.0;  // a launch must cross its wall this far from the other two
 
 const HEAD_R_MIN_MM: f32 = 50.0;  // radius of the fastest comet
 const HEAD_R_MAX_MM: f32 = 95.0;  // radius of the slowest comet
@@ -134,7 +135,8 @@ impl Ricochet {
             1 => (lerp(WORLD_LEFT, WORLD_CX, t), lerp(WORLD_TOP, WORLD_BOT, t), N_LEFT),
             _ => (lerp(WORLD_RIGHT, WORLD_CX, t), lerp(WORLD_TOP, WORLD_BOT, t), N_RIGHT),
         };
-        let ang = n.1.atan2(n.0) + (self.rng.f32() - 0.5) * 2.0 * ENTRY_SPREAD;
+        let base = n.1.atan2(n.0);
+        let off = (self.rng.f32() - 0.5) * 2.0 * ENTRY_SPREAD;
         let hue = self.rng.f32() * 360.0;
         // Fast comets are small, slow ones big.
         let speed_frac = self.rng.f32();
@@ -143,6 +145,19 @@ impl Ricochet {
         // Start one radius outside the wall.
         let px = ex - n.0 * radius;
         let py = ey - n.1 * radius;
+        // A path that crosses its wall too near a corner misses the triangle or clips the
+        // corner, and the comet never gets inside. Aim it to the other side of straight in.
+        let mut ang = base + off;
+        let reach = radius / off.cos();
+        let (d0, d1, d2) = wall_dists(px + ang.cos() * reach, py + ang.sin() * reach);
+        let clear = match edge {
+            0 => d1.min(d2),
+            1 => d0.min(d2),
+            _ => d0.min(d1),
+        };
+        if clear < ENTRY_CLEAR_MM {
+            ang = base - off;
+        }
         let c = &mut self.comets[i];
         c.alive = true;
         c.entering = true;
