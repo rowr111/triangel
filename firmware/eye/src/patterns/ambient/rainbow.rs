@@ -2,7 +2,7 @@ use crate::patterns::glints::{GlintStyle, Glints};
 use crate::patterns::{Frame, Pattern, cycle, fold_ms, hsv, tile_hash, wrap360};
 use crate::led::geom::{DIST_C, THETA_C};
 use crate::audio::Audio;
-use crate::led::map::LED_MAP;
+use crate::led::map::{LED_COUNT, LED_MAP};
 use core::f32::consts::TAU;
 
 // Rainbow: hue follows the angle around the center, and the wheel rotates.
@@ -33,11 +33,22 @@ const GLINTS: GlintStyle = GlintStyle {
 pub struct Rainbow {
     glints:  Glints,
     last_ms: u32,
+    // Fixed per LED: its ripple angle (rad), its place on the hue wheel (0-1) and its
+    // twinkle phase (rad).
+    ripple_at:  [f32; LED_COUNT],
+    hue_turn:   [f32; LED_COUNT],
+    twinkle_at: [f32; LED_COUNT],
 }
 
 impl Rainbow {
     pub fn new() -> Self {
-        Rainbow { glints: Glints::new(0x3C6E_F372, GLINTS), last_ms: 0 }
+        Rainbow {
+            glints:     Glints::new(0x3C6E_F372, GLINTS),
+            last_ms:    0,
+            ripple_at:  core::array::from_fn(|i| DIST_C[i] / IRID_SPAN_MM * TAU),
+            hue_turn:   core::array::from_fn(|i| THETA_C[i] / TAU),
+            twinkle_at: core::array::from_fn(|i| tile_hash(&LED_MAP[i]) as f32),
+        }
     }
 }
 
@@ -48,16 +59,16 @@ impl Pattern for Rainbow {
 
         let breathe = BREATHE * BREATHE_DEPTH * (cycle(t_ms, BREATHE_PERIOD_MS) * TAU).sin();
         let spin = cycle(t_ms, SPIN_PERIOD_MS) + breathe;
-        let twinkle_t = fold_ms(t_ms, TWINKLE_RATE);
+        let twinkle_ph = fold_ms(t_ms, TWINKLE_RATE) * TWINKLE_RATE;
         let irid_ph = cycle(t_ms, IRID_PERIOD_MS) * TAU;
 
-        for (i, led) in LED_MAP.iter().enumerate() {
-            let ripple = (DIST_C[i] / IRID_SPAN_MM * TAU - irid_ph).sin();
-            let hue = (THETA_C[i] / TAU + spin) * 360.0 + IRIDESCENCE * IRID_DEG * ripple;
+        for (i, px) in out.iter_mut().enumerate() {
+            let ripple = (self.ripple_at[i] - irid_ph).sin();
+            let hue = (self.hue_turn[i] + spin) * 360.0 + IRIDESCENCE * IRID_DEG * ripple;
 
-            let dip = 0.5 - 0.5 * (twinkle_t * TWINKLE_RATE + tile_hash(led) as f32).sin();
+            let dip = 0.5 - 0.5 * (twinkle_ph + self.twinkle_at[i]).sin();
 
-            out[i] = hsv(wrap360(hue), 1.0, 1.0 - TWINKLE * dip);
+            *px = hsv(wrap360(hue), 1.0, 1.0 - TWINKLE * dip);
         }
 
         self.glints.update(t_ms, dt_ms, out);

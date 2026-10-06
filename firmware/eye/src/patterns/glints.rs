@@ -47,7 +47,7 @@ impl Glints {
         self.tries += dt_ms as f32 * s.tries_per_sec / 1000.0;
         while self.tries >= 1.0 {
             self.tries -= 1.0;
-            let led = (self.rng.f32() * LED_COUNT as f32) as usize % LED_COUNT;
+            let led = self.rng.below(LED_COUNT);
             let [r, g, b] = out[led];
             let lit = r.max(g).max(b) as f32 / 255.0;
             if self.rng.f32() >= lit {

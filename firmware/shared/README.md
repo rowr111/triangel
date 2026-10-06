@@ -4,7 +4,7 @@ Code both chips build against, so the **ear** (audio) and the **eye** (LEDs) can
 
 ## `frame` - the ear -> eye frame
 
-The ear sends one `BandFrame` per 32 ms of audio (~31 fps) over UART. Baud rate, band count and frame length are constants in [`src/frame.rs`](src/frame.rs) (`EAR_UART_BAUD`, `BAND_COUNT`, `FRAME_LEN`).
+The ear sends one `BandFrame` for each 32 ms of audio it captures, about 28 per second, over UART. Baud rate, band count and frame length are constants in [`src/frame.rs`](src/frame.rs) (`EAR_UART_BAUD`, `BAND_COUNT`, `FRAME_LEN`).
 
 ### Wire format (58 bytes, little-endian)
 

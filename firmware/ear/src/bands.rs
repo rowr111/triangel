@@ -30,7 +30,7 @@ const LEVEL_DECAY: f32  = 0.4;
 /// loud spike cannot move it.
 const EXTREME_COUNT: usize = 5;
 
-/// Frames between reference recomputations (~256 ms).
+/// Frames between reference recomputations (about 0.3 s).
 const REFRESH_FRAMES: u32 = 8;
 
 /// Bands averaged for the raw bass level: 40-100 Hz, the kick and the bass line.

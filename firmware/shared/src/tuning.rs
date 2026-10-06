@@ -159,7 +159,7 @@ pub mod spiderweb {
 
 /// Flashing the ear after changing anything here.
 pub mod ear {
-    /// History behind each reference, in 32 ms frames: all bands, each band, and level.
+    /// History behind each reference, in frames (about 28 a second): all bands, each band, level.
     pub const BAND_WINDOW_FRAMES: usize = 94;
     pub const BAND_OWN_WINDOW_FRAMES: usize = 48;
     pub const LEVEL_WINDOW_FRAMES: usize = 234;

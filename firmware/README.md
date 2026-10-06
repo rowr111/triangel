@@ -30,7 +30,7 @@ Boards are numbered left-to-right, top-to-bottom by position. The data path snak
 
 ## Eye <-> ear communication
 
-The ear sends one frame per 32 ms of audio (~31 fps) to the eye over a single UART wire. The frame carries 24 band levels, the overall loudness (absolute and relative to recent music), how sharply the spectrum just rose, and the bass level. The eye turns those into beats, drops, per-band onsets and the Auto sound-mode decision.
+The ear sends one frame for each 32 ms of audio it captures, about 28 per second, to the eye over a single UART wire. The frame carries 24 band levels, the overall loudness (absolute and relative to recent music), how sharply the spectrum just rose, and the bass level. The eye turns those into beats, drops, per-band onsets and the Auto sound-mode decision.
 
 The baud rate and frame layout are defined once, in the [`shared/`](shared/) crate that both chips build against; see its README for the byte layout.
 

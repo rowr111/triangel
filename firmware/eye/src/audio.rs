@@ -384,7 +384,7 @@ impl AudioReceiver {
     /// flag the slow arm/release accumulator judges.
     fn apply_frame(&mut self, frame: &BandFrame, now_ms: u32) {
         for (i, &b) in frame.bands.iter().enumerate() {
-            let v = b as f32 / 65535.0;
+            let v = norm_from_wire(b);
             self.state.bands[i] = v;
             self.state.band_fast[i] += (v - self.state.band_fast[i]) * BAND_FAST;
             self.state.band_slow[i] += (v - self.state.band_slow[i]) * BAND_SLOW;

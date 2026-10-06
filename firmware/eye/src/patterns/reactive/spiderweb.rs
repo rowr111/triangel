@@ -145,7 +145,7 @@ impl Pattern for Spiderweb {
         } else if audio.beat {
             let count = 1 + (audio.beat_strength * EXTRA_LINES) as usize;
             for _ in 0..count {
-                let li = (self.rng.f32() * self.lines.len() as f32) as usize % self.lines.len();
+                let li = self.rng.below(self.lines.len());
                 self.fire(li, t_ms, 0.5 + 0.5 * audio.beat_strength, 0.0, FADE_MS);
             }
         }

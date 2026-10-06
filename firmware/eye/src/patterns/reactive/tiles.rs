@@ -101,7 +101,7 @@ impl Pattern for Tiles {
         if audio.drop {
             self.light(self.center, t_ms, TILES - 1, 1.0, DROP_HOLD_MS, DROP_FADE_MS);
         } else if audio.beat {
-            let seed = 1 + (self.rng.f32() * (TILES - 1) as f32) as usize % (TILES - 1);
+            let seed = 1 + self.rng.below(TILES - 1);
             let count = 1 + (audio.beat_strength * GROW_EXTRA) as usize;
             self.light(seed, t_ms, count, 0.5 + 0.5 * audio.beat_strength, 0.0, FADE_MS);
         }

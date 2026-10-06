@@ -77,15 +77,27 @@ pub struct Fubuki {
     flake_e: [f32; LED_COUNT],
     flake_h: [f32; LED_COUNT],
     flake_s: [f32; LED_COUNT],
+    // Fixed per LED, from a hash of its board and position: the hash, the pile brightness
+    // with its texture, the pulse phase (rad) and the ragged-edge offset (mm).
+    led_hash:  [u32; LED_COUNT],
+    pile_tex:  [f32; LED_COUNT],
+    pulse_at:  [f32; LED_COUNT],
+    jitter_mm: [f32; LED_COUNT],
 }
 
 impl Fubuki {
     pub fn new() -> Self {
+        let led_hash: [u32; LED_COUNT] =
+            core::array::from_fn(|i| hash2(LED_MAP[i].board_id as u32, LED_MAP[i].local_idx as u32));
         Fubuki {
             origin_ms: 0,
             flake_e:   [0.0; LED_COUNT],
             flake_h:   [0.0; LED_COUNT],
             flake_s:   [0.0; LED_COUNT],
+            led_hash,
+            pile_tex:  led_hash.map(|hp| PILE_VAL * (1.0 - PILE_TEXTURE * ((hp >> 9 & 0xFF) as f32 / 255.0))),
+            pulse_at:  led_hash.map(|hp| (hp >> 17 & 0x1FF) as f32 / 512.0 * TAU),
+            jitter_mm: led_hash.map(|hp| ((hp >> 26) as f32 / 63.0 - 0.5) * 2.0 * FILL_JITTER_MM),
         }
     }
 }
@@ -115,7 +127,7 @@ impl Pattern for Fubuki {
         let jscale_c = 4.0 * fc * (1.0 - fc);
         let jscale_p = 4.0 * fp * (1.0 - fp);
 
-        let pulse_t = fold_ms(local, PILE_PULSE_RATE);
+        let pulse_ph = fold_ms(local, PILE_PULSE_RATE) * PILE_PULSE_RATE;
 
         // nf is how far the sky and the flakes have turned to the new season's colors.
         let nf = if first {
@@ -150,16 +162,14 @@ impl Pattern for Fubuki {
 
         for (i, led) in LED_MAP.iter().enumerate() {
             // Per-LED texture and pulse, shared by both piles.
-            let hp = hash2(led.board_id as u32, led.local_idx as u32);
-            let tex = 1.0 - PILE_TEXTURE * ((hp >> 9 & 0xFF) as f32 / 255.0);
-            let phase = (hp >> 17 & 0x1FF) as f32 / 512.0 * TAU;
-            let pulse = 1.0 - PILE_PULSE * (0.5 - 0.5 * (pulse_t * PILE_PULSE_RATE + phase).sin());
-            let pile_v = PILE_VAL * tex * pulse;
+            let hp = self.led_hash[i];
+            let pulse = 1.0 - PILE_PULSE * (0.5 - 0.5 * (pulse_ph + self.pulse_at[i]).sin());
+            let pile_v = self.pile_tex[i] * pulse;
 
             // How far inside each pile this LED is; the jitter shrinks to 0 at empty and full.
-            let jbase = (hp >> 26) as f32 / 63.0 - 0.5;
-            let fillamt_c = ((led.wy - line_c - jbase * 2.0 * FILL_JITTER_MM * jscale_c) / FILL_FEATHER_MM).clamp(0.0, 1.0);
-            let fillamt_p = ((led.wy - line_p - jbase * 2.0 * FILL_JITTER_MM * jscale_p) / FILL_FEATHER_MM).clamp(0.0, 1.0);
+            let jitter = self.jitter_mm[i];
+            let fillamt_c = ((led.wy - line_c - jitter * jscale_c) / FILL_FEATHER_MM).clamp(0.0, 1.0);
+            let fillamt_p = ((led.wy - line_p - jitter * jscale_p) / FILL_FEATHER_MM).clamp(0.0, 1.0);
 
             // Sky, then the old pile over it, then the new pile on top.
             let (pch, pcs) = prev.colors[(hp % prev.n) as usize];

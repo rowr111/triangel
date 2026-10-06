@@ -90,7 +90,7 @@ impl Ripples {
 
     /// Where the next drop lands: at a random LED, so always on the fixture.
     pub fn spot(&mut self) -> Spot {
-        let pick = (self.rng.f32() * LED_COUNT as f32) as usize % LED_COUNT;
+        let pick = self.rng.below(LED_COUNT);
         let (x, y) = (LED_MAP[pick].wx, LED_MAP[pick].wy);
         let hue = HUE_MIN + self.rng.f32() * (HUE_MAX - HUE_MIN);
         Spot { x, y, hue }

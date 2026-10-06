@@ -4,7 +4,7 @@ Audio processor firmware for the triangel fixture. Runs on a Baochip-1x under [X
 
 ## What this is
 
-The **ear** chip captures audio, measures it in 24 frequency bands, and streams the result to the **eye** chip over UART at ~31 fps.
+The **ear** chip captures audio, measures it in 24 frequency bands, and streams the result to the **eye** chip over UART at about 28 fps.
 
 Pipeline per frame (32 ms):
 
@@ -37,7 +37,7 @@ It also carries the level normalized against recent loudness, and the spectral f
 | Pipeline sample rate | 24 kHz | 2:1 box-average decimation; 12 kHz Nyquist |
 | Bit depth | 24-bit | Top 16 bits used |
 | Channels | Mono | Select pin tied low on PCB = left channel |
-| Frame size | 768 samples | 32 ms per frame, ~31 fps |
+| Frame size | 768 samples | 32 ms of audio per frame. About 28 fps, because audio that arrives while a frame is being processed is skipped |
 
 All of these derive from three constants at the top of [`src/audio.rs`](src/audio.rs).
 

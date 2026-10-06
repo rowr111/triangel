@@ -18,8 +18,8 @@ pub const DECIMATE: usize = 2;
 pub const RAW_RATE_HZ: u32 = BIO_QUANTUM_HZ / 2 / BCLK_PER_FRAME;
 /// The rate read_frame returns, after the box average that decimates each group.
 pub const SAMPLE_RATE_HZ: u32 = RAW_RATE_HZ / DECIMATE as u32;
-/// Wall-clock period of one FRAME_SAMPLES frame - the budget everything downstream of
-/// read_frame has to fit inside before the next frame is ready.
+/// Milliseconds of audio in one frame. Frames arrive farther apart than this, because
+/// audio that comes in while one is being processed is skipped.
 pub const FRAME_PERIOD_MS: u32 = FRAME_SAMPLES as u32 * 1000 / SAMPLE_RATE_HZ;
 
 // Integer division would quietly truncate a combination that does not divide evenly,

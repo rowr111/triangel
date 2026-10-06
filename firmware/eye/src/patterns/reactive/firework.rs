@@ -78,7 +78,7 @@ impl Firework {
 
     /// A random LED's position.
     fn random_point(&mut self) -> (f32, f32) {
-        let pick = (self.rng.f32() * LED_COUNT as f32) as usize % LED_COUNT;
+        let pick = self.rng.below(LED_COUNT);
         (LED_MAP[pick].wx, LED_MAP[pick].wy)
     }
 

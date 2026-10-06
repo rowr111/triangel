@@ -176,12 +176,12 @@ impl Shot {
 }
 
 /// xorshift32. Each pattern seeds its own, so its sequence is fixed.
-#[derive(Clone, Copy)]
 pub struct Rng(u32);
 
 impl Rng {
+    /// A zero seed would produce only zeros, so it is swapped for a fixed number.
     pub const fn new(seed: u32) -> Self {
-        Rng(seed)
+        Rng(if seed == 0 { 0x9E37_79B9 } else { seed })
     }
 
     pub fn next_u32(&mut self) -> u32 {
@@ -203,8 +203,13 @@ impl Rng {
         min + self.next_u32() % (max - min)
     }
 
+    /// Uniform whole number in [0, n).
+    pub fn below(&mut self, n: usize) -> usize {
+        (self.f32() * n as f32) as usize % n
+    }
+
     /// One entry of `items`, uniformly.
     pub fn pick<T: Copy>(&mut self, items: &[T]) -> T {
-        items[(self.f32() * items.len() as f32) as usize % items.len()]
+        items[self.below(items.len())]
     }
 }
