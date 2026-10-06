@@ -3,7 +3,7 @@ use std::collections::VecDeque;
 use crate::led::map::LED_COUNT;
 use crate::patterns::transition::{self, TransitionStyle};
 use crate::audio::Audio;
-use crate::patterns::{Frame, Pattern};
+use crate::patterns::{Frame, Pattern, Rng, knuth_hash};
 use crate::patterns::ambient::{drizzle::Drizzle, effervesce::Effervesce, flame::ApexFlame, fubuki::Fubuki, rainbow::Rainbow, ricochet::Ricochet, shimmer::CenterShimmer, squall::Squall, uzumaki::Uzumaki};
 use crate::patterns::reactive::{
     firework::Firework, raindrop::Raindrop, spectrum::Spectrum, spiderweb::Spiderweb, tiles::Tiles,
@@ -29,7 +29,7 @@ const DEFAULT_BRIGHTNESS_INDEX: usize = 3; // middle -> perceptual medium, room 
 #[cfg(feature = "previewer")]
 const DEFAULT_BRIGHTNESS_INDEX: usize = BRIGHTNESS_LEVELS.len() - 1; // full - the web view is dim otherwise
 
-// Audition order for pick_style - cycled so each step shows a different transition.
+// The styles a pattern step picks from at random.
 const STYLES: [TransitionStyle; 7] = [
     TransitionStyle::Crossfade,
     TransitionStyle::RadialOut,
@@ -162,7 +162,8 @@ pub struct SetlistManager {
     transition:        Option<Transition>,
     pending:           VecDeque<Step>,
     last_sound_active: bool,
-    next_style:        usize,
+    style_rng:         Rng,
+    last_style:        usize, // index into STYLES
     from_buf:          Frame,
     brightness_index:  usize,
     pub sound_mode:    SoundMode,
@@ -170,6 +171,8 @@ pub struct SetlistManager {
 
 impl SetlistManager {
     pub fn new(now_ms: u32) -> Self {
+        let mut style_rng = Rng::new(now_ms);
+        let last_style = style_rng.below(STYLES.len());
         SetlistManager {
             setlists:          [
                 Setlist::new(ambient_patterns()),
@@ -180,7 +183,8 @@ impl SetlistManager {
             transition:        None,
             pending:           VecDeque::new(),
             last_sound_active: false,
-            next_style:        0,
+            style_rng,
+            last_style,
             from_buf:          [[0u8; 3]; LED_COUNT],
             brightness_index:  DEFAULT_BRIGHTNESS_INDEX,
             sound_mode:        SoundMode::Off,
@@ -191,12 +195,13 @@ impl SetlistManager {
         &mut self.setlists[kind as usize]
     }
 
-    /// Cycle through the transition styles so each new step shows a different one - handy
-    /// for auditioning in the previewer. Swap for a fixed pick or randomise here later.
-    fn pick_style(&mut self) -> TransitionStyle {
-        let style = STYLES[self.next_style % STYLES.len()];
-        self.next_style = self.next_style.wrapping_add(1);
-        style
+    /// A random style for a pattern step, never the same one twice in a row.
+    fn pick_style(&mut self, now_ms: u32) -> TransitionStyle {
+        // Mixing in the time of the step makes the sequence differ after each power-up.
+        self.style_rng = Rng::new(self.style_rng.next_u32() ^ knuth_hash(now_ms));
+        let skip = 1 + self.style_rng.below(STYLES.len() - 1);
+        self.last_style = (self.last_style + skip) % STYLES.len();
+        STYLES[self.last_style]
     }
 
     fn begin_transition(&mut self, from_kind: SetlistKind, from_idx: usize, now_ms: u32, duration_ms: u32, style: TransitionStyle) {
@@ -285,7 +290,7 @@ impl SetlistManager {
         let list = self.list(kind);
         let from_idx = list.idx;
         list.step(dir);
-        let style = self.pick_style();
+        let style = self.pick_style(now_ms);
         self.begin_transition(kind, from_idx, now_ms, STEP_TRANSITION_MS, style);
     }
 
