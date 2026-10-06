@@ -36,31 +36,35 @@ const SWAY_MM:     f32   = 30.0; // sideways sway
 const SWAY_CYCLES: f32   = 1.5;  // sways per fall
 const CONVERGE:    f32   = 0.5;  // how far flakes drift toward the center as they fall
 
-// A sky tint plus the (hue, sat) palette shared by pile and flakes; `n` colors are in use.
+// A sky tint plus the (hue, sat) palette shared by pile and flakes.
 struct Season {
     sky_hue: f32,
     sky_sat: f32,
-    n:       u32,
-    colors:  [(f32, f32); 12],
+    colors:  &'static [(f32, f32)],
 }
 
-const PAD: (f32, f32) = (0.0, 0.0); // unused palette slots
+impl Season {
+    /// The palette color a hash picks.
+    fn color(&self, hash: u32) -> (f32, f32) {
+        self.colors[hash as usize % self.colors.len()]
+    }
+}
 
 const SEASONS: [Season; 4] = [
     // Spring: mostly pink, some white, a touch of green.
-    Season { sky_hue: 330.0, sky_sat: 0.35, n: 12,
-        colors: [(332.0, 0.6), (0.0, 0.0), (345.0, 0.7), (332.0, 0.6), (345.0, 0.7), (0.0, 0.0),
-                 (332.0, 0.6), (345.0, 0.7), (100.0, 0.6), (332.0, 0.6), (345.0, 0.7), (0.0, 0.0)] },
+    Season { sky_hue: 330.0, sky_sat: 0.35,
+        colors: &[(332.0, 0.6), (0.0, 0.0), (345.0, 0.7), (332.0, 0.6), (345.0, 0.7), (0.0, 0.0),
+                  (332.0, 0.6), (345.0, 0.7), (100.0, 0.6), (332.0, 0.6), (345.0, 0.7), (0.0, 0.0)] },
     // Summer: three greens, a tan and a golden yellow.
-    Season { sky_hue: 120.0, sky_sat: 0.4, n: 8,
-        colors: [(105.0, 0.9), (90.0, 0.85), (130.0, 0.8), (105.0, 0.9), (90.0, 0.85), (130.0, 0.8),
-                 (30.0, 0.5), (44.0, 0.92), PAD, PAD, PAD, PAD] },
+    Season { sky_hue: 120.0, sky_sat: 0.4,
+        colors: &[(105.0, 0.9), (90.0, 0.85), (130.0, 0.8), (105.0, 0.9), (90.0, 0.85), (130.0, 0.8),
+                  (30.0, 0.5), (44.0, 0.92)] },
     // Autumn: gold, orange, rust and red.
-    Season { sky_hue: 25.0,  sky_sat: 0.5,  n: 4,
-        colors: [(40.0, 0.9), (25.0, 0.95), (12.0, 0.95), (0.0, 0.85), PAD, PAD, PAD, PAD, PAD, PAD, PAD, PAD] },
+    Season { sky_hue: 25.0,  sky_sat: 0.5,
+        colors: &[(40.0, 0.9), (25.0, 0.95), (12.0, 0.95), (0.0, 0.85)] },
     // Winter: white and pale blue.
-    Season { sky_hue: 215.0, sky_sat: 0.55, n: 2,
-        colors: [(0.0, 0.0), (210.0, 0.22), PAD, PAD, PAD, PAD, PAD, PAD, PAD, PAD, PAD, PAD] },
+    Season { sky_hue: 215.0, sky_sat: 0.55,
+        colors: &[(0.0, 0.0), (210.0, 0.22)] },
 ];
 
 #[derive(Clone, Copy)]
@@ -177,8 +181,8 @@ impl Pattern for Fubuki {
             let fillamt_p = ((led.wy - line_p - jitter * jscale_p) / FILL_FEATHER_MM).clamp(0.0, 1.0);
 
             // Sky, then the old pile over it, then the new pile on top.
-            let (pch, pcs) = prev.colors[(hp % prev.n) as usize];
-            let (ch, cs) = season.colors[(hp % season.n) as usize];
+            let (pch, pcs) = prev.color(hp);
+            let (ch, cs) = season.color(hp);
             let mut hue = sky_h;
             let mut sat = sky_s;
             let mut val = SKY_VAL;
@@ -218,7 +222,7 @@ fn make_flake(i: usize, t_ms: u32, fill_y: f32, prev: &Season, new: &Season, nf:
     let y = WORLD_TOP + fp * (fill_y - WORLD_TOP);
     // A fraction `nf` of the flakes use the new season's colors.
     let src = if (((g >> 20) & 0x3FF) as f32 / 1024.0) < nf { new } else { prev };
-    let (hue, sat) = src.colors[(g % src.n) as usize];
+    let (hue, sat) = src.color(g);
 
     Flake { x, y, hue, sat }
 }

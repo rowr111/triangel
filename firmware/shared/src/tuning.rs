@@ -1,10 +1,12 @@
-//! Sound-reactive tuning. Build and flash the eye after changing all of these 
-//! except the last (ear) section.
+//! Sound-reactive tuning. Build and flash the eye after changing all of these
+//! except `BASS_BANDS` (both chips) and the last (ear) section.
+
+/// Bands that count as the bass: 0-2 is 40-100 Hz. The ear's bass level, the beat
+/// detector and Raindrop's trigger all use it.
+pub const BASS_BANDS: usize = 3;
 
 /// Beat detection shared by Firework, Tiles and Spiderweb.
 pub mod beat {
-    /// Bands checked for bass under a hit: 0-2 is 40-100 Hz.
-    pub const KICK_BANDS: usize = 3;
     /// How much bass there has to be for a hit to count. Keeps hi-hats out.
     pub const LOW_MIN: f32 = 0.15;
     /// A beat fires when the rise across all bands reaches this many times its recent
@@ -82,8 +84,6 @@ pub mod spectrum {
 
 /// Raindrop. Has its own trigger, separate from `beat`.
 pub mod raindrop {
-    /// Bands its trigger listens to: 0-2 is 40-100 Hz.
-    pub const KICK_BANDS: usize = 3;
     /// Fires when a bass band's onset reaches this. Lower fires more often.
     pub const TRIGGER: f32 = 0.20;
     /// It fires again only after dropping back under this.

@@ -138,6 +138,11 @@ fn q12(v: f32) -> i32 {
     (v * 4096.0).round() as i32
 }
 
+/// sin(a + b) in Q12, from the sin and cos of each.
+fn sin_sum_q12(a_sin: i16, a_cos: i16, b_sin: i32, b_cos: i32) -> i32 {
+    (a_sin as i32 * b_cos + a_cos as i32 * b_sin) >> 12
+}
+
 impl Pattern for ApexFlame {
     fn render(&mut self, t_ms: u32, _audio: &Audio, out: &mut Frame) {
         // Each time term wraps at its own period first, so the f32 stays precise.
@@ -194,13 +199,13 @@ impl Pattern for ApexFlame {
         let flare_heat = (FLARE_HEAT_Q * flare_env) as i32;
 
         for (i, led) in LED_MAP.iter().enumerate() {
-            let w1 = (self.w1_sin[i] as i32 * b1_cos + self.w1_cos[i] as i32 * b1_sin) >> 12;
-            let w2 = (self.w2_sin[i] as i32 * b2_cos + self.w2_cos[i] as i32 * b2_sin) >> 12;
+            let w1 = sin_sum_q12(self.w1_sin[i], self.w1_cos[i], b1_sin, b1_cos);
+            let w2 = sin_sum_q12(self.w2_sin[i], self.w2_cos[i], b2_sin, b2_cos);
             let wave = (((w1 * MIX1_Q + w2 * MIX2_Q) >> 12) + ONE) >> 1;
             let wave = WAVE_FLOOR_Q + (((ONE - WAVE_FLOOR_Q) * wave) >> 12);
 
             // Smoke: rising bands that wiggle sideways, dark where the field is near its peak.
-            let wiggle = (self.m_sin[i] as i32 * m_cos + self.m_cos[i] as i32 * m_sin) >> 12;
+            let wiggle = sin_sum_q12(self.m_sin[i], self.m_cos[i], m_sin, m_cos);
             let turn = self.smoke_y[i]
                 .wrapping_add(smoke_rise)
                 .wrapping_add(((wiggle * SMOKE_MEANDER_TURNS) >> 12) as u16);
@@ -215,8 +220,8 @@ impl Pattern for ApexFlame {
             let wisp = (((wisp * wisp) >> 12) * (3 * ONE - 2 * wisp)) >> 12; // smoothstep
             let smoke = ONE - ((SMOKE_DARKEN_Q * wisp) >> 12);
 
-            let fl1 = (self.f1_sin[i] as i32 * f1_cos + self.f1_cos[i] as i32 * f1_sin) >> 12;
-            let fl2 = (self.f2_sin[i] as i32 * f2_cos + self.f2_cos[i] as i32 * f2_sin) >> 12;
+            let fl1 = sin_sum_q12(self.f1_sin[i], self.f1_cos[i], f1_sin, f1_cos);
+            let fl2 = sin_sum_q12(self.f2_sin[i], self.f2_cos[i], f2_sin, f2_cos);
             let flicker = ONE + ((FLICKER_HALF_Q * (fl1 + fl2)) >> 12);
 
             // Nearby embers and the flaring tile.

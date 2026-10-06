@@ -8,7 +8,7 @@ use bao1x_hal_service::UdmaGlobal;
 
 use triangel_shared::frame::{level_from_wire, norm_from_wire, BandFrame, BAND_COUNT, EAR_UART_BAUD, Fed, FrameAssembler, LEVEL_DB_FLOOR};
 use triangel_shared::follow;
-use triangel_shared::tuning::{beat::*, drop_detect::*, level::*, link::*, onset::*};
+use triangel_shared::tuning::{beat::*, drop_detect::*, level::*, link::*, onset::*, BASS_BANDS};
 
 use crate::pins;
 
@@ -264,7 +264,7 @@ impl AudioReceiver {
     fn detect_beat(&mut self, now_ms: u32) {
         let st = &mut self.state;
         st.flux_avg += (st.flux - st.flux_avg) * FLUX_AVG_RATE;
-        let low = st.bands[..KICK_BANDS].iter().sum::<f32>() / KICK_BANDS as f32;
+        let low = st.bands[..BASS_BANDS].iter().sum::<f32>() / BASS_BANDS as f32;
         let ratio = if low >= LOW_MIN && st.flux_avg > 1e-4 { st.flux / st.flux_avg } else { 0.0 };
 
         if st.beat_armed

@@ -39,4 +39,4 @@ The eye receives a byte stream, not whole frames. `FrameAssembler::feed` takes o
 
 ## `tuning` - sound-reactive tuning
 
-Every knob for beat, onset and drop detection, the Auto sound-mode switch, each reactive pattern, and the ear's normalization, in one file: [`src/tuning.rs`](src/tuning.rs). The `ear` section needs the ear reflashed; everything else only the eye.
+Every knob for beat, onset and drop detection, the Auto sound-mode switch, each reactive pattern, and the ear's normalization, in one file: [`src/tuning.rs`](src/tuning.rs). The `ear` section needs the ear reflashed and `BASS_BANDS` needs both chips; everything else only the eye.

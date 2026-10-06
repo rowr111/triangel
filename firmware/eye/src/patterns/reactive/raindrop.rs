@@ -2,6 +2,7 @@ use crate::audio::Audio;
 use crate::patterns::ripples::{RippleStyle, Ripples};
 use crate::patterns::{Frame, Pattern};
 use triangel_shared::tuning::raindrop::*;
+use triangel_shared::tuning::BASS_BANDS;
 
 const STYLE: RippleStyle = RippleStyle {
     ripple_speed:    RIPPLE_SPEED,
@@ -91,7 +92,7 @@ impl Raindrop {
 
 impl Pattern for Raindrop {
     fn render(&mut self, t_ms: u32, audio: &Audio, out: &mut Frame) {
-        let hit = audio.rise[..KICK_BANDS].iter().copied().fold(0.0f32, f32::max);
+        let hit = audio.rise[..BASS_BANDS].iter().copied().fold(0.0f32, f32::max);
         let clear = t_ms.wrapping_sub(self.last_drop_ms) >= REFRACTORY_MS;
         if self.armed && hit >= TRIGGER && clear {
             self.armed = false;

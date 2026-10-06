@@ -8,6 +8,7 @@
 use triangel_shared::frame::{level_to_wire, norm_to_wire, BandFrame, BAND_COUNT, LEVEL_DB_FLOOR};
 use triangel_shared::follow;
 use triangel_shared::tuning::ear::*;
+use triangel_shared::tuning::BASS_BANDS;
 
 use crate::audio::{FRAME_SAMPLES, SAMPLE_RATE_HZ};
 
@@ -32,9 +33,6 @@ const EXTREME_COUNT: usize = 5;
 
 /// Frames between reference recomputations (about 0.3 s).
 const REFRESH_FRAMES: u32 = 8;
-
-/// Bands averaged for the raw bass level: 40-100 Hz, the kick and the bass line.
-const BASS_BANDS: usize = 3;
 
 /// Low and high reference over the last `N` frames: the `EXTREME_COUNT`th lowest and
 /// highest values in the window.
