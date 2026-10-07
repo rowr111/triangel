@@ -21,8 +21,7 @@ pub const STATUS_DMA_DONE:   u8 = 4;
 pub const STATUS_RECEIVING:  u8 = 5;
 pub static UART_STATUS:        AtomicU8  = AtomicU8::new(STATUS_PENDING);
 pub static UART_FIRST_BYTE:    AtomicU8  = AtomicU8::new(0);
-/// Frames that decoded, and frames dropped on a bad sync or checksum. The pair tells
-/// a wrong-data link from a dead one.
+/// Frames that decoded, and frames dropped on a bad sync or checksum.
 pub static UART_FRAMES_OK:     AtomicU32 = AtomicU32::new(0);
 pub static UART_FRAMES_BAD:    AtomicU32 = AtomicU32::new(0);
 /// Latest decoded level, as f32 bits: absolute dBFS and the ear's normalized 0.0-1.0.
@@ -35,8 +34,7 @@ pub static DROP_COUNT:         AtomicU32  = AtomicU32::new(0);
 pub static DROP_BASS_DB:       AtomicU32  = AtomicU32::new(0);
 pub static DROP_REF_DB:        AtomicU32  = AtomicU32::new(0);
 
-/// Drop detector state for the diagnostic heartbeat: in a breakdown, drops detected,
-/// the bass level, and the reference it is judged against.
+/// Drop detector state for the heartbeat: in a breakdown, drops, bass level, reference.
 #[cfg(all(feature = "usb", not(feature = "previewer")))]
 pub fn drop_stats() -> (bool, u32, f32, f32) {
     (
@@ -47,8 +45,8 @@ pub fn drop_stats() -> (bool, u32, f32, f32) {
     )
 }
 
-/// Link state for the diagnostic heartbeat: status, frames decoded, frames dropped,
-/// the first byte ever seen, current dBFS, and current normalized level.
+/// Link state for the heartbeat: status, frames decoded, frames dropped, the first byte
+/// ever seen, dBFS, and normalized level.
 #[cfg(all(feature = "usb", not(feature = "previewer")))]
 pub fn stats() -> (u8, u32, u32, u8, f32, f32) {
     (
@@ -61,38 +59,23 @@ pub fn stats() -> (u8, u32, u32, u8, f32, f32) {
     )
 }
 
-// The UART's IFRAM block is split 2048 TX + 2048 RX by the HAL (UART_RX_BUF_START /
-// UART_RX_BUF_SIZE in bao1x-hal's uart.rs - private there, so mirrored here). The RX
-// half is our DMA ring: the UDMA engine writes incoming bytes into it continuously
-// (CFG_CONT wraps forever) and update() chases its write pointer once per render
-// frame. Reception is entirely hardware-side: a CPU-serviced byte interface cannot
-// keep up with frame-sized bursts at 1 Mbaud (10 us/byte) under a multitasking OS.
+// The HAL splits the UART's IFRAM block into 2048 TX and 2048 RX bytes; its constants are
+// private, so they are mirrored here. The RX half is the DMA ring the UDMA engine fills,
+// because reading a byte at a time on the CPU cannot keep up with 1 Mbaud bursts.
 const RX_DMA_BUF_START: usize = 2048;
 const RX_DMA_BUF_LEN:   usize = 2048;
 
-// --- Beat detection ---
-// A struck drum moves the whole spectrum at once, so the trigger is the total rise
-// across every band, gated on the low bands holding energy to tell a kick from a hat.
-// The threshold is a multiple of the running average rather than a level: every band
-// moves a little every frame, so flux has a busy floor a fixed threshold sits under.
-
-// --- Drop detection ---
-// A drop is the bass returning after a breakdown, so it is found by the absence before
-// it rather than by how loud it is. It runs on the raw bass level alone, not on the beat
-// detector, so it does not inherit that detector's misses.
-//
-// The bass follower rides the kick peaks and holds across the gaps between them, so a
+// The bass follower rises with the kicks and holds across the gaps between them, so a
 // single bar's rest does not read as the bass leaving.
 const BASS_ATTACK: f32 = 0.5;
 const BASS_DECAY: f32 = 0.05;
-/// How fast the reference - the normal level of the bass - follows while music plays.
+/// How fast the reference, the normal level of the bass, follows while music plays.
 const BASS_REF_RATE: f32 = 0.008;
 
-// Fall per quiet tick once the ear stops sending; drains the window in ~4 s.
+// dB the loudness falls each STOPPED_AFTER_MS while the ear is not sending.
 const QUIET_DECAY_DB: f32 = 2.5;
 
-/// Custom cache-flush instruction (from the baochip dma_basic2 test) so the CPU
-/// re-reads the DMA engine's writes instead of a stale cached copy.
+/// Custom cache-flush instruction, so the CPU re-reads what the DMA engine wrote.
 #[inline(always)]
 fn cache_flush() {
     // Safety: a hint instruction with no memory operands of its own.
@@ -192,8 +175,7 @@ pub struct AudioReceiver {
     // Owned and mutated only by the render thread; the DMA engine is the only other
     // writer, and it touches nothing but the IFRAM ring.
     state: AudioState,
-    // None if the UART never came up (sound-reactive then stays disabled; the LED loop
-    // is unaffected).
+    // None if the UART never came up; sound-reactive then stays off.
     dma: Option<DmaRx>,
 }
 
@@ -234,9 +216,8 @@ impl AudioReceiver {
             }
         } else {
             let low = st.bass_ref > BASS_MIN_DB && st.bass_env < st.bass_ref - BREAKDOWN_DB;
-            // Only learn the normal level while the bass is present. Following it down
-            // during the seconds it takes to confirm a breakdown closes the gap before the
-            // confirmation can finish.
+            // Learn the normal level only while the bass is present. Following it down would
+            // close the gap before a breakdown is confirmed.
             if !low {
                 st.bass_ref += (st.bass_env - st.bass_ref) * BASS_REF_RATE;
             }
@@ -303,16 +284,14 @@ impl AudioReceiver {
         }
     }
 
-    /// Called once per frame from the render loop. Chases the DMA engine's write pointer
-    /// through the frame assembler, applies any complete frame, decays toward silence
-    /// when the ear stops sending, and advances the slow arm/release accumulator.
+    /// Called once per render frame. Applies the frames that have arrived, fades toward
+    /// silence when the ear stops sending, and advances the Auto-mode timer.
     pub fn update(&mut self, now_ms: u32) {
-        // Frame delta for the accumulator, capped so boot delay or a frame overrun
-        // can't slam it forward in one step.
+        // Time since the last call, capped so a long gap cannot jump the timers ahead.
         let dt_ms = (now_ms.wrapping_sub(self.state.last_tick_ms) as f32).min(100.0);
         self.state.last_tick_ms = now_ms;
 
-        // Drain every byte the DMA engine wrote since last frame through the state machine.
+        // Feed every byte the DMA engine wrote since the last call to the assembler.
         let mut got_frame = false;
         let mut got_byte = false;
         if let Some(pos) = self.dma.as_ref().and_then(|d| d.write_pos()) {
@@ -333,14 +312,13 @@ impl AudioReceiver {
             self.dma.as_mut().unwrap().tail = tail;
         }
 
-        // Bytes arriving but nothing decoding is a different fault from silence, so
-        // give it its own status rather than leaving it as "waiting for the first".
+        // Bytes arriving but nothing decoding is a different fault from silence, so it has
+        // its own status.
         if got_byte && UART_STATUS.load(Ordering::Relaxed) == STATUS_INIT_OK {
             UART_STATUS.store(STATUS_DMA_DONE, Ordering::Relaxed);
         }
 
-        // No fresh frame for a while: the ear stopped sending - decay toward silence
-        // and count the time as quiet.
+        // The ear has stopped sending: let the loudness fall and count the time as quiet.
         if !got_frame && now_ms.wrapping_sub(self.state.last_update_ms) >= STOPPED_AFTER_MS {
             self.state.smoothed_dbfs =
                 (self.state.smoothed_dbfs - QUIET_DECAY_DB).max(LEVEL_DB_FLOOR);
@@ -362,8 +340,8 @@ impl AudioReceiver {
             st.level_norm *= keep;
         }
 
-        // Leaky accumulator: fill 1:1 while loud, drain at ARM/RELEASE while quiet.
-        // Activity flips only at the rails, so borderline sound holds the current mode.
+        // Fills at 1:1 while loud and drains at ARM/RELEASE while quiet. Activity changes
+        // only when it is full or empty, so borderline sound holds the current mode.
         if self.state.last_loud {
             self.state.loud_ms = (self.state.loud_ms + dt_ms).min(ACTIVITY_ARM_MS);
             if self.state.loud_ms >= ACTIVITY_ARM_MS {
@@ -396,8 +374,8 @@ impl AudioReceiver {
         }
     }
 
-    /// Apply a decoded frame: the 24 bands, the render level (light EMA), and the loud
-    /// flag the slow arm/release accumulator judges.
+    /// Apply a decoded frame: the bands, the beat and drop detectors, the level, and the
+    /// loud flag the Auto-mode timer uses.
     fn apply_frame(&mut self, frame: &BandFrame, now_ms: u32) {
         for (i, &b) in frame.bands.iter().enumerate() {
             let v = norm_from_wire(b);
@@ -411,7 +389,7 @@ impl AudioReceiver {
         self.detect_drop(now_ms);
         self.state.level_norm = norm_from_wire(frame.level_norm);
         let dbfs = level_from_wire(frame.level);
-        // Light EMA so one rogue frame can't spike the fill. In dB: even steps.
+        // Smoothed, so one stray frame cannot spike the level.
         self.state.smoothed_dbfs = self.state.smoothed_dbfs * 0.6 + dbfs * 0.4;
         self.state.last_loud = self.state.smoothed_dbfs > ACTIVITY_LOUD_DBFS;
         self.state.last_update_ms = now_ms;
@@ -424,11 +402,9 @@ impl AudioReceiver {
 }
 
 impl DmaRx {
-    /// The DMA engine's live write position within the RX ring, derived from the RX
-    /// channel's SIZE register - the countdown of bytes remaining in the current pass,
-    /// which decrements as bytes land (and reloads to the full size on each CONT wrap).
-    /// SADDR does not read back as a live pointer on this chip, so SIZE is the source.
-    /// None if the readback is out of range (transfer idle or mid-reload edge).
+    /// The DMA engine's write position in the RX ring, from the SIZE register's countdown
+    /// of bytes left in this pass (SADDR does not read back live on this chip). None if
+    /// the readback is out of range.
     fn write_pos(&self) -> Option<usize> {
         // Safety: Bank::Rx + DmaReg::Size of the mapped UART CSR page.
         let remaining = unsafe {
@@ -456,9 +432,8 @@ fn init_audio_uart() -> Option<DmaRx> {
     pins::setup_input_pin(&iox, pins::AUDIO_UART_RX_PORT, pins::AUDIO_UART_RX_PIN, IoxFunction::AF1, IoxEnable::Enable);
     UdmaGlobal::new().udma_clock_config(PeriphId::Uart2, true);
 
-    // UART2 may be transiently owned by another process at boot; retry with backoff for a
-    // few seconds rather than dying on the first failure. If it never comes up, run with
-    // sound-reactive disabled - a boot-time conflict won't resolve later anyway.
+    // UART2 may be owned by another process for a moment at boot, so retry for a few
+    // seconds. If it never comes up, run with sound-reactive off.
     const MAX_INIT_ATTEMPTS: u32 = 50; // ~5s at 100ms backoff
     let mut attempt = 0u32;
     loop {
@@ -509,9 +484,8 @@ fn init_uart() -> Option<DmaRx> {
     };
     uart.set_baud(EAR_UART_BAUD, PERCLK_HZ);
 
-    // set_baud leaves the UART in poll mode (Setup bit 0x10: bytes go to the 1-deep
-    // Valid/Data command interface). Rewrite Setup without that bit so RX streams into
-    // the UDMA engine instead. Same disable-then-configure sequence set_baud uses.
+    // set_baud leaves the UART in poll mode (Setup bit 0x10). Rewrite Setup without that
+    // bit, so RX streams into the UDMA engine, with set_baud's disable-then-configure order.
     let clk_counter: u32 = PERCLK_HZ / EAR_UART_BAUD;
     // Safety: Bank::Custom + UartReg::Setup is the Setup register of the mapped UART CSR.
     unsafe {
@@ -520,9 +494,8 @@ fn init_uart() -> Option<DmaRx> {
         setup.write_volatile(0x0306 | (clk_counter << 16));
     }
 
-    // Start the continuous RX transfer over the whole 2048-byte RX half of the IFRAM
-    // block: the engine wraps forever (0b1 = the HAL's CFG_CONT; udma_enqueue ORs in
-    // its own enable bit) and we chase its write pointer from update().
+    // Start a continuous RX transfer over the RX half of the IFRAM block. 0b1 is the HAL's
+    // CFG_CONT, which makes the engine wrap forever; udma_enqueue adds its own enable bit.
     // Safety: the slice describes the physical RX region; only its address/len are used.
     unsafe {
         let rx_phys = core::slice::from_raw_parts(

@@ -9,8 +9,7 @@ pub const BASS_BANDS: usize = 3;
 pub mod beat {
     /// How much bass there has to be for a hit to count. Keeps hi-hats out.
     pub const LOW_MIN: f32 = 0.15;
-    /// A beat fires when the rise across all bands reaches this many times its recent
-    /// average. Lower fires more often.
+    /// A beat fires at this many times the recent average rise. Lower fires more often.
     pub const FLUX_TRIGGER: f32 = 1.9;
     /// It fires again only after dropping back under this.
     pub const FLUX_RELEASE: f32 = 1.3;
@@ -165,7 +164,7 @@ pub mod spiderweb {
     pub const DROP_FADE_MS: f32 = 2500.0;
 }
 
-/// Flashing the ear after changing anything here.
+/// Flash the ear after changing anything here.
 pub mod ear {
     /// History behind each reference, in frames (about 28 a second): all bands, each band, level.
     pub const BAND_WINDOW_FRAMES: usize = 94;
