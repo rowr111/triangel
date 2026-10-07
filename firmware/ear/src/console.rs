@@ -6,7 +6,7 @@ use std::sync::atomic::{AtomicU32, Ordering};
 use crate::audio::FRAME_PERIOD_MS;
 
 use crate::audio::{DECIMATE, I2sAudio, RAW_RATE_HZ, SAMPLE_RATE_HZ};
-use triangel_shared::frame::BAND_COUNT;
+use triangel_shared::frame::{BAND_COUNT, LEVEL_DB_FLOOR};
 use crate::diag::{self, Diag};
 
 /// Raw FIFO words shown by `r`, and how many are printed per line.
@@ -14,19 +14,18 @@ const RAW_DUMP_WORDS:    usize = 32;
 const RAW_DUMP_PER_LINE: usize = 8;
 /// Measurement window for `s` and `t`.
 const MEASURE_MS: u64 = 1000;
-/// How long `m` runs, and how much it measures per printed line.
-const METER_MS:             u64   = 15_000;
-const METER_WINDOW_SAMPLES: usize = RAW_RATE_HZ as usize / 10; // 100 ms
-/// `c` records this many windows of this many samples.
-const CAPTURE_WINDOWS:        usize = 30;
-const CAPTURE_WINDOW_SAMPLES: usize = RAW_RATE_HZ as usize / 10; // 100 ms
+/// How long `m` runs.
+const METER_MS: u64 = 15_000;
+/// How many windows `c` records.
+const CAPTURE_WINDOWS: usize = 30;
+/// One window of `m` or `c`: 100 ms.
+const WINDOW_SAMPLES: usize = RAW_RATE_HZ as usize / 10;
 /// Octave band centers for `f`. A Q of 1.41 makes each filter about an octave wide.
 const BANDS:   usize        = 6;
 const BAND_HZ: [f32; BANDS] = [125.0, 250.0, 500.0, 1000.0, 2000.0, 4000.0];
 const BAND_Q:  f32          = 1.41;
 /// `f` records one second at the pipeline's rate, then filters it.
-const ANALYZE_RATE_HZ: f32   = SAMPLE_RATE_HZ as f32;
-const ANALYZE_SAMPLES: usize = SAMPLE_RATE_HZ as usize; // 1 s
+const ANALYZE_SAMPLES: usize = SAMPLE_RATE_HZ as usize;
 /// A band this far above its own quiet reading counts as heard.
 const BAND_RISE_DB: f32 = 6.0;
 /// Pause after the prompt, so there is time to start making noise.
@@ -36,18 +35,19 @@ const SETTLE_SAMPLES:       usize = RAW_RATE_HZ as usize / 5;  // 200 ms
 const METER_SETTLE_SAMPLES: usize = RAW_RATE_HZ as usize / 20; // 50 ms, between windows
 /// Samples read between clock checks. Reading the clock is a syscall, too slow to do per sample.
 const SAMPLE_BLOCK: usize = 256;
-/// Raw sample rate the BIO program should produce. `s` measures against it.
-const EXPECTED_RATE_HZ: u64 = RAW_RATE_HZ as u64;
 /// Full scale for a sign-extended 24-bit sample.
 const FULL_SCALE_RAW: f64 = 8_388_608.0;
 /// The ICS43434 reads -26 dBFS at 94 dB SPL, so sound pressure is roughly dBFS + 120.
 const DBFS_TO_SPL: f32 = 120.0;
-/// Width of the meter's bar and the dBFS floor its left edge represents.
-const BAR_WIDTH:    usize = 40;
-const BAR_FLOOR_DB: f32   = -90.0;
+/// Width of the meter's bar. Its left edge is LEVEL_DB_FLOOR.
+const BAR_WIDTH: usize = 40;
 
 /// How often the console thread checks whether the audio loop has run its command.
 const COMMAND_POLL_MS: usize = 20;
+
+/// Messages more than one command prints.
+const NO_SAMPLES: &str = "no samples: the BIO core is not pushing anything";
+const STARVED:    &str = "recording starved - the BIO stopped pushing partway";
 
 /// The keystroke waiting to be run, or 0. The mic is not `Send`, so the console thread
 /// hands the key to the audio thread and waits.
@@ -94,22 +94,17 @@ pub fn spawn() {
             let cmd = d.command();
             // First keystroke silences the heartbeat so it cannot break up output.
             diag::quiet();
-            // These need no mic, so answer here without interrupting audio.
-            if cmd == '?' || cmd == 'h' {
-                help(&d);
-                continue;
-            }
-            if cmd == 'p' {
-                perf(&d);
-                continue;
-            }
-            if cmd == 'n' {
-                references(&d);
-                continue;
-            }
-            PENDING.store(cmd as u32, Ordering::Release);
-            while PENDING.load(Ordering::Acquire) != 0 {
-                tt.sleep_ms(COMMAND_POLL_MS).ok();
+            match cmd {
+                // These need no mic, so answer here without interrupting audio.
+                '?' | 'h' => help(&d),
+                'p' => perf(&d),
+                'n' => references(&d),
+                _ => {
+                    PENDING.store(cmd as u32, Ordering::Release);
+                    while PENDING.load(Ordering::Acquire) != 0 {
+                        tt.sleep_ms(COMMAND_POLL_MS).ok();
+                    }
+                }
             }
         }
     });
@@ -142,7 +137,7 @@ pub fn help(d: &Diag) {
     d.line("     band - about 30 dB more sensitive than c, and works with any sound");
     d.line("  r  hex-dump the raw 24-bit words after settling");
     d.line(&format!("  s  count samples for 1 s, compare against the expected {} Hz",
-        EXPECTED_RATE_HZ));
+        RAW_RATE_HZ));
     d.line("  t  1 s of statistics: min, max, DC offset, RMS");
     d.line("  m  live level meter for 15 s");
     d.line("  p  filterbank time per frame");
@@ -250,8 +245,9 @@ fn rate_check(d: &Diag, tt: &ticktimer::Ticktimer, mic: &mut I2sAudio) {
 
     let elapsed = (tt.elapsed_ms() - start).max(1);
     let rate = count * 1000 / elapsed;
+    let expected = RAW_RATE_HZ as u64;
     d.line(&format!("{} samples in {} ms = {} Hz (expected {})",
-        count, elapsed, rate, EXPECTED_RATE_HZ));
+        count, elapsed, rate, expected));
 
     if starved {
         d.line("a read timed out on an empty FIFO - the BIO stopped pushing partway");
@@ -259,7 +255,7 @@ fn rate_check(d: &Diag, tt: &ticktimer::Ticktimer, mic: &mut I2sAudio) {
     if count == 0 {
         d.line("nothing arriving at all: check the pin mux, and that BCLK (PB1) and");
         d.line("WS (PB3) are really toggling - 3.072 MHz and 48 kHz respectively");
-    } else if rate * 4 < EXPECTED_RATE_HZ * 3 || rate * 3 > EXPECTED_RATE_HZ * 4 {
+    } else if rate * 4 < expected * 3 || rate * 3 > expected * 4 {
         d.line("rate is off by a large factor: suspect the BIO quantum divider,");
         d.line("not the mic");
     }
@@ -269,7 +265,7 @@ fn rate_check(d: &Diag, tt: &ticktimer::Ticktimer, mic: &mut I2sAudio) {
 /// survive the 24 to 16 bit conversion shows as such.
 fn stats(d: &Diag, tt: &ticktimer::Ticktimer, mic: &mut I2sAudio) {
     if !settle(mic, SETTLE_SAMPLES) {
-        d.line("no samples: the BIO core is not pushing anything");
+        d.line(NO_SAMPLES);
         return;
     }
 
@@ -301,7 +297,7 @@ fn stats(d: &Diag, tt: &ticktimer::Ticktimer, mic: &mut I2sAudio) {
     }
 
     if n == 0 {
-        d.line("no samples: the BIO core is not pushing anything");
+        d.line(NO_SAMPLES);
         return;
     }
 
@@ -354,17 +350,12 @@ fn meter(d: &Diag, tt: &ticktimer::Ticktimer, mic: &mut I2sAudio) {
     let end = tt.elapsed_ms() + METER_MS;
 
     while tt.elapsed_ms() < end {
-        if !settle(mic, METER_SETTLE_SAMPLES) {
+        let window = if settle(mic, METER_SETTLE_SAMPLES) { window_rms(mic, WINDOW_SAMPLES) } else { None };
+        let Some((rms, _)) = window else {
             d.line("no samples - stopping");
             return;
-        }
-        match window_rms(mic, METER_WINDOW_SAMPLES) {
-            Some((rms, _)) => d.line(&bar(dbfs(rms, FULL_SCALE_RAW))),
-            None => {
-                d.line("no samples - stopping");
-                return;
-            }
-        }
+        };
+        d.line(&bar(dbfs(rms, FULL_SCALE_RAW)));
     }
 }
 
@@ -372,19 +363,19 @@ fn meter(d: &Diag, tt: &ticktimer::Ticktimer, mic: &mut I2sAudio) {
 /// so no samples are dropped.
 fn capture(d: &Diag, mic: &mut I2sAudio) {
     d.line(&format!("recording {} s silently - make noise NOW (clap, talk, music)",
-        CAPTURE_WINDOWS * CAPTURE_WINDOW_SAMPLES / RAW_RATE_HZ as usize));
+        CAPTURE_WINDOWS * WINDOW_SAMPLES / RAW_RATE_HZ as usize));
 
     if !settle(mic, SETTLE_SAMPLES) {
-        d.line("no samples: the BIO core is not pushing anything");
+        d.line(NO_SAMPLES);
         return;
     }
 
     let mut recorded = [(0f64, 0i32); CAPTURE_WINDOWS];
     for slot in recorded.iter_mut() {
-        match window_rms(mic, CAPTURE_WINDOW_SAMPLES) {
+        match window_rms(mic, WINDOW_SAMPLES) {
             Some(w) => *slot = w,
             None => {
-                d.line("recording starved - the BIO stopped pushing partway");
+                d.line(STARVED);
                 return;
             }
         }
@@ -425,7 +416,7 @@ fn capture(d: &Diag, mic: &mut I2sAudio) {
 /// does not mask the one the sound lands in, so this is more sensitive than `c`.
 fn spectrum(d: &Diag, tt: &ticktimer::Ticktimer, mic: &mut I2sAudio) {
     if !settle(mic, SETTLE_SAMPLES) {
-        d.line("no samples: the BIO core is not pushing anything");
+        d.line(NO_SAMPLES);
         return;
     }
     let mut buf = Vec::with_capacity(ANALYZE_SAMPLES);
@@ -475,7 +466,7 @@ fn record(d: &Diag, mic: &mut I2sAudio, buf: &mut Vec<i16>) -> bool {
         let mut acc = 0i32;
         for _ in 0..DECIMATE {
             let Some(s) = mic.try_read_sample() else {
-                d.line("recording starved - the BIO stopped pushing partway");
+                d.line(STARVED);
                 return false;
             };
             acc += s >> 8; // 24-bit -> 16-bit, as read_frame does
@@ -516,7 +507,7 @@ struct Bandpass {
 
 impl Bandpass {
     fn new(hz: f32) -> Self {
-        let w0 = 2.0 * std::f32::consts::PI * hz / ANALYZE_RATE_HZ;
+        let w0 = 2.0 * std::f32::consts::PI * hz / SAMPLE_RATE_HZ as f32;
         let alpha = w0.sin() / (2.0 * BAND_Q);
         let a0 = 1.0 + alpha;
         Self {
@@ -564,12 +555,12 @@ fn window_rms(mic: &mut I2sAudio, samples: usize) -> Option<(f64, i32)> {
 
 /// Level in dBFS for an RMS expressed in units of the given full scale.
 fn dbfs(rms: f64, full_scale: f64) -> f32 {
-    if rms <= 0.0 { BAR_FLOOR_DB } else { (20.0 * (rms / full_scale).log10()) as f32 }
+    if rms <= 0.0 { LEVEL_DB_FLOOR } else { (20.0 * (rms / full_scale).log10()) as f32 }
 }
 
 /// A dBFS bar with the number after it.
 fn bar(db: f32) -> String {
-    let filled = (((db - BAR_FLOOR_DB) / -BAR_FLOOR_DB).clamp(0.0, 1.0) * BAR_WIDTH as f32) as usize;
+    let filled = (((db - LEVEL_DB_FLOOR) / -LEVEL_DB_FLOOR).clamp(0.0, 1.0) * BAR_WIDTH as f32) as usize;
 
     let mut s = String::with_capacity(BAR_WIDTH + 24);
     s.push('[');

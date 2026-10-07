@@ -9,7 +9,7 @@ mod uart_out;
 
 use audio::{FRAME_PERIOD_MS, I2sAudio};
 use triangel_shared::frame::{level_from_wire, norm_from_wire};
-use diag::Diag;
+use diag::{Diag, Stage};
 use uart_out::UartOut;
 
 /// Frames averaged per timing measurement, and how far it must drift to be worth
@@ -31,25 +31,25 @@ fn main() -> ! {
     diag::spawn_heartbeat();
     d.line("");
     d.line("=== ear ===");
-    diag::stage(&d, 0);
+    diag::stage(&d, Stage::UsbUp);
 
     let hal = bao1x_hal_service::Hal::new();
     hal.set_preemption(true);
-    diag::stage(&d, 1);
+    diag::stage(&d, Stage::HalUp);
 
     let tt = ticktimer::Ticktimer::new().unwrap();
 
     d.line("I2S pins: PB1 = BCLK, PB2 = SD, PB3 = WS");
-    diag::stage(&d, 2);
+    diag::stage(&d, Stage::StartingBio);
     let mut mic = I2sAudio::new();
-    diag::stage(&d, 3);
+    diag::stage(&d, Stage::BioUp);
 
     let mut uart_out = UartOut::new();
 
     d.line(&format!("FIFO0 level {}", mic.fifo_level()));
     console::help(&d);
     console::spawn();
-    diag::stage(&d, 4);
+    diag::stage(&d, Stage::PromptReady);
 
     // Run the 24-band filterbank on each frame and send framed BandFrames to the eye.
     let mut processor = bands::BandProcessor::new();

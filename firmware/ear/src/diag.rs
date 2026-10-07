@@ -1,14 +1,34 @@
 //! USB-serial console for mic bringup. UART2 carries the audio link to the eye,
 //! so this is the only visibility into the firmware.
 
-use std::sync::atomic::{AtomicBool, AtomicU32, AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
+use std::sync::Mutex;
 
 use usb_bao1x::UsbHid;
 
 /// Startup milestones, so a heartbeat line names where a stall happened.
-pub const STAGES: &[&str] =
-    &["usb up", "hal up", "starting BIO core", "BIO core up", "prompt ready"];
-static STAGE: AtomicUsize = AtomicUsize::new(0);
+#[derive(Clone, Copy)]
+pub enum Stage {
+    UsbUp,
+    HalUp,
+    StartingBio,
+    BioUp,
+    PromptReady,
+}
+
+impl Stage {
+    fn name(self) -> &'static str {
+        match self {
+            Stage::UsbUp => "usb up",
+            Stage::HalUp => "hal up",
+            Stage::StartingBio => "starting BIO core",
+            Stage::BioUp => "BIO core up",
+            Stage::PromptReady => "prompt ready",
+        }
+    }
+}
+
+static STAGE: Mutex<Stage> = Mutex::new(Stage::UsbUp);
 static QUIET: AtomicBool = AtomicBool::new(false);
 /// Bytes ever received from the host, reported in the heartbeat so a dead input
 /// path is distinguishable from one that arrives but does not parse.
@@ -58,9 +78,9 @@ impl Diag {
 }
 
 /// Record a startup stage and print it.
-pub fn stage(d: &Diag, idx: usize) {
-    STAGE.store(idx, Ordering::Relaxed);
-    d.line(&format!("stage: {}", STAGES[idx]));
+pub fn stage(d: &Diag, stage: Stage) {
+    *STAGE.lock().unwrap() = stage;
+    d.line(&format!("stage: {}", stage.name()));
 }
 
 /// Stop the heartbeat, so command output is not broken up by it.
@@ -80,10 +100,11 @@ pub fn spawn_heartbeat() {
             if QUIET.load(Ordering::Relaxed) {
                 return;
             }
+            let stage = *STAGE.lock().unwrap();
             d.line(&format!(
                 "ear alive {} s, stage: {}, rx {} bytes",
                 tt.elapsed_ms() / 1000,
-                STAGES[STAGE.load(Ordering::Relaxed)],
+                stage.name(),
                 RX_BYTES.load(Ordering::Relaxed)
             ));
         }
