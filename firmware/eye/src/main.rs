@@ -21,7 +21,7 @@ fn main() -> ! {
     // Diagnostics and heartbeat come up before anything that could block, so
     // a stalled boot still reports the stage it is stuck at over USB serial.
     let boot_diag = diag::Diag::new();
-    diag::stage(&boot_diag, 0);
+    diag::stage(&boot_diag, diag::Stage::MainStart);
     diag::spawn_heartbeat();
 
     let tt = ticktimer::Ticktimer::new().unwrap();
@@ -31,16 +31,16 @@ fn main() -> ! {
 
     // Hardware / previewer output
     let mut led_out = led::LedOutput::new();
-    diag::stage(&boot_diag, 1);
+    diag::stage(&boot_diag, diag::Stage::LedOutUp);
 
     // Audio receiver (continuous DMA into the UART's IFRAM ring; no interrupts, no threads)
     let mut audio = audio::AudioReceiver::new();
-    diag::stage(&boot_diag, 2);
+    diag::stage(&boot_diag, diag::Stage::AudioUp);
 
     // Input event queue (spawns button + IR threads)
     let event_queue = input::new_queue();
     input::spawn(event_queue.clone());
-    diag::stage(&boot_diag, 3);
+    diag::stage(&boot_diag, diag::Stage::InputSpawned);
 
     // Setlist manager owns pattern cycling, brightness, sound mode
     let mut setlist = SetlistManager::new(tt.elapsed_ms() as u32);
@@ -48,7 +48,7 @@ fn main() -> ! {
     // Frame buffer - reused every frame to avoid allocation
     let mut frame = [[0u8; 3]; led::map::LED_COUNT];
 
-    diag::stage(&boot_diag, 4);
+    diag::stage(&boot_diag, diag::Stage::RenderLoop);
 
     // Absolute next-frame deadline - prevents timing drift across frames.
     let mut next_frame = tt.elapsed_ms();

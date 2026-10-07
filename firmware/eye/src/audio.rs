@@ -12,14 +12,24 @@ use triangel_shared::tuning::{beat::*, drop_detect::*, level::*, link::*, onset:
 
 use crate::pins;
 
-// UART link status, reported by the heartbeat.
-pub const STATUS_PENDING:    u8 = 0;
-pub const STATUS_CSR_FAIL:   u8 = 1;
-pub const STATUS_IFRAM_FAIL: u8 = 2;
-pub const STATUS_INIT_OK:    u8 = 3;
-pub const STATUS_DMA_DONE:   u8 = 4;
-pub const STATUS_RECEIVING:  u8 = 5;
-pub static UART_STATUS:        AtomicU8  = AtomicU8::new(STATUS_PENDING);
+/// UART link status. The heartbeat reports it as its number.
+#[derive(Clone, Copy)]
+enum LinkStatus {
+    Pending   = 0,
+    CsrFail   = 1,
+    IframFail = 2,
+    InitOk    = 3,
+    DmaDone   = 4,
+    Receiving = 5,
+}
+
+impl LinkStatus {
+    fn set(self) {
+        UART_STATUS.store(self as u8, Ordering::Relaxed);
+    }
+}
+
+pub static UART_STATUS:        AtomicU8  = AtomicU8::new(LinkStatus::Pending as u8);
 pub static UART_FIRST_BYTE:    AtomicU8  = AtomicU8::new(0);
 /// Frames that decoded, and frames dropped on a bad sync or checksum.
 pub static UART_FRAMES_OK:     AtomicU32 = AtomicU32::new(0);
@@ -34,29 +44,47 @@ pub static DROP_COUNT:         AtomicU32  = AtomicU32::new(0);
 pub static DROP_BASS_DB:       AtomicU32  = AtomicU32::new(0);
 pub static DROP_REF_DB:        AtomicU32  = AtomicU32::new(0);
 
-/// Drop detector state for the heartbeat: in a breakdown, drops, bass level, reference.
+/// Drop detector state for the heartbeat.
 #[cfg(all(feature = "usb", not(feature = "previewer")))]
-pub fn drop_stats() -> (bool, u32, f32, f32) {
-    (
-        DROP_BREAKDOWN.load(Ordering::Relaxed),
-        DROP_COUNT.load(Ordering::Relaxed),
-        f32::from_bits(DROP_BASS_DB.load(Ordering::Relaxed)),
-        f32::from_bits(DROP_REF_DB.load(Ordering::Relaxed)),
-    )
+pub struct DropStats {
+    pub in_breakdown: bool,
+    pub drops:        u32,
+    pub bass_db:      f32,
+    pub ref_db:       f32,
 }
 
-/// Link state for the heartbeat: status, frames decoded, frames dropped, the first byte
-/// ever seen, dBFS, and normalized level.
 #[cfg(all(feature = "usb", not(feature = "previewer")))]
-pub fn stats() -> (u8, u32, u32, u8, f32, f32) {
-    (
-        UART_STATUS.load(Ordering::Relaxed),
-        UART_FRAMES_OK.load(Ordering::Relaxed),
-        UART_FRAMES_BAD.load(Ordering::Relaxed),
-        UART_FIRST_BYTE.load(Ordering::Relaxed),
-        f32::from_bits(UART_LAST_DBFS.load(Ordering::Relaxed)),
-        f32::from_bits(UART_LAST_NORM.load(Ordering::Relaxed)),
-    )
+pub fn drop_stats() -> DropStats {
+    DropStats {
+        in_breakdown: DROP_BREAKDOWN.load(Ordering::Relaxed),
+        drops:        DROP_COUNT.load(Ordering::Relaxed),
+        bass_db:      f32::from_bits(DROP_BASS_DB.load(Ordering::Relaxed)),
+        ref_db:       f32::from_bits(DROP_REF_DB.load(Ordering::Relaxed)),
+    }
+}
+
+/// Link state for the heartbeat.
+#[cfg(all(feature = "usb", not(feature = "previewer")))]
+pub struct LinkStats {
+    pub status:     u8,
+    pub frames_ok:  u32,
+    pub frames_bad: u32,
+    /// The first byte ever received.
+    pub first_byte: u8,
+    pub dbfs:       f32,
+    pub norm:       f32,
+}
+
+#[cfg(all(feature = "usb", not(feature = "previewer")))]
+pub fn stats() -> LinkStats {
+    LinkStats {
+        status:     UART_STATUS.load(Ordering::Relaxed),
+        frames_ok:  UART_FRAMES_OK.load(Ordering::Relaxed),
+        frames_bad: UART_FRAMES_BAD.load(Ordering::Relaxed),
+        first_byte: UART_FIRST_BYTE.load(Ordering::Relaxed),
+        dbfs:       f32::from_bits(UART_LAST_DBFS.load(Ordering::Relaxed)),
+        norm:       f32::from_bits(UART_LAST_NORM.load(Ordering::Relaxed)),
+    }
 }
 
 // The HAL splits the UART's IFRAM block into 2048 TX and 2048 RX bytes; its constants are
@@ -294,28 +322,30 @@ impl AudioReceiver {
         // Feed every byte the DMA engine wrote since the last call to the assembler.
         let mut got_frame = false;
         let mut got_byte = false;
-        if let Some(pos) = self.dma.as_ref().and_then(|d| d.write_pos()) {
-            cache_flush();
-            let mut tail = self.dma.as_ref().unwrap().tail;
-            while tail != pos {
-                let byte = self.dma.as_ref().unwrap().read_ring(tail);
-                tail = (tail + 1) % RX_DMA_BUF_LEN;
-                got_byte = true;
-                if !self.state.first_byte_seen {
-                    self.state.first_byte_seen = true;
-                    UART_FIRST_BYTE.store(byte, Ordering::Relaxed);
-                }
-                if self.feed_byte(byte, now_ms) {
-                    got_frame = true;
+        // `dma` is taken out for the loop, because feed_byte needs all of `self`.
+        if let Some(mut dma) = self.dma.take() {
+            if let Some(pos) = dma.write_pos() {
+                cache_flush();
+                while dma.tail != pos {
+                    let byte = dma.read_ring(dma.tail);
+                    dma.tail = (dma.tail + 1) % RX_DMA_BUF_LEN;
+                    got_byte = true;
+                    if !self.state.first_byte_seen {
+                        self.state.first_byte_seen = true;
+                        UART_FIRST_BYTE.store(byte, Ordering::Relaxed);
+                    }
+                    if self.feed_byte(byte, now_ms) {
+                        got_frame = true;
+                    }
                 }
             }
-            self.dma.as_mut().unwrap().tail = tail;
+            self.dma = Some(dma);
         }
 
         // Bytes arriving but nothing decoding is a different fault from silence, so it has
         // its own status.
-        if got_byte && UART_STATUS.load(Ordering::Relaxed) == STATUS_INIT_OK {
-            UART_STATUS.store(STATUS_DMA_DONE, Ordering::Relaxed);
+        if got_byte && UART_STATUS.load(Ordering::Relaxed) == LinkStatus::InitOk as u8 {
+            LinkStatus::DmaDone.set();
         }
 
         // The ear has stopped sending: let the loudness fall and count the time as quiet.
@@ -394,7 +424,7 @@ impl AudioReceiver {
         self.state.last_loud = self.state.smoothed_dbfs > ACTIVITY_LOUD_DBFS;
         self.state.last_update_ms = now_ms;
         self.state.ear_stopped = false;
-        UART_STATUS.store(STATUS_RECEIVING, Ordering::Relaxed);
+        LinkStatus::Receiving.set();
         UART_FRAMES_OK.fetch_add(1, Ordering::Relaxed);
         UART_LAST_DBFS.store(self.state.smoothed_dbfs.to_bits(), Ordering::Relaxed);
         UART_LAST_NORM.store(self.state.level_norm.to_bits(), Ordering::Relaxed);
@@ -464,7 +494,7 @@ fn init_uart() -> Option<DmaRx> {
         xous::MemoryFlags::R | xous::MemoryFlags::W,
     ) {
         Ok(m) => m,
-        Err(_) => { UART_STATUS.store(STATUS_CSR_FAIL, Ordering::Relaxed); return None; }
+        Err(_) => { LinkStatus::CsrFail.set(); return None; }
     };
 
     let ifram_mem = match xous::syscall::map_memory(
@@ -473,7 +503,7 @@ fn init_uart() -> Option<DmaRx> {
         xous::MemoryFlags::R | xous::MemoryFlags::W,
     ) {
         Ok(m) => m,
-        Err(_) => { UART_STATUS.store(STATUS_IFRAM_FAIL, Ordering::Relaxed); return None; }
+        Err(_) => { LinkStatus::IframFail.set(); return None; }
     };
 
     let csr_virt   = csr_mem.as_ptr() as usize;
@@ -505,7 +535,7 @@ fn init_uart() -> Option<DmaRx> {
         uart.udma_enqueue(Bank::Rx, rx_phys, 0b1);
     }
 
-    UART_STATUS.store(STATUS_INIT_OK, Ordering::Relaxed);
+    LinkStatus::InitOk.set();
     let dma = DmaRx { csr_virt, ifram_virt, tail: 0 };
     // Start reading from wherever the engine is now, not from index 0.
     let tail = dma.write_pos().unwrap_or(0);

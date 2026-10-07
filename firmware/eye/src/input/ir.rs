@@ -24,15 +24,24 @@ static DECODED_FRAMES:  AtomicU32 = AtomicU32::new(0);
 static REJECTED_FRAMES: AtomicU32 = AtomicU32::new(0);
 static LAST_FRAME:      AtomicU32 = AtomicU32::new(0);
 
-/// (clock_hz, decoded, rejected, last_frame) for the heartbeat line.
+/// IR receiver state for the heartbeat.
 #[cfg(all(feature = "usb", not(feature = "previewer")))]
-pub fn stats() -> (u32, u32, u32, u32) {
-    (
-        CLOCK_HZ.load(Ordering::Relaxed),
-        DECODED_FRAMES.load(Ordering::Relaxed),
-        REJECTED_FRAMES.load(Ordering::Relaxed),
-        LAST_FRAME.load(Ordering::Relaxed),
-    )
+#[derive(Clone, Copy, PartialEq)]
+pub struct IrStats {
+    pub clock_hz:   u32,
+    pub decoded:    u32,
+    pub rejected:   u32,
+    pub last_frame: u32,
+}
+
+#[cfg(all(feature = "usb", not(feature = "previewer")))]
+pub fn stats() -> IrStats {
+    IrStats {
+        clock_hz:   CLOCK_HZ.load(Ordering::Relaxed),
+        decoded:    DECODED_FRAMES.load(Ordering::Relaxed),
+        rejected:   REJECTED_FRAMES.load(Ordering::Relaxed),
+        last_frame: LAST_FRAME.load(Ordering::Relaxed),
+    }
 }
 
 /// Spawn the IR receiver thread; init progress prints to the USB serial monitor.

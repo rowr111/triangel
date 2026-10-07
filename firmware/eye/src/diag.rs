@@ -1,4 +1,4 @@
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Mutex;
 
 // USB-serial diagnostic channel for bringup on hardware. The console input
 // path is unavailable on this system build (UART2 is repurposed for the ear
@@ -10,9 +10,28 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 /// Boot milestones, printed as reached and repeated in the heartbeat line so
 /// a monitor attached late can still see how far boot got.
-pub const STAGES: &[&str] =
-    &["main start", "led out up", "audio up", "input spawned", "render loop"];
-static STAGE: AtomicUsize = AtomicUsize::new(0);
+#[derive(Clone, Copy)]
+pub enum Stage {
+    MainStart,
+    LedOutUp,
+    AudioUp,
+    InputSpawned,
+    RenderLoop,
+}
+
+impl Stage {
+    fn name(self) -> &'static str {
+        match self {
+            Stage::MainStart => "main start",
+            Stage::LedOutUp => "led out up",
+            Stage::AudioUp => "audio up",
+            Stage::InputSpawned => "input spawned",
+            Stage::RenderLoop => "render loop",
+        }
+    }
+}
+
+static STAGE: Mutex<Stage> = Mutex::new(Stage::MainStart);
 
 pub struct Diag {
     #[cfg(all(feature = "usb", not(feature = "previewer")))]
@@ -43,10 +62,10 @@ impl Diag {
     }
 }
 
-/// Record a boot stage (index into STAGES) and print it.
-pub fn stage(diag: &Diag, idx: usize) {
-    STAGE.store(idx, Ordering::Relaxed);
-    diag.line(&format!("eye boot: {}", STAGES[idx]));
+/// Record a boot stage and print it.
+pub fn stage(diag: &Diag, stage: Stage) {
+    *STAGE.lock().unwrap() = stage;
+    diag.line(&format!("eye boot: {}", stage.name()));
 }
 
 /// Report liveness and IR activity: one line shortly after boot, then a line
@@ -67,35 +86,35 @@ pub fn spawn_heartbeat() {
 
             // Audio link: counters first, so bytes-but-no-frames is distinguishable
             // from nothing arriving at all.
-            let (status, ok, bad, first, dbfs, norm) = crate::audio::stats();
-            if last_audio != Some((ok, bad)) {
-                last_audio = Some((ok, bad));
+            let link = crate::audio::stats();
+            if last_audio != Some((link.frames_ok, link.frames_bad)) {
+                last_audio = Some((link.frames_ok, link.frames_bad));
                 diag.line(&format!(
                     "audio: status {}, frames {}, dropped {}, first byte {:02x}, {:.1} dBFS, norm {:.2}",
-                    status, ok, bad, first, dbfs, norm,
+                    link.status, link.frames_ok, link.frames_bad, link.first_byte, link.dbfs, link.norm,
                 ));
-                let (breakdown, drops, bass, reference) = crate::audio::drop_stats();
+                let bass = crate::audio::drop_stats();
                 diag.line(&format!(
                     "drop: {}, drops {}, bass {:.1} dB against {:.1} dB",
-                    if breakdown { "in breakdown" } else { "normal" },
-                    drops, bass, reference,
+                    if bass.in_breakdown { "in breakdown" } else { "normal" },
+                    bass.drops, bass.bass_db, bass.ref_db,
                 ));
             }
 
-            let stats = crate::input::ir::stats();
-            if last_stats == Some(stats) {
+            let ir = crate::input::ir::stats();
+            if last_stats == Some(ir) {
                 continue;
             }
-            last_stats = Some(stats);
-            let (clock_hz, decoded, rejected, last_frame) = stats;
+            last_stats = Some(ir);
+            let stage = *STAGE.lock().unwrap();
             diag.line(&format!(
                 "alive {} s, stage: {}, ir: decoded {}, rejected {}, clock {} Hz, last frame {:08x}",
                 tt.elapsed_ms() / 1000,
-                STAGES[STAGE.load(Ordering::Relaxed)],
-                decoded,
-                rejected,
-                clock_hz,
-                last_frame,
+                stage.name(),
+                ir.decoded,
+                ir.rejected,
+                ir.clock_hz,
+                ir.last_frame,
             ));
         }
     });
