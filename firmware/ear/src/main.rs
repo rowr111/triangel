@@ -89,7 +89,7 @@ fn main() -> ! {
             let per_frame = bands_ms as f32 / BANDS_TIMING_FRAMES as f32;
             console::record_bands_time((per_frame * 1000.0) as u32);
             if bands_reported.is_none_or(|last| (per_frame - last).abs() > BANDS_REPORT_DELTA_MS) {
-                d.line(&format!("bands: {:.2} ms per frame, budget {} ms", per_frame, FRAME_PERIOD_MS));
+                d.line(&format!("bands: {:.2} ms to process each {} ms frame", per_frame, FRAME_PERIOD_MS));
                 bands_reported = Some(per_frame);
             }
             bands_ms = 0;

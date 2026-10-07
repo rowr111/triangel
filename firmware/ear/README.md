@@ -77,7 +77,7 @@ Until the first keystroke the board prints a liveness line every 2 s naming the 
 | `s` | Count samples for 1 s and compare against the expected 48000 Hz |
 | `t` | 1 s of statistics: min, max, DC offset, RMS |
 | `m` | Live level meter for 15 s |
-| `p` | Filterbank cost per frame against the frame budget |
+| `p` | Filterbank time per frame |
 | `n` | Live normalization references and the level they scale |
 | `?` | Help |
 

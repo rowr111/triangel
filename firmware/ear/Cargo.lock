@@ -245,7 +245,6 @@ dependencies = [
  "triangel-shared",
  "usb-bao1x",
  "utralib",
- "xous",
  "xous-api-ticktimer",
 ]
 

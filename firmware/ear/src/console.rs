@@ -145,7 +145,7 @@ pub fn help(d: &Diag) {
         EXPECTED_RATE_HZ));
     d.line("  t  1 s of statistics: min, max, DC offset, RMS");
     d.line("  m  live level meter for 15 s");
-    d.line("  p  filterbank cost per frame against the frame budget");
+    d.line("  p  filterbank time per frame");
     d.line("  n  live low/high normalization references and the level they scale");
     d.line("  ?  this help");
 }
@@ -178,7 +178,7 @@ fn perf(d: &Diag) {
     }
     let ms = us as f32 / 1000.0;
     d.line(&format!(
-        "bands: {:.2} ms per frame, budget {} ms ({:.0}%)",
+        "bands: {:.2} ms to process each {} ms frame ({:.0}%)",
         ms,
         FRAME_PERIOD_MS,
         ms / FRAME_PERIOD_MS as f32 * 100.0
