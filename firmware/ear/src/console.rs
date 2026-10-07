@@ -5,7 +5,7 @@ use std::sync::atomic::{AtomicU32, Ordering};
 
 use crate::audio::FRAME_PERIOD_MS;
 
-use crate::audio::{DECIMATE, I2sAudio, RAW_RATE_HZ, SAMPLE_RATE_HZ};
+use crate::audio::{I2sAudio, RAW_RATE_HZ, SAMPLE_RATE_HZ};
 use triangel_shared::frame::{BAND_COUNT, LEVEL_DB_FLOOR};
 use crate::diag::{self, Diag};
 
@@ -301,9 +301,7 @@ fn stats(d: &Diag, tt: &ticktimer::Ticktimer, mic: &mut I2sAudio) {
         return;
     }
 
-    // RMS about the mean, so the mic's DC offset does not inflate the reading.
-    let mean = sum / n;
-    let rms = ((sumsq / n - mean * mean).max(0) as f64).sqrt();
+    let (mean, rms) = mean_and_rms(sum, sumsq, n);
     let (min, max) = (min as i64, max as i64);
 
     if starved {
@@ -459,19 +457,15 @@ fn spectrum(d: &Diag, tt: &ticktimer::Ticktimer, mic: &mut I2sAudio) {
     }
 }
 
-/// Fill the buffer with one second at the pipeline's rate, decimating as read_frame does.
+/// Fill the buffer with one second at the pipeline's rate.
 fn record(d: &Diag, mic: &mut I2sAudio, buf: &mut Vec<i16>) -> bool {
     buf.clear();
     for _ in 0..ANALYZE_SAMPLES {
-        let mut acc = 0i32;
-        for _ in 0..DECIMATE {
-            let Some(s) = mic.try_read_sample() else {
-                d.line(STARVED);
-                return false;
-            };
-            acc += s >> 8; // 24-bit -> 16-bit, as read_frame does
-        }
-        buf.push((acc / DECIMATE as i32) as i16);
+        let Some(sample) = mic.read_decimated() else {
+            d.line(STARVED);
+            return false;
+        };
+        buf.push(sample);
     }
     true
 }
@@ -548,9 +542,15 @@ fn window_rms(mic: &mut I2sAudio, samples: usize) -> Option<(f64, i32)> {
         sumsq += (s as i64) * (s as i64);
         peak = peak.max(s.saturating_abs());
     }
-    let n = samples as i64;
+    let (_, rms) = mean_and_rms(sum, sumsq, samples as i64);
+    Some((rms, peak))
+}
+
+/// The mean of `n` samples, and their RMS about that mean, so the mic's DC offset does not
+/// inflate the reading.
+fn mean_and_rms(sum: i64, sumsq: i64, n: i64) -> (i64, f64) {
     let mean = sum / n;
-    Some((((sumsq / n - mean * mean).max(0) as f64).sqrt(), peak))
+    (mean, ((sumsq / n - mean * mean).max(0) as f64).sqrt())
 }
 
 /// Level in dBFS for an RMS expressed in units of the given full scale.

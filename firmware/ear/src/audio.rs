@@ -14,7 +14,7 @@ const BIO_QUANTUM_HZ: u32 = 6_144_000;
 /// SCK cycles per WS frame. The ICS43434 requires exactly 64 (datasheet, I2S Data Interface).
 const BCLK_PER_FRAME: u32 = 64;
 /// Decimation factor from the mic's rate down to the pipeline's.
-pub const DECIMATE: usize = 2;
+const DECIMATE: usize = 2;
 
 /// The rate the mic is clocked at - one 24-bit sample per WS frame.
 pub const RAW_RATE_HZ: u32 = BIO_QUANTUM_HZ / 2 / BCLK_PER_FRAME;
@@ -165,6 +165,18 @@ impl I2sAudio {
         self.try_read_raw().map(|raw| (raw << 8) as i32 >> 8)
     }
 
+    /// One sample at the pipeline's rate: the average of DECIMATE raw samples, 48 kHz down
+    /// to 24 kHz. The average also acts as a simple low-pass against aliasing. None if the
+    /// mic stops partway.
+    pub fn read_decimated(&mut self) -> Option<i16> {
+        let mut acc: i32 = 0;
+        for _ in 0..DECIMATE {
+            // 24-bit -> 16-bit: keep the 16 most-significant bits.
+            acc += self.try_read_sample()? >> 8;
+        }
+        Some((acc / DECIMATE as i32) as i16)
+    }
+
     /// Frames abandoned so far because nothing was arriving.
     pub fn starved_frames(&self) -> u32 { self.starved_frames }
 
@@ -183,19 +195,12 @@ impl I2sAudio {
 
         let mut out = [0i16; FRAME_SAMPLES];
         for slot in out.iter_mut() {
-            // Average each group of DECIMATE samples: 48 kHz down to 24 kHz. The average
-            // also acts as a simple low-pass against aliasing.
-            let mut acc: i32 = 0;
-            for _ in 0..DECIMATE {
-                let Some(s) = self.try_read_sample() else {
-                    // Give up rather than pay the spin limit for every remaining sample.
-                    self.starved_frames = self.starved_frames.wrapping_add(1);
-                    return out;
-                };
-                // 24-bit -> 16-bit: keep the 16 most-significant bits.
-                acc += s >> 8;
-            }
-            *slot = (acc / DECIMATE as i32) as i16;
+            let Some(sample) = self.read_decimated() else {
+                // Give up rather than pay the spin limit for every remaining sample.
+                self.starved_frames = self.starved_frames.wrapping_add(1);
+                return out;
+            };
+            *slot = sample;
         }
         out
     }

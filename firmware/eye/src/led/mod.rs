@@ -12,6 +12,9 @@ use map::{CHAIN1_LED_COUNT, CHAIN2_LED_COUNT};
 #[cfg(not(feature = "previewer"))]
 use crate::pins;
 
+// send_frame splits the packed frame at the end of chain 1.
+#[cfg(not(feature = "previewer"))]
+const _: () = assert!(CHAIN1_LED_COUNT + CHAIN2_LED_COUNT == LED_COUNT);
 
 /// Sends frames to the LED chains, or over USB serial with `--features previewer`.
 pub struct LedOutput {
@@ -50,23 +53,15 @@ impl LedOutput {
     /// about 9.4 ms.
     pub fn send_frame(&mut self, frame: &[[u8; 3]; LED_COUNT]) {
         // The chains and the previewer both want chain order, not LED_MAP order.
-        let mut chain_ordered = [[0u8; 3]; LED_COUNT];
-        for (i, rgb) in frame.iter().enumerate() {
-            chain_ordered[map::LED_MAP[i].chain_idx as usize] = *rgb;
-        }
-
         #[cfg(not(feature = "previewer"))]
         {
             // Chain 1 is chain_idx 0-287, chain 2 is 288-599.
-            let mut packed1 = [0u32; CHAIN1_LED_COUNT];
-            for (i, rgb) in chain_ordered[..CHAIN1_LED_COUNT].iter().enumerate() {
-                packed1[i] = ws2812_pair::rgb_to_u32(rgb[0], rgb[1], rgb[2]);
+            let mut packed = [0u32; LED_COUNT];
+            for (led, rgb) in map::LED_MAP.iter().zip(frame) {
+                packed[led.chain_idx as usize] = ws2812_pair::rgb_to_u32(rgb[0], rgb[1], rgb[2]);
             }
-            let mut packed2 = [0u32; CHAIN2_LED_COUNT];
-            for (i, rgb) in chain_ordered[CHAIN1_LED_COUNT..].iter().enumerate() {
-                packed2[i] = ws2812_pair::rgb_to_u32(rgb[0], rgb[1], rgb[2]);
-            }
-            self.inner.ws2812.send_async(&packed1, &packed2);
+            let (chain1, chain2) = packed.split_at(CHAIN1_LED_COUNT);
+            self.inner.ws2812.send_async(chain1, chain2);
             self.inner.ws2812.send_await();
         }
 
@@ -77,10 +72,11 @@ impl LedOutput {
             const MAGIC: [u8; 4] = [0xFF, 0xFF, 0xFF, 0xFF];
             let mut buf = [0u8; 4 + LED_COUNT * 3];
             buf[..4].copy_from_slice(&MAGIC);
-            for (i, rgb) in chain_ordered.iter().enumerate() {
-                buf[4 + i * 3]     = rgb[0].min(254);
-                buf[4 + i * 3 + 1] = rgb[1].min(254);
-                buf[4 + i * 3 + 2] = rgb[2].min(254);
+            for (led, rgb) in map::LED_MAP.iter().zip(frame) {
+                let at = 4 + led.chain_idx as usize * 3;
+                buf[at]     = rgb[0].min(254);
+                buf[at + 1] = rgb[1].min(254);
+                buf[at + 2] = rgb[2].min(254);
             }
             // The USB send buffer is 1024 bytes and a frame is 1804, so send in chunks
             // with a pause for the buffer to drain.
