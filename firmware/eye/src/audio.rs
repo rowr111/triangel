@@ -129,65 +129,204 @@ pub struct Audio {
     pub drop:       bool,
 }
 
-struct AudioState {
-    bands:          [f32; BAND_COUNT],
-    band_fast:      [f32; BAND_COUNT],
-    band_slow:      [f32; BAND_COUNT],
-    flux:           f32,
-    flux_avg:       f32,
-    beat_armed:     bool,
-    beat_pending:   bool,
-    beat_strength:  f32,
-    last_beat_ms:   u32,
-    bass_db:        f32,
-    bass_env:       f32,
-    bass_ref:       f32,
-    low_since:      Option<u32>,
-    in_breakdown:   bool,
-    breakdown_since: u32,
-    drop_pending:   bool,
-    level_norm:     f32,
-    smoothed_dbfs:  f32,
-    activity:       bool,
-    last_loud:      bool, // freshest byte's verdict; persists across byte-less frames
-    loud_ms:        f32,  // leaky accumulator of net loud time, 0..=ACTIVITY_ARM_MS
-    last_tick_ms:   u32,
-    last_update_ms: u32,
-    ear_stopped:    bool, // no frame for STOPPED_AFTER_MS; cleared by the next one
-    // Frame assembler (owned by the render loop).
-    assembler:      FrameAssembler,
-    first_byte_seen: bool,
+/// The bands as last received, with each band's fast and slow averages.
+struct Onsets {
+    bands:     [f32; BAND_COUNT],
+    band_fast: [f32; BAND_COUNT],
+    band_slow: [f32; BAND_COUNT],
 }
 
-impl AudioState {
+impl Onsets {
     fn new() -> Self {
-        AudioState {
-            bands:          [0.0; BAND_COUNT],
-            band_fast:      [0.0; BAND_COUNT],
-            band_slow:      [0.0; BAND_COUNT],
-            flux:           0.0,
-            flux_avg:       0.0,
-            beat_armed:     true,
-            beat_pending:   false,
-            beat_strength:  0.0,
-            last_beat_ms:   0,
-            bass_db:        LEVEL_DB_FLOOR,
-            bass_env:       LEVEL_DB_FLOOR,
-            bass_ref:       LEVEL_DB_FLOOR,
-            low_since:      None,
-            in_breakdown:   false,
+        Onsets {
+            bands:     [0.0; BAND_COUNT],
+            band_fast: [0.0; BAND_COUNT],
+            band_slow: [0.0; BAND_COUNT],
+        }
+    }
+
+    /// Take a frame's bands.
+    fn apply(&mut self, wire: &[u16; BAND_COUNT]) {
+        for (i, &b) in wire.iter().enumerate() {
+            let v = norm_from_wire(b);
+            self.bands[i] = v;
+            self.band_fast[i] += (v - self.band_fast[i]) * BAND_FAST;
+            self.band_slow[i] += (v - self.band_slow[i]) * BAND_SLOW;
+        }
+    }
+
+    /// Mean of the bass bands.
+    fn bass(&self) -> f32 {
+        self.bands[..BASS_BANDS].iter().sum::<f32>() / BASS_BANDS as f32
+    }
+
+    /// How far each band has just jumped above its slow average, 0.0-1.0.
+    fn rise(&self) -> [f32; BAND_COUNT] {
+        let mut rise = [0.0; BAND_COUNT];
+        for (r, (fast, slow)) in rise
+            .iter_mut()
+            .zip(self.band_fast.iter().zip(self.band_slow.iter()))
+        {
+            *r = ((fast - slow) * RISE_GAIN).clamp(0.0, 1.0);
+        }
+        rise
+    }
+
+    /// Scale the bands toward silence, keeping the fraction `keep`.
+    fn fade(&mut self, keep: f32) {
+        for ((band, fast), slow) in self.bands.iter_mut().zip(&mut self.band_fast).zip(&self.band_slow) {
+            *band *= keep;
+            // Toward the slow baseline, which is kept, so `rise` falls to zero now and
+            // does not jump when frames return.
+            *fast = slow + (*fast - slow) * keep;
+        }
+    }
+}
+
+/// Fires a beat when a frame's flux stands well above its recent average and the bass
+/// bands hold energy.
+struct BeatDetector {
+    flux_avg: f32,
+    armed:    bool,
+    pending:  bool,
+    strength: f32,
+    last_ms:  u32,
+}
+
+impl BeatDetector {
+    fn new() -> Self {
+        BeatDetector { flux_avg: 0.0, armed: true, pending: false, strength: 0.0, last_ms: 0 }
+    }
+
+    /// Called once per received frame, which is when flux moves. `low` is the bass level.
+    fn update(&mut self, flux: f32, low: f32, now_ms: u32) {
+        self.flux_avg += (flux - self.flux_avg) * FLUX_AVG_RATE;
+        let ratio = if low >= LOW_MIN && self.flux_avg > 1e-4 { flux / self.flux_avg } else { 0.0 };
+
+        if self.armed
+            && ratio >= FLUX_TRIGGER
+            && now_ms.wrapping_sub(self.last_ms) >= BEAT_REFRACTORY_MS
+        {
+            self.armed = false;
+            self.strength = ((ratio - FLUX_TRIGGER) / FLUX_TRIGGER).clamp(0.0, 1.0);
+            self.pending = true;
+            self.last_ms = now_ms;
+        } else if ratio < FLUX_RELEASE {
+            self.armed = true;
+        }
+    }
+}
+
+/// Tracks the bass against its normal level: enters a breakdown when it stays well below
+/// for long enough, and fires a drop when it comes back.
+struct DropDetector {
+    bass_env:        f32,
+    bass_ref:        f32,
+    low_since:       Option<u32>,
+    in_breakdown:    bool,
+    breakdown_since: u32,
+    pending:         bool,
+}
+
+impl DropDetector {
+    fn new() -> Self {
+        DropDetector {
+            bass_env:        LEVEL_DB_FLOOR,
+            bass_ref:        LEVEL_DB_FLOOR,
+            low_since:       None,
+            in_breakdown:    false,
             breakdown_since: 0,
-            drop_pending:   false,
-            level_norm:     0.0,
-            smoothed_dbfs:  LEVEL_DB_FLOOR,
-            activity:       false,
-            last_loud:      false,
-            loud_ms:        0.0,
-            last_tick_ms:   0,
-            last_update_ms: 0,
-            ear_stopped:    false,
-            assembler:      FrameAssembler::default(),
-            first_byte_seen: false,
+            pending:         false,
+        }
+    }
+
+    /// Called once per received frame with the frame's bass level in dB.
+    fn update(&mut self, bass_db: f32, now_ms: u32) {
+        self.bass_env = follow(self.bass_env, bass_db, BASS_ATTACK, BASS_DECAY);
+
+        if self.in_breakdown {
+            let elapsed = now_ms.wrapping_sub(self.breakdown_since);
+            let back = self.bass_env >= self.bass_ref - DROP_DB;
+            let expired = elapsed > BREAKDOWN_MAX_MS;
+            if back || expired {
+                self.in_breakdown = false;
+                self.low_since = None;
+                if back {
+                    self.pending = true;
+                    DROP_COUNT.fetch_add(1, Ordering::Relaxed);
+                } else {
+                    // The music stopped. Let the quiet become the new normal rather than
+                    // re-entering a breakdown against a level that has gone.
+                    self.bass_ref = self.bass_env;
+                }
+            }
+        } else {
+            let low = self.bass_ref > BASS_MIN_DB && self.bass_env < self.bass_ref - BREAKDOWN_DB;
+            // Learn the normal level only while the bass is present. Following it down would
+            // close the gap before a breakdown is confirmed.
+            if !low {
+                self.bass_ref += (self.bass_env - self.bass_ref) * BASS_REF_RATE;
+            }
+            match (low, self.low_since) {
+                (false, _) => self.low_since = None,
+                (true, None) => self.low_since = Some(now_ms),
+                (true, Some(since)) => {
+                    if now_ms.wrapping_sub(since) >= BREAKDOWN_MS {
+                        self.in_breakdown = true;
+                        // The breakdown counts from when the bass first left, not from
+                        // when it was confirmed.
+                        self.breakdown_since = since;
+                    }
+                }
+            }
+        }
+
+        DROP_BREAKDOWN.store(self.in_breakdown, Ordering::Relaxed);
+        DROP_BASS_DB.store(self.bass_env.to_bits(), Ordering::Relaxed);
+        DROP_REF_DB.store(self.bass_ref.to_bits(), Ordering::Relaxed);
+    }
+}
+
+/// Decides when Auto mode shows the sound patterns, from how long it has been loud.
+struct ActivityGate {
+    smoothed_dbfs: f32,
+    last_loud:     bool, // the latest frame's verdict; kept until the next frame or quiet tick
+    loud_ms:       f32,  // net loud time, 0..=ACTIVITY_ARM_MS
+    active:        bool,
+}
+
+impl ActivityGate {
+    fn new() -> Self {
+        ActivityGate { smoothed_dbfs: LEVEL_DB_FLOOR, last_loud: false, loud_ms: 0.0, active: false }
+    }
+
+    /// Take a frame's loudness.
+    fn frame(&mut self, dbfs: f32) {
+        // Smoothed, so one stray frame cannot spike the level.
+        self.smoothed_dbfs = self.smoothed_dbfs * 0.6 + dbfs * 0.4;
+        self.last_loud = self.smoothed_dbfs > ACTIVITY_LOUD_DBFS;
+    }
+
+    /// The ear has sent nothing for another STOPPED_AFTER_MS.
+    fn quiet(&mut self) {
+        self.smoothed_dbfs = (self.smoothed_dbfs - QUIET_DECAY_DB).max(LEVEL_DB_FLOOR);
+        self.last_loud = false;
+    }
+
+    /// Advance by one render frame. Fills at 1:1 while loud and drains at ARM/RELEASE while
+    /// quiet. `active` changes only when full or empty, so borderline sound holds the mode.
+    fn tick(&mut self, dt_ms: f32) {
+        if self.last_loud {
+            self.loud_ms = (self.loud_ms + dt_ms).min(ACTIVITY_ARM_MS);
+            if self.loud_ms >= ACTIVITY_ARM_MS {
+                self.active = true;
+            }
+        } else {
+            let drain = dt_ms * (ACTIVITY_ARM_MS / ACTIVITY_RELEASE_MS);
+            self.loud_ms = (self.loud_ms - drain).max(0.0);
+            if self.loud_ms <= 0.0 {
+                self.active = false;
+            }
         }
     }
 }
@@ -199,116 +338,53 @@ struct DmaRx {
     tail:       usize, // next unread index within the 2048-byte RX ring
 }
 
+// Owned and mutated only by the render thread; the DMA engine is the only other writer,
+// and it touches nothing but the IFRAM ring.
 pub struct AudioReceiver {
-    // Owned and mutated only by the render thread; the DMA engine is the only other
-    // writer, and it touches nothing but the IFRAM ring.
-    state: AudioState,
+    onsets:          Onsets,
+    beats:           BeatDetector,
+    drops:           DropDetector,
+    gate:            ActivityGate,
+    level_norm:      f32,
+    last_tick_ms:    u32,
+    last_update_ms:  u32,
+    ear_stopped:     bool, // no frame for STOPPED_AFTER_MS; cleared by the next one
+    assembler:       FrameAssembler,
+    first_byte_seen: bool,
     // None if the UART never came up; sound-reactive then stays off.
-    dma: Option<DmaRx>,
+    dma:             Option<DmaRx>,
 }
 
 impl AudioReceiver {
     pub fn new() -> Self {
         AudioReceiver {
-            state: AudioState::new(),
-            dma:   init_audio_uart(),
+            onsets:          Onsets::new(),
+            beats:           BeatDetector::new(),
+            drops:           DropDetector::new(),
+            gate:            ActivityGate::new(),
+            level_norm:      0.0,
+            last_tick_ms:    0,
+            last_update_ms:  0,
+            ear_stopped:     false,
+            assembler:       FrameAssembler::default(),
+            first_byte_seen: false,
+            dma:             init_audio_uart(),
         }
     }
 
     pub fn is_active(&self) -> bool {
-        self.state.activity
-    }
-
-    /// Track the bass against its normal level: enter a breakdown when it stays well
-    /// below for long enough, and fire a drop when it comes back. Called once per
-    /// received frame.
-    fn detect_drop(&mut self, now_ms: u32) {
-        let st = &mut self.state;
-        st.bass_env = follow(st.bass_env, st.bass_db, BASS_ATTACK, BASS_DECAY);
-
-        if st.in_breakdown {
-            let elapsed = now_ms.wrapping_sub(st.breakdown_since);
-            let back = st.bass_env >= st.bass_ref - DROP_DB;
-            let expired = elapsed > BREAKDOWN_MAX_MS;
-            if back || expired {
-                st.in_breakdown = false;
-                st.low_since = None;
-                if back {
-                    st.drop_pending = true;
-                    DROP_COUNT.fetch_add(1, Ordering::Relaxed);
-                } else {
-                    // The music stopped. Let the quiet become the new normal rather than
-                    // re-entering a breakdown against a level that has gone.
-                    st.bass_ref = st.bass_env;
-                }
-            }
-        } else {
-            let low = st.bass_ref > BASS_MIN_DB && st.bass_env < st.bass_ref - BREAKDOWN_DB;
-            // Learn the normal level only while the bass is present. Following it down would
-            // close the gap before a breakdown is confirmed.
-            if !low {
-                st.bass_ref += (st.bass_env - st.bass_ref) * BASS_REF_RATE;
-            }
-            match (low, st.low_since) {
-                (false, _) => st.low_since = None,
-                (true, None) => st.low_since = Some(now_ms),
-                (true, Some(since)) => {
-                    if now_ms.wrapping_sub(since) >= BREAKDOWN_MS {
-                        st.in_breakdown = true;
-                        // The breakdown counts from when the bass first left, not from
-                        // when it was confirmed.
-                        st.breakdown_since = since;
-                    }
-                }
-            }
-        }
-
-        DROP_BREAKDOWN.store(st.in_breakdown, Ordering::Relaxed);
-        DROP_BASS_DB.store(st.bass_env.to_bits(), Ordering::Relaxed);
-        DROP_REF_DB.store(st.bass_ref.to_bits(), Ordering::Relaxed);
-    }
-
-    /// Fire a beat when this frame's flux stands well above its recent average and the
-    /// low bands hold energy. Called once per received frame, which is when flux moves.
-    fn detect_beat(&mut self, now_ms: u32) {
-        let st = &mut self.state;
-        st.flux_avg += (st.flux - st.flux_avg) * FLUX_AVG_RATE;
-        let low = st.bands[..BASS_BANDS].iter().sum::<f32>() / BASS_BANDS as f32;
-        let ratio = if low >= LOW_MIN && st.flux_avg > 1e-4 { st.flux / st.flux_avg } else { 0.0 };
-
-        if st.beat_armed
-            && ratio >= FLUX_TRIGGER
-            && now_ms.wrapping_sub(st.last_beat_ms) >= BEAT_REFRACTORY_MS
-        {
-            st.beat_armed = false;
-            st.beat_strength = ((ratio - FLUX_TRIGGER) / FLUX_TRIGGER).clamp(0.0, 1.0);
-            st.beat_pending = true;
-            st.last_beat_ms = now_ms;
-        } else if ratio < FLUX_RELEASE {
-            st.beat_armed = true;
-        }
+        self.gate.active
     }
 
     /// The frame patterns render against.
     pub fn snapshot(&mut self) -> Audio {
-        let mut rise = [0.0; BAND_COUNT];
-        for (r, (fast, slow)) in rise
-            .iter_mut()
-            .zip(self.state.band_fast.iter().zip(self.state.band_slow.iter()))
-        {
-            *r = ((fast - slow) * RISE_GAIN).clamp(0.0, 1.0);
-        }
-        let beat = self.state.beat_pending;
-        self.state.beat_pending = false;
-        let drop = self.state.drop_pending;
-        self.state.drop_pending = false;
         Audio {
-            beat,
-            drop,
-            beat_strength: self.state.beat_strength,
-            level_norm: self.state.level_norm,
-            bands:      self.state.bands,
-            rise,
+            beat:          std::mem::take(&mut self.beats.pending),
+            drop:          std::mem::take(&mut self.drops.pending),
+            beat_strength: self.beats.strength,
+            level_norm:    self.level_norm,
+            bands:         self.onsets.bands,
+            rise:          self.onsets.rise(),
         }
     }
 
@@ -316,8 +392,8 @@ impl AudioReceiver {
     /// silence when the ear stops sending, and advances the Auto-mode timer.
     pub fn update(&mut self, now_ms: u32) {
         // Time since the last call, capped so a long gap cannot jump the timers ahead.
-        let dt_ms = (now_ms.wrapping_sub(self.state.last_tick_ms) as f32).min(100.0);
-        self.state.last_tick_ms = now_ms;
+        let dt_ms = (now_ms.wrapping_sub(self.last_tick_ms) as f32).min(100.0);
+        self.last_tick_ms = now_ms;
 
         // Feed every byte the DMA engine wrote since the last call to the assembler.
         let mut got_frame = false;
@@ -330,8 +406,8 @@ impl AudioReceiver {
                     let byte = dma.read_ring(dma.tail);
                     dma.tail = (dma.tail + 1) % RX_DMA_BUF_LEN;
                     got_byte = true;
-                    if !self.state.first_byte_seen {
-                        self.state.first_byte_seen = true;
+                    if !self.first_byte_seen {
+                        self.first_byte_seen = true;
                         UART_FIRST_BYTE.store(byte, Ordering::Relaxed);
                     }
                     if self.feed_byte(byte, now_ms) {
@@ -349,47 +425,26 @@ impl AudioReceiver {
         }
 
         // The ear has stopped sending: let the loudness fall and count the time as quiet.
-        if !got_frame && now_ms.wrapping_sub(self.state.last_update_ms) >= STOPPED_AFTER_MS {
-            self.state.smoothed_dbfs =
-                (self.state.smoothed_dbfs - QUIET_DECAY_DB).max(LEVEL_DB_FLOOR);
-            self.state.last_loud = false;
-            self.state.last_update_ms = now_ms;
-            self.state.ear_stopped = true;
+        if !got_frame && now_ms.wrapping_sub(self.last_update_ms) >= STOPPED_AFTER_MS {
+            self.gate.quiet();
+            self.last_update_ms = now_ms;
+            self.ear_stopped = true;
         }
 
         // Fade what the patterns see, so they go quiet instead of holding the last frame.
-        if self.state.ear_stopped {
+        if self.ear_stopped {
             let keep = (1.0 - dt_ms / STOPPED_FADE_MS).max(0.0);
-            let st = &mut self.state;
-            for ((band, fast), slow) in st.bands.iter_mut().zip(&mut st.band_fast).zip(&st.band_slow) {
-                *band *= keep;
-                // Toward the slow baseline, which is kept, so `rise` falls to zero now and
-                // does not jump when frames return.
-                *fast = slow + (*fast - slow) * keep;
-            }
-            st.level_norm *= keep;
+            self.onsets.fade(keep);
+            self.level_norm *= keep;
         }
 
-        // Fills at 1:1 while loud and drains at ARM/RELEASE while quiet. Activity changes
-        // only when it is full or empty, so borderline sound holds the current mode.
-        if self.state.last_loud {
-            self.state.loud_ms = (self.state.loud_ms + dt_ms).min(ACTIVITY_ARM_MS);
-            if self.state.loud_ms >= ACTIVITY_ARM_MS {
-                self.state.activity = true;
-            }
-        } else {
-            let drain = dt_ms * (ACTIVITY_ARM_MS / ACTIVITY_RELEASE_MS);
-            self.state.loud_ms = (self.state.loud_ms - drain).max(0.0);
-            if self.state.loud_ms <= 0.0 {
-                self.state.activity = false;
-            }
-        }
+        self.gate.tick(dt_ms);
     }
 
     /// Feed one received byte into the frame assembler. Returns true when a complete,
     /// checksum-valid `BandFrame` was decoded and applied.
     fn feed_byte(&mut self, byte: u8, now_ms: u32) -> bool {
-        match self.state.assembler.feed(byte) {
+        match self.assembler.feed(byte) {
             Fed::Pending => false,
             Fed::Frame(frame) => {
                 self.apply_frame(&frame, now_ms);
@@ -407,27 +462,17 @@ impl AudioReceiver {
     /// Apply a decoded frame: the bands, the beat and drop detectors, the level, and the
     /// loud flag the Auto-mode timer uses.
     fn apply_frame(&mut self, frame: &BandFrame, now_ms: u32) {
-        for (i, &b) in frame.bands.iter().enumerate() {
-            let v = norm_from_wire(b);
-            self.state.bands[i] = v;
-            self.state.band_fast[i] += (v - self.state.band_fast[i]) * BAND_FAST;
-            self.state.band_slow[i] += (v - self.state.band_slow[i]) * BAND_SLOW;
-        }
-        self.state.flux = norm_from_wire(frame.flux);
-        self.state.bass_db = level_from_wire(frame.bass);
-        self.detect_beat(now_ms);
-        self.detect_drop(now_ms);
-        self.state.level_norm = norm_from_wire(frame.level_norm);
-        let dbfs = level_from_wire(frame.level);
-        // Smoothed, so one stray frame cannot spike the level.
-        self.state.smoothed_dbfs = self.state.smoothed_dbfs * 0.6 + dbfs * 0.4;
-        self.state.last_loud = self.state.smoothed_dbfs > ACTIVITY_LOUD_DBFS;
-        self.state.last_update_ms = now_ms;
-        self.state.ear_stopped = false;
+        self.onsets.apply(&frame.bands);
+        self.beats.update(norm_from_wire(frame.flux), self.onsets.bass(), now_ms);
+        self.drops.update(level_from_wire(frame.bass), now_ms);
+        self.level_norm = norm_from_wire(frame.level_norm);
+        self.gate.frame(level_from_wire(frame.level));
+        self.last_update_ms = now_ms;
+        self.ear_stopped = false;
         LinkStatus::Receiving.set();
         UART_FRAMES_OK.fetch_add(1, Ordering::Relaxed);
-        UART_LAST_DBFS.store(self.state.smoothed_dbfs.to_bits(), Ordering::Relaxed);
-        UART_LAST_NORM.store(self.state.level_norm.to_bits(), Ordering::Relaxed);
+        UART_LAST_DBFS.store(self.gate.smoothed_dbfs.to_bits(), Ordering::Relaxed);
+        UART_LAST_NORM.store(self.level_norm.to_bits(), Ordering::Relaxed);
     }
 }
 
