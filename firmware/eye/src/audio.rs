@@ -548,7 +548,12 @@ fn init_uart() -> Option<DmaRx> {
         xous::MemoryFlags::R | xous::MemoryFlags::W,
     ) {
         Ok(m) => m,
-        Err(_) => { LinkStatus::IframFail.set(); return None; }
+        Err(_) => {
+            // Give the CSR page back, or each retry would map another.
+            xous::syscall::unmap_memory(csr_mem).ok();
+            LinkStatus::IframFail.set();
+            return None;
+        }
     };
 
     let csr_virt   = csr_mem.as_ptr() as usize;
