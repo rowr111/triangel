@@ -289,27 +289,26 @@ impl DropDetector {
 
 /// Decides when Auto mode shows the sound patterns, from how long it has been loud.
 struct ActivityGate {
-    smoothed_dbfs: f32,
-    last_loud:     bool, // the latest frame's verdict; kept until the next frame or quiet tick
-    loud_ms:       f32,  // net loud time, 0..=ACTIVITY_ARM_MS
-    active:        bool,
+    dbfs:      f32,  // as the ear sent it; the ear does the smoothing
+    last_loud: bool, // the latest frame's verdict; kept until the next frame or quiet tick
+    loud_ms:   f32,  // net loud time, 0..=ACTIVITY_ARM_MS
+    active:    bool,
 }
 
 impl ActivityGate {
     fn new() -> Self {
-        ActivityGate { smoothed_dbfs: LEVEL_DB_FLOOR, last_loud: false, loud_ms: 0.0, active: false }
+        ActivityGate { dbfs: LEVEL_DB_FLOOR, last_loud: false, loud_ms: 0.0, active: false }
     }
 
     /// Take a frame's loudness.
     fn frame(&mut self, dbfs: f32) {
-        // Smoothed, so one stray frame cannot spike the level.
-        self.smoothed_dbfs = self.smoothed_dbfs * 0.6 + dbfs * 0.4;
-        self.last_loud = self.smoothed_dbfs > ACTIVITY_LOUD_DBFS;
+        self.dbfs = dbfs;
+        self.last_loud = dbfs > ACTIVITY_LOUD_DBFS;
     }
 
     /// The ear has sent nothing for another STOPPED_AFTER_MS.
     fn quiet(&mut self) {
-        self.smoothed_dbfs = (self.smoothed_dbfs - QUIET_DECAY_DB).max(LEVEL_DB_FLOOR);
+        self.dbfs = (self.dbfs - QUIET_DECAY_DB).max(LEVEL_DB_FLOOR);
         self.last_loud = false;
     }
 
@@ -471,7 +470,7 @@ impl AudioReceiver {
         self.ear_stopped = false;
         LinkStatus::Receiving.set();
         UART_FRAMES_OK.fetch_add(1, Ordering::Relaxed);
-        UART_LAST_DBFS.store(self.gate.smoothed_dbfs.to_bits(), Ordering::Relaxed);
+        UART_LAST_DBFS.store(self.gate.dbfs.to_bits(), Ordering::Relaxed);
         UART_LAST_NORM.store(self.level_norm.to_bits(), Ordering::Relaxed);
     }
 }
