@@ -51,7 +51,7 @@ pip install pre-commit
 pre-commit install   # in this repo's root
 ```
 
-Build and flash with the Baochip VS Code extension: out-of-tree, kernel mode manual, kernel files from each chip's `xous_build` folder. Never use ci-sync; it replaces the kernels built in the root README's "Building the kernels".
+Build and flash with the Baochip VS Code extension: out-of-tree, kernel mode manual, kernel files from `firmware/xous_build`. Never use ci-sync; it replaces the kernels built in the root README's "Building the kernels".
 
 ## Regenerating the LED map
 

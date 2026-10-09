@@ -33,10 +33,10 @@ From a xous-core checkout:
 
 1. `cargo xtask dabao --feature gdb-stub`
 2. Copy `loader.uf2` and `xous.uf2` from `target/riscv32imac-unknown-xous-elf/release/`
-   into both `firmware/eye/xous_build/` and `firmware/ear/xous_build/`.
+   into `firmware/xous_build/`. Both chips flash from that one folder.
 
 The eye also needs a fix to the I2C driver (`libs/bao1x-hal/src/udma/i2c.rs`) that is not
-in upstream xous-core, so build its kernel from a checkout that has that fix.
+in upstream xous-core, so build from a checkout that has that fix.
 
 ## Regenerating the I2S mic driver for different pins
 
