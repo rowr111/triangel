@@ -5,6 +5,7 @@ pub mod ripples;
 pub mod transition;
 
 use core::f32::consts::TAU;
+use core::sync::atomic::{AtomicU32, Ordering};
 
 use crate::audio::Audio;
 use crate::led::map::Led;
@@ -180,12 +181,21 @@ impl Shot {
     }
 }
 
-/// xorshift32. Each pattern seeds its own, so its sequence is fixed.
+// Mixed into every seed.
+static BOOT_SEED: AtomicU32 = AtomicU32::new(0);
+
+/// Call before any pattern is built.
+pub fn set_boot_seed(seed: u32) {
+    BOOT_SEED.store(seed, Ordering::Relaxed);
+}
+
+/// xorshift32. Each pattern seeds its own.
 pub struct Rng(u32);
 
 impl Rng {
     /// A zero seed would produce only zeros, so it is swapped for a fixed number.
-    pub const fn new(seed: u32) -> Self {
+    pub fn new(seed: u32) -> Self {
+        let seed = seed ^ BOOT_SEED.load(Ordering::Relaxed);
         Rng(if seed == 0 { 0x9E37_79B9 } else { seed })
     }
 

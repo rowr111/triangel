@@ -15,6 +15,8 @@ usb-bao1x = { git = "https://github.com/betrusted-io/xous-core", rev = "f7d8c7e2
 
 bio-lib = { git = "https://github.com/betrusted-io/xous-core", rev = "f7d8c7e2a69db0f46f65e0aaeaf19a1bf7d94329" }
 arbitrary-int = "1.2"
+# Stay on 0.2, the version xous-core patches below.
+getrandom = "0.2"
 triangel-shared = { path = "../shared" }
 
 [patch.crates-io]

@@ -42,6 +42,11 @@ fn main() -> ! {
     input::spawn(event_tx);
     diag::stage(&boot_diag, diag::Stage::InputSpawned);
 
+    // Seed the patterns from the hardware random number generator
+    let mut seed = [0u8; 4];
+    getrandom::getrandom(&mut seed).expect("no hardware random numbers");
+    patterns::set_boot_seed(u32::from_le_bytes(seed));
+
     // Setlist manager owns pattern cycling, brightness, sound mode
     let mut setlist = SetlistManager::new(tt.elapsed_ms() as u32);
 
