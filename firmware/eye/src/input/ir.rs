@@ -1,6 +1,6 @@
 use std::sync::atomic::{AtomicU32, Ordering};
 
-use super::{EventQueue, InputEvent};
+use super::{EventSender, InputEvent};
 use crate::diag::Diag;
 use crate::input::nec_capture::{NecCapture, REPEAT_FRAME};
 use crate::pins;
@@ -45,7 +45,7 @@ pub fn stats() -> IrStats {
 }
 
 /// Spawn the IR receiver thread; init progress prints to the USB serial monitor.
-pub fn spawn(queue: EventQueue) {
+pub fn spawn(events: EventSender) {
     std::thread::spawn(move || {
         let diag = Diag::new();
         diag.line("IR: thread start, initializing BIO capture");
@@ -58,7 +58,7 @@ pub fn spawn(queue: EventQueue) {
                     pins::IR_BIO_PIN,
                     capture.clock_hz()
                 ));
-                receive_loop(capture, queue, diag);
+                receive_loop(capture, events, diag);
             }
             // Give up rather than panic: the d-pad still works without IR.
             Err(e) => diag.line(&format!("IR NecCapture init FAILED: {:?}", e)),
@@ -66,7 +66,7 @@ pub fn spawn(queue: EventQueue) {
     });
 }
 
-fn receive_loop(capture: NecCapture, queue: EventQueue, diag: Diag) -> ! {
+fn receive_loop(capture: NecCapture, events: EventSender, diag: Diag) -> ! {
     let tt = ticktimer::Ticktimer::new().unwrap();
     // Last valid command; repeat frames re-trigger it (brightness only).
     let mut last_cmd: Option<u8> = None;
@@ -75,7 +75,7 @@ fn receive_loop(capture: NecCapture, queue: EventQueue, diag: Diag) -> ! {
             if frame == REPEAT_FRAME {
                 // Only brightness auto-repeats; other commands act once per press.
                 if let Some(cmd @ (IR_CMD_BRIGHTNESS_UP | IR_CMD_BRIGHTNESS_DOWN)) = last_cmd {
-                    map_ir_cmd(cmd, &queue);
+                    map_ir_cmd(cmd, &events);
                 }
                 continue;
             }
@@ -89,15 +89,15 @@ fn receive_loop(capture: NecCapture, queue: EventQueue, diag: Diag) -> ! {
             DECODED_FRAMES.fetch_add(1, Ordering::Relaxed);
             diag.line(&format!("IR frame ok: cmd {:02x} (frame {:08x})", cmd, frame));
             last_cmd = Some(cmd);
-            map_ir_cmd(cmd, &queue);
+            map_ir_cmd(cmd, &events);
         }
         // The FIFO holds eight frames, so this only bounds input latency.
         tt.sleep_ms(10).ok();
     }
 }
 
-/// Map a command byte to an InputEvent and queue it.
-fn map_ir_cmd(cmd: u8, queue: &EventQueue) {
+/// Map a command byte to an InputEvent and send it.
+fn map_ir_cmd(cmd: u8, events: &EventSender) {
     let event = match cmd {
         IR_CMD_BRIGHTNESS_UP   => Some(InputEvent::BrightnessUp),
         IR_CMD_BRIGHTNESS_DOWN => Some(InputEvent::BrightnessDown),
@@ -108,6 +108,6 @@ fn map_ir_cmd(cmd: u8, queue: &EventQueue) {
         _                      => None,
     };
     if let Some(ev) = event {
-        super::lock_queue(queue).push_back(ev);
+        events.send(ev).ok();
     }
 }

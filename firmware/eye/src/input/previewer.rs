@@ -1,6 +1,6 @@
 use usb_bao1x::UsbHid;
 
-use super::{EventQueue, InputEvent};
+use super::{EventSender, InputEvent};
 use crate::setlist::SoundMode;
 
 // On-screen previewer controls arrive as newline-terminated ASCII commands over USB
@@ -9,20 +9,20 @@ use crate::setlist::SoundMode;
 //   U/D = brightness up/down, L/R = pattern prev/next, C = toggle hold,
 //   S0/S1/S2 = sound mode Off/Auto/On.
 
-/// Spawn the previewer serial-input thread. Feeds the same event queue the physical
+/// Spawn the previewer serial-input thread. Feeds the same event channel the physical
 /// buttons do, so on-screen and real input are interchangeable.
-pub fn spawn(queue: EventQueue) {
-    std::thread::spawn(move || recv_loop(queue));
+pub fn spawn(events: EventSender) {
+    std::thread::spawn(move || recv_loop(events));
 }
 
-fn recv_loop(queue: EventQueue) {
+fn recv_loop(events: EventSender) {
     let usb = UsbHid::new();
     loop {
         // Blocks until a '\n'-terminated command arrives over USB serial.
         let line = usb.serial_wait_ascii(Some('\n'));
         for cmd in line.split_whitespace() {
             if let Some(ev) = parse_command(cmd) {
-                super::lock_queue(&queue).push_back(ev);
+                events.send(ev).ok();
             }
         }
     }

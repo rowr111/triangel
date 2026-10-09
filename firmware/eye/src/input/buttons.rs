@@ -1,4 +1,4 @@
-use super::{EventQueue, InputEvent};
+use super::{EventSender, InputEvent};
 use crate::setlist::SoundMode;
 
 // Where the seven panel inputs are read from. The source module owns the wiring details -
@@ -28,9 +28,9 @@ pub struct Inputs {
 }
 
 /// Spawn the button/switch polling thread.
-pub fn spawn(queue: EventQueue) {
+pub fn spawn(events: EventSender) {
     std::thread::spawn(move || {
-        poll_loop(queue);
+        poll_loop(events);
     });
 }
 
@@ -76,7 +76,7 @@ fn switch_position(inputs: &Inputs) -> SoundMode {
     }
 }
 
-fn poll_loop(queue: EventQueue) {
+fn poll_loop(events: EventSender) {
     let tt = ticktimer::Ticktimer::new().unwrap();
     let mut source = source::Source::new();
 
@@ -116,11 +116,8 @@ fn poll_loop(queue: EventQueue) {
                 fired.push(InputEvent::SetSoundMode(sw));
             }
 
-            if !fired.is_empty() {
-                let mut q = super::lock_queue(&queue);
-                for ev in fired {
-                    q.push_back(ev);
-                }
+            for ev in fired {
+                events.send(ev).ok();
             }
         }
 

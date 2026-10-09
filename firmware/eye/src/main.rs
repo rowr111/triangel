@@ -37,9 +37,9 @@ fn main() -> ! {
     let mut audio = audio::AudioReceiver::new();
     diag::stage(&boot_diag, diag::Stage::AudioUp);
 
-    // Input event queue (spawns button + IR threads)
-    let event_queue = input::new_queue();
-    input::spawn(event_queue.clone());
+    // Input event channel (spawns button + IR threads)
+    let (event_tx, events) = input::channel();
+    input::spawn(event_tx);
     diag::stage(&boot_diag, diag::Stage::InputSpawned);
 
     // Setlist manager owns pattern cycling, brightness, sound mode
@@ -63,7 +63,7 @@ fn main() -> ! {
         let snapshot = audio.snapshot();
 
         // Drain input events and apply to setlist; it derives sound_active per event.
-        input::apply_events(&event_queue, &mut setlist, frame_start as u32, audio.is_active());
+        input::apply_events(&events, &mut setlist, frame_start as u32, audio.is_active());
 
         // Determine sound-reactive mode after events: they may have changed it this frame.
         let sound_active = setlist.sound_active(audio.is_active());
