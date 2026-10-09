@@ -1,14 +1,15 @@
-//! Sound-reactive tuning. Build and flash the eye after changing all of these 
-//! except the last (ear) section.
+//! Sound-reactive tuning. Build and flash the eye after changing all of these
+//! except `BASS_BANDS` (both chips) and the last (ear) section.
+
+/// Bands that count as the bass: 0-2 is 40-100 Hz. The ear's bass level, the beat
+/// detector and Raindrop's trigger all use it.
+pub const BASS_BANDS: usize = 3;
 
 /// Beat detection shared by Firework, Tiles and Spiderweb.
 pub mod beat {
-    /// Bands checked for bass under a hit: 0-2 is 40-100 Hz.
-    pub const KICK_BANDS: usize = 3;
     /// How much bass there has to be for a hit to count. Keeps hi-hats out.
     pub const LOW_MIN: f32 = 0.15;
-    /// A beat fires when the rise across all bands reaches this many times its recent
-    /// average. Lower fires more often.
+    /// A beat fires at this many times the recent average rise. Lower fires more often.
     pub const FLUX_TRIGGER: f32 = 1.9;
     /// It fires again only after dropping back under this.
     pub const FLUX_RELEASE: f32 = 1.3;
@@ -50,6 +51,14 @@ pub mod level {
     pub const ACTIVITY_RELEASE_MS: f32 = 30_000.0;
 }
 
+/// When the ear stops sending.
+pub mod link {
+    /// No frame for this long counts as stopped.
+    pub const STOPPED_AFTER_MS: u32 = 200;
+    /// Once stopped, the bands and level fall to about a third in this many ms.
+    pub const STOPPED_FADE_MS: f32 = 300.0;
+}
+
 pub mod spectrum {
     /// Brightness in a quiet room.
     pub const QUIET_FLOOR: f32 = 0.20;
@@ -74,8 +83,6 @@ pub mod spectrum {
 
 /// Raindrop. Has its own trigger, separate from `beat`.
 pub mod raindrop {
-    /// Bands its trigger listens to: 0-2 is 40-100 Hz.
-    pub const KICK_BANDS: usize = 3;
     /// Fires when a bass band's onset reaches this. Lower fires more often.
     pub const TRIGGER: f32 = 0.20;
     /// It fires again only after dropping back under this.
@@ -124,9 +131,6 @@ pub mod firework {
     /// Share of a spark's life spent white, and how much brighter it is then.
     pub const WHITE_FRAC: f32 = 0.22;
     pub const HIT_BOOST: f32 = 2.2;
-    /// White background level and how much it moves. 0 turns it off.
-    pub const WASH_BASE: f32 = 0.0;
-    pub const WASH_DEPTH: f32 = 0.0;
 }
 
 pub mod tiles {
@@ -160,9 +164,9 @@ pub mod spiderweb {
     pub const DROP_FADE_MS: f32 = 2500.0;
 }
 
-/// Flashing the ear after changing anything here.
+/// Flash the ear after changing anything here.
 pub mod ear {
-    /// History behind each reference, in 32 ms frames: all bands, each band, and level.
+    /// History behind each reference, in frames (about 28 a second): all bands, each band, level.
     pub const BAND_WINDOW_FRAMES: usize = 94;
     pub const BAND_OWN_WINDOW_FRAMES: usize = 48;
     pub const LEVEL_WINDOW_FRAMES: usize = 234;

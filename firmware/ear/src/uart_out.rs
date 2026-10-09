@@ -1,19 +1,14 @@
-//! Sends the ear's audio to the eye chip over a hardware UART as a framed `MelFrame`
-//! (see `triangel-shared`): 53 bytes total - a sync byte, the 24 bands, the level, an
-//! activity flag, and an XOR checksum. The bands carry the filterbank's normalized
-//! output and the level carries absolute dBFS; both are produced on every frame.
-//!
-//! Physical connection: ear pin 15 (PB14, UART2 TX) wires to eye pin 16 (PB13,
-//! UART2 RX), plus GND. Baud rate must match `EAR_UART_BAUD` in eye's `audio.rs`.
+//! Sends each `BandFrame` to the eye over UART2: ear pin 15 (PB14, TX) to eye pin 16
+//! (PB13, RX), plus GND.
 
 use bao1x_api::iox::IoxHal;
 use bao1x_api::{IoSetup, IoxDir, IoxDriveStrength, IoxEnable, IoxFunction, PeriphId};
 use bao1x_hal::clocks::PERCLK_HZ;
 use bao1x_hal::udma::{Uart, UartChannel};
 use bao1x_hal_service::UdmaGlobal;
-use triangel_shared::mel::{EAR_UART_BAUD, FRAME_LEN, MelFrame};
+use triangel_shared::frame::{BandFrame, EAR_UART_BAUD, FRAME_LEN};
 
-/// Owns the UART TX peripheral and sends framed `MelFrame`s to the eye.
+/// Owns the UART TX peripheral and sends framed `BandFrame`s to the eye.
 pub struct UartOut {
     uart: Uart,
 }
@@ -45,8 +40,8 @@ impl UartOut {
         Self { uart }
     }
 
-    /// Encode and send one `MelFrame` (53 bytes) to the eye.
-    pub fn send(&mut self, frame: &MelFrame) {
+    /// Encode and send one `BandFrame` to the eye.
+    pub fn send(&mut self, frame: &BandFrame) {
         let mut buf = [0u8; FRAME_LEN];
         frame.encode(&mut buf);
         self.uart.write(&buf);

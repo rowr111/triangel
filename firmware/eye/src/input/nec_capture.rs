@@ -1,7 +1,7 @@
 use arbitrary_int::{Number, u5};
 use bao1x_api::bio::*;
 use bao1x_api::bio_resources::*;
-use bao1x_api::{IoSetup, IoxDir, IoxEnable};
+use bao1x_api::{IoxEnable, IoxFunction};
 use bao1x_hal::bio::{Bio, CoreCsr};
 use utralib::utra::bio_bdma;
 
@@ -61,16 +61,7 @@ impl NecCapture {
         // Schmitt-trigger input, pull-up on: the receiver idles high.
         let iox = bao1x_api::iox::IoxHal::new();
         let (port, io_pin) = bio_bit_to_port_and_pin(pin);
-        iox.setup_pin(
-            port,
-            io_pin,
-            Some(IoxDir::Input),
-            Some(bao1x_api::IoxFunction::Gpio),
-            Some(IoxEnable::Enable),
-            Some(IoxEnable::Enable),
-            None,
-            None,
-        );
+        crate::pins::setup_input_pin(&iox, port, io_pin, IoxFunction::Gpio, IoxEnable::Enable);
 
         let mut bio_ss = Bio::new();
         let resource_grant = bio_ss.claim_resources(&Self::resource_spec())?;

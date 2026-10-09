@@ -1,61 +1,42 @@
 # triangel-shared
 
-Shared types and wire protocol definitions for the triangel two-chip lighting system. Both the **eye** chip (LED controller) and the **ear** chip (audio processor) depend on this crate so the encoder and decoder are guaranteed to match.
+Code both chips build against, so the **ear** (audio) and the **eye** (LEDs) cannot disagree. No dependencies and no OS requirements.
 
-## Contents
+## `frame` - the ear -> eye frame
 
-### `mel` - ear->eye mel frame protocol
+The ear sends one `BandFrame` for each 32 ms of audio it captures, about 28 per second, over UART. Baud rate, band count and frame length are constants in [`src/frame.rs`](src/frame.rs) (`EAR_UART_BAUD`, `BAND_COUNT`, `FRAME_LEN`).
 
-The ear chip streams 24 mel frequency band values to the eye chip over UART at ~30 fps.
-
-#### Constants
-
-| Constant | Value | Description |
-|---|---|---|
-| `EAR_UART_BAUD` | `921_600` | Baud rate for the ear->eye UART link - must match on both chips |
-| `SYNC_BYTE` | `0xAA` | Sync byte at the start of every mel frame |
-| `MEL_BANDS` | `24` | Number of mel frequency bands per frame |
-| `FRAME_LEN` | `51` | Wire frame length in bytes |
-
-#### Wire frame format (51 bytes)
+### Wire format (58 bytes, little-endian)
 
 | Offset | Size | Content |
-|--------|------|---------|
-| 0x00 | 1 byte | Sync byte: `0xAA` |
-| 0x01-0x30 | 48 bytes | 24 x u16 little-endian mel bands (band 0 first) |
-| 0x31 | 1 byte | Activity flag (0 = quiet, 1 = music active) |
-| 0x32 | 1 byte | XOR checksum of bytes 0x01-0x31 |
+|---|---|---|
+| 0x00 | 1 | Sync byte `0xAA` |
+| 0x01-0x30 | 48 | `bands`: 24 x u16, band 0 (lowest) first |
+| 0x31-0x32 | 2 | `level`: overall loudness, absolute dBFS |
+| 0x33-0x34 | 2 | `level_norm`: loudness relative to the recent loudest and quietest |
+| 0x35-0x36 | 2 | `flux`: how much the whole spectrum rose this frame |
+| 0x37-0x38 | 2 | `bass`: level of the lowest bands, absolute dBFS |
+| 0x39 | 1 | XOR checksum of bytes 0x01-0x38 |
 
-Band values are `u16` scaled 0-65535. The eye chip divides by 65535.0 to get 0.0-1.0 floats before applying attack/decay smoothing. The activity flag is set by the ear chip based on sustained absolute energy exceeding a calibrated threshold.
+`bands` are normalized against recent music, so they show spectral shape but never go dark in a quiet room. `level` and `bass` are absolute, so they do. dB SPL is roughly dBFS + 120 with this microphone.
 
-#### Usage
+Values go on and off the wire through `level_to_wire` / `level_from_wire` (dBFS) and `norm_to_wire` / `norm_from_wire` (0.0-1.0).
 
-**Ear chip (encode):**
+### Usage
+
 ```rust
-use triangel_shared::mel::{MelFrame, FRAME_LEN};
+use triangel_shared::frame::{BandFrame, FRAME_LEN};
 
-let frame = MelFrame { bands: computed_bands, activity: is_loud };
+// ear
 let mut buf = [0u8; FRAME_LEN];
 frame.encode(&mut buf);
-uart.write_all(&buf).ok();
+
+// eye - None on a bad sync byte or checksum
+if let Some(frame) = BandFrame::decode(&buf) { /* ... */ }
 ```
 
-**Eye chip (decode):**
-```rust
-use triangel_shared::mel::{MelFrame, FRAME_LEN};
+The eye receives a byte stream, not whole frames. `FrameAssembler::feed` takes one byte at a time, finds the sync byte, and returns a `BandFrame` each time one completes.
 
-let mut buf = [0u8; FRAME_LEN];
-uart.read_exact(&mut buf).ok();
-if let Some(frame) = MelFrame::decode(&buf) {
-    // frame.bands[0..24] - mel band values
-    // frame.activity     - true when sustained loudness exceeds ear's threshold
-}
-```
+## `tuning` - sound-reactive tuning
 
-## Adding as a dependency
-
-```toml
-triangel-shared = { path = "../shared" }
-```
-
-This crate has no external dependencies and no OS requirements - safe to use in both chips.
+Every knob for beat, onset and drop detection, the Auto sound-mode switch, each reactive pattern, and the ear's normalization, in one file: [`src/tuning.rs`](src/tuning.rs). The `ear` section needs the ear reflashed and `BASS_BANDS` needs both chips; everything else only the eye.

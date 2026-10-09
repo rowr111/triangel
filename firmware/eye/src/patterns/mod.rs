@@ -2,64 +2,30 @@ pub mod ambient;
 pub mod glints;
 pub mod reactive;
 pub mod ripples;
-#[allow(dead_code)] // bench patterns, unused until one is added to a setlist by hand
-pub mod test;
 pub mod transition;
+
+use core::f32::consts::TAU;
+use core::sync::atomic::{AtomicU32, Ordering};
 
 use crate::audio::Audio;
 use crate::led::map::Led;
 
 pub type Frame = [[u8; 3]; crate::led::map::LED_COUNT];
 
-/// A pattern in the ambient setlist.
+/// A pattern in either setlist. `out[i]` is the color of `LED_MAP[i]`. Ambient patterns
+/// ignore `audio`.
 pub trait Pattern: Send {
-    /// Render one frame into `out`.
-    /// `leds` - world-position metadata for each LED, indexed by chain position
-    /// `t_ms` - monotonic time in milliseconds
-    fn render(&mut self, leds: &[Led], t_ms: u32, out: &mut Frame);
+    fn render(&mut self, t_ms: u32, audio: &Audio, out: &mut Frame);
+
+    /// Called each time the pattern comes on screen, before its first frame there.
+    fn on_enter(&mut self, _t_ms: u32) {}
 }
 
-/// A pattern in the sound-reactive setlist. Has to look interesting at every level,
-/// silence included.
-pub trait ReactivePattern: Send {
-    fn render(&mut self, leds: &[Led], t_ms: u32, audio: &Audio, out: &mut Frame);
-}
-
-// --- Envelope ---
-
-/// Attack/decay envelope for a reactive pattern that wants to rise and fall at its
-/// own rate. Hold one as a field and call `update()` each frame.
-#[allow(dead_code)]
-pub struct Envelope {
-    pub attack: f32,
-    pub decay:  f32,
-    value:      f32,
-}
-
-#[allow(dead_code)]
-impl Envelope {
-    pub fn new(attack: f32, decay: f32) -> Self {
-        Envelope { attack, decay, value: 0.0 }
-    }
-
-    /// Feed a new input sample (0.0-1.0), returns the smoothed value.
-    pub fn update(&mut self, input: f32) -> f32 {
-        if input > self.value {
-            self.value += self.attack * (input - self.value);
-        } else {
-            self.value = (self.value - self.decay).max(input).max(0.0);
-        }
-        self.value
-    }
-}
-
-// --- Shared math utilities ---
-
-/// HSV -> RGB. h: 0-360, s/v: 0-1. Returns [r, g, b] each 0-255.
+/// HSV to RGB. h is 0-360, s and v are 0-1.
 pub fn hsv(h: f32, s: f32, v: f32) -> [u8; 3] {
     let h60 = h / 60.0;
     let f = |n: f32| -> f32 {
-        // n + h60 is inside [1, 11), so wrapping is at most one subtraction.
+        // n + h60 is in [1, 11), so one subtraction wraps it.
         let mut k = n + h60;
         if k >= 6.0 {
             k -= 6.0;
@@ -71,11 +37,16 @@ pub fn hsv(h: f32, s: f32, v: f32) -> [u8; 3] {
 
 pub fn lerp(a: f32, b: f32, t: f32) -> f32 { a + (b - a) * t }
 
-/// Steps the patterns' hashes quantize a 0..TAU phase offset into, 0.01 rad each.
+/// sin(a + b), from the sin and cos of each.
+pub fn sin_sum(a_sin: f32, a_cos: f32, b_sin: f32, b_cos: f32) -> f32 {
+    a_sin * b_cos + a_cos * b_sin
+}
+
+/// Number of phase offsets in `phase_phasors`, 0.01 rad apart, covering 0..TAU.
 pub const PHASE_STEPS: usize = 628;
 
-/// sin and cos of every hash-quantized phase offset, for rotating a per-LED phasor by a
-/// per-frame angle instead of calling sin per LED.
+/// sin and cos of each phase offset. With sin and cos of the frame's angle, they give
+/// sin(offset + angle) without a sin call per LED.
 pub fn phase_phasors() -> &'static ([f32; PHASE_STEPS], [f32; PHASE_STEPS]) {
     static T: std::sync::OnceLock<([f32; PHASE_STEPS], [f32; PHASE_STEPS])> =
         std::sync::OnceLock::new();
@@ -91,7 +62,7 @@ pub fn phase_phasors() -> &'static ([f32; PHASE_STEPS], [f32; PHASE_STEPS]) {
     })
 }
 
-/// Wrap a hue into [0, 360). Exact for inputs within one turn of range.
+/// Wraps a hue into [0, 360). The input must be within one turn of that range.
 pub fn wrap360(h: f32) -> f32 {
     if h >= 360.0 {
         h - 360.0
@@ -99,5 +70,161 @@ pub fn wrap360(h: f32) -> f32 {
         h + 360.0
     } else {
         h
+    }
+}
+
+/// Smooth 0-1 ramp; `t` is clamped to 0-1 first.
+pub fn smoothstep(t: f32) -> f32 {
+    let t = t.clamp(0.0, 1.0);
+    t * t * (3.0 - 2.0 * t)
+}
+
+pub fn mix_rgb(a: [f32; 3], b: [f32; 3], t: f32) -> [f32; 3] {
+    [lerp(a[0], b[0], t), lerp(a[1], b[1], t), lerp(a[2], b[2], t)]
+}
+
+/// Color at `t` along a ramp of (position, color) stops, positions rising from 0 to 1.
+pub fn ramp(stops: &[(f32, [f32; 3])], t: f32) -> [f32; 3] {
+    let t = t.clamp(0.0, 1.0);
+    for pair in stops.windows(2) {
+        let (t0, c0) = pair[0];
+        let (t1, c1) = pair[1];
+        if t <= t1 {
+            return mix_rgb(c0, c1, (t - t0) / (t1 - t0));
+        }
+    }
+    stops[stops.len() - 1].1
+}
+
+/// Where `t_ms` sits in a repeating period, 0-1.
+pub fn cycle(t_ms: u32, period_ms: u32) -> f32 {
+    (t_ms % period_ms) as f32 / period_ms as f32
+}
+
+/// `t_ms` wrapped to one period of a `rate` in rad/ms, for `sin(t * rate + ...)`.
+pub fn fold_ms(t_ms: u32, rate: f32) -> f32 {
+    let period = (TAU / rate) as u32;
+    (t_ms % period.max(1)) as f32
+}
+
+/// Hash of two u32s.
+pub fn hash2(a: u32, b: u32) -> u32 {
+    let mut h = a.wrapping_mul(0x9E37_79B1) ^ b.wrapping_mul(0x85EB_CA77);
+    h ^= h >> 15;
+    h = h.wrapping_mul(0x27D4_EB2F);
+    h ^= h >> 13;
+    h
+}
+
+/// Knuth's multiplicative hash: spreads consecutive inputs far apart.
+pub fn knuth_hash(x: u32) -> u32 {
+    x.wrapping_mul(2654435761)
+}
+
+/// Distinct values `tile_hash` can take.
+pub const TILE_HASH_STEPS: u32 = 97;
+
+/// Per-LED value from its tile and position on the tile, 0..TILE_HASH_STEPS.
+pub fn tile_hash(led: &Led) -> u32 {
+    (led.board_id as u32 * 7 + led.local_idx as u32 * 13) % TILE_HASH_STEPS
+}
+
+/// Index of the first slot `is_free` accepts, or else the one that started longest ago.
+pub fn free_or_oldest<T>(
+    slots: &[T],
+    now_ms: u32,
+    is_free: impl Fn(&T) -> bool,
+    start_ms: impl Fn(&T) -> u32,
+) -> usize {
+    let age = |s: &T| now_ms.wrapping_sub(start_ms(s));
+    slots.iter().position(&is_free).unwrap_or_else(|| {
+        let mut oldest = 0;
+        for (i, s) in slots.iter().enumerate() {
+            if age(s) > age(&slots[oldest]) {
+                oldest = i;
+            }
+        }
+        oldest
+    })
+}
+
+/// One flash: full brightness for `hold_ms` from `start_ms`, then fading over `fade_ms`.
+#[derive(Clone, Copy)]
+pub struct Shot {
+    pub start_ms: u32,
+    pub strength: f32,
+    pub hue:      f32,
+    pub sat:      f32,
+    pub hold_ms:  f32,
+    pub fade_ms:  f32,
+}
+
+impl Shot {
+    pub const NONE: Shot =
+        Shot { start_ms: 0, strength: 0.0, hue: 0.0, sat: 0.0, hold_ms: 0.0, fade_ms: 0.0 };
+
+    /// Age in ms and brightness 0-1, or None if unlit, not started yet, or finished.
+    pub fn level(&self, t_ms: u32) -> Option<(f32, f32)> {
+        if self.strength <= 0.0 {
+            return None;
+        }
+        let age = t_ms.wrapping_sub(self.start_ms) as i32 as f32;
+        if age < 0.0 || age >= self.hold_ms + self.fade_ms {
+            return None;
+        }
+        let fade = if age < self.hold_ms { 1.0 } else { 1.0 - (age - self.hold_ms) / self.fade_ms };
+        Some((age, fade))
+    }
+
+    pub fn end_ms(&self) -> u32 {
+        self.start_ms.wrapping_add((self.hold_ms + self.fade_ms) as u32)
+    }
+}
+
+// Mixed into every seed.
+static BOOT_SEED: AtomicU32 = AtomicU32::new(0);
+
+/// Call before any pattern is built.
+pub fn set_boot_seed(seed: u32) {
+    BOOT_SEED.store(seed, Ordering::Relaxed);
+}
+
+/// xorshift32. Each pattern seeds its own.
+pub struct Rng(u32);
+
+impl Rng {
+    /// A zero seed would produce only zeros, so it is swapped for a fixed number.
+    pub fn new(seed: u32) -> Self {
+        let seed = seed ^ BOOT_SEED.load(Ordering::Relaxed);
+        Rng(if seed == 0 { 0x9E37_79B9 } else { seed })
+    }
+
+    pub fn next_u32(&mut self) -> u32 {
+        let mut x = self.0;
+        x ^= x << 13;
+        x ^= x >> 17;
+        x ^= x << 5;
+        self.0 = x;
+        x
+    }
+
+    /// Uniform in [0, 1).
+    pub fn f32(&mut self) -> f32 {
+        (self.next_u32() >> 8) as f32 / 16_777_216.0
+    }
+
+    /// Uniform whole number in [min, max).
+    pub fn range_u32(&mut self, min: u32, max: u32) -> u32 {
+        min + self.next_u32() % (max - min)
+    }
+
+    /// Uniform whole number in [0, n).
+    pub fn below(&mut self, n: usize) -> usize {
+        (self.f32() * n as f32) as usize % n
+    }
+
+    /// One entry of `items`, uniformly.
+    pub fn pick<T: Copy>(&mut self, items: &[T]) -> T {
+        items[self.below(items.len())]
     }
 }

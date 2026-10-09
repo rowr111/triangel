@@ -1,10 +1,10 @@
 use std::collections::VecDeque;
 
-use crate::led::map::{Led, LED_COUNT, LED_MAP};
+use crate::led::map::LED_COUNT;
 use crate::patterns::transition::{self, TransitionStyle};
 use crate::audio::Audio;
-use crate::patterns::{Frame, Pattern, ReactivePattern};
-use crate::patterns::ambient::{drizzle::Drizzle, effervesce::Effervesce, flame::ApexFlame, fubuki::Fubuki, rainbow::RainbowX, ricochet::Ricochet, shimmer::CenterShimmer, squall::Squall, uzumaki::Uzumaki};
+use crate::patterns::{Frame, Pattern, Rng, knuth_hash};
+use crate::patterns::ambient::{drizzle::Drizzle, effervesce::Effervesce, flame::ApexFlame, fubuki::Fubuki, rainbow::Rainbow, ricochet::Ricochet, shimmer::CenterShimmer, squall::Squall, uzumaki::Uzumaki};
 use crate::patterns::reactive::{
     firework::Firework, raindrop::Raindrop, spectrum::Spectrum, spiderweb::Spiderweb, tiles::Tiles,
 };
@@ -16,6 +16,10 @@ const CYCLE_MS: u32 = 3 * 60 * 1_000; // 3 minutes
 const STEP_TRANSITION_MS:  u32 = 3000;
 const SOUND_TRANSITION_MS: u32 = 200;
 
+// A pattern not drawn for longer than this has left the screen, so it gets `on_enter`
+// when it is next drawn.
+const REENTRY_GAP_MS: u32 = 500;
+
 // Global brightness ladder: geometric steps (~1.7x each) so a d-pad press feels like an
 // even perceived change instead of lurching at the low end. Applied as a flat multiply
 // over the finished frame; the top level is 1.0 (full brightness, a no-op).
@@ -25,7 +29,7 @@ const DEFAULT_BRIGHTNESS_INDEX: usize = 3; // middle -> perceptual medium, room 
 #[cfg(feature = "previewer")]
 const DEFAULT_BRIGHTNESS_INDEX: usize = BRIGHTNESS_LEVELS.len() - 1; // full - the web view is dim otherwise
 
-// Audition order for pick_style - cycled so each step shows a different transition.
+// The styles a pattern step picks from at random.
 const STYLES: [TransitionStyle; 7] = [
     TransitionStyle::Crossfade,
     TransitionStyle::RadialOut,
@@ -44,50 +48,66 @@ fn ambient_patterns() -> Vec<Box<dyn Pattern>> {
         Box::new(ApexFlame::new(100.0, 80.0)),
         Box::new(Uzumaki::new()),
         Box::new(Effervesce::new()),
-        Box::new(RainbowX::new(60.0)),
+        Box::new(Rainbow::new()),
         Box::new(Ricochet::new()),
         Box::new(Drizzle::new()),
     ]
 }
 
-fn reactive_patterns() -> Vec<Box<dyn ReactivePattern>> {
+fn reactive_patterns() -> Vec<Box<dyn Pattern>> {
     vec![
-        Box::new(Tiles::new(&LED_MAP)),
+        Box::new(Tiles::new()),
         Box::new(Spectrum::new()),
         Box::new(Raindrop::new()),
-        Box::new(Firework::new(&LED_MAP)),
-        Box::new(Spiderweb::new(&LED_MAP)),
+        Box::new(Firework::new()),
+        Box::new(Spiderweb::new()),
     ]
 }
 
 // --- A single ordered list of patterns with its own cursor ---
 
-struct Setlist<P: ?Sized> {
-    patterns: Vec<Box<P>>,
+struct Setlist {
+    patterns: Vec<Box<dyn Pattern>>,
+    /// When each pattern was last drawn, if ever.
+    drawn_ms: Vec<Option<u32>>,
     idx:      usize,
 }
 
-impl<P: ?Sized> Setlist<P> {
+impl Setlist {
+    fn new(patterns: Vec<Box<dyn Pattern>>) -> Self {
+        let drawn_ms = vec![None; patterns.len()];
+        Setlist { patterns, drawn_ms, idx: 0 }
+    }
+
     fn len(&self) -> usize {
         self.patterns.len()
     }
 
-    fn next(&mut self) {
-        self.idx = (self.idx + 1) % self.patterns.len();
+    /// Draw pattern `i`, telling it first if it has been off screen.
+    fn draw(&mut self, i: usize, t_ms: u32, audio: &Audio, out: &mut Frame) {
+        if self.drawn_ms[i].is_none_or(|last| t_ms.wrapping_sub(last) > REENTRY_GAP_MS) {
+            self.patterns[i].on_enter(t_ms);
+        }
+        self.drawn_ms[i] = Some(t_ms);
+        self.patterns[i].render(t_ms, audio, out);
     }
 
-    fn prev(&mut self) {
+    fn step(&mut self, dir: Step) {
         let len = self.patterns.len();
-        self.idx = (self.idx + len - 1) % len;
+        self.idx = match dir {
+            Step::Next => (self.idx + 1) % len,
+            Step::Prev => (self.idx + len - 1) % len,
+        };
     }
 }
 
 // --- Transitions ---
 
-#[derive(Clone, Copy)]
+/// Which setlist; also its index in `SetlistManager::setlists`.
+#[derive(Clone, Copy, PartialEq)]
 enum SetlistKind {
-    Ambient,
-    Reactive,
+    Ambient = 0,
+    Reactive = 1,
 }
 
 impl SetlistKind {
@@ -108,7 +128,7 @@ struct Transition {
 }
 
 #[derive(Clone, Copy)]
-enum Step {
+pub enum Step {
     Next,
     Prev,
 }
@@ -136,14 +156,14 @@ impl SoundMode {
 // --- Setlist manager ---
 
 pub struct SetlistManager {
-    ambient:           Setlist<dyn Pattern>,
-    reactive:          Setlist<dyn ReactivePattern>,
+    setlists:          [Setlist; 2],
     last_cycle_ms:     u32,
     held:              bool,
     transition:        Option<Transition>,
     pending:           VecDeque<Step>,
     last_sound_active: bool,
-    next_style:        usize,
+    style_rng:         Rng,
+    last_style:        usize, // index into STYLES
     from_buf:          Frame,
     brightness_index:  usize,
     pub sound_mode:    SoundMode,
@@ -151,67 +171,51 @@ pub struct SetlistManager {
 
 impl SetlistManager {
     pub fn new(now_ms: u32) -> Self {
+        let mut style_rng = Rng::new(now_ms);
+        let last_style = style_rng.below(STYLES.len());
         SetlistManager {
-            ambient:           Setlist { patterns: ambient_patterns(),  idx: 0 },
-            reactive:          Setlist { patterns: reactive_patterns(), idx: 0 },
+            setlists:          [
+                Setlist::new(ambient_patterns()),
+                Setlist::new(reactive_patterns()),
+            ],
             last_cycle_ms:     now_ms,
             held:              false,
             transition:        None,
             pending:           VecDeque::new(),
             last_sound_active: false,
-            next_style:        0,
+            style_rng,
+            last_style,
             from_buf:          [[0u8; 3]; LED_COUNT],
             brightness_index:  DEFAULT_BRIGHTNESS_INDEX,
             sound_mode:        SoundMode::Off,
         }
     }
 
-    /// Cursor of the named setlist. The two hold different traits, so they cannot be
-    /// reached through one reference.
-    fn idx_of(&self, kind: SetlistKind) -> usize {
-        match kind { SetlistKind::Ambient => self.ambient.idx, SetlistKind::Reactive => self.reactive.idx }
+    fn list(&mut self, kind: SetlistKind) -> &mut Setlist {
+        &mut self.setlists[kind as usize]
     }
 
-    fn len_of(&self, kind: SetlistKind) -> usize {
-        match kind { SetlistKind::Ambient => self.ambient.len(), SetlistKind::Reactive => self.reactive.len() }
-    }
-
-    fn step(&mut self, kind: SetlistKind, dir: Step) {
-        match (kind, dir) {
-            (SetlistKind::Ambient,  Step::Next) => self.ambient.next(),
-            (SetlistKind::Ambient,  Step::Prev) => self.ambient.prev(),
-            (SetlistKind::Reactive, Step::Next) => self.reactive.next(),
-            (SetlistKind::Reactive, Step::Prev) => self.reactive.prev(),
-        }
-    }
-
-    /// Cycle through the transition styles so each new step shows a different one - handy
-    /// for auditioning in the previewer. Swap for a fixed pick or randomise here later.
-    fn pick_style(&mut self) -> TransitionStyle {
-        let style = STYLES[self.next_style % STYLES.len()];
-        self.next_style = self.next_style.wrapping_add(1);
-        style
+    /// A random style for a pattern step, never the same one twice in a row.
+    fn pick_style(&mut self, now_ms: u32) -> TransitionStyle {
+        // Mixing in the time of the step makes the sequence differ after each power-up.
+        self.style_rng = Rng::new(self.style_rng.next_u32() ^ knuth_hash(now_ms));
+        let skip = 1 + self.style_rng.below(STYLES.len() - 1);
+        self.last_style = (self.last_style + skip) % STYLES.len();
+        STYLES[self.last_style]
     }
 
     fn begin_transition(&mut self, from_kind: SetlistKind, from_idx: usize, now_ms: u32, duration_ms: u32, style: TransitionStyle) {
         self.transition = Some(Transition { from_kind, from_idx, start_ms: now_ms, duration_ms, style });
     }
 
-    fn render_into(&mut self, kind: SetlistKind, idx: usize, leds: &[Led], t_ms: u32, audio: &Audio, out: &mut Frame) {
-        match kind {
-            SetlistKind::Ambient  => self.ambient.patterns[idx].render(leds, t_ms, out),
-            SetlistKind::Reactive => self.reactive.patterns[idx].render(leds, t_ms, audio, out),
-        }
-    }
-
     /// Render the current frame, compositing an in-flight transition over it. Detects the
     /// ambient<->reactive flip and starts a fast crossfade for it.
-    pub fn render(&mut self, leds: &[Led], t_ms: u32, audio: &Audio, sound_active: bool, out: &mut Frame) {
+    pub fn render(&mut self, t_ms: u32, audio: &Audio, sound_active: bool, out: &mut Frame) {
         // Sound flip is a hard setlist change: it jumps the queue (drops pending steps that
         // belong to the old setlist) and crossfades immediately.
         if sound_active != self.last_sound_active {
             let from_kind = SetlistKind::from_sound(self.last_sound_active);
-            let from_idx  = self.idx_of(from_kind);
+            let from_idx  = self.list(from_kind).idx;
             self.pending.clear();
             self.begin_transition(from_kind, from_idx, t_ms, SOUND_TRANSITION_MS, TransitionStyle::Crossfade);
             self.last_sound_active = sound_active;
@@ -228,22 +232,15 @@ impl SetlistManager {
 
         // Live current pattern -> out.
         let to_kind = SetlistKind::from_sound(sound_active);
-        let to_idx  = self.idx_of(to_kind);
-        self.render_into(to_kind, to_idx, leds, t_ms, audio, out);
+        let to_idx  = self.list(to_kind).idx;
+        self.setlists[to_kind as usize].draw(to_idx, t_ms, audio, out);
 
         // Composite the outgoing pattern over it while a transition is running.
         if let Some(tr) = self.transition {
             // max(1) guards against a zero-duration transition dividing by zero.
             let progress = t_ms.wrapping_sub(tr.start_ms) as f32 / tr.duration_ms.max(1) as f32;
-            match tr.from_kind {
-                SetlistKind::Ambient => {
-                    self.ambient.patterns[tr.from_idx].render(leds, t_ms, &mut self.from_buf)
-                }
-                SetlistKind::Reactive => {
-                    self.reactive.patterns[tr.from_idx].render(leds, t_ms, audio, &mut self.from_buf)
-                }
-            }
-            transition::blend(tr.style, leds, progress, &self.from_buf, out);
+            self.setlists[tr.from_kind as usize].draw(tr.from_idx, t_ms, audio, &mut self.from_buf);
+            transition::blend(tr.style, progress, &self.from_buf, out);
         }
     }
 
@@ -257,15 +254,10 @@ impl SetlistManager {
         }
     }
 
-    /// Advance one pattern. `now_ms` restarts the cycle countdown so a manual
-    /// step doesn't immediately auto-advance.
-    pub fn step_next(&mut self, now_ms: u32, sound_active: bool) {
-        self.enqueue_step(SetlistKind::from_sound(sound_active), Step::Next, now_ms);
-    }
-
-    /// Step back one pattern; `now_ms` restarts the cycle countdown (see step_next).
-    pub fn step_prev(&mut self, now_ms: u32, sound_active: bool) {
-        self.enqueue_step(SetlistKind::from_sound(sound_active), Step::Prev, now_ms);
+    /// Step one pattern in the setlist on screen. `now_ms` restarts the cycle countdown so
+    /// a manual step doesn't immediately auto-advance.
+    pub fn step(&mut self, dir: Step, now_ms: u32, sound_active: bool) {
+        self.enqueue_step(SetlistKind::from_sound(sound_active), dir, now_ms);
     }
 
     /// Queue a step, or start it immediately if idle. Transitions play one at a time so an
@@ -274,10 +266,11 @@ impl SetlistManager {
     fn enqueue_step(&mut self, kind: SetlistKind, dir: Step, now_ms: u32) {
         self.last_cycle_ms = now_ms;
         // A single-pattern setlist has nowhere to step; skip the pointless self-transition.
-        if self.len_of(kind) < 2 {
+        let len = self.list(kind).len();
+        if len < 2 {
             return;
         }
-        if self.pending.len() < self.len_of(kind) {
+        if self.pending.len() < len {
             self.pending.push_back(dir);
         }
         self.pump_queue(kind, now_ms);
@@ -294,9 +287,10 @@ impl SetlistManager {
 
     /// Advance/retreat the active setlist and start a transition from the old pattern.
     fn begin_step(&mut self, kind: SetlistKind, dir: Step, now_ms: u32) {
-        let from_idx = self.idx_of(kind);
-        self.step(kind, dir);
-        let style = self.pick_style();
+        let list = self.list(kind);
+        let from_idx = list.idx;
+        list.step(dir);
+        let style = self.pick_style(now_ms);
         self.begin_transition(kind, from_idx, now_ms, STEP_TRANSITION_MS, style);
     }
 

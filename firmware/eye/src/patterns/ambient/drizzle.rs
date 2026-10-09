@@ -1,11 +1,11 @@
-use crate::led::map::Led;
+use crate::audio::Audio;
 use crate::patterns::ripples::{RippleStyle, Ripples};
 use crate::patterns::{Frame, Pattern};
 
-/// Wait between drops, picked fresh each time.
+/// Wait between drops.
 const GAP_MIN_MS: f32 = 600.0;
 const GAP_MAX_MS: f32 = 3000.0;
-/// Drop strength range. The hardest reach full white.
+/// Drop strength range.
 const STRENGTH_MIN: f32 = 0.35;
 const STRENGTH_MAX: f32 = 1.0;
 /// Ring spacing in mm, and rings per drop.
@@ -25,8 +25,7 @@ const STYLE: RippleStyle = RippleStyle {
     hit_boost:       4.5,
 };
 
-/// Rain on black water with no sound: a drop lands here and there at random and
-/// ripples out.
+/// Rain on black water: drops land at random spots and times and ripple out.
 pub struct Drizzle {
     ripples: Ripples,
     last_ms: u32,
@@ -40,19 +39,19 @@ impl Drizzle {
 }
 
 impl Pattern for Drizzle {
-    fn render(&mut self, leds: &[Led], t_ms: u32, out: &mut Frame) {
+    fn render(&mut self, t_ms: u32, _audio: &Audio, out: &mut Frame) {
         if t_ms.wrapping_sub(self.last_ms) >= self.gap_ms {
             let r = &mut self.ripples;
-            let spot = r.spot(leds);
-            // Squared so most drops are soft and only a few land hard.
-            let hard = r.randf();
+            let spot = r.spot();
+            // Squared, so most drops are soft.
+            let hard = r.rng().f32();
             let strength = STRENGTH_MIN + hard * hard * (STRENGTH_MAX - STRENGTH_MIN);
-            let spacing = SPACING_MIN_MM + r.randf() * (SPACING_MAX_MM - SPACING_MIN_MM);
-            let count = RINGS_MIN + r.randf() * (RINGS_MAX - RINGS_MIN);
+            let spacing = SPACING_MIN_MM + r.rng().f32() * (SPACING_MAX_MM - SPACING_MIN_MM);
+            let count = RINGS_MIN + r.rng().f32() * (RINGS_MAX - RINGS_MIN);
             r.land(spot, t_ms, strength, spacing, count);
             self.last_ms = t_ms;
-            self.gap_ms = (GAP_MIN_MS + r.randf() * (GAP_MAX_MS - GAP_MIN_MS)) as u32;
+            self.gap_ms = (GAP_MIN_MS + r.rng().f32() * (GAP_MAX_MS - GAP_MIN_MS)) as u32;
         }
-        self.ripples.draw(leds, t_ms, out);
+        self.ripples.draw(t_ms, out);
     }
 }

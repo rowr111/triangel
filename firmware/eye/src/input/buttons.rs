@@ -1,7 +1,4 @@
-use std::collections::VecDeque;
-use std::sync::{Arc, Mutex};
-
-use super::{EventQueue, InputEvent};
+use super::{EventSender, InputEvent};
 use crate::setlist::SoundMode;
 
 // Where the seven panel inputs are read from. The source module owns the wiring details -
@@ -31,9 +28,9 @@ pub struct Inputs {
 }
 
 /// Spawn the button/switch polling thread.
-pub fn spawn(queue: EventQueue) {
+pub fn spawn(events: EventSender) {
     std::thread::spawn(move || {
-        poll_loop(queue);
+        poll_loop(events);
     });
 }
 
@@ -79,15 +76,12 @@ fn switch_position(inputs: &Inputs) -> SoundMode {
     }
 }
 
-fn poll_loop(queue: Arc<Mutex<VecDeque<InputEvent>>>) {
+fn poll_loop(events: EventSender) {
     let tt = ticktimer::Ticktimer::new().unwrap();
     let mut source = source::Source::new();
 
-    let mut db_up     = Debouncer::new();
-    let mut db_down   = Debouncer::new();
-    let mut db_left   = Debouncer::new();
-    let mut db_right  = Debouncer::new();
-    let mut db_center = Debouncer::new();
+    // One per button, in the order of `buttons` below.
+    let mut debouncers = [const { Debouncer::new() }; 5];
 
     // Last reading, held across ticks: a source that only reports on change leaves most
     // ticks with nothing new, and the debouncer still needs a value every tick.
@@ -102,15 +96,15 @@ fn poll_loop(queue: Arc<Mutex<VecDeque<InputEvent>>>) {
         }
 
         if let Some(inputs) = inputs {
-            let buttons: [(&mut Debouncer, InputEvent, bool); 5] = [
-                (&mut db_up,     InputEvent::BrightnessUp,   inputs.up),
-                (&mut db_down,   InputEvent::BrightnessDown, inputs.down),
-                (&mut db_left,   InputEvent::PatternPrev,    inputs.left),
-                (&mut db_right,  InputEvent::PatternNext,    inputs.right),
-                (&mut db_center, InputEvent::ToggleHold,     inputs.center),
+            let buttons = [
+                (InputEvent::BrightnessUp,   inputs.up),
+                (InputEvent::BrightnessDown, inputs.down),
+                (InputEvent::PatternPrev,    inputs.left),
+                (InputEvent::PatternNext,    inputs.right),
+                (InputEvent::ToggleHold,     inputs.center),
             ];
             let mut fired: Vec<InputEvent> = Vec::new();
-            for (db, event, pressed) in buttons {
+            for (db, (event, pressed)) in debouncers.iter_mut().zip(buttons) {
                 if db.update(pressed) {
                     fired.push(event);
                 }
@@ -122,11 +116,8 @@ fn poll_loop(queue: Arc<Mutex<VecDeque<InputEvent>>>) {
                 fired.push(InputEvent::SetSoundMode(sw));
             }
 
-            if !fired.is_empty() {
-                let mut q = super::lock_queue(&queue);
-                for ev in fired {
-                    q.push_back(ev);
-                }
+            for ev in fired {
+                events.send(ev).ok();
             }
         }
 

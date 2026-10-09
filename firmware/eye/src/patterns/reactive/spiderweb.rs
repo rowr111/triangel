@@ -1,70 +1,55 @@
 use core::f32::consts::PI;
 
 use crate::audio::Audio;
-use crate::led::map::{Led, LED_COUNT};
-use crate::patterns::{Frame, ReactivePattern, hsv};
+use crate::led::geom::{BOARD_COUNT, LEDS_PER_BOARD};
+use crate::led::map::{Led, LED_COUNT, LED_MAP};
+use crate::patterns::{Frame, Pattern, Rng, Shot, hsv};
 use triangel_shared::tuning::spiderweb::*;
 
-/// The tile outlines line up into straight rows running edge to edge across the fixture,
-/// nine in each of three directions: horizontal, and the two slants at 60 degrees. Where
-/// two tiles meet their outlines run side by side, so those count as two separate lines.
+/// The tile outlines form straight lines across the fixture, nine in each of three
+/// directions: horizontal and the two 60-degree slants.
 const LINES_PER_FAMILY: usize = 9;
 const MAX_LINES: usize = LINES_PER_FAMILY * 3;
-/// An LED's direction, from the two LEDs either side of it on its tile, has to be this
-/// close to one of the three to count. Corners turn a sharp angle and fail it.
+/// How close an LED's direction must be to one of the three. Corner LEDs fail it.
 const DIR_TOLERANCE: f32 = 12.0 * PI / 180.0;
 /// LEDs in one row share an offset to within this; neighboring rows are 12 mm apart.
 const ROW_MERGE_MM: f32 = 1.0;
 
-/// Silk colors: mostly white, with pale blue, lavender and violet. Three of the six are
-/// white, so half of all lit lines are.
+/// (hue, sat): half white, plus pale blue, lavender and violet.
 const PALETTE: [(f32, f32); 6] =
     [(0.0, 0.0), (0.0, 0.0), (0.0, 0.0), (205.0, 0.30), (260.0, 0.32), (278.0, 0.50)];
-
-#[derive(Clone, Copy)]
-struct Shot {
-    start_ms: u32,
-    strength: f32,
-    hue:      f32,
-    sat:      f32,
-    hold_ms:  f32,
-    fade_ms:  f32,
-}
-
-const NO_SHOT: Shot =
-    Shot { start_ms: 0, strength: 0.0, hue: 0.0, sat: 0.0, hold_ms: 0.0, fade_ms: 0.0 };
 
 struct Line {
     family: usize,
     offset: f32,
-    /// The current shot and the one before, both drawn, so a line lit again while still
-    /// glowing keeps whichever is brighter rather than dropping back first.
+    /// The latest two shots; the brighter one shows.
     shots:  [Shot; 2],
 }
 
-/// A spider web. It rests at a faint glow that pulses up on each beat; on the beat a whole
-/// line lights at once, burns white, then settles into its color and fades back down to
-/// the glow. A drop lights every line at once.
+/// A faint web that pulses on each beat. A beat lights whole lines, white at first, then
+/// fading through their color; a drop lights every line.
 pub struct Spiderweb {
-    rng:      u32,
+    rng:      Rng,
     lines:    Vec<Line>,
-    /// Which line each LED sits on.
+    /// Which line each LED is on.
     led_line: [u8; LED_COUNT],
-    /// When the last beat landed and how hard, for the background pulse.
+    /// When the last beat landed and how hard.
     pulse_ms: u32,
     pulse:    f32,
 }
 
 impl Spiderweb {
-    pub fn new(leds: &[Led]) -> Self {
+    pub fn new() -> Self {
+        let leds = &LED_MAP;
         let normal: [(f32, f32); 3] = core::array::from_fn(|f| {
             let a = f as f32 * PI / 3.0;
             (-a.sin(), a.cos())
         });
         let across = |f: usize, led: &Led| normal[f].0 * led.wx + normal[f].1 * led.wy;
 
-        // Which LED sits at each position on each tile, for finding an LED's neighbors.
-        let mut at = [[u16::MAX; 26]; 26];
+        // Which LED is at each position on each tile. Positions start at 1, and there is a
+        // spare empty slot past the last.
+        let mut at = [[u16::MAX; LEDS_PER_BOARD + 2]; BOARD_COUNT + 1];
         for (i, led) in leds.iter().enumerate() {
             at[led.board_id as usize][led.local_idx as usize] = i as u16;
         }
@@ -73,7 +58,7 @@ impl Spiderweb {
         let mut family = [u8::MAX; LED_COUNT];
         for (i, led) in leds.iter().enumerate() {
             let (b, l) = (led.board_id as usize, led.local_idx as usize);
-            if l == 0 || l + 1 >= 26 {
+            if l == 0 || l + 1 >= LEDS_PER_BOARD + 2 {
                 continue;
             }
             let (p, n) = (at[b][l - 1], at[b][l + 1]);
@@ -93,8 +78,8 @@ impl Spiderweb {
             }
         }
 
-        // Rows are the LEDs of one direction sharing an offset. The largest nine in each
-        // direction are the lines; anything smaller is a corner that slipped through.
+        // Group each direction's LEDs into rows by offset. The nine largest rows are the
+        // lines; smaller ones are stray corner LEDs.
         let mut lines = Vec::new();
         for f in 0..3 {
             let mut offs: Vec<f32> = leds
@@ -103,7 +88,7 @@ impl Spiderweb {
                 .filter(|&(_, &fam)| fam as usize == f)
                 .map(|(led, _)| across(f, led))
                 .collect();
-            offs.sort_unstable_by(|a, b| a.partial_cmp(b).unwrap_or(core::cmp::Ordering::Equal));
+            offs.sort_unstable_by(|a, b| a.total_cmp(b));
             let mut rows: Vec<(usize, f32)> = Vec::new();
             let mut run = (0usize, 0.0f32, f32::MIN);
             for o in offs {
@@ -118,12 +103,11 @@ impl Spiderweb {
             }
             rows.sort_unstable_by(|a, b| b.0.cmp(&a.0));
             for &(_, offset) in rows.iter().take(LINES_PER_FAMILY) {
-                lines.push(Line { family: f, offset, shots: [NO_SHOT; 2] });
+                lines.push(Line { family: f, offset, shots: [Shot::NONE; 2] });
             }
         }
 
-        // Every LED joins whichever line runs closest to it. That takes in the corners,
-        // which sit where lines cross.
+        // Every LED, corners included, joins the line nearest to it.
         let mut led_line = [0u8; LED_COUNT];
         for (i, led) in leds.iter().enumerate() {
             let mut best = (0usize, f32::MAX);
@@ -136,41 +120,24 @@ impl Spiderweb {
             led_line[i] = best.0 as u8;
         }
 
-        Spiderweb { rng: 0x5157_3EB0, lines, led_line, pulse_ms: 0, pulse: 0.0 }
+        Spiderweb { rng: Rng::new(0x5157_3EB0), lines, led_line, pulse_ms: 0, pulse: 0.0 }
     }
 
-    fn next_rng(&mut self) -> u32 {
-        let mut x = self.rng;
-        x ^= x << 13;
-        x ^= x >> 17;
-        x ^= x << 5;
-        self.rng = x;
-        x
-    }
-
-    fn randf(&mut self) -> f32 {
-        (self.next_rng() >> 8) as f32 / 16_777_216.0
-    }
-
-    /// Light line `li`, replacing whichever of its two shots will finish sooner, so a long
-    /// drop survives the beats that follow it.
+    /// Lights line `li`, replacing whichever of its two shots ends sooner, so a long drop
+    /// shot outlasts the beats after it.
     fn fire(&mut self, li: usize, t_ms: u32, strength: f32, hold: f32, fade: f32) {
-        let (hue, sat) = PALETTE[(self.randf() * PALETTE.len() as f32) as usize % PALETTE.len()];
+        let (hue, sat) = self.rng.pick(&PALETTE);
         let line = &mut self.lines[li];
         let remaining = |s: &Shot| {
-            if s.strength <= 0.0 {
-                f32::MIN
-            } else {
-                s.hold_ms + s.fade_ms - t_ms.wrapping_sub(s.start_ms) as i32 as f32
-            }
+            if s.strength <= 0.0 { i32::MIN } else { s.end_ms().wrapping_sub(t_ms) as i32 }
         };
         let slot = if remaining(&line.shots[0]) <= remaining(&line.shots[1]) { 0 } else { 1 };
         line.shots[slot] = Shot { start_ms: t_ms, strength, hue, sat, hold_ms: hold, fade_ms: fade };
     }
 }
 
-impl ReactivePattern for Spiderweb {
-    fn render(&mut self, _leds: &[Led], t_ms: u32, audio: &Audio, out: &mut Frame) {
+impl Pattern for Spiderweb {
+    fn render(&mut self, t_ms: u32, audio: &Audio, out: &mut Frame) {
         if audio.drop {
             for li in 0..self.lines.len() {
                 self.fire(li, t_ms, 1.0, DROP_HOLD_MS, DROP_FADE_MS);
@@ -178,7 +145,7 @@ impl ReactivePattern for Spiderweb {
         } else if audio.beat {
             let count = 1 + (audio.beat_strength * EXTRA_LINES) as usize;
             for _ in 0..count {
-                let li = (self.randf() * self.lines.len() as f32) as usize % self.lines.len();
+                let li = self.rng.below(self.lines.len());
                 self.fire(li, t_ms, 0.5 + 0.5 * audio.beat_strength, 0.0, FADE_MS);
             }
         }
@@ -187,37 +154,24 @@ impl ReactivePattern for Spiderweb {
             self.pulse = if audio.drop { 1.0 } else { 0.5 + 0.5 * audio.beat_strength };
         }
 
-        // The background swells on the beat and settles back.
+        // Background glow, brighter just after a beat.
         let since = t_ms.wrapping_sub(self.pulse_ms) as f32;
         let swell = self.pulse * (1.0 - since / PULSE_MS).max(0.0).powi(2);
         let base = BASE_LEVEL * (1.0 + PULSE_DEPTH * swell);
 
-        // Every LED on a line shares its brightness, so each line's color is worked out
-        // once and copied to its LEDs.
+        // One color per line, shared by all its LEDs.
         let mut color = [[0u8; 3]; MAX_LINES];
         for (c, line) in color.iter_mut().zip(self.lines.iter()) {
             let mut best = (0.0f32, 0.0f32, 0.0f32); // brightness, hue, saturation
             for shot in &line.shots {
-                if shot.strength <= 0.0 {
-                    continue;
-                }
-                let age = t_ms.wrapping_sub(shot.start_ms) as i32 as f32;
-                if age < 0.0 || age >= shot.hold_ms + shot.fade_ms {
-                    continue;
-                }
-                let fade = if age < shot.hold_ms {
-                    1.0
-                } else {
-                    1.0 - (age - shot.hold_ms) / shot.fade_ms
-                };
+                let Some((age, fade)) = shot.level(t_ms) else { continue };
                 let head = (1.0 - age / HEAD_MS).clamp(0.0, 1.0);
                 let v = (shot.strength * fade * fade * (1.0 + HEAD_BOOST * head)).min(1.0);
                 if v > best.0 {
                     best = (v, shot.hue, shot.sat * (1.0 - head));
                 }
             }
-            // A lit line rises out of the background and settles back into it, taking on
-            // its color only as far as it is lit, so the glow underneath stays white.
+            // Saturation follows the lift, so the background glow stays white.
             let (lift, hue, sat) = best;
             *c = hsv(hue, sat * lift, (base + (1.0 - base) * lift).min(1.0));
         }

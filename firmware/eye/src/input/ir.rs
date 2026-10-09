@@ -1,6 +1,6 @@
 use std::sync::atomic::{AtomicU32, Ordering};
 
-use super::{EventQueue, InputEvent};
+use super::{EventSender, InputEvent};
 use crate::diag::Diag;
 use crate::input::nec_capture::{NecCapture, REPEAT_FRAME};
 use crate::pins;
@@ -10,15 +10,13 @@ use crate::pins;
 const NEC_ADDR_LO: u8 = 0x85;
 const NEC_ADDR_HI: u8 = 0xFE;
 
-// Command bytes from the 7-button remote.
+// Command bytes from the 7-button remote. The TV button (0x45) is unassigned.
 const IR_CMD_BRIGHTNESS_UP:   u8 = 0x43; // Up button
 const IR_CMD_BRIGHTNESS_DOWN: u8 = 0x44; // Down button
 const IR_CMD_PATTERN_NEXT:    u8 = 0x41; // Right button
 const IR_CMD_PATTERN_PREV:    u8 = 0x42; // Left button
 const IR_CMD_HOLD:            u8 = 0x40; // Center button
 const IR_CMD_GEAR:            u8 = 0x46; // Gear button -> cycle sound mode
-#[allow(dead_code)]
-const IR_CMD_TV:              u8 = 0x45; // TV button - spare (use TBD)
 
 // Diagnostic state reported by the heartbeat line.
 static CLOCK_HZ:        AtomicU32 = AtomicU32::new(0);
@@ -26,19 +24,28 @@ static DECODED_FRAMES:  AtomicU32 = AtomicU32::new(0);
 static REJECTED_FRAMES: AtomicU32 = AtomicU32::new(0);
 static LAST_FRAME:      AtomicU32 = AtomicU32::new(0);
 
-/// (clock_hz, decoded, rejected, last_frame) for the heartbeat line.
+/// IR receiver state for the heartbeat.
 #[cfg(all(feature = "usb", not(feature = "previewer")))]
-pub fn stats() -> (u32, u32, u32, u32) {
-    (
-        CLOCK_HZ.load(Ordering::Relaxed),
-        DECODED_FRAMES.load(Ordering::Relaxed),
-        REJECTED_FRAMES.load(Ordering::Relaxed),
-        LAST_FRAME.load(Ordering::Relaxed),
-    )
+#[derive(Clone, Copy, PartialEq)]
+pub struct IrStats {
+    pub clock_hz:   u32,
+    pub decoded:    u32,
+    pub rejected:   u32,
+    pub last_frame: u32,
+}
+
+#[cfg(all(feature = "usb", not(feature = "previewer")))]
+pub fn stats() -> IrStats {
+    IrStats {
+        clock_hz:   CLOCK_HZ.load(Ordering::Relaxed),
+        decoded:    DECODED_FRAMES.load(Ordering::Relaxed),
+        rejected:   REJECTED_FRAMES.load(Ordering::Relaxed),
+        last_frame: LAST_FRAME.load(Ordering::Relaxed),
+    }
 }
 
 /// Spawn the IR receiver thread; init progress prints to the USB serial monitor.
-pub fn spawn(queue: EventQueue) {
+pub fn spawn(events: EventSender) {
     std::thread::spawn(move || {
         let diag = Diag::new();
         diag.line("IR: thread start, initializing BIO capture");
@@ -46,24 +53,20 @@ pub fn spawn(queue: EventQueue) {
         match NecCapture::new(pin) {
             Ok(capture) => {
                 CLOCK_HZ.store(capture.clock_hz(), Ordering::Relaxed);
-                log::info!("IR capture on BIO pin {} at {} Hz", pins::IR_BIO_PIN, capture.clock_hz());
                 diag.line(&format!(
                     "IR capture on BIO pin {} at {} Hz",
                     pins::IR_BIO_PIN,
                     capture.clock_hz()
                 ));
-                receive_loop(capture, queue, diag);
+                receive_loop(capture, events, diag);
             }
             // Give up rather than panic: the d-pad still works without IR.
-            Err(e) => {
-                diag.line(&format!("IR NecCapture init FAILED: {:?}", e));
-                log::error!("IR NecCapture init failed: {:?}", e);
-            }
+            Err(e) => diag.line(&format!("IR NecCapture init FAILED: {:?}", e)),
         }
     });
 }
 
-fn receive_loop(capture: NecCapture, queue: EventQueue, diag: Diag) -> ! {
+fn receive_loop(capture: NecCapture, events: EventSender, diag: Diag) -> ! {
     let tt = ticktimer::Ticktimer::new().unwrap();
     // Last valid command; repeat frames re-trigger it (brightness only).
     let mut last_cmd: Option<u8> = None;
@@ -72,7 +75,7 @@ fn receive_loop(capture: NecCapture, queue: EventQueue, diag: Diag) -> ! {
             if frame == REPEAT_FRAME {
                 // Only brightness auto-repeats; other commands act once per press.
                 if let Some(cmd @ (IR_CMD_BRIGHTNESS_UP | IR_CMD_BRIGHTNESS_DOWN)) = last_cmd {
-                    map_ir_cmd(cmd, &queue);
+                    map_ir_cmd(cmd, &events);
                 }
                 continue;
             }
@@ -81,21 +84,20 @@ fn receive_loop(capture: NecCapture, queue: EventQueue, diag: Diag) -> ! {
             if addr_lo != NEC_ADDR_LO || addr_hi != NEC_ADDR_HI || (cmd ^ cmd_inv) != 0xFF {
                 REJECTED_FRAMES.fetch_add(1, Ordering::Relaxed);
                 diag.line(&format!("IR frame rejected: {:08x}", frame));
-                log::debug!("IR frame rejected: {:08x}", frame);
                 continue;
             }
             DECODED_FRAMES.fetch_add(1, Ordering::Relaxed);
             diag.line(&format!("IR frame ok: cmd {:02x} (frame {:08x})", cmd, frame));
             last_cmd = Some(cmd);
-            map_ir_cmd(cmd, &queue);
+            map_ir_cmd(cmd, &events);
         }
         // The FIFO holds eight frames, so this only bounds input latency.
         tt.sleep_ms(10).ok();
     }
 }
 
-/// Map a command byte to an InputEvent and queue it.
-fn map_ir_cmd(cmd: u8, queue: &EventQueue) {
+/// Map a command byte to an InputEvent and send it.
+fn map_ir_cmd(cmd: u8, events: &EventSender) {
     let event = match cmd {
         IR_CMD_BRIGHTNESS_UP   => Some(InputEvent::BrightnessUp),
         IR_CMD_BRIGHTNESS_DOWN => Some(InputEvent::BrightnessDown),
@@ -103,10 +105,9 @@ fn map_ir_cmd(cmd: u8, queue: &EventQueue) {
         IR_CMD_PATTERN_PREV    => Some(InputEvent::PatternPrev),
         IR_CMD_HOLD            => Some(InputEvent::ToggleHold),
         IR_CMD_GEAR            => Some(InputEvent::CycleSoundMode),
-        // TV button spare
         _                      => None,
     };
     if let Some(ev) = event {
-        super::lock_queue(queue).push_back(ev);
+        events.send(ev).ok();
     }
 }

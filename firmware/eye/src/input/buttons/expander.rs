@@ -61,7 +61,8 @@ impl Source {
             Source { iox, i2c: I2c::new(), configured: false, ticks: 0, backoff: 0, penalty: 0 };
         source.configured = source.configure();
         if !source.configured {
-            log::warn!("input board did not answer at boot; retrying while it stays absent");
+            crate::diag::Diag::new()
+                .line("input board did not answer at boot; retrying while it stays absent");
         }
         source
     }

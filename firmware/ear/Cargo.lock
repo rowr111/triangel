@@ -242,12 +242,9 @@ dependencies = [
  "bao1x-api",
  "bao1x-hal",
  "bao1x-hal-service",
- "log",
  "triangel-shared",
  "usb-bao1x",
  "utralib",
- "xous",
- "xous-api-log",
  "xous-api-ticktimer",
 ]
 
