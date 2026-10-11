@@ -7,7 +7,7 @@ use utralib::utra::bio_bdma;
 
 use crate::input::nec_rx::nec_rx_bio_code;
 
-// NEC infrared receive on a BIO core. The kernel halts on each RISING edge,
+// NEC infrared receive by a BIO program. It halts on each RISING edge,
 // classifies the interval, and pushes whole 32-bit frames - one FIFO word
 // each, so the 8-deep FIFO buffers about a second of presses.
 
@@ -76,7 +76,7 @@ impl NecCapture {
             mode: IoConfigMode::SetOnly,
             ..Default::default()
         };
-        bio_ss.setup_io_config(io_config).unwrap();
+        bio_ss.setup_io_config(io_config)?;
 
         bio_ss.set_core_run_state(&resource_grant, true);
 
@@ -85,7 +85,7 @@ impl NecCapture {
 
         // Startup words: pin mask, then the five boundaries in ticks. Sending
         // them instead of baking them in keeps decode correct at any BIO clock.
-        let fifo_handle = unsafe { bio_ss.get_core_handle(Fifo::Fifo0) }?.expect("Didn't get FIFO0 handle");
+        let fifo_handle = unsafe { bio_ss.get_core_handle(Fifo::Fifo0) }?.ok_or(BioError::ResourceInUse)?;
         let mut fifo = CoreCsr::from_handle(&fifo_handle);
         fifo.csr.wo(bio_bdma::SFR_TXF0, 1 << pin.as_u32());
         fifo.csr.wo(bio_bdma::SFR_TXF0, ticks(BOUND_MIN_US));
@@ -97,7 +97,7 @@ impl NecCapture {
         Ok(Self { bio_ss, _fifo_handle: fifo_handle, fifo, resource_grant, pin, clock_hz })
     }
 
-    /// BIO clock frequency the kernel's intervals are measured in.
+    /// BIO clock frequency the BIO program's intervals are measured in.
     pub fn clock_hz(&self) -> u32 { self.clock_hz }
 
     /// Next frame, or None if none is waiting. Little-endian bytes are
