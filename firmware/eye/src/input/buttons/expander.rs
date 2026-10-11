@@ -127,10 +127,11 @@ impl Source {
         matches!(self.i2c.i2c_write(pins::EXPANDER_ADDR, reg, &[value]), Ok(I2cResult::Ack(_)))
     }
 
+    /// The port byte, or None if the read failed or the pull-ups are off (the expander reset).
     fn read_port(&mut self) -> Option<u8> {
-        let mut buf = [0u8; 1];
-        match self.i2c.i2c_read(pins::EXPANDER_ADDR, GPIO, &mut buf, false) {
-            Ok(I2cResult::Ack(_)) => Some(buf[0]),
+        let mut buf = [0u8; (GPIO - GPPU + 1) as usize];
+        match self.i2c.i2c_read(pins::EXPANDER_ADDR, GPPU, &mut buf, false) {
+            Ok(I2cResult::Ack(_)) if buf[0] == 0xFF => Some(buf[buf.len() - 1]),
             _ => None,
         }
     }
