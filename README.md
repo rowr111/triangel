@@ -19,7 +19,7 @@ Two Baochip-1x chips run under [Xous OS](https://betrusted.io/xous-book/):
 | [`firmware/eye/`](firmware/eye/README.md) | Eye chip firmware - LED output, patterns, input handling |
 | [`firmware/ear/`](firmware/ear/README.md) | Ear chip firmware - audio capture, filterbank, UART output |
 | [`firmware/shared/`](firmware/shared/README.md) | Shared crate - the ear-to-eye frame format and the sound-reactive tuning |
-| [`triangel previewer/`](triangel%20previewer/README.md) | Browser-based LED simulator and desktop audio tools |
+| [`triangel previewer/`](triangel%20previewer/README.md) | Browser-based LED simulator |
 | `hardware/` | KiCad PCB design files |
 | [`graphics/`](graphics/README.md) | Artwork, assembly sticker sheets, and the scripts that generate them |
 
