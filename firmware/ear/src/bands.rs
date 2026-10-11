@@ -153,11 +153,11 @@ struct Biquad {
 
 impl Biquad {
     /// Constant-peak-gain bandpass (Audio EQ Cookbook) centered on `center_hz` with
-    /// a -3 dB width of `bandwidth_hz`, normalized so the a0 coefficient is 1.
-    fn bandpass(center_hz: f32, bandwidth_hz: f32) -> Self {
+    /// a -3 dB width of `octaves`, normalized so the a0 coefficient is 1.
+    fn bandpass(center_hz: f32, octaves: f32) -> Self {
         let w0 = 2.0 * std::f32::consts::PI * center_hz / SAMPLE_RATE;
-        // alpha = sin(w0) / 2Q, with Q = center / bandwidth.
-        let alpha = w0.sin() * bandwidth_hz / (2.0 * center_hz);
+        // Audio EQ Cookbook alpha for a width in octaves, accurate up to half the sample rate.
+        let alpha = w0.sin() * (std::f32::consts::LN_2 / 2.0 * octaves * w0 / w0.sin()).sinh();
         let a0 = 1.0 + alpha;
         let q = |v: f32| (v as f64 * (1i64 << COEF_Q) as f64).round() as i32;
         Self {
@@ -199,7 +199,7 @@ impl BandBank {
     /// Band m is centered on edge m+1 and spans edges m..m+2, so neighbors overlap.
     fn new() -> Self {
         let filters = std::array::from_fn(|m| {
-            Biquad::bandpass(edge_hz(m + 1), edge_hz(m + 2) - edge_hz(m))
+            Biquad::bandpass(edge_hz(m + 1), (edge_hz(m + 2) / edge_hz(m)).log2())
         });
         Self { filters, energy: [0; BAND_COUNT], count: 0 }
     }
