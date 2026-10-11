@@ -13,6 +13,7 @@
       background: #222; color: #666;
     }
     #status.live { background: #0a2a0a; color: #4c4; }
+    #status.stalled { background: #2a2206; color: #cc4; }
 
     /* On-screen input panel (previewer builds): mirrors the physical d-pad + switch. */
     #controls {
@@ -112,6 +113,15 @@
     // --- WebSocket bridge connection ---------------------------------------
     const statusEl = document.getElementById('status');
     let activeWs = null; // set while connected, for sending on-screen input commands
+    let lastFrameMs = 0;
+
+    // Show "no frames" when none has arrived for half a second.
+    setInterval(() => {
+      if (!activeWs) return;
+      const live = performance.now() - lastFrameMs < 500;
+      statusEl.textContent = live ? 'bridge live' : 'no frames';
+      statusEl.className = live ? 'live' : 'stalled';
+    }, 250);
 
     function connectBridge(wsUrl) {
       const ws = new WebSocket(wsUrl);
@@ -119,8 +129,6 @@
 
       ws.onopen = () => {
         activeWs = ws;
-        statusEl.textContent = 'bridge live';
-        statusEl.className = 'live';
       };
 
       ws.onmessage = (event) => {
@@ -131,6 +139,7 @@
           frame[byChain[c]] = [bytes[c * 3], bytes[c * 3 + 1], bytes[c * 3 + 2]];
         }
         liveColors = frame;
+        lastFrameMs = performance.now();
       };
 
       ws.onclose = () => {

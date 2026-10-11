@@ -83,6 +83,7 @@ function scheduleReconnect() {
 }
 
 let activeSerial = null;
+let lastOpenError = null;
 
 function connect() {
   buf = Buffer.alloc(0);
@@ -91,11 +92,15 @@ function connect() {
 
   serial.open((err) => {
     if (err) {
+      // Once per message, so the retry loop stays quiet.
+      if (err.message !== lastOpenError) console.error('Serial open failed:', err.message);
+      lastOpenError = err.message;
       activeSerial = null;
       scheduleReconnect();
       return;
     }
     activeSerial = serial;
+    lastOpenError = null;
     console.log(`Serial open: ${SERIAL_PATH} @ ${BAUD_RATE} baud`);
   });
 
@@ -105,7 +110,7 @@ function connect() {
       const idx = buf.indexOf(FRAME_MAGIC);
       if (idx === -1) {
         // No magic found - keep last 3 bytes in case the marker is split across chunks.
-        buf = buf.subarray(buf.length - (FRAME_MAGIC.length - 1));
+        buf = buf.subarray(Math.max(0, buf.length - (FRAME_MAGIC.length - 1)));
         break;
       }
       if (idx > 0) buf = buf.subarray(idx);
