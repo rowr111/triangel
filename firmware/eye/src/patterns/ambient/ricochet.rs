@@ -16,8 +16,8 @@ const SPEED_MIN_MM_S: f32 = 50.0;  // each comet picks a speed in this range
 const SPEED_MAX_MM_S: f32 = 200.0;
 const ENERGY_DECAY:   f32 = 0.8;   // energy kept per bounce
 const ENERGY_MIN:     f32 = 0.1;   // below this the comet dies
-const BOUNCE_PERTURB: f32 = 0.15;  // random turn (rad) per bounce, so paths never loop
-const ENTRY_SPREAD:   f32 = 0.9;   // most a launch can angle (rad) off straight in
+const BOUNCE_PERTURB: f32 = 0.25;  // random turn (rad) per bounce, so paths never loop
+const ENTRY_SPREAD:   f32 = 1.1;   // most a launch can angle (rad) off straight in
 const ENTRY_CLEAR_MM: f32 = 20.0;  // a launch must cross its wall this far from the other two
 
 const HEAD_R_MIN_MM: f32 = 50.0;  // radius of the fastest comet
@@ -207,6 +207,10 @@ impl Ricochet {
                 c.x += -md * n.0;
                 c.y += -md * n.1;
                 let vn = c.vx * n.0 + c.vy * n.1;
+                // Already heading back in: rounding left it a hair outside, not a new hit.
+                if vn >= 0.0 {
+                    continue;
+                }
                 c.vx -= 2.0 * vn * n.0;
                 c.vy -= 2.0 * vn * n.1;
 
