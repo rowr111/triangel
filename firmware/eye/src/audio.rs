@@ -19,7 +19,8 @@ enum LinkStatus {
     CsrFail   = 1,
     IframFail = 2,
     InitOk    = 3,
-    DmaDone   = 4,
+    /// Bytes are arriving but no frame has decoded.
+    BytesNoFrame = 4,
     Receiving = 5,
 }
 
@@ -29,20 +30,20 @@ impl LinkStatus {
     }
 }
 
-pub static UART_STATUS:        AtomicU8  = AtomicU8::new(LinkStatus::Pending as u8);
-pub static UART_FIRST_BYTE:    AtomicU8  = AtomicU8::new(0);
+static UART_STATUS:        AtomicU8  = AtomicU8::new(LinkStatus::Pending as u8);
+static UART_FIRST_BYTE:    AtomicU8  = AtomicU8::new(0);
 /// Frames that decoded, and frames dropped on a bad sync or checksum.
-pub static UART_FRAMES_OK:     AtomicU32 = AtomicU32::new(0);
-pub static UART_FRAMES_BAD:    AtomicU32 = AtomicU32::new(0);
+static UART_FRAMES_OK:     AtomicU32 = AtomicU32::new(0);
+static UART_FRAMES_BAD:    AtomicU32 = AtomicU32::new(0);
 /// Latest decoded level, as f32 bits: absolute dBFS and the ear's normalized 0.0-1.0.
-pub static UART_LAST_DBFS:     AtomicU32 = AtomicU32::new(0);
-pub static UART_LAST_NORM:     AtomicU32 = AtomicU32::new(0);
+static UART_LAST_DBFS:     AtomicU32 = AtomicU32::new(LEVEL_DB_FLOOR.to_bits());
+static UART_LAST_NORM:     AtomicU32 = AtomicU32::new(0);
 /// Drop detector state for the heartbeat: in a breakdown, drops so far, and the raw
 /// bass level against its reference, both in dB as f32 bits.
-pub static DROP_BREAKDOWN:     AtomicBool = AtomicBool::new(false);
-pub static DROP_COUNT:         AtomicU32  = AtomicU32::new(0);
-pub static DROP_BASS_DB:       AtomicU32  = AtomicU32::new(0);
-pub static DROP_REF_DB:        AtomicU32  = AtomicU32::new(0);
+static DROP_BREAKDOWN:     AtomicBool = AtomicBool::new(false);
+static DROP_COUNT:         AtomicU32  = AtomicU32::new(0);
+static DROP_BASS_DB:       AtomicU32  = AtomicU32::new(LEVEL_DB_FLOOR.to_bits());
+static DROP_REF_DB:        AtomicU32  = AtomicU32::new(LEVEL_DB_FLOOR.to_bits());
 
 /// Drop detector state for the heartbeat.
 pub struct DropStats {
@@ -96,9 +97,6 @@ const BASS_DECAY: f32 = 0.05;
 /// How fast the reference, the normal level of the bass, follows while music plays.
 const BASS_REF_RATE: f32 = 0.008;
 
-// dB the loudness falls each STOPPED_AFTER_MS while the ear is not sending.
-const QUIET_DECAY_DB: f32 = 2.5;
-
 /// Custom cache-flush instruction, so the CPU re-reads what the DMA engine wrote.
 #[inline(always)]
 fn cache_flush() {
@@ -130,6 +128,8 @@ struct Onsets {
     bands:     [f32; BAND_COUNT],
     band_fast: [f32; BAND_COUNT],
     band_slow: [f32; BAND_COUNT],
+    /// False until the first frame, which the averages start from.
+    started:   bool,
 }
 
 impl Onsets {
@@ -138,11 +138,17 @@ impl Onsets {
             bands:     [0.0; BAND_COUNT],
             band_fast: [0.0; BAND_COUNT],
             band_slow: [0.0; BAND_COUNT],
+            started:   false,
         }
     }
 
     /// Take a frame's bands.
     fn apply(&mut self, wire: &[u16; BAND_COUNT]) {
+        if !self.started {
+            self.started = true;
+            self.band_fast = wire.map(norm_from_wire);
+            self.band_slow = self.band_fast;
+        }
         for (i, &b) in wire.iter().enumerate() {
             let v = norm_from_wire(b);
             self.bands[i] = v;
@@ -183,6 +189,8 @@ impl Onsets {
 /// bands hold energy.
 struct BeatDetector {
     flux_avg: f32,
+    /// Share of `flux_avg` still made of its zero start.
+    unfilled: f32,
     armed:    bool,
     pending:  bool,
     strength: f32,
@@ -191,13 +199,15 @@ struct BeatDetector {
 
 impl BeatDetector {
     fn new() -> Self {
-        BeatDetector { flux_avg: 0.0, armed: true, pending: false, strength: 0.0, last_ms: 0 }
+        BeatDetector { flux_avg: 0.0, unfilled: 1.0, armed: true, pending: false, strength: 0.0, last_ms: 0 }
     }
 
     /// Called once per received frame, which is when flux moves. `low` is the bass level.
     fn update(&mut self, flux: f32, low: f32, now_ms: u32) {
         self.flux_avg += (flux - self.flux_avg) * FLUX_AVG_RATE;
-        let ratio = if low >= LOW_MIN && self.flux_avg > 1e-4 { flux / self.flux_avg } else { 0.0 };
+        self.unfilled *= 1.0 - FLUX_AVG_RATE;
+        let avg = self.flux_avg / (1.0 - self.unfilled);
+        let ratio = if low >= LOW_MIN && avg > 1e-4 { flux / avg } else { 0.0 };
 
         if self.armed
             && ratio >= FLUX_TRIGGER
@@ -285,7 +295,6 @@ impl DropDetector {
 
 /// Decides when Auto mode shows the sound patterns, from how long it has been loud.
 struct ActivityGate {
-    dbfs:      f32,  // as the ear sent it; the ear does the smoothing
     last_loud: bool, // the latest frame's verdict; kept until the next frame or quiet tick
     loud_ms:   f32,  // net loud time, 0..=ACTIVITY_ARM_MS
     active:    bool,
@@ -293,18 +302,16 @@ struct ActivityGate {
 
 impl ActivityGate {
     fn new() -> Self {
-        ActivityGate { dbfs: LEVEL_DB_FLOOR, last_loud: false, loud_ms: 0.0, active: false }
+        ActivityGate { last_loud: false, loud_ms: 0.0, active: false }
     }
 
     /// Take a frame's loudness.
     fn frame(&mut self, dbfs: f32) {
-        self.dbfs = dbfs;
         self.last_loud = dbfs > ACTIVITY_LOUD_DBFS;
     }
 
     /// The ear has sent nothing for another STOPPED_AFTER_MS.
     fn quiet(&mut self) {
-        self.dbfs = (self.dbfs - QUIET_DECAY_DB).max(LEVEL_DB_FLOOR);
         self.last_loud = false;
     }
 
@@ -346,7 +353,7 @@ pub struct AudioReceiver {
     ear_stopped:     bool, // no frame for STOPPED_AFTER_MS; cleared by the next one
     assembler:       FrameAssembler,
     first_byte_seen: bool,
-    // None if the UART never came up; sound-reactive then stays off.
+    // None if the UART never came up; the sound patterns then get no audio.
     dma:             Option<DmaRx>,
 }
 
@@ -416,10 +423,10 @@ impl AudioReceiver {
         // Bytes arriving but nothing decoding is a different fault from silence, so it has
         // its own status.
         if got_byte && UART_STATUS.load(Ordering::Relaxed) == LinkStatus::InitOk as u8 {
-            LinkStatus::DmaDone.set();
+            LinkStatus::BytesNoFrame.set();
         }
 
-        // The ear has stopped sending: let the loudness fall and count the time as quiet.
+        // The ear has stopped sending, so the time counts as quiet.
         if !got_frame && now_ms.wrapping_sub(self.last_update_ms) >= STOPPED_AFTER_MS {
             self.gate.quiet();
             self.last_update_ms = now_ms;
@@ -461,12 +468,13 @@ impl AudioReceiver {
         self.beats.update(norm_from_wire(frame.flux), self.onsets.bass(), now_ms);
         self.drops.update(level_from_wire(frame.bass), now_ms);
         self.level_norm = norm_from_wire(frame.level_norm);
-        self.gate.frame(level_from_wire(frame.level));
+        let dbfs = level_from_wire(frame.level);
+        self.gate.frame(dbfs);
         self.last_update_ms = now_ms;
         self.ear_stopped = false;
         LinkStatus::Receiving.set();
         UART_FRAMES_OK.fetch_add(1, Ordering::Relaxed);
-        UART_LAST_DBFS.store(self.gate.dbfs.to_bits(), Ordering::Relaxed);
+        UART_LAST_DBFS.store(dbfs.to_bits(), Ordering::Relaxed);
         UART_LAST_NORM.store(self.level_norm.to_bits(), Ordering::Relaxed);
     }
 }
@@ -489,7 +497,9 @@ impl DmaRx {
     /// Read ring byte `idx` through the virtual IFRAM mapping.
     fn read_ring(&self, idx: usize) -> u8 {
         // Safety: idx is bounded by RX_DMA_BUF_LEN within the mapped 4K IFRAM page.
-        unsafe { ((self.ifram_virt + RX_DMA_BUF_START) as *const u8).add(idx).read_volatile() }
+        unsafe {
+            ((self.ifram_virt + RX_DMA_BUF_START) as *const u8).add(idx % RX_DMA_BUF_LEN).read_volatile()
+        }
     }
 }
 
@@ -503,7 +513,7 @@ fn init_audio_uart() -> Option<DmaRx> {
     UdmaGlobal::new().udma_clock_config(PeriphId::Uart2, true);
 
     // UART2 may be owned by another process for a moment at boot, so retry for a few
-    // seconds. If it never comes up, run with sound-reactive off.
+    // seconds. If it never comes up, run with no audio.
     const MAX_INIT_ATTEMPTS: u32 = 50; // ~5s at 100ms backoff
     let mut attempt = 0u32;
     loop {
@@ -518,7 +528,7 @@ fn init_audio_uart() -> Option<DmaRx> {
         }
         attempt += 1;
         if attempt >= MAX_INIT_ATTEMPTS {
-            diag.line(&format!("audio UART init failed after {} attempts; sound-reactive disabled", MAX_INIT_ATTEMPTS));
+            diag.line(&format!("audio UART init failed after {} attempts; running with no audio", MAX_INIT_ATTEMPTS));
             return None;
         }
         tt.sleep_ms(100).ok();
@@ -557,10 +567,8 @@ fn init_uart() -> Option<DmaRx> {
     let uart = unsafe {
         Uart::get_handle(csr_virt, bao1x_hal::board::APP_UART_IFRAM_ADDR, ifram_virt)
     };
-    uart.set_baud(EAR_UART_BAUD, PERCLK_HZ);
 
-    // set_baud leaves the UART in poll mode (Setup bit 0x10). Rewrite Setup without that
-    // bit, so RX streams into the UDMA engine, with set_baud's disable-then-configure order.
+    // The HAL's set_baud writes without its poll bit 0x10, so RX streams into the UDMA engine.
     let clk_counter: u32 = PERCLK_HZ / EAR_UART_BAUD;
     // Safety: Bank::Custom + UartReg::Setup is the Setup register of the mapped UART CSR.
     unsafe {
