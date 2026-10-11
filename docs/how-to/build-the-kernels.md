@@ -4,7 +4,7 @@ Both DABAO boards run a kernel built with the `gdb-stub` feature. The link betwe
 
 You need Rust 1.96.1 and the Xous toolkit: see [Building](../../firmware/README.md#building).
 
-1. Get the `i2c-bounded-waits` branch of [rowr111/xous-core](https://github.com/rowr111/xous-core/tree/i2c-bounded-waits). It adds a fix to the I2C driver that the eye's `input-board` build needs, and a fix to the `gdb-stub` build, neither yet in upstream xous-core.
+1. Get the `i2c-bounded-waits` branch of [rowr111/xous-core](https://github.com/rowr111/xous-core/tree/i2c-bounded-waits). It adds a fix to the I2C driver, which the eye uses to read the input board, and a fix to the `gdb-stub` build, neither yet in upstream xous-core.
 2. In that checkout, run:
 
    ```

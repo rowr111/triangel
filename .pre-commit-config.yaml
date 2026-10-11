@@ -22,10 +22,10 @@ repos:
         files: ^firmware/
         pass_filenames: false
 
-      - id: clippy-eye-input-board
-        name: cargo clippy (eye, input-board)
+      - id: clippy-eye-combined-board
+        name: cargo clippy (eye, combined-board)
         language: system
-        entry: cargo clippy --manifest-path firmware/eye/Cargo.toml --features input-board -- -D warnings
+        entry: cargo clippy --manifest-path firmware/eye/Cargo.toml --features combined-board -- -D warnings
         files: ^firmware/
         pass_filenames: false
 

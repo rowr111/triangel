@@ -13,14 +13,14 @@ pub const LED_BIO_PIN_2: u8 = 5;
 pub const AUDIO_UART_RX_PORT: IoxPort = IoxPort::PB;
 pub const AUDIO_UART_RX_PIN:  u8      = 13;
 
-// D-pad and 3-position sound switch. Without the `input-board` feature they are wired to
-// eye GPIOs; with it they sit behind an I2C expander on a separate board. The IR sensor
-// is on PC8 either way.
+// D-pad and 3-position sound switch. They sit behind an I2C expander on the separate input
+// board; with the `combined-board` feature they are wired to eye GPIOs. The IR sensor is
+// on PC8 either way.
 
-#[cfg(not(feature = "input-board"))]
+#[cfg(feature = "combined-board")]
 pub use combined_board::*;
 
-#[cfg(not(feature = "input-board"))]
+#[cfg(feature = "combined-board")]
 mod combined_board {
     use super::IoxPort;
 
@@ -45,10 +45,10 @@ mod combined_board {
     pub const SW_OFF_PIN:  u8      = 2;
 }
 
-#[cfg(feature = "input-board")]
+#[cfg(not(feature = "combined-board"))]
 pub use input_board::*;
 
-#[cfg(feature = "input-board")]
+#[cfg(not(feature = "combined-board"))]
 mod input_board {
     use super::IoxPort;
 

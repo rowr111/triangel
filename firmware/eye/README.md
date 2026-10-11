@@ -65,7 +65,7 @@ Build via the Baochip VSCode extension (`buildMode: out-of-tree`). Optional feat
 |---|---|
 | `previewer` | Send LED frames over USB serial to the browser simulator instead of driving WS2812, and take on-screen control input |
 | `bringup` | Stream boot stages, a heartbeat, audio link stats and IR activity over USB serial. Silent when combined with `previewer`, whose serial stream is binary |
-| `input-board` | Read the d-pad and switch from the separate input board (MCP23008 over I2C) instead of eye GPIOs |
+| `combined-board` | For the older all-in-one controller board: read the d-pad and switch from eye GPIOs. Without it they are read from the separate input board (MCP23008 over I2C) |
 
 ## Using the previewer
 

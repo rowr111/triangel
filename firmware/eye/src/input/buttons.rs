@@ -3,11 +3,11 @@ use crate::setlist::SoundMode;
 
 // Where the seven panel inputs are read from. The source module owns the wiring details -
 // which pins or which expander bits, and which polarity - and hands back normalized state.
-#[cfg(not(feature = "input-board"))]
+#[cfg(feature = "combined-board")]
 #[path = "buttons/gpio.rs"]
 mod source;
 
-#[cfg(feature = "input-board")]
+#[cfg(not(feature = "combined-board"))]
 #[path = "buttons/expander.rs"]
 mod source;
 
