@@ -1,4 +1,4 @@
-use crate::patterns::{Frame, Pattern, Rng, cycle, knuth_hash, lerp, mix_rgb, phase_phasors, ramp, sin_sum, PHASE_STEPS};
+use crate::patterns::{Frame, Pattern, Rng, cycle, knuth_hash, lerp, mix_rgb, phase_phasors, ramp, random_u32, sin_sum, PHASE_STEPS};
 use crate::led::geom::{LATTICE_ROW_H, LATTICE_SIDE, LATTICE_TOP_Y};
 use crate::led::grid::{self, CELL_MM};
 use crate::audio::Audio;
@@ -107,6 +107,7 @@ pub struct Squall {
     slots:   [StrikeSlot; BOLT_SLOTS],
     rng:     Rng,
     last_ms: Option<u32>, // None until the first render
+    seed:    u32,         // new each time it comes on screen, so the blooms differ
     // sin and cos of the per-LED part of the boil's two inner sines.
     by_sin: [f32; LED_COUNT],
     by_cos: [f32; LED_COUNT],
@@ -145,6 +146,7 @@ impl Squall {
             slots,
             rng,
             last_ms: None,
+            seed: 0,
             by_sin: core::array::from_fn(|i| (LED_MAP[i].wy * k * BOIL_CROSS_Y).sin()),
             by_cos: core::array::from_fn(|i| (LED_MAP[i].wy * k * BOIL_CROSS_Y).cos()),
             bx_sin: core::array::from_fn(|i| (LED_MAP[i].wx * k * BOIL_CROSS_X).sin()),
@@ -267,6 +269,7 @@ impl Squall {
 
 impl Pattern for Squall {
     fn on_enter(&mut self, t_ms: u32) {
+        self.seed = random_u32();
         // Restart the timers so they do not all fire at once after time off screen.
         for slot in &mut self.slots {
             slot.gap_start_ms = t_ms;
@@ -303,7 +306,7 @@ impl Pattern for Squall {
         for (k, b) in blooms.iter_mut().enumerate() {
             let period = BLOOM_PERIOD_MS + k as u32 * BLOOM_STAGGER_MS;
             let p = cycle(t_ms, period);
-            let h = knuth_hash(t_ms / period) ^ (k as u32).wrapping_mul(0x9E37_79B9);
+            let h = knuth_hash((t_ms / period) ^ self.seed) ^ (k as u32).wrapping_mul(0x9E37_79B9);
             let y = WORLD_TOP + ((h >> 10) % 1000) as f32 / 1000.0 * WORLD_H;
             let hw = (WORLD_BOT - y) / WORLD_H * WORLD_HALF_W + 40.0; // triangle width at y
             let x = WORLD_CX + ((h % 1000) as f32 / 1000.0 * 2.0 - 1.0) * hw;

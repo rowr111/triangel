@@ -95,6 +95,8 @@ pub struct ApexFlame {
     flare_board:    u32,
     flare_start_ms: u32,
     flare_gap_ms:   u32,
+    /// New each time the pattern comes on screen, so its embers differ.
+    seed: u32,
 }
 
 impl ApexFlame {
@@ -138,6 +140,7 @@ impl ApexFlame {
             flare_board:    1,
             flare_start_ms: 0,
             flare_gap_ms:   0,
+            seed: 0,
         }
     }
 }
@@ -153,6 +156,10 @@ fn sin_sum_q12(a_sin: i16, a_cos: i16, b_sin: i32, b_cos: i32) -> i32 {
 }
 
 impl Pattern for ApexFlame {
+    fn on_enter(&mut self, _t_ms: u32) {
+        self.seed = random_u32();
+    }
+
     fn render(&mut self, t_ms: u32, _audio: &Audio, out: &mut Frame) {
         // Each time term wraps at its own period first, so the f32 stays precise.
         let wl2  = self.wavelength * SECOND_WAVELENGTH_RATIO;
@@ -183,7 +190,7 @@ impl Pattern for ApexFlame {
         for (k, ember) in embers.iter_mut().enumerate() {
             let period = EMBER_PERIOD_MS + k as u32 * EMBER_STAGGER_MS;
             let phase = cycle(t_ms, period);
-            let h = knuth_hash(t_ms / period) ^ (k as u32).wrapping_mul(0x9E37_79B9);
+            let h = knuth_hash((t_ms / period) ^ self.seed) ^ (k as u32).wrapping_mul(0x9E37_79B9);
             let y0 = WORLD_BOT - 6.0 - ((h >> 8) % 130) as f32;
             let half_w = (WORLD_BOT - y0) / WORLD_H * 250.0; // triangle half-width at y0
             let x0 = WORLD_CX + ((h % 201) as f32 - 100.0) / 100.0 * half_w;

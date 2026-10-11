@@ -1,5 +1,5 @@
 use crate::audio::Audio;
-use crate::patterns::{Frame, Pattern, cycle, fold_ms, hash2, hsv, sin_sum, smoothstep, wrap360};
+use crate::patterns::{Frame, Pattern, cycle, fold_ms, hash2, hsv, random_u32, sin_sum, smoothstep, wrap360};
 use crate::led::map::{Led, LED_COUNT, LED_MAP};
 use core::f32::consts::{PI, TAU};
 
@@ -58,6 +58,8 @@ pub struct Effervesce {
     // sin and cos of each LED's glitter phase.
     ph_sin: [f32; LED_COUNT],
     ph_cos: [f32; LED_COUNT],
+    /// New each time the pattern comes on screen, so its shapes differ.
+    seed: u32,
 }
 
 impl Effervesce {
@@ -69,13 +71,18 @@ impl Effervesce {
         Effervesce {
             ph_sin: core::array::from_fn(|i| phase(i).sin()),
             ph_cos: core::array::from_fn(|i| phase(i).cos()),
+            seed: 0,
         }
     }
 }
 
 impl Pattern for Effervesce {
+    fn on_enter(&mut self, _t_ms: u32) {
+        self.seed = random_u32();
+    }
+
     fn render(&mut self, t_ms: u32, _audio: &Audio, out: &mut Frame) {
-        let elems: [Elem; ELEMENTS] = core::array::from_fn(|s| make_elem(s, t_ms));
+        let elems: [Elem; ELEMENTS] = core::array::from_fn(|s| make_elem(s, t_ms, self.seed));
 
         let base_hue = cycle(t_ms, HUE_DRIFT_MS) * 360.0;
         let (base_shue, base_chue) = base_hue.to_radians().sin_cos();
@@ -125,7 +132,7 @@ impl Pattern for Effervesce {
 }
 
 /// Slot `s`'s current shape, from time and hashes.
-fn make_elem(s: usize, t_ms: u32) -> Elem {
+fn make_elem(s: usize, t_ms: u32, show_seed: u32) -> Elem {
     // Each slot has its own lifetime and start offset, so the slots do not respawn together.
     let slot_seed = hash2(s as u32 + 1, 0x5EED);
     let life  = LIFETIME_MIN_MS + slot_seed % (LIFETIME_MAX_MS - LIFETIME_MIN_MS);
@@ -133,7 +140,7 @@ fn make_elem(s: usize, t_ms: u32) -> Elem {
     let gen   = local / life;
     let age   = (local % life) as f32 / life as f32;
 
-    let seed = hash2(s as u32 + 1, gen);
+    let seed = hash2(s as u32 + 1, gen ^ show_seed);
     let led  = &LED_MAP[(seed as usize) % LED_COUNT];
     let kind = ((seed >> 8) % 3) as u8;
     let ang0 = ((seed >> 12) & 0xFFFF) as f32 / 65_536.0 * TAU;

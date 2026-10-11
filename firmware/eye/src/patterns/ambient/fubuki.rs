@@ -1,5 +1,5 @@
 use crate::audio::Audio;
-use crate::patterns::{Frame, Pattern, cycle, fold_ms, hash2, hsv, lerp, sin_sum, wrap360};
+use crate::patterns::{Frame, Pattern, cycle, fold_ms, hash2, hsv, lerp, random_u32, sin_sum, wrap360};
 use crate::led::grid::{self, CELL_MM};
 use crate::led::map::{WORLD_TOP, WORLD_BOT, WORLD_H, WORLD_CX, LED_COUNT, LED_MAP};
 use crate::led::world::{WORLD_LEFT, WORLD_RIGHT};
@@ -78,6 +78,7 @@ struct Flake {
 
 pub struct Fubuki {
     origin_ms: u32, // t_ms when the pattern last came on screen
+    seed:      u32, // new each time it comes on screen, so the snowfall differs
     // Strongest flake on each LED this frame, and its hue and saturation.
     flake_e: [f32; LED_COUNT],
     flake_h: [f32; LED_COUNT],
@@ -98,7 +99,8 @@ impl Fubuki {
         let pulse_at = |hp: u32| (hp >> 17 & 0x1FF) as f32 / 512.0 * TAU;
         Fubuki {
             origin_ms: 0,
-            flake_e:   [0.0; LED_COUNT],
+            seed:      0,
+            flake_e:  [0.0; LED_COUNT],
             flake_h:   [0.0; LED_COUNT],
             flake_s:   [0.0; LED_COUNT],
             led_hash,
@@ -114,6 +116,7 @@ impl Pattern for Fubuki {
     fn on_enter(&mut self, t_ms: u32) {
         // Start over from an empty triangle.
         self.origin_ms = t_ms;
+        self.seed = random_u32();
     }
 
     fn render(&mut self, t_ms: u32, _audio: &Audio, out: &mut Frame) {
@@ -148,7 +151,7 @@ impl Pattern for Fubuki {
 
         // Flakes land on whichever pile is higher.
         let surface = line_c.min(line_p);
-        let flakes: [Flake; FLAKES] = core::array::from_fn(|i| make_flake(i, local, surface, prev, season, nf));
+        let flakes: [Flake; FLAKES] = core::array::from_fn(|i| make_flake(i, local, self.seed, surface, prev, season, nf));
 
         // Keep the strongest flake per LED.
         let reach = (FLAKE_R_MM / CELL_MM).ceil() as usize;
@@ -204,7 +207,7 @@ impl Pattern for Fubuki {
 }
 
 /// Flake `i`'s position and color this frame, from time and hashes.
-fn make_flake(i: usize, t_ms: u32, fill_y: f32, prev: &Season, new: &Season, nf: f32) -> Flake {
+fn make_flake(i: usize, t_ms: u32, seed: u32, fill_y: f32, prev: &Season, new: &Season, nf: f32) -> Flake {
     // Each slot has its own fall time and start offset, so the flakes do not drop together.
     let sseed  = hash2(i as u32 + 1, 0x0F1A);
     let period = FALL_MIN_MS + sseed % (FALL_MAX_MS - FALL_MIN_MS);
@@ -212,7 +215,7 @@ fn make_flake(i: usize, t_ms: u32, fill_y: f32, prev: &Season, new: &Season, nf:
     let gen    = local / period;
     let fp     = cycle(local, period); // 0 at the top, 1 at the pile
 
-    let g       = hash2(i as u32 + 1, gen);
+    let g       = hash2(i as u32 + 1, gen ^ seed);
     // Across the fixture, a little in from each side.
     let spawn_x = WORLD_LEFT + 10.0 + (g % (WORLD_RIGHT - WORLD_LEFT - 15.0) as u32) as f32;
     let sway_ph = (g >> 8 & 0xFF) as f32 / 255.0 * TAU;
