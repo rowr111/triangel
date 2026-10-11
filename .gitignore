@@ -3,7 +3,9 @@ target/
 
 # Node
 node_modules/
-package-lock.json
+
+# Previewer: the serial port differs per machine
+bridge.config.json
 
 # Python
 __pycache__/
@@ -26,5 +28,4 @@ __pycache__/
 # OS
 .DS_Store
 Thumbs.db
-*.pyc
 *.code-workspace
