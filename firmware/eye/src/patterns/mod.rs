@@ -230,8 +230,11 @@ impl Rng {
         (self.next_u32() >> 8) as f32 / 16_777_216.0
     }
 
-    /// Uniform whole number in [min, max).
+    /// Uniform whole number in [min, max), or `min` if the range is empty.
     pub fn range_u32(&mut self, min: u32, max: u32) -> u32 {
+        if max <= min {
+            return min;
+        }
         min + self.next_u32() % (max - min)
     }
 
