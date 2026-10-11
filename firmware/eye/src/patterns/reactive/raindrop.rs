@@ -35,7 +35,6 @@ const BEAT_MISSES: u8 = 4;
 pub struct Raindrop {
     ripples:      Ripples,
     armed:        bool,
-    last_drop_ms: u32,
     /// Beat period, or 0 when no tempo has been found.
     beat_ms:         f32,
     last_trigger_ms: u32,
@@ -48,7 +47,6 @@ impl Raindrop {
         Raindrop {
             ripples:      Ripples::new(0x9E37_79B9, STYLE),
             armed:        true,
-            last_drop_ms: 0,
             beat_ms:         0.0,
             last_trigger_ms: 0,
             misses:          0,
@@ -103,14 +101,13 @@ impl Raindrop {
         };
         let count = rng.range_f32(RINGS_MIN, RINGS_MAX);
         self.ripples.land(spot, t_ms, strength, spacing, count);
-        self.last_drop_ms = t_ms;
     }
 }
 
 impl Pattern for Raindrop {
     fn render(&mut self, t_ms: u32, audio: &Audio, out: &mut Frame) {
         let hit = audio.rise[..BASS_BANDS].iter().copied().fold(0.0f32, f32::max);
-        let clear = t_ms.wrapping_sub(self.last_drop_ms) >= REFRACTORY_MS;
+        let clear = t_ms.wrapping_sub(self.last_trigger_ms) >= REFRACTORY_MS;
         if self.armed && hit >= TRIGGER && clear {
             self.armed = false;
             let strength = ((hit - TRIGGER) / (1.0 - TRIGGER)).clamp(0.0, 1.0);

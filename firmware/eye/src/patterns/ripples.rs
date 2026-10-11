@@ -34,7 +34,7 @@ pub struct Spot {
     hue: f32,
 }
 
-struct Drop {
+struct Droplet {
     x:        f32,
     y:        f32,
     start_ms: u32,
@@ -46,7 +46,7 @@ struct Drop {
     alive:    bool,
 }
 
-impl Drop {
+impl Droplet {
     /// Leading-edge radius, how young the drop is (1 to 0), and ring brightness at `t_ms`.
     fn front(&self, t_ms: u32, s: &RippleStyle) -> (f32, f32, f32) {
         let r = s.start_radius_mm + t_ms.wrapping_sub(self.start_ms) as f32 * s.ripple_speed;
@@ -88,7 +88,7 @@ struct Ring {
 pub struct Ripples {
     rng:   Rng,
     style: RippleStyle,
-    drops: [Drop; MAX_DROPS],
+    drops: [Droplet; MAX_DROPS],
 }
 
 impl Ripples {
@@ -96,7 +96,7 @@ impl Ripples {
         Ripples {
             rng: Rng::new(seed),
             style,
-            drops: core::array::from_fn(|_| Drop {
+            drops: core::array::from_fn(|_| Droplet {
                 x: 0.0, y: 0.0, start_ms: 0, strength: 0.0, hue: HUE_MIN,
                 spacing: 0.0, train: 0.0, alive: false,
             }),
@@ -123,7 +123,7 @@ impl Ripples {
             let glow = |i: &usize| self.drops[*i].glow(t_ms, &self.style);
             (0..MAX_DROPS).min_by(|a, b| glow(a).total_cmp(&glow(b))).unwrap_or(0)
         });
-        self.drops[slot] = Drop {
+        self.drops[slot] = Droplet {
             x: spot.x,
             y: spot.y,
             start_ms: t_ms,
