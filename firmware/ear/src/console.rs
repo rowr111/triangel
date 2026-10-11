@@ -33,7 +33,7 @@ const READY_MS: usize = 1500;
 /// Samples discarded before a measurement, so it starts on fresh, settled audio.
 const SETTLE_SAMPLES:       usize = RAW_RATE_HZ as usize / 5;  // 200 ms
 const METER_SETTLE_SAMPLES: usize = RAW_RATE_HZ as usize / 20; // 50 ms, between windows
-/// Samples read between clock checks. Reading the clock is a syscall, too slow to do per sample.
+/// Samples read between clock checks; the clock is a syscall, too slow per sample.
 const SAMPLE_BLOCK: usize = 256;
 /// Full scale for a sign-extended 24-bit sample.
 const FULL_SCALE_RAW: f64 = 8_388_608.0;
@@ -49,8 +49,7 @@ const COMMAND_POLL_MS: usize = 20;
 const NO_SAMPLES: &str = "no samples: the BIO core is not pushing anything";
 const STARVED:    &str = "recording starved - the BIO stopped pushing partway";
 
-/// The keystroke waiting to be run, or 0. The mic is not `Send`, so the console thread
-/// hands the key to the audio thread and waits.
+/// The key waiting to be run, or 0. The audio thread runs it: the mic is not `Send`.
 static PENDING: AtomicU32 = AtomicU32::new(0);
 
 /// Latest filterbank cost in microseconds, published by the audio loop for `p`.
@@ -110,8 +109,7 @@ pub fn spawn() {
     });
 }
 
-/// Run the command the console thread has read, if any. Called by the audio loop between
-/// frames, so the eye link goes quiet only while a command runs.
+/// Run the waiting command, if any. Called by the audio loop between frames.
 pub fn service(d: &Diag, tt: &ticktimer::Ticktimer, mic: &mut I2sAudio) {
     let pending = PENDING.load(Ordering::Acquire);
     if pending == 0 {
@@ -221,8 +219,7 @@ fn raw_dump(d: &Diag, mic: &mut I2sAudio) {
     d.line("sign = working");
 }
 
-/// Count raw samples for a second. A rate off by a clean factor points at the BIO clock
-/// divider, not the mic.
+/// Count raw samples for a second.
 fn rate_check(d: &Diag, tt: &ticktimer::Ticktimer, mic: &mut I2sAudio) {
     mic.flush();
     let start = tt.elapsed_ms();
@@ -231,7 +228,7 @@ fn rate_check(d: &Diag, tt: &ticktimer::Ticktimer, mic: &mut I2sAudio) {
 
     'measure: loop {
         for _ in 0..SAMPLE_BLOCK {
-            // One timeout is conclusive: in a tight drain loop the FIFO never stays empty that long.
+            // One timeout is enough: a drained FIFO never stays empty that long.
             if mic.try_read_raw().is_none() {
                 starved = true;
                 break 'measure;
@@ -249,20 +246,18 @@ fn rate_check(d: &Diag, tt: &ticktimer::Ticktimer, mic: &mut I2sAudio) {
     d.line(&format!("{} samples in {} ms = {} Hz (expected {})",
         count, elapsed, rate, expected));
 
-    if starved {
-        d.line("a read timed out on an empty FIFO - the BIO stopped pushing partway");
-    }
     if count == 0 {
-        d.line("nothing arriving at all: check the pin mux, and that BCLK (PB1) and");
-        d.line("WS (PB3) are really toggling - 3.072 MHz and 48 kHz respectively");
+        d.line("nothing arriving at all: check that BCLK (PB1) and WS (PB3) are really");
+        d.line("toggling - 3.072 MHz and 48 kHz respectively");
+    } else if starved {
+        d.line("a read timed out on an empty FIFO - the BIO stopped pushing partway");
     } else if rate * 4 < expected * 3 || rate * 3 > expected * 4 {
         d.line("rate is off by a large factor: suspect the BIO quantum divider,");
         d.line("not the mic");
     }
 }
 
-/// A second of statistics, raw and as the i16 the pipeline sees, so a signal too small to
-/// survive the 24 to 16 bit conversion shows as such.
+/// A second of statistics, raw and as the i16 the pipeline sees.
 fn stats(d: &Diag, tt: &ticktimer::Ticktimer, mic: &mut I2sAudio) {
     if !settle(mic, SETTLE_SAMPLES) {
         d.line(NO_SAMPLES);
@@ -318,7 +313,7 @@ fn stats(d: &Diag, tt: &ticktimer::Ticktimer, mic: &mut I2sAudio) {
     d.line(&format!("          : roughly {:.0} dB SPL", db + DBFS_TO_SPL));
 
     // The ICS43434 leaves bit 0 unused, so one stuck low bit is expected. Bit 23 always set
-    // means the capture window opens a cycle early and reads the idle-high data line.
+    // while bit 22 changes means the capture window opens a cycle early.
     d.line(&format!("bits      : any-set {:08x} all-set {:08x}", any_set, all_set));
     if any_set == 0 {
         d.line("every bit was zero for the whole window - the data line never went high");
@@ -330,7 +325,7 @@ fn stats(d: &Diag, tt: &ticktimer::Ticktimer, mic: &mut I2sAudio) {
         d.line("every bit was high in every sample - nothing is driving the data line.");
         d.line("Check the wiring, and that the mic's channel select is tied to GND so it");
         d.line("transmits in the half of the frame we read.");
-    } else if all_set & 0x0080_0000 != 0 {
+    } else if all_set & 0x00C0_0000 == 0x0080_0000 {
         d.line("bit 23 was set in every sample - the capture window is opening too early");
         d.line("and reading the idle data line instead of the mic's first bit");
     }
@@ -341,7 +336,7 @@ fn stats(d: &Diag, tt: &ticktimer::Ticktimer, mic: &mut I2sAudio) {
     }
 }
 
-/// Live level. Each window settles briefly first, so it starts on fresh samples.
+/// Live level, each window on fresh samples.
 fn meter(d: &Diag, tt: &ticktimer::Ticktimer, mic: &mut I2sAudio) {
     d.line(&format!("live level for {} s - clap, talk, play music", METER_MS / 1000));
     d.line("(if this looks unresponsive, use c - it records without stopping to print)");
@@ -357,8 +352,7 @@ fn meter(d: &Diag, tt: &ticktimer::Ticktimer, mic: &mut I2sAudio) {
     }
 }
 
-/// Record silently, then report. With no output during recording the drain never pauses,
-/// so no samples are dropped.
+/// Record silently, then report, so printing cannot drop samples.
 fn capture(d: &Diag, mic: &mut I2sAudio) {
     d.line(&format!("recording {} s silently - make noise NOW (clap, talk, music)",
         CAPTURE_WINDOWS * WINDOW_SAMPLES / RAW_RATE_HZ as usize));
@@ -410,8 +404,7 @@ fn capture(d: &Diag, mic: &mut I2sAudio) {
     }
 }
 
-/// A quiet second against a noisy one, compared per octave band. Noise in the other bands
-/// does not mask the one the sound lands in, so this is more sensitive than `c`.
+/// A quiet second against a noisy one, per octave band. More sensitive than `c`.
 fn spectrum(d: &Diag, tt: &ticktimer::Ticktimer, mic: &mut I2sAudio) {
     if !settle(mic, SETTLE_SAMPLES) {
         d.line(NO_SAMPLES);
@@ -531,8 +524,7 @@ impl Bandpass {
     }
 }
 
-/// RMS about the mean and absolute peak over one window of raw samples. None if
-/// the BIO stopped pushing partway.
+/// RMS and absolute peak over one window of raw samples. None if the BIO stopped.
 fn window_rms(mic: &mut I2sAudio, samples: usize) -> Option<(f64, i32)> {
     let (mut sum, mut sumsq) = (0i64, 0i64);
     let mut peak = 0i32;
@@ -546,11 +538,10 @@ fn window_rms(mic: &mut I2sAudio, samples: usize) -> Option<(f64, i32)> {
     Some((rms, peak))
 }
 
-/// The mean of `n` samples, and their RMS about that mean, so the mic's DC offset does not
-/// inflate the reading.
+/// The mean of `n` samples, and their RMS about that mean.
 fn mean_and_rms(sum: i64, sumsq: i64, n: i64) -> (i64, f64) {
-    let mean = sum / n;
-    (mean, ((sumsq / n - mean * mean).max(0) as f64).sqrt())
+    let mean = sum as f64 / n as f64;
+    (sum / n, (sumsq as f64 / n as f64 - mean * mean).max(0.0).sqrt())
 }
 
 /// Level in dBFS for an RMS expressed in units of the given full scale.

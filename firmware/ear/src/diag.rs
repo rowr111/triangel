@@ -65,13 +65,13 @@ impl Diag {
     pub fn command(&self) -> char {
         self.usb.serial_send(b"\r\nmic> ").ok();
         loop {
-            for b in self.usb.serial_wait_binary() {
-                RX_BYTES.fetch_add(1, Ordering::Relaxed);
-                if b.is_ascii_graphic() {
-                    // Echo it back - the monitor runs with local echo off.
-                    self.usb.serial_send(&[b, b'\r', b'\n']).ok();
-                    return b as char;
-                }
+            let batch = self.usb.serial_wait_binary();
+            RX_BYTES.fetch_add(batch.len() as u32, Ordering::Relaxed);
+            // The newest key wins; anything typed before it is dropped.
+            if let Some(&b) = batch.iter().rev().find(|b| b.is_ascii_graphic()) {
+                // Echo it back - the monitor runs with local echo off.
+                self.usb.serial_send(&[b, b'\r', b'\n']).ok();
+                return b as char;
             }
         }
     }
