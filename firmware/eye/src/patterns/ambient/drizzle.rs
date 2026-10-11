@@ -46,11 +46,11 @@ impl Pattern for Drizzle {
             // Squared, so most drops are soft.
             let hard = r.rng().f32();
             let strength = STRENGTH_MIN + hard * hard * (STRENGTH_MAX - STRENGTH_MIN);
-            let spacing = SPACING_MIN_MM + r.rng().f32() * (SPACING_MAX_MM - SPACING_MIN_MM);
-            let count = RINGS_MIN + r.rng().f32() * (RINGS_MAX - RINGS_MIN);
+            let spacing = r.rng().range_f32(SPACING_MIN_MM, SPACING_MAX_MM);
+            let count = r.rng().range_f32(RINGS_MIN, RINGS_MAX);
             r.land(spot, t_ms, strength, spacing, count);
             self.last_ms = t_ms;
-            self.gap_ms = (GAP_MIN_MS + r.rng().f32() * (GAP_MAX_MS - GAP_MIN_MS)) as u32;
+            self.gap_ms = r.rng().range_f32(GAP_MIN_MS, GAP_MAX_MS) as u32;
         }
         self.ripples.draw(t_ms, out);
     }

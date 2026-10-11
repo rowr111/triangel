@@ -32,7 +32,6 @@ const GLINTS: GlintStyle = GlintStyle {
 
 pub struct Rainbow {
     glints:  Glints,
-    last_ms: u32,
     // Fixed per LED: sin and cos of its ripple angle, its place on the hue wheel (0-1)
     // and its tile hash.
     ripple_sin: [f32; LED_COUNT],
@@ -46,7 +45,6 @@ impl Rainbow {
         let ripple_at = |i: usize| DIST_C[i] / IRID_SPAN_MM * TAU;
         Rainbow {
             glints:     Glints::new(0x3C6E_F372, GLINTS),
-            last_ms:    0,
             ripple_sin: core::array::from_fn(|i| ripple_at(i).sin()),
             ripple_cos: core::array::from_fn(|i| ripple_at(i).cos()),
             hue_turn:   core::array::from_fn(|i| THETA_C[i] / TAU),
@@ -57,9 +55,6 @@ impl Rainbow {
 
 impl Pattern for Rainbow {
     fn render(&mut self, t_ms: u32, _audio: &Audio, out: &mut Frame) {
-        let dt_ms = t_ms.wrapping_sub(self.last_ms).min(100);
-        self.last_ms = t_ms;
-
         let breathe = BREATHE * BREATHE_DEPTH * (cycle(t_ms, BREATHE_PERIOD_MS) * TAU).sin();
         let spin = cycle(t_ms, SPIN_PERIOD_MS) + breathe;
         let twinkle_ph = fold_ms(t_ms, TWINKLE_RATE) * TWINKLE_RATE;
@@ -77,6 +72,6 @@ impl Pattern for Rainbow {
             *px = hsv(wrap360(hue), 1.0, 1.0 - TWINKLE * dip);
         }
 
-        self.glints.update(t_ms, dt_ms, out);
+        self.glints.update(t_ms, out);
     }
 }

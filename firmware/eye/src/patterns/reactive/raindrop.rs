@@ -99,9 +99,9 @@ impl Raindrop {
             (RIPPLE_SPEED * self.beat_ms * div)
                 .clamp(SPACING_LOCKED_MIN_MM, SPACING_LOCKED_MAX_MM)
         } else {
-            SPACING_MIN_MM + rng.f32() * (SPACING_MAX_MM - SPACING_MIN_MM)
+            rng.range_f32(SPACING_MIN_MM, SPACING_MAX_MM)
         };
-        let count = RINGS_MIN + rng.f32() * (RINGS_MAX - RINGS_MIN);
+        let count = rng.range_f32(RINGS_MIN, RINGS_MAX);
         self.ripples.land(spot, t_ms, strength, spacing, count);
         self.last_drop_ms = t_ms;
     }

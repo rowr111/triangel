@@ -119,7 +119,7 @@ impl Firework {
         let offset = self.rng.f32() * TAU;
         for k in 0..count {
             let angle = offset + step * k as f32 + (self.rng.f32() - 0.5) * step;
-            let speed = SPEED_MIN + self.rng.f32() * (SPEED_MAX - SPEED_MIN);
+            let speed = self.rng.range_f32(SPEED_MIN, SPEED_MAX);
             let (sn, cs) = angle.sin_cos();
             let slot = free_or_oldest(&self.sparks, t_ms, |s| !s.alive, |s| s.start_ms);
             self.sparks[slot] = Spark {

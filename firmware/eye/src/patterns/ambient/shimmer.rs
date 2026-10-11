@@ -29,7 +29,7 @@ const SPEED_CHANGE_MAX_MS: u32 = 14_000;
 const SPEED_EASE_MS:       i32 = 2_000; // roughly how long the change takes
 
 const GLINTS: GlintStyle = GlintStyle {
-    tries_per_sec: 14.0, // about half land, since brighter LEDs are likelier to take one
+    tries_per_sec: 14.0, // about half succeed, since brighter LEDs are likelier to take one
     min_ms:        250,  // fade time
     max_ms:        450,
     white:         0.75, // how far toward white a glint starts
@@ -111,13 +111,13 @@ impl CenterShimmer {
 
     /// A new ring's brightness at its darkest, 0-255.
     fn random_dark(&mut self) -> u8 {
-        ((DARK_MIN + self.rng.f32() * (DARK_MAX - DARK_MIN)) * 255.0) as u8
+        (self.rng.range_f32(DARK_MIN, DARK_MAX) * 255.0) as u8
     }
 
     /// Eases the speed toward its target, moves the wave, and picks a darkness for each new ring.
     fn advance_wave(&mut self, t_ms: u32, dt_ms: u32) {
         if t_ms.wrapping_sub(self.speed_pick_ms) >= self.speed_gap_ms {
-            let m = SPEED_MIN + self.rng.f32() * (SPEED_MAX - SPEED_MIN);
+            let m = self.rng.range_f32(SPEED_MIN, SPEED_MAX);
             self.speed_target_q8 = (self.speed * m * 256.0) as i32;
             self.speed_pick_ms = t_ms;
             self.speed_gap_ms = SPEED_CHANGE_MIN_MS
@@ -188,6 +188,6 @@ impl Pattern for CenterShimmer {
             *o = hsv_q(hue as i32, v);
         }
 
-        self.glints.update(t_ms, dt_ms, out);
+        self.glints.update(t_ms, out);
     }
 }

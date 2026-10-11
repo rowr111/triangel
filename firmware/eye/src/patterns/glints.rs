@@ -6,7 +6,7 @@ const MAX_GLINTS: usize = 24;
 /// How a pattern's glints look.
 #[derive(Clone, Copy)]
 pub struct GlintStyle {
-    /// Tries per second. A try on a brighter LED is likelier to land.
+    /// Tries per second. A try on a brighter LED is likelier to succeed.
     pub tries_per_sec: f32,
     /// Fade time range.
     pub min_ms: u32,
@@ -29,6 +29,7 @@ pub struct Glints {
     rng:    Rng,
     glints: [Glint; MAX_GLINTS],
     tries:  f32, // fractional tries carried to the next frame
+    last_ms: u32,
 }
 
 impl Glints {
@@ -38,12 +39,16 @@ impl Glints {
             rng: Rng::new(seed),
             glints: [Glint { led: 0, start_ms: 0, life_ms: 0 }; MAX_GLINTS],
             tries: 0.0,
+            last_ms: 0,
         }
     }
 
     /// Starts new glints, then blends every live one toward white.
-    pub fn update(&mut self, t_ms: u32, dt_ms: u32, out: &mut Frame) {
+    pub fn update(&mut self, t_ms: u32, out: &mut Frame) {
         let s = self.style;
+        // Capped so a long gap cannot start a burst of tries.
+        let dt_ms = t_ms.wrapping_sub(self.last_ms).min(100);
+        self.last_ms = t_ms;
         self.tries += dt_ms as f32 * s.tries_per_sec / 1000.0;
         while self.tries >= 1.0 {
             self.tries -= 1.0;

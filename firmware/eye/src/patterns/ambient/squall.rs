@@ -122,10 +122,10 @@ impl Squall {
     pub fn new() -> Self {
         let mut rng = Rng::new(0x5EED_5EA5);
         let clouds = core::array::from_fn(|_| {
-            let x = lerp(WORLD_LEFT, WORLD_RIGHT, rng.f32());
-            let y = lerp(WORLD_TOP, WORLD_BOT, rng.f32());
+            let x = rng.range_f32(WORLD_LEFT, WORLD_RIGHT);
+            let y = rng.range_f32(WORLD_TOP, WORLD_BOT);
             let ang = rng.f32() * TAU;
-            let speed = lerp(CLOUD_SPEED_MIN, CLOUD_SPEED_MAX, rng.f32());
+            let speed = rng.range_f32(CLOUD_SPEED_MIN, CLOUD_SPEED_MAX);
             let (vx, vy) = (ang.cos() * speed, ang.sin() * speed);
             Cloud {
                 x, y, vx, vy, tvx: vx, tvy: vy,
@@ -162,7 +162,7 @@ impl Squall {
         for c in clouds.iter_mut() {
             if t_ms.wrapping_sub(c.retarget_start_ms) >= c.retarget_len_ms {
                 let ang = rng.f32() * TAU;
-                let speed = lerp(CLOUD_SPEED_MIN, CLOUD_SPEED_MAX, rng.f32());
+                let speed = rng.range_f32(CLOUD_SPEED_MIN, CLOUD_SPEED_MAX);
                 c.tvx = ang.cos() * speed;
                 c.tvy = ang.sin() * speed;
                 c.retarget_start_ms = t_ms;
@@ -468,7 +468,7 @@ fn respawn(c: &mut Cloud, rng: &mut Rng, t_ms: u32) {
     let ty = lerp(WORLD_TOP, WORLD_BOT, 0.25 + 0.5 * rng.f32());
     let (dx, dy) = (tx - x, ty - y);
     let len = (dx * dx + dy * dy).sqrt().max(1.0);
-    let speed = lerp(CLOUD_SPEED_MIN, CLOUD_SPEED_MAX, rng.f32());
+    let speed = rng.range_f32(CLOUD_SPEED_MIN, CLOUD_SPEED_MAX);
     c.x = x;
     c.y = y;
     c.vx = dx / len * speed;

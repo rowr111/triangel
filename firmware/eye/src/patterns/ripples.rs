@@ -92,7 +92,7 @@ impl Ripples {
     pub fn spot(&mut self) -> Spot {
         let pick = self.rng.below(LED_COUNT);
         let (x, y) = (LED_MAP[pick].wx, LED_MAP[pick].wy);
-        let hue = HUE_MIN + self.rng.f32() * (HUE_MAX - HUE_MIN);
+        let hue = self.rng.range_f32(HUE_MIN, HUE_MAX);
         Spot { x, y, hue }
     }
 
