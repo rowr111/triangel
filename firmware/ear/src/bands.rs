@@ -1,9 +1,10 @@
 //! Turns each frame of microphone samples into a `BandFrame`: the level in 24 frequency
 //! bands from 40 Hz to 12 kHz, plus the overall level.
 //!
-//! Each band is a third of an octave wide: its edges are a fixed ratio apart, not a fixed
-//! number of Hz. Equal-width bands, or the mel scale, would put a kick drum near 50 Hz
-//! and a voice near 120 Hz in the same band. Here they land four bands apart.
+//! Band centers are a third of an octave apart, a fixed ratio and not a fixed number of
+//! Hz, and each band covers two thirds. Equal-width bands, or the mel scale, would put a
+//! kick drum near 50 Hz and a voice near 120 Hz in the same band. Here they are four
+//! bands apart.
 
 use triangel_shared::frame::{level_to_wire, norm_to_wire, BandFrame, BAND_COUNT, LEVEL_DB_FLOOR};
 use triangel_shared::follow;
@@ -18,8 +19,8 @@ const SAMPLE_RATE: f32 = SAMPLE_RATE_HZ as f32;
 /// Lowest frequency covered. 40 Hz puts a kick drum's fundamental in the first bands.
 const BAND_LOW_HZ: f32 = 40.0;
 
-/// Highest frequency covered: half the 24 kHz sample rate.
-const BAND_HIGH_HZ: f32 = 12_000.0;
+/// Highest frequency covered: half the sample rate.
+const BAND_HIGH_HZ: f32 = SAMPLE_RATE / 2.0;
 
 // How fast the smoothed RMS behind the level rises and falls, per frame.
 const LEVEL_ATTACK: f32 = 0.8;
@@ -96,16 +97,20 @@ impl<const N: usize> RangeTracker<N> {
         let mut lowest  = [f32::MAX; EXTREME_COUNT];
         let mut highest = [f32::MIN; EXTREME_COUNT];
         for &sample in self.history[..self.filled].iter() {
-            let mut v = sample;
-            for slot in lowest[..count].iter_mut() {
-                if v < *slot {
-                    std::mem::swap(slot, &mut v);
+            if sample < lowest[count - 1] {
+                let mut v = sample;
+                for slot in lowest[..count].iter_mut() {
+                    if v < *slot {
+                        std::mem::swap(slot, &mut v);
+                    }
                 }
             }
-            let mut v = sample;
-            for slot in highest[..count].iter_mut() {
-                if v > *slot {
-                    std::mem::swap(slot, &mut v);
+            if sample > highest[count - 1] {
+                let mut v = sample;
+                for slot in highest[..count].iter_mut() {
+                    if v > *slot {
+                        std::mem::swap(slot, &mut v);
+                    }
                 }
             }
         }
@@ -129,7 +134,7 @@ fn edge_hz(i: usize) -> f32 {
 }
 
 /// Fraction bits of the fixed-point coefficients and signal (the chip has no FPU).
-/// a1 reaches -1.937, and a full-scale tone on a band center drives the state to 1.004.
+/// a1 reaches -1.994, and full-scale input drives a filter step to 2.54.
 const COEF_Q: u32 = 30;
 const SIG_Q: u32 = 28;
 
@@ -283,12 +288,8 @@ impl BandProcessor {
     /// Turn one frame of samples into a `BandFrame`.
     pub fn process(&mut self, samples: &[i16; FRAME_SAMPLES]) -> BandFrame {
         // Overall level: RMS of the raw samples, scaled to -1.0..1.0.
-        let rms = (samples
-            .iter()
-            .map(|&s| (s as f32 / 32768.0).powi(2))
-            .sum::<f32>()
-            / FRAME_SAMPLES as f32)
-            .sqrt();
+        let squares: u64 = samples.iter().map(|&s| (s as i32 * s as i32) as u64).sum();
+        let rms = (squares as f32 / (FRAME_SAMPLES as f32 * 32768.0 * 32768.0)).sqrt();
         // Rise fast and fall slowly, so the level does not flicker between beats.
         self.smoothed_rms = follow(self.smoothed_rms, rms, LEVEL_ATTACK, LEVEL_DECAY);
         // RMS is already normalized to full scale, so dBFS needs no calibration.
