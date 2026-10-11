@@ -22,6 +22,9 @@ const BAND_LOW_HZ: f32 = 40.0;
 /// Highest frequency covered: half the sample rate.
 const BAND_HIGH_HZ: f32 = SAMPLE_RATE / 2.0;
 
+/// Samples filtered but not measured at the start of each frame, after the gap in the audio.
+const SETTLE_SAMPLES: usize = 96;
+
 // How fast the smoothed RMS behind the level rises and falls, per frame.
 const LEVEL_ATTACK: f32 = 0.8;
 const LEVEL_DECAY: f32  = 0.4;
@@ -201,6 +204,14 @@ impl BandBank {
         Self { filters, energy: [0; BAND_COUNT], count: 0 }
     }
 
+    /// Run one sample through every band without measuring it.
+    #[inline]
+    fn settle(&mut self, sample: i32) {
+        for filter in self.filters.iter_mut() {
+            filter.step(sample);
+        }
+    }
+
     /// Run one sample through every band and accumulate its squared output.
     #[inline]
     fn push(&mut self, sample: i32) {
@@ -302,9 +313,14 @@ impl BandProcessor {
         self.level_ref.push(dbfs);
         let level_norm = norm_to_wire(self.level_ref.normalize(dbfs, LEVEL_MIN_SPAN_DB));
 
-        for &s in samples.iter() {
-            // i16 -> Q28: s/32768 scaled by 2^28 is exactly s << 13.
-            self.bank.push((s as i32) << (SIG_Q - 15));
+        // i16 -> Q28: s/32768 scaled by 2^28 is exactly s << 13.
+        let to_q28 = |s: i16| (s as i32) << (SIG_Q - 15);
+        let (settle, measured) = samples.split_at(SETTLE_SAMPLES);
+        for &s in settle {
+            self.bank.settle(to_q28(s));
+        }
+        for &s in measured {
+            self.bank.push(to_q28(s));
         }
         // Band energy in dB. The 1e-10 guards log(0) and floors silence at -100 dB.
         let mut band_db = [0f32; BAND_COUNT];
