@@ -3,7 +3,7 @@ use std::collections::VecDeque;
 use crate::led::map::LED_COUNT;
 use crate::patterns::transition::{self, TransitionStyle};
 use crate::audio::Audio;
-use crate::patterns::{Frame, Pattern, Rng, knuth_hash};
+use crate::patterns::{Frame, Pattern, Rng};
 use crate::patterns::ambient::{drizzle::Drizzle, effervesce::Effervesce, flame::ApexFlame, fubuki::Fubuki, rainbow::Rainbow, ricochet::Ricochet, shimmer::CenterShimmer, squall::Squall, uzumaki::Uzumaki};
 use crate::patterns::reactive::{
     firework::Firework, raindrop::Raindrop, spectrum::Spectrum, spiderweb::Spiderweb, tiles::Tiles,
@@ -15,8 +15,7 @@ const REACTIVE_CYCLE_MS: u32 = 5 * 60 * 1_000;
 // The least a pattern shows after a setlist switch.
 const MIN_AFTER_FLIP_MS: u32 = 30_000;
 
-// Transition durations: leisurely for manual/auto pattern steps, snappy for the
-// ambient<->reactive sound flip so it tracks the music rather than lagging it.
+// Crossfade time for a pattern step, and for a switch between the ambient and sound setlists.
 const STEP_TRANSITION_MS:  u32 = 3000;
 const SOUND_TRANSITION_MS: u32 = 200;
 
@@ -24,9 +23,9 @@ const SOUND_TRANSITION_MS: u32 = 200;
 // when it is next drawn.
 const REENTRY_GAP_MS: u32 = 500;
 
-// Global brightness ladder: geometric steps (~1.7x each) so a d-pad press feels like an
-// even perceived change instead of lurching at the low end. Applied as a flat multiply
-// over the finished frame; the top level is 1.0 (full brightness, a no-op).
+// Global brightness ladder: geometric steps (~1.7x each, 1.2x the last) so a d-pad press
+// feels like an even perceived change instead of lurching at the low end. Applied as a flat
+// multiply over the finished frame; the top level is 1.0 (full brightness, a no-op).
 const BRIGHTNESS_LEVELS: [f32; 7] = [0.06, 0.10, 0.17, 0.29, 0.49, 0.83, 1.0];
 #[cfg(not(feature = "previewer"))]
 const DEFAULT_BRIGHTNESS_INDEX: usize = 3; // middle -> perceptual medium, room to go both ways
@@ -210,9 +209,7 @@ impl SetlistManager {
     }
 
     /// A random style for a pattern step, never the same one twice in a row.
-    fn pick_style(&mut self, now_ms: u32) -> TransitionStyle {
-        // Mixing in the time of the step makes the sequence differ after each power-up.
-        self.style_rng = Rng::new(self.style_rng.next_u32() ^ knuth_hash(now_ms));
+    fn pick_style(&mut self) -> TransitionStyle {
         let skip = 1 + self.style_rng.below(STYLES.len() - 1);
         self.last_style = (self.last_style + skip) % STYLES.len();
         STYLES[self.last_style]
@@ -312,7 +309,7 @@ impl SetlistManager {
         let list = self.list(kind);
         let from_idx = list.idx;
         list.step(dir);
-        let style = self.pick_style(now_ms);
+        let style = self.pick_style();
         self.begin_transition(kind, from_idx, now_ms, STEP_TRANSITION_MS, style);
     }
 

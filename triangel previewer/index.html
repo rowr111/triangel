@@ -29,6 +29,7 @@
     }
     #controls button:hover  { background: #333; }
     #controls button:active { background: #0a2a0a; color: #4c4; border-color: #4c4; }
+    #controls button.on     { background: #4c4; color: #111; border-color: #4c4; }
     #dpad {
       display: grid; grid-template-columns: repeat(3, 34px); grid-auto-rows: 26px; gap: 3px;
     }
@@ -120,6 +121,7 @@
         liveColors = null;
         statusEl.textContent = 'no bridge';
         statusEl.className = '';
+        document.querySelector('#controls button.on')?.classList.remove('on');
         setTimeout(() => connectBridge(wsUrl), 2000); // auto-reconnect
       };
 
@@ -133,6 +135,8 @@
       btn.addEventListener('click', () => {
         if (activeWs && activeWs.readyState === WebSocket.OPEN) {
           activeWs.send(btn.dataset.cmd);
+          // The page's own count of Hold presses; the eye does not report its state.
+          if (btn.dataset.cmd === 'C') btn.classList.toggle('on');
         }
       });
     });
