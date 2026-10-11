@@ -1,58 +1,52 @@
 # triangel
 
-A ceiling light fixture in the shape of a ~50cm equilateral triangle, designed to sit in the corner of a room. Built from 25 triangle PCBs (600 WS2812B LEDs total, 24 per board) and driven by custom firmware that runs ambient and sound-reactive lighting patterns.
+A ceiling light shaped like a triangle about 50 cm across, made to sit in the corner of a room. It is built from 25 triangle tiles carrying 600 LEDs, and runs ambient and sound-reactive patterns.
 
-The installation runs two pattern setlists - ambient and sound-reactive - with a d-pad, 3-position mode switch, and IR remote for control.
+<img src="docs/images/triangel.jpg" width="480" alt="triangel: 25 triangle tiles joined into one large triangle, point down, with some of its LEDs lit">
 
-## System overview
+To work on triangel you need DABAO boards. Every page here assumes you have them.
 
-Two Baochip-1x chips run under [Xous OS](https://betrusted.io/xous-book/):
+## The parts
 
-- **eye** - drives the 600 WS2812 LEDs as two chains in parallel, one BIO co-processor core each, at 30 fps; manages pattern setlists and handles all user input
-- **ear** - captures audio from an ICS43434 MEMS mic, measures it in 24 frequency bands, and streams the result to the eye over UART at about 28 fps. The eye uses the band levels to drive sound-reactive patterns.
-
-## Repository structure
-
-| Directory | Contents |
+| Name | What it is |
 |---|---|
-| [`firmware/`](firmware/README.md) | Rust firmware for both chips and the code they share |
-| [`firmware/eye/`](firmware/eye/README.md) | Eye chip firmware - LED output, patterns, input handling |
-| [`firmware/ear/`](firmware/ear/README.md) | Ear chip firmware - audio capture, filterbank, UART output |
-| [`firmware/shared/`](firmware/shared/README.md) | Shared crate - the ear-to-eye frame format and the sound-reactive tuning |
-| [`triangel previewer/`](triangel%20previewer/README.md) | Browser-based LED simulator |
-| `hardware/` | KiCad PCB design files |
-| [`graphics/`](graphics/README.md) | Artwork, assembly sticker sheets, and the scripts that generate them |
+| triangel | The whole project: the tiles and the boards that run them |
+| tile | One of the 25 triangle circuit boards, with 24 LEDs. Also called a triangel. The code calls a tile a `board` |
+| controller board | Holds the two DABAO boards, the microphone and the power supply for the tiles |
+| DABAO board | A Baochip-1x development board. triangel uses two: the **eye** and the **ear** |
+| input board | The five buttons, the sound switch and the IR receiver |
+| remote | A 7-button IR remote that does what the buttons do |
 
-## Building the kernels (UART2 freed)
+## How it works
 
-The ear-to-eye link uses UART2 on both chips, but a stock Xous kernel gives UART2 to its
-log console. Building with the `gdb-stub` feature leaves it free. CI kernels don't have
-it, so both chips use a locally built kernel in manual kernel mode.
+The two DABAO boards each run their own firmware under [Xous](https://betrusted.io/xous-book/):
 
-Build from the `i2c-bounded-waits` branch of [rowr111/xous-core](https://github.com/rowr111/xous-core/tree/i2c-bounded-waits). It adds a fix to the I2C driver that the eye's `input-board` build needs, and a fix to the `gdb-stub` build, neither yet in upstream xous-core.
+- The **eye** draws the patterns and sends them to the 600 LEDs 30 times a second. It also reads the buttons, the switch and the remote.
+- The **ear** listens through the microphone, measures the sound in 24 frequency bands, and sends the result to the eye about 28 times a second.
 
-1. `cargo xtask dabao --feature gdb-stub`
-2. Copy `loader.uf2` and `xous.uf2` from `target/riscv32imac-unknown-xous-elf/release/` into `firmware/xous_build/`. Both chips flash from that one folder.
+## Where to go
 
-## Regenerating the I2S mic driver for different pins
+| If you want to | Read |
+|---|---|
+| Use a triangel: the controls, updating its firmware | [USER_GUIDE.md](USER_GUIDE.md) |
+| Set up your machine and build the firmware | [firmware/README.md](firmware/README.md) |
+| Watch the patterns in a browser | [triangel previewer/README.md](triangel%20previewer/README.md) |
+| Write a pattern | [firmware/eye/PATTERNS.md](firmware/eye/PATTERNS.md) |
+| Build the kernels the boards run | [docs/how-to/build-the-kernels.md](docs/how-to/build-the-kernels.md) |
+| Change the microphone's pins | [docs/how-to/regenerate-the-mic-program.md](docs/how-to/regenerate-the-mic-program.md) |
+| Print the stickers and overlays | [graphics/README.md](graphics/README.md) |
 
-The mic's I2S driver runs as a small precompiled BIO program
-(`firmware/ear/src/i2s_bio.rs`, generated from `bio-sim/sw/i2s/main.c`). The mic
-pins are compiled into it, so changing the mic wiring means regenerating it - a
-firmware constant won't do it. Current pins (these match the schematic and
-`firmware/ear/src/pins.rs`): BCLK=PB1, SD=PB2, WS=PB3.
+## What is in this repository
 
-To regenerate:
+| Folder | Contents |
+|---|---|
+| [`firmware/eye/`](firmware/eye/README.md) | The eye's firmware: LED output, patterns, controls |
+| [`firmware/ear/`](firmware/ear/README.md) | The ear's firmware: microphone, frequency bands, the link to the eye |
+| [`firmware/shared/`](firmware/shared/README.md) | Code both use: the format of what the ear sends, and the sound tuning |
+| [`triangel previewer/`](triangel%20previewer/README.md) | Shows the eye's LED output in a browser |
+| `hardware/` | The circuit boards (KiCad) and the brackets |
+| [`graphics/`](graphics/README.md) | Artwork and the sticker sheets |
 
-1. One-time: `pip install ziglang`
-2. In `bio-sim/sw/i2s/main.c`, set the pin defines (the number is the PBx pin):
+## License
 
-       #define WS_PIN  3
-       #define SCK_PIN 1
-       #define SD_PIN  2
-
-3. From `bio-sim/sw`, run: `python3 -m ziglang build -Dmodule=i2s -Demit-listing=false`
-   (regenerates `bio-sim/sw/i2s/i2s.rs`).
-4. Copy it in: `cp bio-sim/sw/i2s/i2s.rs firmware/ear/src/i2s_bio.rs`
-5. Set the same three numbers in `firmware/ear/src/pins.rs` and in the check below the rate constants in `firmware/ear/src/audio.rs`.
-6. Rebuild the ear firmware.
+MIT. See [LICENSE](LICENSE).

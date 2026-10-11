@@ -45,7 +45,7 @@ repos:
 
       - id: geom-up-to-date
         name: geom.rs matches map.rs and grid.rs
-        language: system
+        language: python
         entry: python firmware/eye/tools/gen_geom.py --check
         files: ^firmware/eye/(src/led|tools)/
         pass_filenames: false
