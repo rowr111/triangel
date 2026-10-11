@@ -9,7 +9,11 @@ use crate::patterns::reactive::{
     firework::Firework, raindrop::Raindrop, spectrum::Spectrum, spiderweb::Spiderweb, tiles::Tiles,
 };
 
-const CYCLE_MS: u32 = 3 * 60 * 1_000; // 3 minutes
+// How long each pattern shows.
+const AMBIENT_CYCLE_MS:  u32 = 3 * 60 * 1_000;
+const REACTIVE_CYCLE_MS: u32 = 5 * 60 * 1_000;
+// The least a pattern shows after a setlist switch.
+const MIN_AFTER_FLIP_MS: u32 = 30_000;
 
 // Transition durations: leisurely for manual/auto pattern steps, snappy for the
 // ambient<->reactive sound flip so it tracks the music rather than lagging it.
@@ -114,6 +118,13 @@ impl SetlistKind {
     fn from_sound(sound_active: bool) -> Self {
         if sound_active { SetlistKind::Reactive } else { SetlistKind::Ambient }
     }
+
+    fn cycle_ms(self) -> u32 {
+        match self {
+            SetlistKind::Ambient => AMBIENT_CYCLE_MS,
+            SetlistKind::Reactive => REACTIVE_CYCLE_MS,
+        }
+    }
 }
 
 /// A transition in flight. Stores only what we're fading *from*; the current pattern is
@@ -157,8 +168,10 @@ impl SoundMode {
 
 pub struct SetlistManager {
     setlists:          [Setlist; 2],
-    last_cycle_ms:     u32,
-    held:              bool,
+    /// Time each setlist's current pattern has shown, counted only while on screen.
+    shown_ms:          [u32; 2],
+    last_tick_ms:      u32,
+    held:           bool,
     transition:        Option<Transition>,
     pending:           VecDeque<Step>,
     last_sound_active: bool,
@@ -178,7 +191,8 @@ impl SetlistManager {
                 Setlist::new(ambient_patterns()),
                 Setlist::new(reactive_patterns()),
             ],
-            last_cycle_ms:     now_ms,
+            shown_ms:          [0; 2],
+            last_tick_ms:      now_ms,
             held:              false,
             transition:        None,
             pending:           VecDeque::new(),
@@ -246,16 +260,24 @@ impl SetlistManager {
 
     /// Call once per frame. Advances pattern index when the cycle timer expires.
     pub fn tick(&mut self, t_ms: u32, sound_active: bool) {
+        let dt_ms = t_ms.wrapping_sub(self.last_tick_ms);
+        self.last_tick_ms = t_ms;
         if self.held {
             return;
         }
-        if t_ms.wrapping_sub(self.last_cycle_ms) >= CYCLE_MS {
-            self.enqueue_step(SetlistKind::from_sound(sound_active), Step::Next, t_ms);
+        let kind = SetlistKind::from_sound(sound_active);
+        let shown = &mut self.shown_ms[kind as usize];
+        // After a setlist switch the pattern gets at least the minimum.
+        if sound_active != self.last_sound_active {
+            *shown = (*shown).min(kind.cycle_ms() - MIN_AFTER_FLIP_MS);
+        }
+        *shown += dt_ms;
+        if *shown >= kind.cycle_ms() {
+            self.enqueue_step(kind, Step::Next, t_ms);
         }
     }
 
-    /// Step one pattern in the setlist on screen. `now_ms` restarts the cycle countdown so
-    /// a manual step doesn't immediately auto-advance.
+    /// Step one pattern in the setlist on screen, and restart its countdown.
     pub fn step(&mut self, dir: Step, now_ms: u32, sound_active: bool) {
         self.enqueue_step(SetlistKind::from_sound(sound_active), dir, now_ms);
     }
@@ -264,7 +286,7 @@ impl SetlistManager {
     /// interrupted fade never pops; the queue is capped at the setlist length so mashing a
     /// button can't back up more than one full loop.
     fn enqueue_step(&mut self, kind: SetlistKind, dir: Step, now_ms: u32) {
-        self.last_cycle_ms = now_ms;
+        self.shown_ms[kind as usize] = 0;
         // A single-pattern setlist has nowhere to step; skip the pointless self-transition.
         let len = self.list(kind).len();
         if len < 2 {
@@ -294,11 +316,11 @@ impl SetlistManager {
         self.begin_transition(kind, from_idx, now_ms, STEP_TRANSITION_MS, style);
     }
 
-    pub fn toggle_hold(&mut self, now_ms: u32) {
+    pub fn toggle_hold(&mut self) {
         self.held = !self.held;
-        // Restart the cycle countdown on release so unholding doesn't instantly auto-advance.
+        // Restart both countdowns on release.
         if !self.held {
-            self.last_cycle_ms = now_ms;
+            self.shown_ms = [0; 2];
         }
     }
 

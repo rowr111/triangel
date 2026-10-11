@@ -7,7 +7,7 @@ LED controller firmware for the triangel fixture. Runs on a Baochip-1x under [Xo
 The **eye** chip drives 600 WS2812 LEDs across 25 triangle PCBs. It manages:
 
 - A 30 fps render loop driving two LED chains in parallel, one BIO co-processor core each
-- Two pattern setlists (ambient and sound-reactive), stepping every 3 minutes with a transition between patterns
+- Two pattern setlists (ambient and sound-reactive), stepping every 3 minutes (ambient) or 5 minutes (sound-reactive) with a transition between patterns
 - D-pad + 3-position switch for brightness, pattern stepping, hold, and sound mode
 - IR remote (same functions as the physical controls)
 - Audio frames from the **ear** chip over UART, from which it detects beats, drops and per-band onsets
