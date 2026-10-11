@@ -180,6 +180,9 @@
       canvas.height = Math.round(WORLD_H * scale + PADDING * 2);
     }
 
+    // LED value to the screen value that gives the same share of light.
+    const TO_SCREEN = Array.from({ length: 256 }, (_, v) => Math.round(255 * Math.pow(v / 255, 1 / 2.2)));
+
     function draw(t) {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -191,7 +194,7 @@
         const { wx, wy } = LED_MAP[i];
         const [r, g, b] = colors[i] || [0, 0, 0];
         if (r === 0 && g === 0 && b === 0) continue;
-        ctx.fillStyle = `rgb(${r},${g},${b})`;
+        ctx.fillStyle = `rgb(${TO_SCREEN[r]},${TO_SCREEN[g]},${TO_SCREEN[b]})`;
         ctx.beginPath();
         ctx.arc(px(wx), py(wy), radius, 0, Math.PI * 2);
         ctx.fill();
