@@ -27,6 +27,8 @@ const BEAT_MAX_MS: f32 = 1200.0;
 const BEAT_LOST_MS: u32 = 4_000;
 /// How far the tempo estimate moves toward each accepted gap.
 const BEAT_EASE: f32 = 0.2;
+/// After this many gaps in a row that do not fit, the tempo restarts from the latest.
+const BEAT_MISSES: u8 = 4;
 
 /// Rain on black water. Each beat lands drops that send out rings, the leading edge
 /// white and the rings behind it colored.
@@ -37,6 +39,8 @@ pub struct Raindrop {
     /// Beat period, or 0 when no tempo has been found.
     beat_ms:         f32,
     last_trigger_ms: u32,
+    /// Gaps in a row that did not fit the tempo.
+    misses:          u8,
 }
 
 impl Raindrop {
@@ -47,20 +51,26 @@ impl Raindrop {
             last_drop_ms: 0,
             beat_ms:         0.0,
             last_trigger_ms: 0,
+            misses:          0,
         }
     }
 
     /// Updates the tempo estimate from the gap since the last trigger. A gap near double
     /// or half the estimate is halved or doubled first; one that still does not match is
-    /// ignored.
+    /// ignored, until BEAT_MISSES in a row restart the tempo.
     fn track_beat(&mut self, t_ms: u32) {
-        let gap = t_ms.wrapping_sub(self.last_trigger_ms) as f32;
+        let since = t_ms.wrapping_sub(self.last_trigger_ms);
         self.last_trigger_ms = t_ms;
+        if since > BEAT_LOST_MS {
+            self.beat_ms = 0.0;
+        }
+        let gap = since as f32;
         if !(BEAT_MIN_MS..=BEAT_MAX_MS).contains(&gap) {
             return;
         }
         if self.beat_ms <= 0.0 {
             self.beat_ms = gap;
+            self.misses = 0;
             return;
         }
         let mut g = gap;
@@ -71,6 +81,13 @@ impl Raindrop {
         }
         if (g - self.beat_ms).abs() < self.beat_ms * 0.25 {
             self.beat_ms += (g - self.beat_ms) * BEAT_EASE;
+            self.misses = 0;
+        } else {
+            self.misses += 1;
+            if self.misses >= BEAT_MISSES {
+                self.beat_ms = gap;
+                self.misses = 0;
+            }
         }
     }
 
