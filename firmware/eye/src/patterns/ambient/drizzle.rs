@@ -26,20 +26,20 @@ const STYLE: RippleStyle = RippleStyle {
 
 /// Rain on black water: drops land at random spots and times and ripple out.
 pub struct Drizzle {
-    ripples: Ripples,
-    last_ms: u32,
-    gap_ms:  u32,
+    ripples:      Ripples,
+    last_drop_ms: u32,
+    gap_ms:       u32,
 }
 
 impl Drizzle {
     pub fn new() -> Self {
-        Drizzle { ripples: Ripples::new(0x2545_F491, STYLE), last_ms: 0, gap_ms: 0 }
+        Drizzle { ripples: Ripples::new(0x2545_F491, STYLE), last_drop_ms: 0, gap_ms: 0 }
     }
 }
 
 impl Pattern for Drizzle {
     fn render(&mut self, t_ms: u32, _audio: &Audio, out: &mut Frame) {
-        if t_ms.wrapping_sub(self.last_ms) >= self.gap_ms {
+        if t_ms.wrapping_sub(self.last_drop_ms) >= self.gap_ms {
             let r = &mut self.ripples;
             let spot = r.spot();
             // Squared, so most drops are soft.
@@ -48,7 +48,7 @@ impl Pattern for Drizzle {
             let spacing = r.rng().range_f32(SPACING_MIN_MM, SPACING_MAX_MM);
             let count = r.rng().range_f32(RINGS_MIN, RINGS_MAX);
             r.land(spot, t_ms, strength, spacing, count);
-            self.last_ms = t_ms;
+            self.last_drop_ms = t_ms;
             self.gap_ms = r.rng().range_f32(GAP_MIN_MS, GAP_MAX_MS) as u32;
         }
         self.ripples.draw(t_ms, out);

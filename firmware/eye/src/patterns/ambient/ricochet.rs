@@ -1,5 +1,5 @@
 use crate::audio::Audio;
-use crate::patterns::{Frame, Pattern, Rng, hsv, lerp, wrap360};
+use crate::patterns::{Frame, Pattern, Rng, hsv, lerp, random_u32, wrap360};
 use crate::led::grid::{self, CELL_MM};
 use crate::led::map::{WORLD_TOP, WORLD_BOT, WORLD_CX, WORLD_CENTROID_Y, LED_COUNT, LED_MAP};
 use crate::led::world::{WORLD_LEFT, WORLD_RIGHT};
@@ -62,6 +62,13 @@ struct Comet {
     speed:  f32, // mm/ms
     trail:      [(f32, f32); TRAIL_LEN],
     trail_head: usize,
+}
+
+impl Comet {
+    /// The head shrinks as the comet loses energy.
+    fn head_radius(&self) -> f32 {
+        self.radius * (0.25 + 0.75 * self.energy)
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -278,7 +285,7 @@ fn wall_dists(x: f32, y: f32) -> (f32, f32, f32) {
 
 /// Sprays up to `count` sparks from comet `c`, fanned around the wall's inward normal `n`.
 fn spawn_sparks(sparks: &mut [Spark; SPARK_POOL], rng: &mut Rng, c: &Comet, count: usize, n: (f32, f32)) {
-    let radius = c.radius * (0.25 + 0.75 * c.energy);
+    let radius = c.head_radius();
     let (shue, chue) = c.hue.to_radians().sin_cos();
     let base = n.1.atan2(n.0);
     let mut spawned = 0;
@@ -309,11 +316,11 @@ impl Pattern for Ricochet {
     fn on_enter(&mut self, t_ms: u32) {
         // Reseed, clear the sparks, and stagger the first launches.
         self.prev_ms = t_ms;
-        self.rng = Rng::new((t_ms ^ 0x9E37_79B9) | 1);
-        for i in 0..MAX_COMETS {
-            self.comets[i].alive = false;
+        self.rng = Rng::new(random_u32());
+        for c in self.comets.iter_mut() {
+            c.alive = false;
             let delay = (self.rng.f32() * STAGGER_MS) as u32;
-            self.comets[i].respawn_at = t_ms.wrapping_add(delay);
+            c.respawn_at = t_ms.wrapping_add(delay);
         }
         self.comets[0].respawn_at = t_ms; // one comet right away
         for s in self.sparks.iter_mut() {
@@ -337,20 +344,16 @@ impl Pattern for Ricochet {
         // This frame's dots: each comet's head and trail, then the live sparks.
         let mut dots = [Dot { x: 0.0, y: 0.0, inv_r2: 0.0, w: 0.0, chue: 0.0, shue: 0.0, reach: 0 }; MAX_COMETS * TRAIL_LEN + SPARK_POOL];
         let mut nd = 0;
-        for i in 0..MAX_COMETS {
-            if !self.comets[i].alive {
-                continue;
-            }
-            let (shue, chue) = self.comets[i].hue.to_radians().sin_cos();
-            let energy = self.comets[i].energy;
-            let radius = self.comets[i].radius;
-            let head = self.comets[i].trail_head;
+        for c in self.comets.iter().filter(|c| c.alive) {
+            let (shue, chue) = c.hue.to_radians().sin_cos();
+            let energy = c.energy;
+            let head = c.trail_head;
             for j in 0..TRAIL_LEN {
                 let idx = (head + TRAIL_LEN - j) % TRAIL_LEN; // j = 0 is the head
-                let (tx, ty) = self.comets[i].trail[idx];
+                let (tx, ty) = c.trail[idx];
                 let f = j as f32 / TRAIL_LEN as f32;
                 let (r, w) = if j == 0 {
-                    (radius * (0.25 + 0.75 * energy), energy)
+                    (c.head_radius(), energy)
                 } else {
                     (TRAIL_R_MM * (1.0 - TAIL_TAPER * f), (1.0 - f) * energy)
                 };
@@ -381,11 +384,9 @@ impl Pattern for Ricochet {
             }
         }
 
-        for k in 0..LED_COUNT {
-            self.acc_v[k] = 0.0;
-            self.acc_x[k] = 0.0;
-            self.acc_y[k] = 0.0;
-        }
+        self.acc_v.fill(0.0);
+        self.acc_x.fill(0.0);
+        self.acc_y.fill(0.0);
         for d in dots.iter().take(nd) {
             self.scatter(d);
         }
