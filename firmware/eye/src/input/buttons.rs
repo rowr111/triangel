@@ -103,21 +103,16 @@ fn poll_loop(events: EventSender) {
                 (InputEvent::PatternNext,    inputs.right),
                 (InputEvent::ToggleHold,     inputs.center),
             ];
-            let mut fired: Vec<InputEvent> = Vec::new();
             for (db, (event, pressed)) in debouncers.iter_mut().zip(buttons) {
                 if db.update(pressed) {
-                    fired.push(event);
+                    events.send(event).ok();
                 }
             }
 
             let sw = switch_position(&inputs);
             if last_switch != Some(sw) {
                 last_switch = Some(sw);
-                fired.push(InputEvent::SetSoundMode(sw));
-            }
-
-            for ev in fired {
-                events.send(ev).ok();
+                events.send(InputEvent::SetSoundMode(sw)).ok();
             }
         }
 
