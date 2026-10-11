@@ -10,7 +10,7 @@ use crate::patterns::reactive::{
 };
 
 // How long each pattern shows.
-const AMBIENT_CYCLE_MS:  u32 = 3 * 60 * 1_000;
+pub(crate) const AMBIENT_CYCLE_MS: u32 = 3 * 60 * 1_000;
 const REACTIVE_CYCLE_MS: u32 = 5 * 60 * 1_000;
 // The least a pattern shows after a setlist switch.
 const MIN_AFTER_FLIP_MS: u32 = 30_000;

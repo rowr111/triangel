@@ -3,6 +3,7 @@ use crate::patterns::{Frame, Pattern, fold_ms, hash2, hsv, lerp, random_u32, sin
 use crate::led::grid::{self, CELL_MM};
 use crate::led::map::{WORLD_TOP, WORLD_BOT, WORLD_H, WORLD_CX, LED_COUNT, LED_MAP};
 use crate::led::world::{WORLD_LEFT, WORLD_RIGHT};
+use crate::setlist::AMBIENT_CYCLE_MS;
 use core::f32::consts::TAU;
 
 // Fubuki (snowstorm): flakes fall and pile up from the apex until the triangle is full,
@@ -10,7 +11,7 @@ use core::f32::consts::TAU;
 // Flakes and pile take the season's colors.
 
 // Season cycle, as fractions of FILL_MS
-const FILL_MS:        u32 = 45_000; // one season; four fit the 3-minute setlist slot
+const FILL_MS:        u32 = AMBIENT_CYCLE_MS / SEASONS.len() as u32; // one season
 const FILL_FRAC:      f32 = 0.97;   // when the new pile is full
 const FILL_DELAY:     f32 = 0.2;    // when the new pile starts rising
 const RECEDE_FRAC:    f32 = 0.25;   // how long the old pile takes to melt
