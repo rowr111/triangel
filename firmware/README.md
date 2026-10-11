@@ -15,10 +15,10 @@ The fixture mounts in the corner of a room - an equilateral triangle cutting off
 
 ```
 ->  1   2   3   4   5   6   7   8   9
-<- 16  15  14  13  12  11  10
-->     17  18  19  20  21
-<-         24  23  22
-                25
+<-     10  11  12  13  14  15  16
+->         17  18  19  20  21
+<-             22  23  24
+                   25
 ```
 
 Boards are numbered left-to-right, top-to-bottom by position. The data path snakes for shortest inter-board wire lengths (~52 mm per jump) and is split into two chains, driven in parallel:
