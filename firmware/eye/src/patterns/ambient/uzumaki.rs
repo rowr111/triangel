@@ -1,4 +1,4 @@
-use crate::patterns::{Frame, Pattern, hsv, mix_rgb, smoothstep};
+use crate::patterns::{Frame, Pattern, cycle, hsv, mix_rgb, smoothstep};
 use crate::led::geom::{DIST_C, DIST_C_MAX, THETA_C};
 use crate::audio::Audio;
 use crate::led::map::LED_COUNT;
@@ -20,8 +20,11 @@ const BREATH_MS:  u32 = 32_000; // one tighten-and-loosen cycle
 const WOBBLE: f32 = 0.15;    // once-around wobble, in band widths (0 = a perfect disc)
 const WOB_MS: u32 = 17_000;  // time for the wobble to travel once around
 
-// Keep WIND_SWING * TAU / BREATH_S under ARMS / ROT_S (here 0.29 against 0.50), or the
-// outer bands move inward for part of the cycle.
+// Otherwise the outer bands move inward for part of the cycle.
+const _: () = assert!(
+    WIND_SWING * TAU * (ROT_MS as f32) < ARMS as f32 * BREATH_MS as f32,
+    "the winding swings faster than the arms turn"
+);
 
 // Band profile, in fractions of one band width
 const STRIPE_HALF:   f32 = 0.10; // half-width of the bright line on each band edge
@@ -106,9 +109,9 @@ impl Uzumaki {
 
 impl Pattern for Uzumaki {
     fn render(&mut self, t_ms: u32, _audio: &Audio, out: &mut Frame) {
-        let rot = ARMS as f32 * (t_ms % ROT_MS) as f32 / ROT_MS as f32;
-        let wind = WIND_MID + WIND_SWING * (TAU * (t_ms % BREATH_MS) as f32 / BREATH_MS as f32).sin();
-        let (wob_s, wob_c) = (TAU * (t_ms % WOB_MS) as f32 / WOB_MS as f32).sin_cos();
+        let rot = ARMS as f32 * cycle(t_ms, ROT_MS);
+        let wind = WIND_MID + WIND_SWING * (TAU * cycle(t_ms, BREATH_MS)).sin();
+        let (wob_s, wob_c) = (TAU * cycle(t_ms, WOB_MS)).sin_cos();
 
         // The lines and the core are the average of the arms' bright stops, toward white.
         // The lines need one shared color because each sits between two arms.
