@@ -1,5 +1,5 @@
 use crate::led::map::{LED_COUNT, LED_MAP};
-use crate::patterns::{Frame, Rng, free_or_oldest, hsv};
+use crate::patterns::{Frame, Rng, hsv};
 
 /// Enough that a drop is rarely replaced while its ripple is still crossing the fixture.
 const MAX_DROPS: usize = 18;
@@ -44,6 +44,26 @@ struct Drop {
     /// Distance from the leading edge back to the last ring.
     train:    f32,
     alive:    bool,
+}
+
+impl Drop {
+    /// Leading-edge radius, how young the drop is (1 to 0), and ring brightness at `t_ms`.
+    fn front(&self, t_ms: u32, s: &RippleStyle) -> (f32, f32, f32) {
+        let r = s.start_radius_mm + t_ms.wrapping_sub(self.start_ms) as f32 * s.ripple_speed;
+        let young = (1.0 - (r - s.start_radius_mm) / s.white_mm).clamp(0.0, 1.0);
+        let amp = self.strength
+            * (s.gain_base + s.gain_hit * self.strength)
+            * (1.0 + s.hit_boost * young);
+        (r, young, amp)
+    }
+
+    /// Roughly how bright the brightest point of the rings is at `t_ms`.
+    fn glow(&self, t_ms: u32, s: &RippleStyle) -> f32 {
+        let (r, _, amp) = self.front(t_ms, s);
+        let inner = (r - self.train).max(0.0);
+        let at = ((s.ripple_max_mm + r - self.train) * 0.5).max(inner).min(r.min(s.ripple_max_mm));
+        amp * (1.0 - (r - at) / self.train) * (1.0 - at / s.ripple_max_mm)
+    }
 }
 
 /// One live drop's geometry for this frame.
@@ -96,9 +116,13 @@ impl Ripples {
         Spot { x, y, hue }
     }
 
-    /// Lands a drop at `spot` with `count` rings `spacing` mm apart.
+    /// Lands a drop at `spot` with `count` rings `spacing` mm apart. With no slot free it
+    /// replaces the dimmest drop.
     pub fn land(&mut self, spot: Spot, t_ms: u32, strength: f32, spacing: f32, count: f32) {
-        let slot = free_or_oldest(&self.drops, t_ms, |d| !d.alive, |d| d.start_ms);
+        let slot = self.drops.iter().position(|d| !d.alive).unwrap_or_else(|| {
+            let glow = |i: &usize| self.drops[*i].glow(t_ms, &self.style);
+            (0..MAX_DROPS).min_by(|a, b| glow(a).total_cmp(&glow(b))).unwrap_or(0)
+        });
         self.drops[slot] = Drop {
             x: spot.x,
             y: spot.y,
@@ -123,22 +147,19 @@ impl Ripples {
             if !drop.alive {
                 continue;
             }
-            let r = s.start_radius_mm + t_ms.wrapping_sub(drop.start_ms) as f32 * s.ripple_speed;
+            let (r, young, amp) = drop.front(t_ms, &s);
             if r - drop.train > s.ripple_max_mm {
                 drop.alive = false;
                 continue;
             }
             let inner = (r - drop.train).max(0.0);
-            let young = (1.0 - (r - s.start_radius_mm) / s.white_mm).clamp(0.0, 1.0);
             live[n_live] = Ring {
                 x: drop.x,
                 y: drop.y,
                 r,
                 u_inner: inner * inner,
                 u_outer: r * r,
-                amp: drop.strength
-                    * (s.gain_base + s.gain_hit * drop.strength)
-                    * (1.0 + s.hit_boost * young),
+                amp,
                 hue: drop.hue,
                 sat_w: DROP_SAT * (1.0 - young),
                 inv_spacing: 1.0 / drop.spacing,
