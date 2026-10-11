@@ -186,17 +186,14 @@ impl Pattern for Fubuki {
             let mut hue = sky_h;
             let mut sat = sky_s;
             let mut val = SKY_VAL;
-            hue = blend_hue(hue, pch, fillamt_p);
-            sat = lerp(sat, pcs, fillamt_p);
+            (hue, sat) = blend_color(hue, sat, pch, pcs, fillamt_p);
             val = lerp(val, pile_v, fillamt_p);
-            hue = blend_hue(hue, ch, fillamt_c);
-            sat = lerp(sat, cs, fillamt_c);
+            (hue, sat) = blend_color(hue, sat, ch, cs, fillamt_c);
             val = lerp(val, pile_v, fillamt_c);
 
             let fe = self.flake_e[i];
             if fe > 0.0 {
-                hue = blend_hue(hue, self.flake_h[i], fe);
-                sat = lerp(sat, self.flake_s[i], fe);
+                (hue, sat) = blend_color(hue, sat, self.flake_h[i], self.flake_s[i], fe);
                 val += (1.0 - val) * (fe * FLAKE_VAL);
             }
 
@@ -231,6 +228,18 @@ fn make_flake(i: usize, t_ms: u32, fill_y: f32, prev: &Season, new: &Season, nf:
 fn fill_line(fr: f32) -> f32 {
     let margin = FILL_FEATHER_MM;
     (WORLD_BOT + margin) - (WORLD_H + 2.0 * margin) * fr.powf(FILL_EXP)
+}
+
+/// Blends a color toward a target by `t`. White has no hue, so the other color's is used.
+fn blend_color(hue: f32, sat: f32, to_hue: f32, to_sat: f32, t: f32) -> (f32, f32) {
+    let hue = if to_sat == 0.0 {
+        hue
+    } else if sat == 0.0 {
+        to_hue
+    } else {
+        blend_hue(hue, to_hue, t)
+    };
+    (hue, lerp(sat, to_sat, t))
 }
 
 /// Blends hue `base` toward `target` (degrees) by `t`, the short way around the wheel.
