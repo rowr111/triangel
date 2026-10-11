@@ -1,10 +1,12 @@
 use crate::led::geom::{BOARD_COUNT, BOARD_Y_RANGE, DIST_APEX};
-use crate::patterns::{Frame, Pattern, cycle, knuth_hash, phase_phasors, ramp, random_u32, PHASE_STEPS};
+use crate::patterns::{Frame, Pattern, cycle, cycle_q16, knuth_hash, phase_phasors, ramp, random_u32, PHASE_STEPS};
 use crate::audio::Audio;
 use crate::led::map::{LED_MAP, WORLD_BOT, WORLD_CX, WORLD_H, LED_COUNT};
 use core::f32::consts::{PI, TAU};
 
 const SECOND_WAVE_STRENGTH:    f32 = 0.5;  // second wave's amplitude, relative to the first
+const WAVE_SPEED:              f32 = 100.0; // mm/s outward, first wave
+const WAVELENGTH:              f32 = 80.0;  // mm per cycle, first wave
 const SECOND_WAVELENGTH_RATIO: f32 = 1.7;  // second wave's wavelength, relative to the first
 const SECOND_SPEED_RATIO:      f32 = 0.63; // second wave's speed, relative to the first
 const WAVE_FLOOR:   f32 = 0.35; // brightness left in the wave troughs
@@ -68,8 +70,6 @@ const RAMP_BITS: u32 = 10;
 const RAMP_STEPS: usize = (1 << RAMP_BITS) + 1;
 
 pub struct ApexFlame {
-    pub speed:      f32, // mm/s outward, first wave
-    pub wavelength: f32, // mm per cycle, first wave
     // sin and cos of each LED's phase in the two waves, Q12.
     w1_sin: [i16; LED_COUNT],
     w1_cos: [i16; LED_COUNT],
@@ -100,9 +100,9 @@ pub struct ApexFlame {
 }
 
 impl ApexFlame {
-    pub fn new(speed: f32, wavelength: f32) -> Self {
-        let k1 = TAU / wavelength;
-        let k2 = TAU / (wavelength * SECOND_WAVELENGTH_RATIO);
+    pub fn new() -> Self {
+        let k1 = TAU / WAVELENGTH;
+        let k2 = TAU / (WAVELENGTH * SECOND_WAVELENGTH_RATIO);
         let q = |v: f32| (v * 4096.0).round() as i16;
         let (fl_sin, fl_cos) = phase_phasors();
         // Two hashed flicker phases per LED; phases stepping along the chain would look
@@ -111,8 +111,6 @@ impl ApexFlame {
         let k1_of = |i: usize| (hash(i) % PHASE_STEPS as u32) as usize;
         let k2_of = |i: usize| ((hash(i) >> 16) % PHASE_STEPS as u32) as usize;
         ApexFlame {
-            speed,
-            wavelength,
             w1_sin: core::array::from_fn(|i| q((DIST_APEX[i] * k1).sin())),
             w1_cos: core::array::from_fn(|i| q((DIST_APEX[i] * k1).cos())),
             w2_sin: core::array::from_fn(|i| q((DIST_APEX[i] * k2).sin())),
@@ -162,9 +160,9 @@ impl Pattern for ApexFlame {
 
     fn render(&mut self, t_ms: u32, _audio: &Audio, out: &mut Frame) {
         // Each time term wraps at its own period first, so the f32 stays precise.
-        let wl2  = self.wavelength * SECOND_WAVELENGTH_RATIO;
-        let spd2 = self.speed * SECOND_SPEED_RATIO;
-        let p1_ms = (self.wavelength / self.speed * 1000.0) as u32;
+        let wl2  = WAVELENGTH * SECOND_WAVELENGTH_RATIO;
+        let spd2 = WAVE_SPEED * SECOND_SPEED_RATIO;
+        let p1_ms = (WAVELENGTH / WAVE_SPEED * 1000.0) as u32;
         let p2_ms = (wl2 / spd2 * 1000.0) as u32;
         let t1_s = (t_ms % p1_ms.max(1)) as f32 / 1000.0;
         let t2_s = (t_ms % p2_ms.max(1)) as f32 / 1000.0;
@@ -172,11 +170,11 @@ impl Pattern for ApexFlame {
         let flick2_phase  = cycle(t_ms, FLICKER2_PERIOD_MS) * TAU;
         let breathe_phase = cycle(t_ms, BREATHE_PERIOD_MS) * TAU;
         let breathe = q12(1.0 - BREATHE_DEPTH * (0.5 + 0.5 * breathe_phase.sin()));
-        let smoke_rise = ((t_ms % SMOKE_RISE_PERIOD_MS) * 65536 / SMOKE_RISE_PERIOD_MS) as u16; // turns x65536
+        let smoke_rise = cycle_q16(t_ms, SMOKE_RISE_PERIOD_MS) as u16; // turns x65536
         let smoke_meander = cycle(t_ms, SMOKE_MEANDER_PERIOD_MS) * TAU;
 
         // sin and cos of this frame's angle for the waves, the flicker and the smoke wiggle.
-        let (b1_sin, b1_cos) = (-t1_s * self.speed * (TAU / self.wavelength)).sin_cos();
+        let (b1_sin, b1_cos) = (-t1_s * WAVE_SPEED * (TAU / WAVELENGTH)).sin_cos();
         let (b2_sin, b2_cos) = (-t2_s * spd2 * (TAU / wl2)).sin_cos();
         let (f1_sin, f1_cos) = flick_phase.sin_cos();
         let (f2_sin, f2_cos) = flick2_phase.sin_cos();

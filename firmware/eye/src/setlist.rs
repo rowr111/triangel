@@ -47,8 +47,8 @@ fn ambient_patterns() -> Vec<Box<dyn Pattern>> {
     vec![
         Box::new(Fubuki::new()),
         Box::new(Squall::new()),
-        Box::new(CenterShimmer::new(60.0, 120.0)),
-        Box::new(ApexFlame::new(100.0, 80.0)),
+        Box::new(CenterShimmer::new()),
+        Box::new(ApexFlame::new()),
         Box::new(Uzumaki::new()),
         Box::new(Effervesce::new()),
         Box::new(Rainbow::new()),

@@ -58,6 +58,7 @@ ramp(&stops, t)             // color along (position, color) stops
 smoothstep(t) -> f32        // clamped to 0-1
 wrap360(h) -> f32           // hue into 0-360, for inputs within one turn of range
 cycle(t_ms, period_ms)      // 0-1 position in a repeating period
+cycle_q16(t_ms, period_ms)  // the same as a whole number, x65536
 fold_ms(t_ms, rate)         // t_ms folded to one period of a rad/ms rate
 slot_life(slot, salt, t_ms, min_ms, max_ms) // (generation, 0-1 age) of a slot that restarts with no stored state
 hash2(a, b), knuth_hash(x), tile_hash(led)

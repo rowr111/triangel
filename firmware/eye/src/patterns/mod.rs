@@ -101,6 +101,11 @@ pub fn cycle(t_ms: u32, period_ms: u32) -> f32 {
     (t_ms % period_ms) as f32 / period_ms as f32
 }
 
+/// Where `t_ms` sits in a repeating period, 0-1 x65536.
+pub fn cycle_q16(t_ms: u32, period_ms: u32) -> u32 {
+    ((t_ms % period_ms) as u64 * 65536 / period_ms as u64) as u32
+}
+
 /// Which lifetime a repeating slot is in and how far through, 0-1. Its length is hashed.
 pub fn slot_life(slot: u32, salt: u32, t_ms: u32, min_ms: u32, max_ms: u32) -> (u32, f32) {
     let slot_seed = hash2(slot, salt);

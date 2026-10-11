@@ -1,5 +1,5 @@
 use crate::patterns::glints::{GlintStyle, Glints};
-use crate::patterns::{Frame, Pattern, Rng, cycle, tile_hash, TILE_HASH_STEPS};
+use crate::patterns::{Frame, Pattern, Rng, cycle, cycle_q16, tile_hash, TILE_HASH_STEPS};
 
 use crate::led::geom::{DIST_C, THETA_C};
 use crate::audio::Audio;
@@ -9,7 +9,9 @@ use core::f32::consts::TAU;
 // Radial shimmer: a wave of brightness moves out from the center, with glints on its
 // crests. The hue also goes by distance from the center, across a cool arc, with a slow
 // three-armed spiral on top.
-const DRIFT_PERIOD_MS: u32 = 24_000; // one full hue drift
+const WAVE_SPEED:      f32 = 60.0;   // base wave speed, mm/s outward
+const WAVELENGTH:      f32 = 120.0;  // mm per cycle
+const HUE_PERIOD_MS:   u32 = 24_000; // time for the colors to move through one full cycle
 const RADIAL_SPAN_MM:  f32 = 350.0;  // distance over which the hue covers the arc once
 const HASH_JITTER:     f32 = 0.06;   // per-LED hue scatter
 const WAVE_FALLOFF:    f32 = 0.7;    // below 1 widens the bright crests, above 1 narrows them
@@ -19,7 +21,8 @@ const WAVE_STEPS:      usize = 1 << WAVE_BITS;
 // Each dark ring gets its own brightness at its darkest, picked when it starts at the center.
 const DARK_MIN:   f32   = 0.0;
 const DARK_MAX:   f32   = 0.5;
-const RING_SLOTS: usize = 64;  // rings remembered, far more than fit on the fixture
+const RING_BITS:  u32   = 6;   // 2^RING_BITS rings remembered, far more than fit on the fixture
+const RING_SLOTS: usize = 1 << RING_BITS;
 
 // Wave speed: now and then a new target is picked and the wave eases to it.
 const SPEED_SCALE_MIN:     f32 = 0.5;
@@ -48,12 +51,9 @@ const SATURATION_Q: i32 = (SATURATION * 4096.0) as i32;
 // Spiral: sectors of hue twisted by radius and rotating. The twist swings one way and back.
 const SPIRAL_ARMS:      f32 = 3.0;
 const SPIRAL_TWIST:     f32 = 0.004;  // most hue cycles added per mm of radius
-const SPIRAL_PERIOD_MS: u32 = 12_000; // one full rotation
 const TWIST_PERIOD_MS:  u32 = 45_000; // one full swing of the twist
 
 pub struct CenterShimmer {
-    pub speed:      f32, // base wave speed, mm/s outward
-    pub wavelength: f32, // mm per cycle
     // Positions are in wave or hue cycles x65536, so the low 16 bits are the fraction of a cycle.
     ring_pos: [u32; LED_COUNT], // each LED's distance from the center
     hue_base: [u32; LED_COUNT], // the fixed part of each LED's hue position
@@ -74,11 +74,9 @@ pub struct CenterShimmer {
 }
 
 impl CenterShimmer {
-    pub fn new(speed: f32, wavelength: f32) -> Self {
+    pub fn new() -> Self {
         let mut s = CenterShimmer {
-            speed,
-            wavelength,
-            ring_pos: core::array::from_fn(|i| (DIST_C[i] / wavelength * 65536.0) as u32),
+            ring_pos: core::array::from_fn(|i| (DIST_C[i] / WAVELENGTH * 65536.0) as u32),
             hue_base: core::array::from_fn(|i| {
                 let hn = tile_hash(&LED_MAP[i]) as f32 / TILE_HASH_STEPS as f32;
                 // Radial gradient, per-LED scatter, and the spiral's sectors.
@@ -95,8 +93,8 @@ impl CenterShimmer {
             wave_phase: 0,
             phase_rem: 0,
             ring_dark: [0; RING_SLOTS],
-            speed_q8: (speed * 256.0) as i32,
-            speed_target_q8: (speed * 256.0) as i32,
+            speed_q8: (WAVE_SPEED * 256.0) as i32,
+            speed_target_q8: (WAVE_SPEED * 256.0) as i32,
             speed_pick_ms: 0,
             speed_gap_ms: 0,
             rng: Rng::new(0x6A09_E667),
@@ -118,7 +116,7 @@ impl CenterShimmer {
     fn advance_wave(&mut self, t_ms: u32, dt_ms: u32) {
         if t_ms.wrapping_sub(self.speed_pick_ms) >= self.speed_gap_ms {
             let m = self.rng.range_f32(SPEED_SCALE_MIN, SPEED_SCALE_MAX);
-            self.speed_target_q8 = (self.speed * m * 256.0) as i32;
+            self.speed_target_q8 = (WAVE_SPEED * m * 256.0) as i32;
             self.speed_pick_ms = t_ms;
             self.speed_gap_ms = SPEED_CHANGE_MIN_MS
                 + (self.rng.f32() * (SPEED_CHANGE_MAX_MS - SPEED_CHANGE_MIN_MS) as f32) as u32;
@@ -126,7 +124,7 @@ impl CenterShimmer {
         self.speed_q8 += (self.speed_target_q8 - self.speed_q8) * dt_ms as i32 / SPEED_EASE_MS;
 
         // Cycles x65536 = mm/s x256 * ms * 256 / (1000 * mm per cycle).
-        let per = (self.wavelength * 1000.0) as u32;
+        let per = (WAVELENGTH * 1000.0) as u32;
         let num = self.speed_q8.max(0) as u32 * dt_ms * 256 + self.phase_rem;
         let old = self.wave_phase;
         self.wave_phase = old.wrapping_add(num / per);
@@ -160,10 +158,8 @@ impl Pattern for CenterShimmer {
         self.last_ms = t_ms;
         self.advance_wave(t_ms, dt_ms);
 
-        // Hue drift and spiral rotation, both 0..1 x65536.
-        let drift = (t_ms % DRIFT_PERIOD_MS) * 65536 / DRIFT_PERIOD_MS;
-        let spin = (t_ms % SPIRAL_PERIOD_MS) * 65536 / SPIRAL_PERIOD_MS;
-        let hue_shift = drift.wrapping_sub(spin);
+        // Moves every LED's hue position back, which drifts the gradient and turns the spiral.
+        let hue_shift = cycle_q16(t_ms, HUE_PERIOD_MS).wrapping_neg();
         // The spiral's current twist, in cycles per mm x2^20.
         let twist = (SPIRAL_TWIST
             * (cycle(t_ms, TWIST_PERIOD_MS) * TAU).sin()
