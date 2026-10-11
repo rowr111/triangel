@@ -35,7 +35,7 @@ frame.encode(&mut buf);
 if let Some(frame) = BandFrame::decode(&buf) { /* ... */ }
 ```
 
-The eye receives a byte stream, not whole frames. `FrameAssembler::feed` takes one byte at a time, finds the sync byte, and returns a `BandFrame` each time one completes.
+The eye receives a byte stream, not whole frames. `FrameAssembler::feed` takes one byte at a time, finds the sync byte, and returns `Fed::Frame` when a frame completes, `Fed::Bad` when one fails its checksum, and `Fed::Pending` otherwise.
 
 ## `tuning` - sound-reactive tuning
 

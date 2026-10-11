@@ -22,8 +22,8 @@ pub enum TransitionStyle {
     RadialIn,      // from the edges inward
     Sparkle,       // each LED changes at its own random moment
     RadialSparkle, // from the center outward, with a ragged edge
-    SpiralOut,     // one tile at a time, spiraling out from the center
-    SpiralIn,      // one tile at a time, spiraling in to the center
+    SpiralOut,     // tile by tile, as a spiral arm sweeps around the fixture
+    SpiralIn,      // the same sweep in reverse
 }
 
 /// Blends `from` into `out`, which holds the incoming frame on entry. `progress` is 0-1.
@@ -75,7 +75,7 @@ fn alpha_for(
     }
 }
 
-/// Each tile's place in the spiral order by `board_id`, 0 (first, innermost) to 1 (last).
+/// Each tile's place in the spiral order by `board_id`, 0 (first) to 1 (last).
 fn board_spiral_ranks() -> &'static [f32; BOARD_COUNT + 1] {
     static RANKS: OnceLock<[f32; BOARD_COUNT + 1]> = OnceLock::new();
     RANKS.get_or_init(compute_spiral_ranks)

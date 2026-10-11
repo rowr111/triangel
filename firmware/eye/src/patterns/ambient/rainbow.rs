@@ -32,7 +32,7 @@ const GLINTS: GlintStyle = GlintStyle {
 
 pub struct Rainbow {
     glints:  Glints,
-    // Fixed per LED: sin and cos of its ripple angle, its place on the hue wheel (0-1)
+    // Fixed per LED: sin and cos of its ripple angle, its place on the hue wheel (-0.5 to 0.5)
     // and its tile hash.
     ripple_sin: [f32; LED_COUNT],
     ripple_cos: [f32; LED_COUNT],

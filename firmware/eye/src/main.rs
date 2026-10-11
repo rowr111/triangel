@@ -18,9 +18,8 @@ fn hardware_random() -> Option<u32> {
 }
 
 fn main() -> ! {
-    // A panic anywhere (main or a thread) prints over USB serial before the
-    // process dies; the USB server owns the message once sent, so it still
-    // reaches the host. Without this, panics are invisible.
+    // On a bringup build a panic prints over USB serial. A panic on the main thread then
+    // ends the process; one on another thread ends only that thread.
     std::panic::set_hook(Box::new(|info| {
         diag::Diag::new().line(&format!("PANIC: {}", info));
     }));

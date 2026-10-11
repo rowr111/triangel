@@ -35,7 +35,7 @@ impl UartOut {
         );
         UdmaGlobal::new().udma_clock_config(PeriphId::Uart2, true);
 
-        // SAFETY: called once at startup before any other UART use on this channel.
+        // SAFETY: the UART2 clock was turned on by udma_clock_config above.
         let uart = unsafe { Uart::new(UartChannel::Uart2, EAR_UART_BAUD, PERCLK_HZ) };
         Self { uart }
     }

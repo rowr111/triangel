@@ -141,14 +141,14 @@ impl I2sAudio {
         this
     }
 
-    /// Samples queued in FIFO0 right now (0..=8). A steady 8 means the BIO is
+    /// Samples queued in FIFO0 right now (0..=7). A steady 7 means the BIO is
     /// pushing and nobody is draining; a steady 0 means nothing is arriving.
     pub fn fifo_level(&self) -> u32 {
         self.rx.csr.rf(bio_bdma::SFR_FLEVEL_PCLK_REGFIFO_LEVEL0)
     }
 
     /// Pop one raw FIFO word, or None after SAMPLE_SPIN_LIMIT polls of an empty FIFO.
-    /// The FIFO is 8 deep, so a reader must keep draining or samples are dropped.
+    /// The FIFO holds 7, so a reader must keep draining or samples are dropped.
     pub fn try_read_raw(&mut self) -> Option<u32> {
         let mut spins = 0u32;
         while self.fifo_level() == 0 {
@@ -192,7 +192,7 @@ impl I2sAudio {
         }
     }
 
-    /// Block until a complete frame is available, then return it.
+    /// Blocks until a frame is read. If samples stop arriving, the rest of it is zeros.
     pub fn read_frame(&mut self) -> [i16; FRAME_SAMPLES] {
         // Drop what queued while the caller processed the last frame, so this one starts
         // on fresh audio.
