@@ -29,6 +29,10 @@ pub const FRAME_PERIOD_MS: u32 = FRAME_SAMPLES as u32 * 1000 / SAMPLE_RATE_HZ;
 // The rates must divide evenly; integer division would truncate without a warning.
 const _: () = assert!(BIO_QUANTUM_HZ.is_multiple_of(2 * BCLK_PER_FRAME));
 const _: () = assert!(RAW_RATE_HZ.is_multiple_of(DECIMATE as u32));
+// The pins are compiled into the BIO program (i2s_bio.rs). Regenerate it to move one.
+const _: () = assert!(
+    crate::pins::MIC_BCLK_BIO_PIN == 1 && crate::pins::MIC_SD_BIO_PIN == 2 && crate::pins::MIC_WS_BIO_PIN == 3
+);
 // The ICS43434's high-performance mode runs from 23 kHz to 51.6 kHz.
 const _: () = assert!(RAW_RATE_HZ >= 23_000 && RAW_RATE_HZ <= 51_600);
 
@@ -59,7 +63,6 @@ impl Resources for I2sAudio {
             claimer: "i2s-mic".to_string(),
             cores: vec![CoreRequirement::Any],
             fifos: vec![Fifo::Fifo0],
-            // BCLK, SD and WS are fixed in the BIO program (i2s_bio.rs).
             static_pins: vec![
                 crate::pins::MIC_BCLK_BIO_PIN,
                 crate::pins::MIC_SD_BIO_PIN,

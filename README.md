@@ -58,4 +58,5 @@ To regenerate:
 3. From `bio-sim/sw`, run: `python3 -m ziglang build -Dmodule=i2s -Demit-listing=false`
    (regenerates `bio-sim/sw/i2s/i2s.rs`).
 4. Copy it in: `cp bio-sim/sw/i2s/i2s.rs firmware/ear/src/i2s_bio.rs`
-5. Rebuild the ear firmware.
+5. Set the same three numbers in `firmware/ear/src/pins.rs` and in the check below the rate constants in `firmware/ear/src/audio.rs`.
+6. Rebuild the ear firmware.

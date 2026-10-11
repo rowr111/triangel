@@ -26,8 +26,8 @@ impl Source {
             left:   !read_pin(&self.iox, pins::BTN_LEFT_PORT,   pins::BTN_LEFT_PIN),
             right:  !read_pin(&self.iox, pins::BTN_RIGHT_PORT,  pins::BTN_RIGHT_PIN),
             center: !read_pin(&self.iox, pins::BTN_CENTER_PORT, pins::BTN_CENTER_PIN),
-            sw_on:   read_pin(&self.iox, pins::SW_A_PORT,       pins::SW_A_PIN),
-            sw_off:  read_pin(&self.iox, pins::SW_B_PORT,       pins::SW_B_PIN),
+            sw_on:   read_pin(&self.iox, pins::SW_ON_PORT,      pins::SW_ON_PIN),
+            sw_off:  read_pin(&self.iox, pins::SW_OFF_PORT,     pins::SW_OFF_PIN),
         })
     }
 }
@@ -49,8 +49,8 @@ fn setup_pins(iox: &IoxHal) {
     // Switch lines: active-high with external 10k pull-downs, so the internal pull-up must
     // stay off - against the pull-down it would form a divider that could misread as HIGH.
     let sw_pins = [
-        (pins::SW_A_PORT, pins::SW_A_PIN),
-        (pins::SW_B_PORT, pins::SW_B_PIN),
+        (pins::SW_ON_PORT, pins::SW_ON_PIN),
+        (pins::SW_OFF_PORT, pins::SW_OFF_PIN),
     ];
     for (port, pin) in sw_pins {
         crate::pins::setup_input_pin(iox, port, pin, IoxFunction::Gpio, IoxEnable::Disable);

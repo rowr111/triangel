@@ -39,7 +39,10 @@ fn main() -> ! {
 
     let tt = ticktimer::Ticktimer::new().unwrap();
 
-    d.line("I2S pins: PB1 = BCLK, PB2 = SD, PB3 = WS");
+    d.line(&format!(
+        "I2S pins: PB{} = BCLK, PB{} = SD, PB{} = WS",
+        pins::MIC_BCLK_BIO_PIN, pins::MIC_SD_BIO_PIN, pins::MIC_WS_BIO_PIN,
+    ));
     diag::stage(&d, Stage::StartingBio);
     let mut mic = I2sAudio::new();
     diag::stage(&d, Stage::BioUp);

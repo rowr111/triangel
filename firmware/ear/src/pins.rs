@@ -9,11 +9,9 @@ use bao1x_api::IoxPort;
 pub const AUDIO_UART_TX_PORT: IoxPort = IoxPort::PB;
 pub const AUDIO_UART_TX_PIN:  u8      = 14;
 
-// ICS43434 MEMS microphone - I2S, implemented as a BIO driver (not the hardware
-// UDMA I2S peripheral), so the pins are not tied to a fixed alternate-function
-// table - any BIO pin works. BIO pin number == PB pin number (PB1 = BIO1, etc).
-// Avoid PB11/PB12 (used for I2C).
-// BCLK = PB1, SD (mic data out) = PB2, WS/LRCLK = PB3.
+// ICS43434 MEMS microphone, I2S through a BIO program. The pins are compiled into that
+// program (i2s_bio.rs), so moving one means regenerating it; see the root README.
+// BIO pin number == PB pin number. Avoid PB11/PB12 (used for I2C).
 pub const MIC_BCLK_BIO_PIN: u8 = 1; // PB1
 pub const MIC_SD_BIO_PIN:   u8 = 2; // PB2
 pub const MIC_WS_BIO_PIN:   u8 = 3; // PB3

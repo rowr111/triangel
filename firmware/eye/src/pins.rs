@@ -38,11 +38,11 @@ mod combined_board {
 
     // 3-position sound switch (eye DABAO, socket U2 right edge). Its common is tied to +3.3V
     // and each throw has a 10k pull-down, so the selected line reads HIGH and the center
-    // position reads both LOW. SW_A is the ON line, SW_B the OFF line.
-    pub const SW_A_PORT: IoxPort = IoxPort::PB;
-    pub const SW_A_PIN:  u8      = 3;
-    pub const SW_B_PORT: IoxPort = IoxPort::PB;
-    pub const SW_B_PIN:  u8      = 2;
+    // position reads both LOW. On the schematic ON is SW_A and OFF is SW_B.
+    pub const SW_ON_PORT:  IoxPort = IoxPort::PB;
+    pub const SW_ON_PIN:   u8      = 3;
+    pub const SW_OFF_PORT: IoxPort = IoxPort::PB;
+    pub const SW_OFF_PIN:  u8      = 2;
 }
 
 #[cfg(feature = "input-board")]
