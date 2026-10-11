@@ -18,6 +18,10 @@ const IR_CMD_PATTERN_PREV:    u8 = 0x42; // Left button
 const IR_CMD_HOLD:            u8 = 0x40; // Center button
 const IR_CMD_GEAR:            u8 = 0x46; // Gear button -> cycle sound mode
 
+// A held button sends a repeat code about every 108 ms (NEC). One that comes later than
+// this after the last accepted code is not from a held button.
+const REPEAT_WINDOW_MS: u64 = 250;
+
 // Diagnostic state reported by the heartbeat line.
 static CLOCK_HZ:        AtomicU32 = AtomicU32::new(0);
 static DECODED_FRAMES:  AtomicU32 = AtomicU32::new(0);
@@ -70,12 +74,18 @@ fn receive_loop(capture: NecCapture, events: EventSender, diag: Diag) -> ! {
     let tt = ticktimer::Ticktimer::new().unwrap();
     // Last valid command; repeat frames re-trigger it (brightness only).
     let mut last_cmd: Option<u8> = None;
+    // When the last frame or repeat was accepted.
+    let mut accepted_ms: u64 = 0;
     loop {
         while let Some(frame) = capture.try_read_frame() {
+            let now_ms = tt.elapsed_ms();
             if frame == REPEAT_FRAME {
                 // Only brightness auto-repeats; other commands act once per press.
                 if let Some(cmd @ (IR_CMD_BRIGHTNESS_UP | IR_CMD_BRIGHTNESS_DOWN)) = last_cmd {
-                    map_ir_cmd(cmd, &events);
+                    if now_ms - accepted_ms <= REPEAT_WINDOW_MS {
+                        accepted_ms = now_ms;
+                        map_ir_cmd(cmd, &events);
+                    }
                 }
                 continue;
             }
@@ -89,6 +99,7 @@ fn receive_loop(capture: NecCapture, events: EventSender, diag: Diag) -> ! {
             DECODED_FRAMES.fetch_add(1, Ordering::Relaxed);
             diag.line(&format!("IR frame ok: cmd {:02x} (frame {:08x})", cmd, frame));
             last_cmd = Some(cmd);
+            accepted_ms = now_ms;
             map_ir_cmd(cmd, &events);
         }
         // The FIFO holds eight frames, so this only bounds input latency.
