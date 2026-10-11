@@ -101,6 +101,14 @@ pub fn cycle(t_ms: u32, period_ms: u32) -> f32 {
     (t_ms % period_ms) as f32 / period_ms as f32
 }
 
+/// Which lifetime a repeating slot is in and how far through, 0-1. Its length is hashed.
+pub fn slot_life(slot: u32, salt: u32, t_ms: u32, min_ms: u32, max_ms: u32) -> (u32, f32) {
+    let slot_seed = hash2(slot, salt);
+    let life = min_ms + slot_seed % (max_ms - min_ms);
+    let local = t_ms.wrapping_add(slot_seed % life);
+    (local / life, cycle(local, life))
+}
+
 /// `t_ms` wrapped to one period of a `rate` in rad/ms, for `sin(t * rate + ...)`.
 pub fn fold_ms(t_ms: u32, rate: f32) -> f32 {
     let period = (TAU / rate) as u32;

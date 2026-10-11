@@ -1,5 +1,5 @@
 use crate::audio::Audio;
-use crate::patterns::{Frame, Pattern, cycle, fold_ms, hash2, hsv, random_u32, sin_sum, smoothstep, wrap360};
+use crate::patterns::{Frame, Pattern, cycle, fold_ms, hash2, hsv, random_u32, sin_sum, slot_life, smoothstep, wrap360};
 use crate::led::map::{Led, LED_COUNT, LED_MAP};
 use core::f32::consts::{PI, TAU};
 
@@ -14,7 +14,7 @@ const BASE_VAL:     f32 = 0.4;    // field brightness floor
 
 // A slow brightness swell that drifts across the field.
 const SWELL:         f32 = 0.25;  // how much the swell lifts brightness
-const SWELL_SPAN_MM: f32 = 260.0; // distance between crests
+const SWELL_SPAN_MM: f32 = 260.0; // crest spacing along x or y; crests run diagonally, 184 mm apart
 const SWELL_MS:      u32 = 12_000;
 
 // Shapes
@@ -37,21 +37,25 @@ const SHIMMER_RATE: f32 = 0.004; // flicker rate (rad/ms)
 const COS60: f32 = 0.5;
 const SIN60: f32 = 0.866_025_4;
 
+#[derive(Clone, Copy)]
+enum Shape {
+    /// An expanding band: its radius and its squared bounds.
+    Ring { r: f32, d2_min: f32, d2_max: f32 },
+    /// A rotating line through the origin, along a unit direction.
+    Bar { cs: f32, sn: f32 },
+    /// Three lines 60 degrees apart.
+    Star { dirs: [(f32, f32); 3] },
+}
+
 // One live shape, with its trig worked out once for the frame.
 #[derive(Clone, Copy)]
 struct Elem {
-    kind: u8,  // 0 ring, 1 bar, 2 star
+    shape: Shape,
     ox:   f32, // origin, always an LED position
     oy:   f32,
     env:  f32, // brightness for the current age, 0..1
-    r:    f32, // ring radius
-    cs:   f32, // direction of the bar, or of the star's first line
-    sn:   f32,
     chue: f32, // cos and sin of the hue angle
     shue: f32,
-    dirs:   [(f32, f32); 2], // the star's other two lines
-    d2_min: f32,             // squared bounds of the ring
-    d2_max: f32,
 }
 
 pub struct Effervesce {
@@ -134,15 +138,10 @@ impl Pattern for Effervesce {
 /// Slot `s`'s current shape, from time and hashes.
 fn make_elem(s: usize, t_ms: u32, show_seed: u32) -> Elem {
     // Each slot has its own lifetime and start offset, so the slots do not respawn together.
-    let slot_seed = hash2(s as u32 + 1, 0x5EED);
-    let life  = LIFETIME_MIN_MS + slot_seed % (LIFETIME_MAX_MS - LIFETIME_MIN_MS);
-    let local = t_ms.wrapping_add(slot_seed % life);
-    let gen   = local / life;
-    let age   = (local % life) as f32 / life as f32;
+    let (gen, age) = slot_life(s as u32 + 1, 0x5EED, t_ms, LIFETIME_MIN_MS, LIFETIME_MAX_MS);
 
     let seed = hash2(s as u32 + 1, gen ^ show_seed);
     let led  = &LED_MAP[(seed as usize) % LED_COUNT];
-    let kind = ((seed >> 8) % 3) as u8;
     let ang0 = ((seed >> 12) & 0xFFFF) as f32 / 65_536.0 * TAU;
     let dir  = if (seed >> 28) & 1 == 0 { 1.0 } else { -1.0 };
     let hue  = (seed & 0x1FF) as f32 / 512.0 * 360.0;
@@ -150,53 +149,45 @@ fn make_elem(s: usize, t_ms: u32, show_seed: u32) -> Elem {
     let (sn, cs) = (ang0 + dir * age * SPIN * TAU).sin_cos();
     let (shue, chue) = hue.to_radians().sin_cos();
     let env = (PI * age).sin(); // fades in, peaks mid-life, fades out
-    let r = age * RING_MAX_MM;
 
-    let d1 = rot60(cs, sn);
-    let dirs = [d1, rot60(d1.0, d1.1)];
-    // A ring smaller than its thickness has no inner edge; -1 never matches a squared distance.
-    let inner = r - RING_THICKNESS_MM;
-    let d2_min = if inner > 0.0 { inner * inner } else { -1.0 };
-    let outer = r + RING_THICKNESS_MM;
+    let shape = match (seed >> 8) % 3 {
+        0 => {
+            let r = age * RING_MAX_MM;
+            // A ring smaller than its thickness has no inner edge; -1 never matches a
+            // squared distance.
+            let inner = r - RING_THICKNESS_MM;
+            let d2_min = if inner > 0.0 { inner * inner } else { -1.0 };
+            let outer = r + RING_THICKNESS_MM;
+            Shape::Ring { r, d2_min, d2_max: outer * outer }
+        }
+        1 => Shape::Bar { cs, sn },
+        _ => {
+            let d1 = rot60(cs, sn);
+            Shape::Star { dirs: [(cs, sn), d1, rot60(d1.0, d1.1)] }
+        }
+    };
 
-    Elem {
-        kind,
-        ox: led.wx,
-        oy: led.wy,
-        env,
-        r,
-        cs,
-        sn,
-        chue,
-        shue,
-        dirs,
-        d2_min,
-        d2_max: outer * outer,
-    }
+    Elem { shape, ox: led.wx, oy: led.wy, env, chue, shue }
 }
 
 /// One shape's brightness at one LED, in 0..1.
 fn shape_intensity(e: &Elem, led: &Led) -> f32 {
     let dx = led.wx - e.ox;
     let dy = led.wy - e.oy;
-    match e.kind {
-        // Ring: an expanding band.
-        0 => {
+    match e.shape {
+        Shape::Ring { r, d2_min, d2_max } => {
             let d2 = dx * dx + dy * dy;
-            if d2 <= e.d2_min || d2 >= e.d2_max {
+            if d2 <= d2_min || d2 >= d2_max {
                 return 0.0;
             }
             let d = d2.sqrt();
-            let shell = ((1.0 - (d - e.r).abs() / RING_THICKNESS_MM) * EDGE_SHARP).clamp(0.0, 1.0);
+            let shell = ((1.0 - (d - r).abs() / RING_THICKNESS_MM) * EDGE_SHARP).clamp(0.0, 1.0);
             shell * e.env
         }
-        // Bar: a rotating line through the origin.
-        1 => line_intensity(dx, dy, e.cs, e.sn) * e.env,
-        // Star: three lines 60 degrees apart, the strongest wins.
-        _ => {
-            let l0 = line_intensity(dx, dy, e.cs, e.sn);
-            let l1 = line_intensity(dx, dy, e.dirs[0].0, e.dirs[0].1);
-            let l2 = line_intensity(dx, dy, e.dirs[1].0, e.dirs[1].1);
+        Shape::Bar { cs, sn } => line_intensity(dx, dy, cs, sn) * e.env,
+        // The strongest of the three lines wins.
+        Shape::Star { dirs } => {
+            let [l0, l1, l2] = dirs.map(|(cs, sn)| line_intensity(dx, dy, cs, sn));
             l0.max(l1).max(l2) * e.env
         }
     }

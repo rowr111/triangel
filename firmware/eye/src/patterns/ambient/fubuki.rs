@@ -1,5 +1,5 @@
 use crate::audio::Audio;
-use crate::patterns::{Frame, Pattern, cycle, fold_ms, hash2, hsv, lerp, random_u32, sin_sum, wrap360};
+use crate::patterns::{Frame, Pattern, fold_ms, hash2, hsv, lerp, random_u32, sin_sum, slot_life, wrap360};
 use crate::led::grid::{self, CELL_MM};
 use crate::led::map::{WORLD_TOP, WORLD_BOT, WORLD_H, WORLD_CX, LED_COUNT, LED_MAP};
 use crate::led::world::{WORLD_LEFT, WORLD_RIGHT};
@@ -209,11 +209,8 @@ impl Pattern for Fubuki {
 /// Flake `i`'s position and color this frame, from time and hashes.
 fn make_flake(i: usize, t_ms: u32, seed: u32, fill_y: f32, prev: &Season, new: &Season, nf: f32) -> Flake {
     // Each slot has its own fall time and start offset, so the flakes do not drop together.
-    let sseed  = hash2(i as u32 + 1, 0x0F1A);
-    let period = FALL_MIN_MS + sseed % (FALL_MAX_MS - FALL_MIN_MS);
-    let local  = t_ms.wrapping_add(sseed % period);
-    let gen    = local / period;
-    let fp     = cycle(local, period); // 0 at the top, 1 at the pile
+    // `fp` is 0 at the top, 1 at the pile.
+    let (gen, fp) = slot_life(i as u32 + 1, 0x0F1A, t_ms, FALL_MIN_MS, FALL_MAX_MS);
 
     let g       = hash2(i as u32 + 1, gen ^ seed);
     // Across the fixture, a little in from each side.
