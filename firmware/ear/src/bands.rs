@@ -293,7 +293,7 @@ impl BandProcessor {
         self.smoothed_rms = follow(self.smoothed_rms, rms, LEVEL_ATTACK, LEVEL_DECAY);
         // RMS is already normalized to full scale, so dBFS needs no calibration.
         let dbfs = if self.smoothed_rms > 0.0 {
-            20.0 * self.smoothed_rms.log10()
+            (20.0 * self.smoothed_rms.log10()).max(LEVEL_DB_FLOOR)
         } else {
             LEVEL_DB_FLOOR
         };

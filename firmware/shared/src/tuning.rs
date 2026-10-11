@@ -177,8 +177,9 @@ pub mod ear {
     pub const BAND_VISIBLE_RANGE_DB: f32 = 26.0;
     /// How much each band is scaled to its own range: 0 keeps true loudness, 1 evens them out.
     pub const PER_BAND_MIX: f32 = 0.45;
-    /// Smallest range a band, and the level, get stretched over.
+    /// Smallest range a band gets stretched over. Only acts with PER_BAND_MIX above 0.7.
     pub const BAND_MIN_SPAN_DB: f32 = 8.0;
+    /// Smallest range the level gets stretched over.
     pub const LEVEL_MIN_SPAN_DB: f32 = 6.0;
     /// Lift per octave toward the treble, and the band it pivots on.
     pub const TILT_DB_PER_OCTAVE: f32 = 2.0;
