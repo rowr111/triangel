@@ -8,6 +8,11 @@ use triangel_shared::tuning::firework::*;
 
 /// Must stay under 255: each LED stores the index of its strongest spark in a byte.
 const MAX_SPARKS: usize = 192;
+const _: () = assert!(MAX_SPARKS <= NO_OWNER as usize, "a spark index must fit below NO_OWNER");
+const _: () = assert!(
+    DROP_BURSTS * (BURST_MIN + BURST_EXTRA as usize) <= MAX_SPARKS,
+    "a drop's bursts need more sparks than MAX_SPARKS"
+);
 /// Spots tried for each drop burst before taking the farthest one found.
 const DROP_TRIES: usize = 12;
 

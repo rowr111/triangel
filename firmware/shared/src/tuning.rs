@@ -116,7 +116,7 @@ pub mod firework {
     pub const BURST_MIN: usize = 8;
     pub const BURST_EXTRA: f32 = 8.0;
     /// Bursts on a drop, and how far apart they are kept, in mm. Keep DROP_BURSTS times
-    /// (BURST_MIN + BURST_EXTRA) well under 192, the most sparks that can fly at once.
+    /// (BURST_MIN + BURST_EXTRA) well under Firework's MAX_SPARKS, the most that can fly at once.
     pub const DROP_BURSTS: usize = 7;
     pub const DROP_SPACING_MM: f32 = 110.0;
     /// Spark speed range in mm per ms, and how long a spark lasts.

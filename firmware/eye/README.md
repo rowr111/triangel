@@ -83,7 +83,7 @@ See [PATTERNS.md](PATTERNS.md).
 
 ## Sound reactivity
 
-Each render frame, reactive patterns get an `Audio` snapshot built from the ear's frames: 24 band levels, a per-band onset (`rise`), overall loudness relative to recent music, and one-frame `beat` and `drop` flags. Detection thresholds and every pattern's sound tuning are in [`../shared/src/tuning.rs`](../shared/src/tuning.rs).
+Each render frame, reactive patterns get an `Audio` snapshot built from the ear's frames: 24 band levels, a per-band onset (`rise`), overall loudness relative to recent music, and one-frame `beat` and `drop` flags. Detection thresholds and the patterns' sound tuning are in [`../shared/src/tuning.rs`](../shared/src/tuning.rs).
 
 Sound mode is set by the 3-position switch, or cycled by the remote's gear button:
 

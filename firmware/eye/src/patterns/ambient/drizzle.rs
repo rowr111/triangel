@@ -1,6 +1,10 @@
 use crate::audio::Audio;
 use crate::patterns::ripples::{RippleStyle, Ripples};
 use crate::patterns::{Frame, Pattern};
+use triangel_shared::tuning::raindrop::{
+    GAIN_BASE, GAIN_HIT, HIT_BOOST, RINGS_MAX, RINGS_MIN, RIPPLE_MAX_MM, RIPPLE_SPEED,
+    SPACING_MAX_MM, SPACING_MIN_MM, START_RADIUS_MM, WHITE_MM,
+};
 
 /// Wait between drops.
 const GAP_MIN_MS: f32 = 600.0;
@@ -8,21 +12,16 @@ const GAP_MAX_MS: f32 = 3000.0;
 /// Drop strength range.
 const STRENGTH_MIN: f32 = 0.35;
 const STRENGTH_MAX: f32 = 1.0;
-/// Ring spacing in mm, and rings per drop.
-const SPACING_MIN_MM: f32 = 24.0;
-const SPACING_MAX_MM: f32 = 42.0;
-const RINGS_MIN: f32 = 2.0;
-const RINGS_MAX: f32 = 5.0;
 
 /// Raindrop's look at half its speed.
 const STYLE: RippleStyle = RippleStyle {
-    ripple_speed:    0.11,
-    ripple_max_mm:   560.0,
-    gain_base:       1.2,
-    gain_hit:        3.0,
-    start_radius_mm: 24.0,
-    white_mm:        180.0,
-    hit_boost:       4.5,
+    ripple_speed:    RIPPLE_SPEED * 0.5,
+    ripple_max_mm:   RIPPLE_MAX_MM,
+    gain_base:       GAIN_BASE,
+    gain_hit:        GAIN_HIT,
+    start_radius_mm: START_RADIUS_MM,
+    white_mm:        WHITE_MM,
+    hit_boost:       HIT_BOOST,
 };
 
 /// Rain on black water: drops land at random spots and times and ripple out.

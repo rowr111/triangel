@@ -22,8 +22,8 @@ const DARK_MAX:   f32   = 0.5;
 const RING_SLOTS: usize = 64;  // rings remembered, far more than fit on the fixture
 
 // Wave speed: now and then a new target is picked and the wave eases to it.
-const SPEED_MIN:           f32 = 0.5;   // as a multiple of the base speed
-const SPEED_MAX:           f32 = 1.6;
+const SPEED_SCALE_MIN:     f32 = 0.5;
+const SPEED_SCALE_MAX:     f32 = 1.6;
 const SPEED_CHANGE_MIN_MS: u32 = 6_000; // wait before the next target
 const SPEED_CHANGE_MAX_MS: u32 = 14_000;
 const SPEED_EASE_MS:       i32 = 2_000; // roughly how long the change takes
@@ -117,7 +117,7 @@ impl CenterShimmer {
     /// Eases the speed toward its target, moves the wave, and picks a darkness for each new ring.
     fn advance_wave(&mut self, t_ms: u32, dt_ms: u32) {
         if t_ms.wrapping_sub(self.speed_pick_ms) >= self.speed_gap_ms {
-            let m = self.rng.range_f32(SPEED_MIN, SPEED_MAX);
+            let m = self.rng.range_f32(SPEED_SCALE_MIN, SPEED_SCALE_MAX);
             self.speed_target_q8 = (self.speed * m * 256.0) as i32;
             self.speed_pick_ms = t_ms;
             self.speed_gap_ms = SPEED_CHANGE_MIN_MS
