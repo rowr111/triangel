@@ -81,7 +81,10 @@ impl LedOutput {
             // The USB send buffer is 1024 bytes and a frame is 1804, so send in chunks
             // with a pause for the buffer to drain.
             for chunk in buf.chunks(512) {
-                self.inner.usb.serial_send(chunk).ok();
+                // A short write: the PC is not reading. The bridge drops a cut frame.
+                if !matches!(self.inner.usb.serial_send(chunk), Ok(n) if n == chunk.len()) {
+                    break;
+                }
                 self.inner.tt.sleep_ms(1).ok();
             }
         }

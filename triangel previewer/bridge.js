@@ -110,6 +110,13 @@ function connect() {
       }
       if (idx > 0) buf = buf.subarray(idx);
       if (buf.length < PACKET_SIZE) break;   // wait for a full packet
+      // A 0xFF in the payload is the next frame's marker: this frame was cut short.
+      if (buf[FRAME_MAGIC.length] === 0xFF) { buf = buf.subarray(1); continue; }
+      const cut = buf.indexOf(0xFF, FRAME_MAGIC.length);
+      if (cut !== -1 && cut < PACKET_SIZE) {
+        buf = buf.subarray(cut);
+        continue;
+      }
       broadcast(buf.subarray(FRAME_MAGIC.length, PACKET_SIZE)); // strip magic, send 1800 bytes
       buf = buf.subarray(PACKET_SIZE);
       frameCount++;
