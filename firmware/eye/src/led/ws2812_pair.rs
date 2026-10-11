@@ -8,7 +8,7 @@ use utralib::utra::bio_bdma;
 use crate::led::map::{CHAIN1_LED_COUNT, CHAIN2_LED_COUNT};
 
 // Two WS2812B chains on two BIO cores, sent in parallel so a frame takes as long as
-// the longer chain (~9.4 ms), not the sum of both. Each chain has one FIFO for pixel
+// the longer chain (about 11 ms), not the sum of both. Each chain has one FIFO for pixel
 // data, and a core raises its bit in the shared event register when its strip is sent.
 
 /// Event register bits the two cores raise when a strip has finished sending.
@@ -165,13 +165,13 @@ pub fn rgb_to_u32(r: u8, g: u8, b: u8) -> u32 { ((g as u32) << 16) | ((r as u32)
 //   1. the I/O mask naming the pin to drive
 //   2. the event register bit to raise when a strip has been sent
 //
-// Every word after that is one LED, from the far end of the chain back:
+// Every word after that is one LED, nearest the controller first:
 //   bit 24     - 0 means more data follows. 1 means send everything received.
 //   bits 23:16 - g[7:0]
 //   bits 15:8  - r[7:0]
 //   bits 7:0   - b[7:0]
 //
-// After sending, the buffer is cleared and rebuilt from the last LED again.
+// After sending, the next word received goes to the start of the buffer again.
 // Expects the quantum clock to be set to a 150ns period (6.66666..7 MHz).
 macro_rules! ws2812b_kernel {
     ($fn_name:ident, $start:ident, $end:ident, $fifo:literal) => {
@@ -258,7 +258,7 @@ macro_rules! ws2812b_kernel {
 
         "60:", // check if we've exhausted all the LED values
             "addi x8, x8, 4",
-            "bge sp, x8, 30b", // see if we've hit the value of current sp
+            "bltu x8, sp, 30b", // see if we've hit the value of current sp
             concat!("li sp, ", buffer_start!()), // reset the stack pointer for a fresh fetch
             // wait to reset the chain
             "li x14, 2000", // delay wait time to reset the chain per spec

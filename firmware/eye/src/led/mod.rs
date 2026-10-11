@@ -50,7 +50,7 @@ impl LedOutput {
     }
 
     /// Sends one frame; `frame[i]` is the color of `LED_MAP[i]`. On hardware this takes
-    /// about 9.4 ms.
+    /// about 11 ms.
     pub fn send_frame(&mut self, frame: &[[u8; 3]; LED_COUNT]) {
         // The chains and the previewer both want chain order, not LED_MAP order.
         #[cfg(not(feature = "previewer"))]
