@@ -61,7 +61,7 @@ If the PCB geometry or board gap changes:
 # 1. In "triangel previewer/": regenerate led_map.js
 node generate_map.js
 
-# 2. Copy the output into firmware/eye/src/led/map.rs
+# 2. Convert each entry of led_map.js to a `Led { .. }` line in firmware/eye/src/led/map.rs
 
 # 3. In firmware/eye/: regenerate src/led/geom.rs from map.rs
 python tools/gen_geom.py

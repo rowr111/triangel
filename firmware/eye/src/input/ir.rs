@@ -10,7 +10,8 @@ use crate::pins;
 const NEC_ADDR_LO: u8 = 0x85;
 const NEC_ADDR_HI: u8 = 0xFE;
 
-// Command bytes from the 7-button remote. The TV button (0x45) is unassigned.
+// Command bytes from the 7-button remote, as pictured in ir_remote_mapping.jpg (the
+// address printed there is not this remote's). The TV button (0x45) is unassigned.
 const IR_CMD_BRIGHTNESS_UP:   u8 = 0x43; // Up button
 const IR_CMD_BRIGHTNESS_DOWN: u8 = 0x44; // Down button
 const IR_CMD_PATTERN_NEXT:    u8 = 0x41; // Right button

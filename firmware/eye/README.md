@@ -36,9 +36,10 @@ src/
 +-- led/
 |   +-- mod.rs          - LedOutput: the WS2812 chains, or the USB previewer
 |   +-- ws2812_pair.rs  - two-chain WS2812 driver
-|   +-- map.rs          - LED_MAP: world position of every LED (generated)
+|   +-- map.rs          - LED_MAP: world position of every LED
 |   +-- geom.rs         - per-LED distances, angles and grid buckets (generated)
 |   +-- grid.rs         - spatial lookup: the LEDs near a point or segment
+|   +-- world.rs        - the fixture's left, right and half-width, from geom.rs
 +-- patterns/
 |   +-- mod.rs          - Pattern trait and shared helpers
 |   +-- transition.rs   - blends from one pattern to the next

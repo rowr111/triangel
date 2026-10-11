@@ -42,3 +42,10 @@ repos:
         entry: cargo clippy --manifest-path firmware/shared/Cargo.toml -- -D warnings
         files: ^firmware/
         pass_filenames: false
+
+      - id: geom-up-to-date
+        name: geom.rs matches map.rs and grid.rs
+        language: system
+        entry: python firmware/eye/tools/gen_geom.py --check
+        files: ^firmware/eye/(src/led|tools)/
+        pass_filenames: false

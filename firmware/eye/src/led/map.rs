@@ -1,5 +1,5 @@
-// Auto-generated from triangel previewer/led_map.js - do not edit by hand.
-// Run generate_map.js in the previewer, then re-run the generation script to update.
+// The table mirrors triangel previewer/led_map.js, converted by hand. After changing it,
+// run tools/gen_geom.py.
 // 600 LEDs across 25 boards. Two chains:
 //   Chain 1 (PB4): chainIdx 0-287   (288 LEDs) - boards 1-9,16,15,14
 //   Chain 2 (PB5): chainIdx 288-599 (312 LEDs) - boards 13,12,11,10,17-21,24,23,22,25
