@@ -45,7 +45,6 @@ pub static DROP_BASS_DB:       AtomicU32  = AtomicU32::new(0);
 pub static DROP_REF_DB:        AtomicU32  = AtomicU32::new(0);
 
 /// Drop detector state for the heartbeat.
-#[cfg(all(feature = "usb", not(feature = "previewer")))]
 pub struct DropStats {
     pub in_breakdown: bool,
     pub drops:        u32,
@@ -53,7 +52,6 @@ pub struct DropStats {
     pub ref_db:       f32,
 }
 
-#[cfg(all(feature = "usb", not(feature = "previewer")))]
 pub fn drop_stats() -> DropStats {
     DropStats {
         in_breakdown: DROP_BREAKDOWN.load(Ordering::Relaxed),
@@ -64,7 +62,6 @@ pub fn drop_stats() -> DropStats {
 }
 
 /// Link state for the heartbeat.
-#[cfg(all(feature = "usb", not(feature = "previewer")))]
 pub struct LinkStats {
     pub status:     u8,
     pub frames_ok:  u32,
@@ -75,7 +72,6 @@ pub struct LinkStats {
     pub norm:       f32,
 }
 
-#[cfg(all(feature = "usb", not(feature = "previewer")))]
 pub fn stats() -> LinkStats {
     LinkStats {
         status:     UART_STATUS.load(Ordering::Relaxed),

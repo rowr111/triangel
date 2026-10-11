@@ -32,11 +32,10 @@ board-dabao = [
 ]
 # Send frames to the browser previewer via USB serial instead of real WS2812 LEDs.
 # Use this when developing without triangle boards connected.
-previewer = ["usb"]
+previewer = []
 # Stream boot progress, IR activity, and panics to the USB serial monitor.
-bringup = ["usb"]
+bringup = []
 # Panel inputs live on a separate input board reached over I2C (MCP23008 expander plus an
 # interrupt line) instead of being wired straight to eye GPIOs on the combined controller board.
 input-board = []
-usb = []
 default = ["bao1x", "board-dabao"]

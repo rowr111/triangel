@@ -1,15 +1,13 @@
 use std::sync::Mutex;
 
-// USB-serial diagnostic channel for bringup on hardware. The console input
-// path is unavailable on this system build (UART2 is repurposed for the ear
-// audio link), so these unconditionally streamed lines are the only
-// visibility into the firmware. Active only on builds with `usb` and without
-// `previewer` - the previewer's serial stream carries binary LED frames and
-// text mixed in would corrupt it. On all other builds every call compiles to
-// a no-op.
+// Status lines over USB serial, the only view into the firmware: UART2, the usual
+// console, carries the ear's audio link.
 
-/// Boot milestones, printed as reached and repeated in the heartbeat line so
-/// a monitor attached late can still see how far boot got.
+/// True on builds that print these lines. The previewer's serial stream carries LED
+/// frames, which text would corrupt.
+pub const ON: bool = cfg!(all(feature = "bringup", not(feature = "previewer")));
+
+/// Boot milestones, printed as reached and repeated by the heartbeat until boot is done.
 #[derive(Clone, Copy)]
 pub enum Stage {
     MainStart,
@@ -34,30 +32,28 @@ impl Stage {
 static STAGE: Mutex<Stage> = Mutex::new(Stage::MainStart);
 
 pub struct Diag {
-    #[cfg(all(feature = "usb", not(feature = "previewer")))]
+    #[cfg(all(feature = "bringup", not(feature = "previewer")))]
     usb: usb_bao1x::UsbHid,
 }
 
 impl Diag {
     pub fn new() -> Self {
         Self {
-            #[cfg(all(feature = "usb", not(feature = "previewer")))]
+            #[cfg(all(feature = "bringup", not(feature = "previewer")))]
             usb: usb_bao1x::UsbHid::new(),
         }
     }
 
-    /// Send one diagnostic line to the USB serial port (no-op on builds
-    /// without it). One send per line: text and line ending in separate sends
-    /// let lines from different threads interleave mid-line.
+    /// Send one line. One send per line, or lines from different threads could
+    /// interleave mid-line.
     pub fn line(&self, s: &str) {
-        #[cfg(all(feature = "usb", not(feature = "previewer")))]
+        #[cfg(all(feature = "bringup", not(feature = "previewer")))]
         {
             let mut out = String::with_capacity(s.len() + 2);
             out.push_str(s);
             out.push_str("\r\n");
             self.usb.serial_send(out.as_bytes()).ok();
         }
-        #[cfg(not(all(feature = "usb", not(feature = "previewer"))))]
         let _ = s;
     }
 }
@@ -68,13 +64,13 @@ pub fn stage(diag: &Diag, stage: Stage) {
     diag.line(&format!("eye boot: {}", stage.name()));
 }
 
-/// Report liveness and IR activity: one line shortly after boot, then a line
-/// at most every 5 seconds and only when the IR counters have changed - the
-/// steady-state serial output is silent. Spawned before anything that could
-/// block in main so a stalled boot still heartbeats and names the stage it
-/// is stuck at.
+/// Every 5 seconds: the audio link and drop lines when the link has changed, and the
+/// alive line until boot is done, then only when the IR counters change. Spawned before
+/// anything in main that could block, so a stalled boot keeps naming its stage.
 pub fn spawn_heartbeat() {
-    #[cfg(all(feature = "usb", not(feature = "previewer")))]
+    if !ON {
+        return;
+    }
     std::thread::spawn(|| {
         let tt = ticktimer::Ticktimer::new().unwrap();
         let diag = Diag::new();
@@ -87,8 +83,9 @@ pub fn spawn_heartbeat() {
             // Audio link: counters first, so bytes-but-no-frames is distinguishable
             // from nothing arriving at all.
             let link = crate::audio::stats();
-            if last_audio != Some((link.frames_ok, link.frames_bad)) {
-                last_audio = Some((link.frames_ok, link.frames_bad));
+            let seen = (link.status, link.first_byte, link.frames_ok, link.frames_bad);
+            if last_audio != Some(seen) {
+                last_audio = Some(seen);
                 diag.line(&format!(
                     "audio: status {}, frames {}, dropped {}, first byte {:02x}, {:.1} dBFS, norm {:.2}",
                     link.status, link.frames_ok, link.frames_bad, link.first_byte, link.dbfs, link.norm,
@@ -102,11 +99,11 @@ pub fn spawn_heartbeat() {
             }
 
             let ir = crate::input::ir::stats();
-            if last_stats == Some(ir) {
+            let stage = *STAGE.lock().unwrap();
+            if matches!(stage, Stage::RenderLoop) && last_stats == Some(ir) {
                 continue;
             }
             last_stats = Some(ir);
-            let stage = *STAGE.lock().unwrap();
             diag.line(&format!(
                 "alive {} s, stage: {}, ir: decoded {}, rejected {}, clock {} Hz, last frame {:08x}",
                 tt.elapsed_ms() / 1000,

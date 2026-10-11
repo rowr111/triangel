@@ -29,7 +29,6 @@ static REJECTED_FRAMES: AtomicU32 = AtomicU32::new(0);
 static LAST_FRAME:      AtomicU32 = AtomicU32::new(0);
 
 /// IR receiver state for the heartbeat.
-#[cfg(all(feature = "usb", not(feature = "previewer")))]
 #[derive(Clone, Copy, PartialEq)]
 pub struct IrStats {
     pub clock_hz:   u32,
@@ -38,7 +37,6 @@ pub struct IrStats {
     pub last_frame: u32,
 }
 
-#[cfg(all(feature = "usb", not(feature = "previewer")))]
 pub fn stats() -> IrStats {
     IrStats {
         clock_hz:   CLOCK_HZ.load(Ordering::Relaxed),
