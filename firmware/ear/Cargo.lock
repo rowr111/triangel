@@ -34,8 +34,8 @@ checksum = "f2032f911046de80f0a198e0901378627c33f59ea0ac00e363d481118bd70a53"
 
 [[package]]
 name = "bao1x-api"
-version = "0.1.0"
-source = "git+https://github.com/betrusted-io/xous-core?rev=aee40a797af372b6debf938d2902b03d1002e8a2#aee40a797af372b6debf938d2902b03d1002e8a2"
+version = "0.1.4"
+source = "git+https://github.com/betrusted-io/xous-core?rev=a9a996d4102afefb9b418bb08c320134e8a5d152#a9a996d4102afefb9b418bb08c320134e8a5d152"
 dependencies = [
  "arbitrary-int",
  "bitbybit",
@@ -52,7 +52,7 @@ dependencies = [
 [[package]]
 name = "bao1x-hal"
 version = "0.1.0"
-source = "git+https://github.com/betrusted-io/xous-core?rev=aee40a797af372b6debf938d2902b03d1002e8a2#aee40a797af372b6debf938d2902b03d1002e8a2"
+source = "git+https://github.com/betrusted-io/xous-core?rev=a9a996d4102afefb9b418bb08c320134e8a5d152#a9a996d4102afefb9b418bb08c320134e8a5d152"
 dependencies = [
  "arbitrary-int",
  "bao1x-api",
@@ -78,7 +78,7 @@ dependencies = [
 [[package]]
 name = "bao1x-hal-service"
 version = "0.1.0"
-source = "git+https://github.com/betrusted-io/xous-core?rev=aee40a797af372b6debf938d2902b03d1002e8a2#aee40a797af372b6debf938d2902b03d1002e8a2"
+source = "git+https://github.com/betrusted-io/xous-core?rev=a9a996d4102afefb9b418bb08c320134e8a5d152#a9a996d4102afefb9b418bb08c320134e8a5d152"
 dependencies = [
  "arbitrary-int",
  "bao1x-api",
@@ -118,7 +118,7 @@ dependencies = [
 [[package]]
 name = "bio-lib"
 version = "0.1.0"
-source = "git+https://github.com/betrusted-io/xous-core?rev=aee40a797af372b6debf938d2902b03d1002e8a2#aee40a797af372b6debf938d2902b03d1002e8a2"
+source = "git+https://github.com/betrusted-io/xous-core?rev=a9a996d4102afefb9b418bb08c320134e8a5d152#a9a996d4102afefb9b418bb08c320134e8a5d152"
 dependencies = [
  "arbitrary-int",
  "bao1x-api",
@@ -273,7 +273,7 @@ checksum = "877a4ace8713b0bcf2a4e7eec82529c029f1d0619886d18145fea96c3ffe5c0f"
 [[package]]
 name = "flatipc"
 version = "0.1.0"
-source = "git+https://github.com/betrusted-io/xous-core?rev=aee40a797af372b6debf938d2902b03d1002e8a2#aee40a797af372b6debf938d2902b03d1002e8a2"
+source = "git+https://github.com/betrusted-io/xous-core?rev=a9a996d4102afefb9b418bb08c320134e8a5d152#a9a996d4102afefb9b418bb08c320134e8a5d152"
 dependencies = [
  "flatipc-derive",
  "xous",
@@ -282,7 +282,7 @@ dependencies = [
 [[package]]
 name = "flatipc-derive"
 version = "0.1.2"
-source = "git+https://github.com/betrusted-io/xous-core?rev=aee40a797af372b6debf938d2902b03d1002e8a2#aee40a797af372b6debf938d2902b03d1002e8a2"
+source = "git+https://github.com/betrusted-io/xous-core?rev=a9a996d4102afefb9b418bb08c320134e8a5d152#a9a996d4102afefb9b418bb08c320134e8a5d152"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -379,7 +379,7 @@ checksum = "1d758ba1b47b00caf47f24925c0074ecb20d6dfcffe7f6d53395c0465674841a"
 [[package]]
 name = "getrandom"
 version = "0.2.12"
-source = "git+https://github.com/betrusted-io/xous-core?rev=aee40a797af372b6debf938d2902b03d1002e8a2#aee40a797af372b6debf938d2902b03d1002e8a2"
+source = "git+https://github.com/betrusted-io/xous-core?rev=a9a996d4102afefb9b418bb08c320134e8a5d152#a9a996d4102afefb9b418bb08c320134e8a5d152"
 dependencies = [
  "cfg-if",
  "flatipc",
@@ -467,7 +467,7 @@ checksum = "68ab91017fe16c622486840e4c83c9a37afeff978bd239b5293d61ece587de66"
 [[package]]
 name = "locales"
 version = "0.1.0"
-source = "git+https://github.com/betrusted-io/xous-core?rev=aee40a797af372b6debf938d2902b03d1002e8a2#aee40a797af372b6debf938d2902b03d1002e8a2"
+source = "git+https://github.com/betrusted-io/xous-core?rev=a9a996d4102afefb9b418bb08c320134e8a5d152#a9a996d4102afefb9b418bb08c320134e8a5d152"
 dependencies = [
  "glob",
  "lazy_static",
@@ -977,7 +977,7 @@ checksum = "e6e4313cd5fcd3dad5cafa179702e2b244f760991f45397d14d4ebf38247da75"
 [[package]]
 name = "usb-bao1x"
 version = "0.1.0"
-source = "git+https://github.com/betrusted-io/xous-core?rev=aee40a797af372b6debf938d2902b03d1002e8a2#aee40a797af372b6debf938d2902b03d1002e8a2"
+source = "git+https://github.com/betrusted-io/xous-core?rev=a9a996d4102afefb9b418bb08c320134e8a5d152#a9a996d4102afefb9b418bb08c320134e8a5d152"
 dependencies = [
  "bao1x-api",
  "bao1x-hal",
@@ -1112,18 +1112,18 @@ dependencies = [
 
 [[package]]
 name = "xous"
-version = "0.9.70"
+version = "0.9.71"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8076e0a642623e94fcfa795dc1e5409715a6f9f842b019c5afffc87efe8d76f8"
+checksum = "673f8f1b380ca7f3efe808b87cb48c4dac72aed03d235337d5593ddc0d00ff93"
 dependencies = [
  "lazy_static",
 ]
 
 [[package]]
 name = "xous-api-log"
-version = "0.1.69"
+version = "0.1.70"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cc00f06eb68245d2f277a9f0a5d29ff9d7cc3d5b88a62d85e1f094a79aa7ee95"
+checksum = "6a6e6b758cd16110ddabc52285ce4743822bd4484b641fca72e37888a3594852"
 dependencies = [
  "log",
  "num-derive",
@@ -1134,9 +1134,9 @@ dependencies = [
 
 [[package]]
 name = "xous-api-names"
-version = "0.9.71"
+version = "0.9.72"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "998a4eb5abd7defef5b4a5a701ff1009787cd9184c1a6e73100f99aa53390152"
+checksum = "91a0a886aca50269c7f9927216ba33c76501d383bb35fe0a309388f02b88e1b4"
 dependencies = [
  "log",
  "num-derive",
@@ -1149,8 +1149,8 @@ dependencies = [
 
 [[package]]
 name = "xous-api-susres"
-version = "0.9.68"
-source = "git+https://github.com/betrusted-io/xous-core?rev=aee40a797af372b6debf938d2902b03d1002e8a2#aee40a797af372b6debf938d2902b03d1002e8a2"
+version = "0.9.69"
+source = "git+https://github.com/betrusted-io/xous-core?rev=a9a996d4102afefb9b418bb08c320134e8a5d152#a9a996d4102afefb9b418bb08c320134e8a5d152"
 dependencies = [
  "log",
  "num-derive",
@@ -1165,9 +1165,9 @@ dependencies = [
 
 [[package]]
 name = "xous-api-ticktimer"
-version = "0.9.70"
+version = "0.9.71"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e9a00a93c3c38caf7f99e73828544027fa0483d0f6ee487b9a1a7b3ee885039d"
+checksum = "6af2ccc33613a065fc1e7e2c500cd8c97eacabeaf375c1a2fd691483f6af7234"
 dependencies = [
  "log",
  "num-derive",
@@ -1182,9 +1182,9 @@ dependencies = [
 
 [[package]]
 name = "xous-ipc"
-version = "0.10.10"
+version = "0.10.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "77dea39ef1a9a4bbfce9a07ab0321915c4e8af31f01f09e7520d5f4ac8224130"
+checksum = "8bf372fe20c7298e22d2387cd779fdd894ceef66546d976ab73544f21082dedb"
 dependencies = [
  "bitflags",
  "rkyv",

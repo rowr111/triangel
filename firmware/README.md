@@ -36,11 +36,11 @@ The baud rate and frame layout are defined once, in the [`shared/`](shared/) cra
 
 ## Building
 
-Rust stays at 1.90.0: the Xous library that `install-toolkit` downloads only works with the version it was built for. One-time setup:
+Rust stays at 1.96.1: the Xous library that `install-toolkit` downloads only works with the version it was built for. One-time setup:
 
 ```powershell
-rustup toolchain install 1.90.0
-rustup override set 1.90.0   # in the xous-core checkout and in this repo's root
+rustup toolchain install 1.96.1
+rustup override set 1.96.1   # in the xous-core checkout and in this repo's root
 cargo xtask install-toolkit  # in the xous-core checkout
 ```
 

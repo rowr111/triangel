@@ -29,14 +29,10 @@ The ear-to-eye link uses UART2 on both chips, but a stock Xous kernel gives UART
 log console. Building with the `gdb-stub` feature leaves it free. CI kernels don't have
 it, so both chips use a locally built kernel in manual kernel mode.
 
-From a xous-core checkout:
+Build from the `i2c-bounded-waits` branch of [rowr111/xous-core](https://github.com/rowr111/xous-core/tree/i2c-bounded-waits). It adds a fix to the I2C driver that the eye's `input-board` build needs, and a fix to the `gdb-stub` build, neither yet in upstream xous-core.
 
 1. `cargo xtask dabao --feature gdb-stub`
-2. Copy `loader.uf2` and `xous.uf2` from `target/riscv32imac-unknown-xous-elf/release/`
-   into `firmware/xous_build/`. Both chips flash from that one folder.
-
-The eye also needs a fix to the I2C driver (`libs/bao1x-hal/src/udma/i2c.rs`) that is not
-in upstream xous-core, so build from a checkout that has that fix.
+2. Copy `loader.uf2` and `xous.uf2` from `target/riscv32imac-unknown-xous-elf/release/` into `firmware/xous_build/`. Both chips flash from that one folder.
 
 ## Regenerating the I2S mic driver for different pins
 

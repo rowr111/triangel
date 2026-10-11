@@ -5,11 +5,11 @@ edition = "2021"
 
 [dependencies]
 utralib = { version = "0.1.27", optional = true, default-features = false }
-ticktimer = { package = "xous-api-ticktimer", version = "0.9.70" }
-bao1x-hal = { git = "https://github.com/betrusted-io/xous-core", rev = "aee40a797af372b6debf938d2902b03d1002e8a2", features = ["std"] }
-bao1x-api = { git = "https://github.com/betrusted-io/xous-core", rev = "aee40a797af372b6debf938d2902b03d1002e8a2" }
-bao1x-hal-service = { git = "https://github.com/betrusted-io/xous-core", rev = "aee40a797af372b6debf938d2902b03d1002e8a2" }
-usb-bao1x = { git = "https://github.com/betrusted-io/xous-core", rev = "aee40a797af372b6debf938d2902b03d1002e8a2" }
+ticktimer = { package = "xous-api-ticktimer", version = "0.9.71" }
+bao1x-hal = { git = "https://github.com/betrusted-io/xous-core", rev = "a9a996d4102afefb9b418bb08c320134e8a5d152", features = ["std"] }
+bao1x-api = { git = "https://github.com/betrusted-io/xous-core", rev = "a9a996d4102afefb9b418bb08c320134e8a5d152" }
+bao1x-hal-service = { git = "https://github.com/betrusted-io/xous-core", rev = "a9a996d4102afefb9b418bb08c320134e8a5d152" }
+usb-bao1x = { git = "https://github.com/betrusted-io/xous-core", rev = "a9a996d4102afefb9b418bb08c320134e8a5d152" }
 
 triangel-shared = { path = "../shared" }
 
@@ -20,7 +20,7 @@ lto = true
 codegen-units = 1
 
 [patch.crates-io]
-getrandom = { git = "https://github.com/betrusted-io/xous-core", rev = "aee40a797af372b6debf938d2902b03d1002e8a2" }
+getrandom = { git = "https://github.com/betrusted-io/xous-core", rev = "a9a996d4102afefb9b418bb08c320134e8a5d152" }
 
 [features]
 bao1x = ["utralib/bao1x", "usb-bao1x/bao1x"]

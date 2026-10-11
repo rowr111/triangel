@@ -101,7 +101,7 @@ impl Spiderweb {
             if run.0 > 0 {
                 rows.push((run.0, run.1 / run.0 as f32));
             }
-            rows.sort_unstable_by(|a, b| b.0.cmp(&a.0));
+            rows.sort_unstable_by_key(|row| core::cmp::Reverse(row.0));
             for &(_, offset) in rows.iter().take(LINES_PER_FAMILY) {
                 lines.push(Line { family: f, offset, shots: [Shot::NONE; 2] });
             }
