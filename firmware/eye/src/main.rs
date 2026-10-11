@@ -10,6 +10,13 @@ use setlist::SetlistManager;
 
 const TARGET_FRAME_MS: u64 = 1000 / 30; // ~33 ms -> 30 fps
 
+/// A number from the Xous random number service.
+fn hardware_random() -> Option<u32> {
+    let mut bytes = [0u8; 4];
+    getrandom::getrandom(&mut bytes).ok()?;
+    Some(u32::from_le_bytes(bytes))
+}
+
 fn main() -> ! {
     // A panic anywhere (main or a thread) prints over USB serial before the
     // process dies; the USB server owns the message once sent, so it still
@@ -43,9 +50,8 @@ fn main() -> ! {
     diag::stage(&boot_diag, diag::Stage::InputSpawned);
 
     // Seed the patterns from the hardware random number generator
-    let mut seed = [0u8; 4];
-    getrandom::getrandom(&mut seed).expect("no hardware random numbers");
-    patterns::set_boot_seed(u32::from_le_bytes(seed));
+    patterns::set_boot_seed(hardware_random().expect("no hardware random numbers"));
+    patterns::set_random_source(hardware_random);
 
     // Setlist manager owns pattern cycling, brightness, sound mode
     let mut setlist = SetlistManager::new(tt.elapsed_ms() as u32);

@@ -1,5 +1,5 @@
 use crate::led::geom::{BOARD_COUNT, BOARD_Y_RANGE, DIST_APEX};
-use crate::patterns::{Frame, Pattern, cycle, knuth_hash, phase_phasors, ramp, PHASE_STEPS};
+use crate::patterns::{Frame, Pattern, cycle, knuth_hash, phase_phasors, ramp, random_u32, PHASE_STEPS};
 use crate::audio::Audio;
 use crate::led::map::{LED_MAP, WORLD_BOT, WORLD_CX, WORLD_H, LED_COUNT};
 use core::f32::consts::{PI, TAU};
@@ -33,9 +33,11 @@ const EMBER_RISE_MM:   f32 = 260.0;  // how far an ember climbs
 const EMBER_WOBBLE_MM: f32 = 25.0;   // sideways drift while rising
 const EMBER_RADIUS_MM: f32 = 28.0;
 const EMBER_HEAT:      f32 = 0.55;   // heat added at the ember's center
-const FLARE_PERIOD_MS: u32 = 8_300;  // one random tile flares per period
-const FLARE_LEN:  f32 = 0.25;        // flare length, as a fraction of the period
-const FLARE_HEAT: f32 = 0.3;         // heat added across the flaring tile
+const FLARE_LEN_MS:     u32 = 2_000;  // how long one tile's flare lasts
+const FLARE_GAP_MIN_MS: u32 = 2_000;  // from one flare's start to the next, picked at random;
+const FLARE_GAP_MAX_MS: u32 = 10_000; // at least FLARE_LEN_MS, so flares do not overlap
+const FLARE_HEAT: f32 = 0.6;          // heat added across the flaring tile
+const _: () = assert!(FLARE_GAP_MIN_MS >= FLARE_LEN_MS);
 
 // Q12 values are x4096, so 4096 is 1.0.
 const ONE: i32 = 4096;
@@ -89,6 +91,10 @@ pub struct ApexFlame {
     y_q4: [i16; LED_COUNT],
     sin_lut:  [i16; SIN_STEPS],
     ramp_lut: [[u8; 3]; RAMP_STEPS],
+    // The tile that flares, when its flare started, and how long until the next starts.
+    flare_board:    u32,
+    flare_start_ms: u32,
+    flare_gap_ms:   u32,
 }
 
 impl ApexFlame {
@@ -129,6 +135,9 @@ impl ApexFlame {
             y_q4: core::array::from_fn(|i| (LED_MAP[i].wy * 16.0).round() as i16),
             sin_lut: core::array::from_fn(|k| q((k as f32 / SIN_STEPS as f32 * TAU).sin())),
             ramp_lut: core::array::from_fn(|k| fire_ramp(k as f32 / (1 << RAMP_BITS) as f32)),
+            flare_board:    1,
+            flare_start_ms: 0,
+            flare_gap_ms:   0,
         }
     }
 }
@@ -187,11 +196,18 @@ impl Pattern for ApexFlame {
             );
         }
 
-        // One random tile per period flares up fast and settles slowly.
-        let flare_phase = cycle(t_ms, FLARE_PERIOD_MS);
-        let flare_board = 1 + (knuth_hash(t_ms / FLARE_PERIOD_MS) >> 8) % BOARD_COUNT as u32;
-        let flare_env = if flare_phase < FLARE_LEN {
-            let fp = flare_phase / FLARE_LEN;
+        // Now and then a random tile flares up fast and settles slowly.
+        let mut flare_age = t_ms.wrapping_sub(self.flare_start_ms);
+        if flare_age >= self.flare_gap_ms {
+            self.flare_start_ms = t_ms;
+            self.flare_gap_ms =
+                FLARE_GAP_MIN_MS + random_u32() % (FLARE_GAP_MAX_MS - FLARE_GAP_MIN_MS + 1);
+            self.flare_board = 1 + random_u32() % BOARD_COUNT as u32;
+            flare_age = 0;
+        }
+        let flare_board = self.flare_board;
+        let flare_env = if flare_age < FLARE_LEN_MS {
+            let fp = flare_age as f32 / FLARE_LEN_MS as f32;
             (fp * 6.0).min(1.0) * (1.0 - fp)
         } else {
             0.0

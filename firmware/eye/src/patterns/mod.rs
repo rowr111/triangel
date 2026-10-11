@@ -189,6 +189,23 @@ pub fn set_boot_seed(seed: u32) {
     BOOT_SEED.store(seed, Ordering::Relaxed);
 }
 
+// The function random_u32 calls for its numbers. Empty until main sets it.
+static RANDOM_SOURCE: std::sync::OnceLock<fn() -> Option<u32>> = std::sync::OnceLock::new();
+static FIXED_SEQUENCE: AtomicU32 = AtomicU32::new(0);
+
+/// Call once at boot with the hardware random number source.
+pub fn set_random_source(source: fn() -> Option<u32>) {
+    RANDOM_SOURCE.set(source).ok();
+}
+
+/// A new random number. A fixed sequence if no source is set or it fails.
+pub fn random_u32() -> u32 {
+    RANDOM_SOURCE
+        .get()
+        .and_then(|source| source())
+        .unwrap_or_else(|| hash2(FIXED_SEQUENCE.fetch_add(1, Ordering::Relaxed), 0))
+}
+
 /// xorshift32. Each pattern seeds its own.
 pub struct Rng(u32);
 
