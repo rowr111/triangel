@@ -323,10 +323,7 @@ impl BandProcessor {
             self.bank.push(to_q28(s));
         }
         // Band energy in dB. The 1e-10 guards log(0) and floors silence at -100 dB.
-        let mut band_db = [0f32; BAND_COUNT];
-        for (b, e) in band_db.iter_mut().zip(self.bank.take_energies()) {
-            *b = 10.0 * (e + 1e-10).log10();
-        }
+        let band_db = self.bank.take_energies().map(|e| 10.0 * (e + 1e-10).log10());
 
         // Each band is scaled between the shared reference, which keeps relative loudness,
         // and its own, which keeps it moving. The references see tilted levels; the gate

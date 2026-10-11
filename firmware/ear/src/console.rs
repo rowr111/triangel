@@ -473,11 +473,7 @@ fn octave_levels(buf: &[i16]) -> [f64; OCTAVE_COUNT] {
             f.feed(x);
         }
     }
-    let mut out = [0f64; OCTAVE_COUNT];
-    for (o, f) in out.iter_mut().zip(filters.iter()) {
-        *o = f.rms(buf.len());
-    }
-    out
+    filters.map(|f| f.rms(buf.len()))
 }
 
 /// One octave-wide bandpass filter that sums the energy passing it.

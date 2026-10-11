@@ -164,14 +164,9 @@ impl Onsets {
 
     /// How far each band has just jumped above its slow average, 0.0-1.0.
     fn rise(&self) -> [f32; BAND_COUNT] {
-        let mut rise = [0.0; BAND_COUNT];
-        for (r, (fast, slow)) in rise
-            .iter_mut()
-            .zip(self.band_fast.iter().zip(self.band_slow.iter()))
-        {
-            *r = ((fast - slow) * RISE_GAIN).clamp(0.0, 1.0);
-        }
-        rise
+        core::array::from_fn(|i| {
+            ((self.band_fast[i] - self.band_slow[i]) * RISE_GAIN).clamp(0.0, 1.0)
+        })
     }
 
     /// Scale the bands toward silence, keeping the fraction `keep`.
