@@ -7,14 +7,7 @@
 // Chain snake: row1 left->right, row2 right->left, row3 left->right, row4 right->left, row5.
 // Baochip data wires connect at board 1 (chain 1) and board 13 (chain 2).
 
-pub const WORLD_CX: f32  = 258.0;
-pub const WORLD_TOP: f32 =   6.0;
-pub const WORLD_BOT: f32 = 436.0;
-pub const WORLD_H: f32   = 430.0;
-/// Centroid of the point-down triangle (1/3 of the way down from the top edge) - the focal
-/// point CenterShimmer pulses from and the radial transitions bloom around.
-pub const WORLD_CENTROID_X: f32 = WORLD_CX;
-pub const WORLD_CENTROID_Y: f32 = WORLD_TOP + (WORLD_BOT - WORLD_TOP) / 3.0;
+pub use super::geom::{WORLD_BOT, WORLD_CENTROID_X, WORLD_CENTROID_Y, WORLD_CX, WORLD_H, WORLD_TOP};
 pub const LED_COUNT: usize = 600;
 // Chain split, for driving the two WS2812 data lines. The previewer sends all
 // 600 in one stream and does not need it.

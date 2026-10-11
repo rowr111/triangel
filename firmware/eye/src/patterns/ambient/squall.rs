@@ -1,4 +1,5 @@
 use crate::patterns::{Frame, Pattern, Rng, cycle, knuth_hash, lerp, mix_rgb, phase_phasors, ramp, sin_sum, PHASE_STEPS};
+use crate::led::geom::{LATTICE_ROW_H, LATTICE_SIDE, LATTICE_TOP_Y};
 use crate::led::grid::{self, CELL_MM};
 use crate::audio::Audio;
 use crate::led::map::{WORLD_BOT, WORLD_CX, WORLD_H, WORLD_TOP, LED_COUNT, LED_MAP};
@@ -58,12 +59,8 @@ const BOLT_TAIL_MS: u32 = 1_400;     // fade-out time after the last stroke
 const BOLT_CORE_MM: f32 = 12.0;      // reaches the two LED rows either side of a tile edge
 const BOLT_GAIN: f32 = 1.6;          // LEDs near the line saturate to full white
 
-// Tile-corner lattice the bolts walk: row r (0 = top edge, 5 = apex) holds 6-r vertices
-// centered on WORLD_CX. Side and row height include the gap between tiles.
-const LATTICE_TOP_Y: f32 = 1.0;
-const LATTICE_ROW_H: f32 = 89.0;
-const LATTICE_SIDE:  f32 = 103.5;
-// Neighbors as (row, index) steps: left, right, and the four diagonals.
+// The bolts walk the tile-corner lattice. Neighbors as (row, index) steps: left, right, and
+// the four diagonals.
 const LATTICE_NEIGHBORS: [(i32, i32); 6] = [(0, -1), (0, 1), (-1, 0), (-1, 1), (1, -1), (1, 0)];
 
 const FOAM_COLOR:  [f32; 3] = [235.0, 245.0, 250.0];

@@ -38,10 +38,10 @@ origin: top-left of fixture
 x: increases rightward, 0-517 mm
 y: increases downward,  0-436 mm
 
-WORLD_CX  = 258 mm  - horizontal centre
-WORLD_TOP =   6 mm  - topmost LED
-WORLD_BOT = 436 mm  - apex (board 25, room corner)
-WORLD_H   = 430 mm  - total height
+WORLD_CX  = 258.7 mm  - horizontal centre
+WORLD_TOP =   6 mm    - topmost LED
+WORLD_BOT = 436 mm    - apex (board 25, room corner)
+WORLD_H   = 430 mm    - total height
 ```
 
 These constants, plus `WORLD_CENTROID_X` / `WORLD_CENTROID_Y`, are in `crate::led::map`.

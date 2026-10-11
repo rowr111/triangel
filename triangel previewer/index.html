@@ -65,33 +65,6 @@
   (function () {
     const PADDING = 32;
 
-    // Board geometry - must match generate_map.js exactly.
-    const LOCAL_CORNERS = [[100, 150], [200, 150], [150, 63.397]];
-    const LOCAL_CX = 150, LOCAL_CY = 121.132;
-    const BOARD_GAP = 2;
-    const CENTROID_DIST = 100 / Math.sqrt(3);
-    const GRID_K = (CENTROID_DIST + BOARD_GAP) / CENTROID_DIST;
-    const H    = 100 * Math.sqrt(3) / 2 * GRID_K;
-    const STEP = 50 * GRID_K;
-
-    const BOARDS = [];
-    for (let r = 1; r <= 5; r++) {
-      const count = 11 - 2 * r;
-      for (let p = 1; p <= count; p++) {
-        const down = (p % 2 === 1);
-        const cx = STEP * (r - 1 + p);
-        const cy = down ? (3*r - 2) / 3 * H : (3*r - 1) / 3 * H;
-        BOARDS.push({ down, cx, cy });
-      }
-    }
-
-    function toWorld(board, lx, ly) {
-      const dx = lx - LOCAL_CX, dy = ly - LOCAL_CY;
-      return board.down
-        ? [board.cx - dx, board.cy - dy]
-        : [board.cx + dx, board.cy + dy];
-    }
-
     // World bounds from LED positions.
     let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
     for (const { wx, wy } of LED_MAP) {
@@ -203,8 +176,7 @@
       // Outlines last - always visible on top.
       ctx.strokeStyle = '#555';
       ctx.lineWidth = 1;
-      for (const board of BOARDS) {
-        const pts = LOCAL_CORNERS.map(([lx, ly]) => toWorld(board, lx, ly));
+      for (const pts of BOARD_OUTLINES) {
         ctx.beginPath();
         ctx.moveTo(px(pts[0][0]), py(pts[0][1]));
         ctx.lineTo(px(pts[1][0]), py(pts[1][1]));

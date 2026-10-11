@@ -1,13 +1,13 @@
 use crate::audio::Audio;
-use crate::led::geom::{BOARD_CENTER, BOARD_COUNT};
+use crate::led::geom::{BOARD_CENTER, BOARD_COUNT, TILE_SPACING_MM};
 use crate::led::map::{LED_MAP, WORLD_CENTROID_X, WORLD_CENTROID_Y};
 use crate::patterns::{Frame, Pattern, Rng, Shot, hsv};
 use triangel_shared::tuning::tiles::*;
 
 /// Tiles are numbered by board id, from 1. Index 0 is unused.
 const TILES: usize = BOARD_COUNT + 1;
-/// Tile centers are 60 mm apart across a shared edge and 103 mm across a shared corner.
-const NEIGHBOR_MM: f32 = 75.0;
+/// Tiles sharing an edge are TILE_SPACING_MM apart; sharing only a corner, 1.7 times that.
+const NEIGHBOR_MM: f32 = TILE_SPACING_MM * 1.25;
 const MAX_NEIGHBORS: usize = 3;
 
 /// (hue, sat). Cooler hues are less saturated, or they look dim.

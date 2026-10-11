@@ -2,6 +2,7 @@ use crate::audio::Audio;
 use crate::patterns::{Frame, Pattern, cycle, fold_ms, hash2, hsv, lerp, sin_sum, wrap360};
 use crate::led::grid::{self, CELL_MM};
 use crate::led::map::{WORLD_TOP, WORLD_BOT, WORLD_H, WORLD_CX, LED_COUNT, LED_MAP};
+use crate::led::world::{WORLD_LEFT, WORLD_RIGHT};
 use core::f32::consts::TAU;
 
 // Fubuki (snowstorm): flakes fall and pile up from the apex until the triangle is full,
@@ -212,7 +213,8 @@ fn make_flake(i: usize, t_ms: u32, fill_y: f32, prev: &Season, new: &Season, nf:
     let fp     = cycle(local, period); // 0 at the top, 1 at the pile
 
     let g       = hash2(i as u32 + 1, gen);
-    let spawn_x = 20.0 + (g % 481) as f32;
+    // Across the fixture, a little in from each side.
+    let spawn_x = WORLD_LEFT + 10.0 + (g % (WORLD_RIGHT - WORLD_LEFT - 15.0) as u32) as f32;
     let sway_ph = (g >> 8 & 0xFF) as f32 / 255.0 * TAU;
 
     let x = lerp(spawn_x, WORLD_CX, fp * CONVERGE) + SWAY_MM * (fp * SWAY_CYCLES * TAU + sway_ph).sin();
