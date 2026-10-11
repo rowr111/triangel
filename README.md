@@ -32,6 +32,7 @@ The two DABAO boards each run their own firmware under [Xous](https://betrusted.
 | Set up your machine and build the firmware | [firmware/README.md](firmware/README.md) |
 | Watch the patterns in a browser | [triangel previewer/README.md](triangel%20previewer/README.md) |
 | Write a pattern | [firmware/eye/PATTERNS.md](firmware/eye/PATTERNS.md) |
+| Know the checks and conventions before changing something | [CONTRIBUTING.md](CONTRIBUTING.md) |
 | Build the kernels the boards run | [docs/how-to/build-the-kernels.md](docs/how-to/build-the-kernels.md) |
 | Change the microphone's pins | [docs/how-to/regenerate-the-mic-program.md](docs/how-to/regenerate-the-mic-program.md) |
 | Print the stickers and overlays | [graphics/README.md](graphics/README.md) |
