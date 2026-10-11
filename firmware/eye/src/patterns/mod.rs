@@ -177,7 +177,7 @@ impl Shot {
         Shot { start_ms: 0, strength: 0.0, hue: 0.0, sat: 0.0, hold_ms: 0.0, fade_ms: 0.0 };
 
     /// Age in ms and brightness 0-1, or None if unlit, not started yet, or finished.
-    pub fn level(&self, t_ms: u32) -> Option<(f32, f32)> {
+    fn level(&self, t_ms: u32) -> Option<(f32, f32)> {
         if self.strength <= 0.0 {
             return None;
         }
@@ -187,6 +187,14 @@ impl Shot {
         }
         let fade = if age < self.hold_ms { 1.0 } else { 1.0 - (age - self.hold_ms) / self.fade_ms };
         Some((age, fade))
+    }
+
+    /// Brightness and saturation at `t_ms`: white and boosted for the first `white_ms`.
+    pub fn lit(&self, t_ms: u32, white_ms: f32, boost: f32) -> Option<(f32, f32)> {
+        let (age, fade) = self.level(t_ms)?;
+        let white = (1.0 - age / white_ms).clamp(0.0, 1.0);
+        let v = (self.strength * fade * fade * (1.0 + boost * white)).min(1.0);
+        Some((v, self.sat * (1.0 - white)))
     }
 
     pub fn end_ms(&self) -> u32 {

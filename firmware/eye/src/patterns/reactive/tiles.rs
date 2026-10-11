@@ -129,12 +129,11 @@ impl Pattern for Tiles {
                 if s.strength > 0.0 && t_ms.wrapping_sub(s.end_ms()) as i32 >= 0 {
                     s.strength = 0.0;
                 }
-                let Some((age, fade)) = s.level(t_ms) else { continue };
-                let young = (1.0 - age / ((s.hold_ms + s.fade_ms) * WHITE_FRAC)).clamp(0.0, 1.0);
-                let v = (s.strength * fade * fade * (1.0 + HIT_BOOST * young)).min(1.0);
+                let white_ms = (s.hold_ms + s.fade_ms) * WHITE_FRAC;
+                let Some((v, sat)) = s.lit(t_ms, white_ms, HIT_BOOST) else { continue };
                 if v > best {
                     best = v;
-                    *c = hsv(s.hue, s.sat * (1.0 - young), v);
+                    *c = hsv(s.hue, sat, v);
                 }
             }
         }

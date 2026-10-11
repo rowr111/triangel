@@ -10,7 +10,7 @@ use triangel_shared::tuning::spiderweb::*;
 /// directions: horizontal and the two 60-degree slants.
 const LINES_PER_FAMILY: usize = 9;
 const MAX_LINES: usize = LINES_PER_FAMILY * 3;
-/// How close an LED's direction must be to one of the three. Corner LEDs fail it.
+/// How close an LED's direction must be to one of the three.
 const DIR_TOLERANCE: f32 = 12.0 * PI / 180.0;
 /// LEDs in one row share an offset to within this; neighboring rows are 12 mm apart.
 const ROW_MERGE_MM: f32 = 1.0;
@@ -33,7 +33,7 @@ pub struct Spiderweb {
     lines:    Vec<Line>,
     /// Which line each LED is on.
     led_line: [u8; LED_COUNT],
-    /// When the last beat landed and how hard.
+    /// When the last beat came and how hard.
     pulse_ms: u32,
     pulse:    f32,
 }
@@ -164,11 +164,9 @@ impl Pattern for Spiderweb {
         for (c, line) in color.iter_mut().zip(self.lines.iter()) {
             let mut best = (0.0f32, 0.0f32, 0.0f32); // brightness, hue, saturation
             for shot in &line.shots {
-                let Some((age, fade)) = shot.level(t_ms) else { continue };
-                let head = (1.0 - age / HEAD_MS).clamp(0.0, 1.0);
-                let v = (shot.strength * fade * fade * (1.0 + HEAD_BOOST * head)).min(1.0);
+                let Some((v, sat)) = shot.lit(t_ms, WHITE_MS, HIT_BOOST) else { continue };
                 if v > best.0 {
-                    best = (v, shot.hue, shot.sat * (1.0 - head));
+                    best = (v, shot.hue, sat);
                 }
             }
             // Saturation follows the lift, so the background glow stays white.

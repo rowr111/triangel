@@ -64,7 +64,7 @@ slot_life(slot, salt, t_ms, min_ms, max_ms) // (generation, 0-1 age) of a slot t
 hash2(a, b), knuth_hash(x), tile_hash(led)
 Rng::new(seed)              // .f32(), .next_u32(), .range_f32(min, max), .range_u32(min, max), .below(n), .pick(&items)
 free_or_oldest(slots, now_ms, is_free, start_ms)  // a free slot in a pool, else the oldest
-Shot                        // a flash held then faded; .level(t_ms), .end_ms()
+Shot                        // a flash held then faded; .lit(t_ms, white_ms, boost), .end_ms()
 phase_phasors()             // see Performance
 ```
 

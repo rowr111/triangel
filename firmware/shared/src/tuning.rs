@@ -153,8 +153,8 @@ pub mod spiderweb {
     pub const PULSE_DEPTH: f32 = 1.5;
     pub const PULSE_MS: f32 = 300.0;
     /// How long a lit line stays white, and how much brighter it is then.
-    pub const HEAD_MS: f32 = 90.0;
-    pub const HEAD_BOOST: f32 = 1.5;
+    pub const WHITE_MS: f32 = 90.0;
+    pub const HIT_BOOST: f32 = 1.5;
     /// How long a lit line takes to fade back to the glow.
     pub const FADE_MS: f32 = 2800.0;
     /// Extra lines a hard beat lights.
