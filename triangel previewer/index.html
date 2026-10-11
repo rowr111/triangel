@@ -121,7 +121,7 @@
         liveColors = null;
         statusEl.textContent = 'no bridge';
         statusEl.className = '';
-        document.querySelector('#controls button.on')?.classList.remove('on');
+        document.querySelectorAll('#controls button.on').forEach((b) => b.classList.remove('on'));
         setTimeout(() => connectBridge(wsUrl), 2000); // auto-reconnect
       };
 
@@ -135,8 +135,11 @@
       btn.addEventListener('click', () => {
         if (activeWs && activeWs.readyState === WebSocket.OPEN) {
           activeWs.send(btn.dataset.cmd);
-          // The page's own count of Hold presses; the eye does not report its state.
+          // The page's own record of what was clicked; the eye does not report its state.
           if (btn.dataset.cmd === 'C') btn.classList.toggle('on');
+          if (btn.parentElement.id === 'switch') {
+            document.querySelectorAll('#switch button').forEach((b) => b.classList.toggle('on', b === btn));
+          }
         }
       });
     });
