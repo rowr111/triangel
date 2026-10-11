@@ -60,9 +60,9 @@ static BANDS_US: AtomicU32 = AtomicU32::new(0);
 /// Publish the filterbank's cost per frame for `p`.
 pub fn record_bands_time(us: u32) { BANDS_US.store(us, Ordering::Relaxed); }
 
-/// Live normalization references and the level they scale, as f32 bits, for `n`.
-static REF_BAND_LO: AtomicU32 = AtomicU32::new(0);
-static REF_BAND_HI: AtomicU32 = AtomicU32::new(0);
+/// The bands' range, the level reference and the level, as f32 bits, for `n`.
+static BAND_RANGE_LO: AtomicU32 = AtomicU32::new(0);
+static BAND_RANGE_HI: AtomicU32 = AtomicU32::new(0);
 static REF_LVL_LO:  AtomicU32 = AtomicU32::new(0);
 static REF_LVL_HI:  AtomicU32 = AtomicU32::new(0);
 static LAST_DBFS:   AtomicU32 = AtomicU32::new(0);
@@ -76,10 +76,10 @@ pub fn record_bands(db: &[f32; BAND_COUNT]) {
     }
 }
 
-/// Publish the references and the level for `n`.
+/// Publish the band range, the level reference and the level for `n`.
 pub fn record_refs(band: (f32, f32), level: (f32, f32), dbfs: f32, norm: f32) {
-    REF_BAND_LO.store(band.0.to_bits(), Ordering::Relaxed);
-    REF_BAND_HI.store(band.1.to_bits(), Ordering::Relaxed);
+    BAND_RANGE_LO.store(band.0.to_bits(), Ordering::Relaxed);
+    BAND_RANGE_HI.store(band.1.to_bits(), Ordering::Relaxed);
     REF_LVL_LO.store(level.0.to_bits(), Ordering::Relaxed);
     REF_LVL_HI.store(level.1.to_bits(), Ordering::Relaxed);
     LAST_DBFS.store(dbfs.to_bits(), Ordering::Relaxed);
@@ -142,18 +142,18 @@ pub fn help(d: &Diag) {
     d.line(&format!("  t  {} s of statistics: min, max, DC offset, RMS", MEASURE_MS / 1000));
     d.line(&format!("  m  live level meter for {} s", METER_MS / 1000));
     d.line("  p  filterbank time per frame");
-    d.line("  n  live low/high normalization references and the level they scale");
+    d.line("  n  the bands' range, the level reference, and the level it scales");
     d.line("  ?  this help");
 }
 
-/// Report the live normalization references.
+/// Report the band range and the level reference.
 fn references(d: &Diag) {
     let g = |a: &AtomicU32| f32::from_bits(a.load(Ordering::Relaxed));
-    let (blo, bhi) = (g(&REF_BAND_LO), g(&REF_BAND_HI));
+    let (blo, bhi) = (g(&BAND_RANGE_LO), g(&BAND_RANGE_HI));
     let (llo, lhi) = (g(&REF_LVL_LO), g(&REF_LVL_HI));
-    d.line(&format!("band  ref {:>7.1} .. {:>7.1} dB, span {:.1}", blo, bhi, bhi - blo));
-    d.line(&format!("level ref {:>7.1} .. {:>7.1} dBFS, span {:.1}", llo, lhi, lhi - llo));
-    d.line(&format!("level now {:>7.1} dBFS -> norm {:.2}", g(&LAST_DBFS), g(&LAST_NORM)));
+    d.line(&format!("band range {:>7.1} .. {:>7.1} dB, span {:.1}", blo, bhi, bhi - blo));
+    d.line(&format!("level ref  {:>7.1} .. {:>7.1} dBFS, span {:.1}", llo, lhi, lhi - llo));
+    d.line(&format!("level now  {:>7.1} dBFS -> norm {:.2}", g(&LAST_DBFS), g(&LAST_NORM)));
     let mut line = String::from("band dB  ");
     for (m, slot) in BAND_DB.iter().enumerate() {
         if m == 12 {

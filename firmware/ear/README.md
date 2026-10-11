@@ -78,7 +78,7 @@ Until the first keystroke the board prints a liveness line every 2 s naming the 
 | `t` | 1 s of statistics: min, max, DC offset, RMS |
 | `m` | Live level meter for 15 s |
 | `p` | Filterbank time per frame |
-| `n` | Live normalization references and the level they scale |
+| `n` | The bands' range, the level reference, and the level it scales |
 | `?` | Help |
 
-`p`, `n` and `?` are answered without interrupting audio. The rest run on the audio thread between frames, so the eye stops receiving frames while one is in progress - up to 15 s for `m`, 3 s or less for the others. The eye decays to silence after 200 ms without a frame and recovers on its own; because its Auto-mode arm and release times are both 30 s, even the longest command will not flip it out of sound-reactive mode.
+`p`, `n` and `?` do not interrupt audio. The others stop frames to the eye while they run: up to 15 s for `m`, under 5 s for the rest. The eye fades to silence and recovers on its own, and no command is long enough to switch it out of sound-reactive mode.

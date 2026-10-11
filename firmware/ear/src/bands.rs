@@ -239,7 +239,7 @@ pub struct BandProcessor {
     band_lo: f32,
     band_hi: f32,
 
-    /// Last frame's untilted band levels in dB, for the console readout.
+    /// Last frame's untilted band levels in dB, which flux is measured against.
     last_db: [f32; BAND_COUNT],
 
     /// Reference for `level_norm`, fed the broadband dBFS each frame.
