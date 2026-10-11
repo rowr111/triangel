@@ -3,7 +3,7 @@ use core::f32::consts::TAU;
 use crate::audio::Audio;
 use crate::led::geom::{DIST_C, THETA_C};
 use crate::led::map::LED_COUNT;
-use crate::patterns::{Frame, Pattern, cycle, lerp};
+use crate::patterns::{Frame, Pattern, cycle, lerp, sin_sum};
 use triangel_shared::frame::BAND_COUNT;
 use triangel_shared::tuning::spectrum::*;
 
@@ -33,11 +33,11 @@ const PALETTES: [[[f32; 3]; STOPS]; 6] = [
 /// Maps a band index onto the ramp.
 const BAND_TO_RAMP: f32 = 1.0 / (BAND_COUNT - 1) as f32;
 
-// Lobes in the slow ripple that rotates around the center.
+// Lobes in the slow swirl that rotates around the center.
 const LOBES: f32 = 3.0;
 
 /// The bands by distance from the center: bass at the core, treble at the rim. LEDs are
-/// ranked by distance and split evenly, so every band gets the same number of LEDs.
+/// ranked by distance and spread evenly from the first band to the last.
 pub struct Spectrum {
     /// Fractional band index per LED, 0.0 to BAND_COUNT-1.
     band_pos: [f32; LED_COUNT],
@@ -90,13 +90,13 @@ impl Pattern for Spectrum {
             let energy = lerp(audio.bands[k], audio.bands[k + 1], f);
             let hit = lerp(audio.rise[k], audio.rise[k + 1], f);
 
-            let ripple = self.swirl_s[i] * wc + self.swirl_c[i] * ws;
-            let lit = energy * loud * GAIN * (1.0 + SWIRL_DEPTH * ripple);
+            let swirl = sin_sum(self.swirl_s[i], self.swirl_c[i], ws, wc);
+            let lit = energy * loud * GAIN * (1.0 + SWIRL_DEPTH * swirl);
             let v = (lit + hit * HIT_GAIN).clamp(0.0, 1.0);
 
             // Position along the ramp. Subtracting the flow moves colors outward; the 4.0
             // keeps it positive.
-            let mut f = pos * BAND_TO_RAMP - flow + RIPPLE_SHIFT * ripple + 4.0;
+            let mut f = pos * BAND_TO_RAMP - flow + SWIRL_SHIFT * swirl + 4.0;
             // Fold into 0..2 and reflect the upper half, so the ramp runs out and back.
             f -= 2.0 * ((f * 0.5) as u32) as f32;
             let t = if f > 1.0 { 2.0 - f } else { f } * (STOPS - 1) as f32;

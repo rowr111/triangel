@@ -67,11 +67,11 @@ pub mod spectrum {
     /// How much a hit brightens a band, and how much it whitens it.
     pub const HIT_GAIN: f32 = 0.9;
     pub const HIT_WHITE: f32 = 0.65;
-    /// Depth and speed of the slow ripple.
+    /// Depth and speed of the slow swirl.
     pub const SWIRL_DEPTH: f32 = 0.18;
     pub const SWIRL_PERIOD_MS: u32 = 12_000;
-    /// How far the ripple moves colors along the palette.
-    pub const RIPPLE_SHIFT: f32 = 0.10;
+    /// How far the swirl moves colors along the palette.
+    pub const SWIRL_SHIFT: f32 = 0.10;
     /// Time for colors to flow from the center to the edge and back.
     pub const FLOW_PERIOD_MS: u32 = 14_000;
     /// Time on each palette, and how long the next one takes to sweep out.
