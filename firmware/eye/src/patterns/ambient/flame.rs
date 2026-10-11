@@ -62,6 +62,14 @@ const EMBER_R_Q4: i32 = (EMBER_RADIUS_MM * 16.0) as i32;
 const EMBER_R2_Q8: i32 = EMBER_R_Q4 * EMBER_R_Q4;
 const EMBER_INV_R2: i32 = (4096 << 16) / EMBER_R2_Q8;
 
+/// One ember this frame: its center in 1/16 mm and its heat in Q12.
+#[derive(Clone, Copy)]
+struct Ember {
+    x:    i32,
+    y:    i32,
+    heat: i32,
+}
+
 /// Sine table entries per turn; a phase in turns x65536 indexes it by its top bits.
 const SIN_BITS: u32 = 10;
 const SIN_STEPS: usize = 1 << SIN_BITS;
@@ -184,7 +192,7 @@ impl Pattern for ApexFlame {
         let (m_sin, m_cos) = (q12(m_sin), q12(m_cos));
 
         // Embers start low inside the triangle, rise with a wobble and fade.
-        let mut embers = [(0i32, 0i32, 0i32); EMBER_COUNT]; // (x, y in 1/16 mm, heat Q12)
+        let mut embers = [Ember { x: 0, y: 0, heat: 0 }; EMBER_COUNT];
         for (k, ember) in embers.iter_mut().enumerate() {
             let period = EMBER_PERIOD_MS + k as u32 * EMBER_STAGGER_MS;
             let phase = cycle(t_ms, period);
@@ -194,11 +202,11 @@ impl Pattern for ApexFlame {
             let x0 = WORLD_CX + ((h % 201) as f32 - 100.0) / 100.0 * half_w;
             let x = x0 + (phase * TAU * 1.5 + (h >> 16) as f32).sin() * EMBER_WOBBLE_MM;
             let y = y0 - phase * EMBER_RISE_MM;
-            *ember = (
-                (x * 16.0).round() as i32,
-                (y * 16.0).round() as i32,
-                (EMBER_HEAT_Q * (phase * PI).sin()) as i32,
-            );
+            *ember = Ember {
+                x: (x * 16.0).round() as i32,
+                y: (y * 16.0).round() as i32,
+                heat: (EMBER_HEAT_Q * (phase * PI).sin()) as i32,
+            };
         }
 
         // Now and then a random tile flares up fast and settles slowly.
@@ -247,7 +255,7 @@ impl Pattern for ApexFlame {
 
             // Nearby embers and the flaring tile.
             let mut event_heat = 0i32;
-            for &(ex, ey, heat) in &embers {
+            for &Ember { x: ex, y: ey, heat } in &embers {
                 let dx = self.x_q4[i] as i32 - ex;
                 let dy = self.y_q4[i] as i32 - ey;
                 if dx.abs() >= EMBER_R_Q4 || dy.abs() >= EMBER_R_Q4 {

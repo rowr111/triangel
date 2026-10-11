@@ -55,7 +55,7 @@ const BOLT_STEP_MS: u32 = 150;       // time per tile side while building
 const FLICKER_FADE_MS: f32 = 180.0;  // decay of each return stroke
 const BOLT_PULSES_MIN: usize = 2;    // return strokes per strike
 const BOLT_PULSES_MAX: usize = 5;
-const BOLT_TAIL_MS: u32 = 1_400;     // fade-out time after the last stroke
+const BOLT_TAIL_MS: u32 = 1_400;     // slot held after the last stroke; must cover the fade
 const BOLT_CORE_MM: f32 = 12.0;      // reaches the two LED rows either side of a tile edge
 const BOLT_GAIN: f32 = 1.6;          // LEDs near the line saturate to full white
 
@@ -100,13 +100,41 @@ struct StrikeSlot {
     gap_len_ms:   u32,
 }
 
+/// One upwelling this frame.
+#[derive(Clone, Copy)]
+struct Bloom {
+    x:      f32,
+    y:      f32,
+    inv_r2: f32,
+    amp:    f32,
+    ring:   f32, // 0 a filled disc, 1 a ring
+    reach:  usize,
+}
+
+impl Bloom {
+    const ZERO: Bloom = Bloom { x: 0.0, y: 0.0, inv_r2: 0.0, amp: 0.0, ring: 0.0, reach: 0 };
+}
+
+/// One soft disc of a cloud this frame.
+#[derive(Clone, Copy)]
+struct Lobe {
+    x:      f32,
+    y:      f32,
+    inv_r2: f32,
+    reach:  usize,
+}
+
+impl Lobe {
+    const ZERO: Lobe = Lobe { x: 0.0, y: 0.0, inv_r2: 0.0, reach: 0 };
+}
+
 /// A night storm seen from above: dark water boiling with upwellings, pale clouds
 /// drifting, and sparse lightning.
 pub struct Squall {
     clouds:  [Cloud; CLOUD_COUNT],
     slots:   [StrikeSlot; BOLT_SLOTS],
     rng:     Rng,
-    last_ms: Option<u32>, // None until the first render
+    last_ms: u32,
     seed:    u32,         // new each time it comes on screen, so the blooms differ
     // sin and cos of the per-LED part of the boil's two inner sines.
     by_sin: [f32; LED_COUNT],
@@ -138,14 +166,14 @@ impl Squall {
         let slots = core::array::from_fn(|_| StrikeSlot {
             strike:       None,
             gap_start_ms: 0,
-            gap_len_ms:   0,
+            gap_len_ms:   rng.range_u32(STRIKE_GAP_MIN_MS, STRIKE_GAP_MAX_MS),
         });
         let k = TAU / BOIL_CELL_MM;
         Squall {
             clouds,
             slots,
             rng,
-            last_ms: None,
+            last_ms: 0,
             seed: 0,
             by_sin: core::array::from_fn(|i| (LED_MAP[i].wy * k * BOIL_CROSS_Y).sin()),
             by_cos: core::array::from_fn(|i| (LED_MAP[i].wy * k * BOIL_CROSS_Y).cos()),
@@ -270,6 +298,7 @@ impl Squall {
 impl Pattern for Squall {
     fn on_enter(&mut self, t_ms: u32) {
         self.seed = random_u32();
+        self.last_ms = t_ms;
         // Restart the timers so they do not all fire at once after time off screen.
         for slot in &mut self.slots {
             slot.gap_start_ms = t_ms;
@@ -284,40 +313,35 @@ impl Pattern for Squall {
         let boil2 = cycle(t_ms, BOIL2_PERIOD_MS) * TAU;
         let foam_phase = cycle(t_ms, FOAM_PERIOD_MS) * TAU;
 
-        let dt_s = match self.last_ms {
-            Some(last) => (t_ms.wrapping_sub(last) as f32 / 1000.0).min(0.1),
-            None => {
-                // First frame: start every gap now, so no bolt fires straight away.
-                let Squall { slots, rng, .. } = self;
-                for slot in slots.iter_mut() {
-                    slot.gap_start_ms = t_ms;
-                    slot.gap_len_ms = rng.range_u32(STRIKE_GAP_MIN_MS, STRIKE_GAP_MAX_MS);
-                }
-                0.0
-            }
-        };
-        self.last_ms = Some(t_ms);
+        let dt_s = (t_ms.wrapping_sub(self.last_ms) as f32 / 1000.0).min(0.1);
+        self.last_ms = t_ms;
         self.update_clouds(t_ms, dt_s);
         self.update_strikes(t_ms);
 
-        // One bloom per slot per period, at a hashed spot: (x, y, 1/r^2, amplitude, ring
-        // blend, grid reach).
-        let mut blooms = [(0.0f32, 0.0f32, 0.0f32, 0.0f32, 0.0f32, 0usize); BLOOM_SLOTS];
+        // One bloom per slot per period, at a hashed spot.
+        let mut blooms = [Bloom::ZERO; BLOOM_SLOTS];
         for (k, b) in blooms.iter_mut().enumerate() {
             let period = BLOOM_PERIOD_MS + k as u32 * BLOOM_STAGGER_MS;
             let p = cycle(t_ms, period);
             let h = knuth_hash((t_ms / period) ^ self.seed) ^ (k as u32).wrapping_mul(0x9E37_79B9);
             let y = WORLD_TOP + ((h >> 10) % 1000) as f32 / 1000.0 * WORLD_H;
-            let hw = (WORLD_BOT - y) / WORLD_H * WORLD_HALF_W + 40.0; // triangle width at y
+            // Triangle half-width at y, plus 40 mm.
+            let hw = (WORLD_BOT - y) / WORLD_H * WORLD_HALF_W + 40.0;
             let x = WORLD_CX + ((h % 1000) as f32 / 1000.0 * 2.0 - 1.0) * hw;
             let r = lerp(BLOOM_R0_MM, BLOOM_R1_MM, p);
             let reach = (r / CELL_MM).ceil() as usize;
-            *b = (x, y, 1.0 / (r * r), BLOOM_PEAK * (p * PI).sin(), BLOOM_RIM * p, reach);
+            *b = Bloom {
+                x,
+                y,
+                inv_r2: 1.0 / (r * r),
+                amp: BLOOM_PEAK * (p * PI).sin(),
+                ring: BLOOM_RIM * p,
+                reach,
+            };
         }
 
-        // Every cloud's lobes, each orbiting its cloud center and changing radius:
-        // (x, y, 1/r^2, grid reach).
-        let mut lobes = [(0.0f32, 0.0f32, 0.0f32, 0usize); CLOUD_COUNT * CLOUD_LOBES];
+        // Every cloud's lobes, each orbiting its cloud center and changing radius.
+        let mut lobes = [Lobe::ZERO; CLOUD_COUNT * CLOUD_LOBES];
         for (ci, c) in self.clouds.iter().enumerate() {
             for j in 0..CLOUD_LOBES {
                 let h = c.seed ^ (j as u32).wrapping_mul(0x9E37_79B9);
@@ -327,12 +351,12 @@ impl Pattern for Squall {
                 let breathe = cycle(t_ms, breathe_p) * TAU + (h >> 12) as f32;
                 let off = CLOUD_LOBE_OFF_MM * (0.35 + 0.65 * ((h >> 4) % 100) as f32 / 100.0);
                 let r = CLOUD_LOBE_R_MM * (1.0 + CLOUD_BREATHE * breathe.sin());
-                lobes[ci * CLOUD_LOBES + j] = (
-                    c.x + orbit.cos() * off,
-                    c.y + orbit.sin() * off,
-                    1.0 / (r * r),
-                    (r / CELL_MM).ceil() as usize,
-                );
+                lobes[ci * CLOUD_LOBES + j] = Lobe {
+                    x: c.x + orbit.cos() * off,
+                    y: c.y + orbit.sin() * off,
+                    inv_r2: 1.0 / (r * r),
+                    reach: (r / CELL_MM).ceil() as usize,
+                };
             }
         }
 
@@ -397,7 +421,7 @@ impl Pattern for Squall {
         }
 
         // Upwellings: a young bloom is a filled disc that turns into a ring as it ages.
-        for &(x, y, inv_r2, amp, ring, reach) in &blooms {
+        for &Bloom { x, y, inv_r2, amp, ring, reach } in &blooms {
             grid::for_each_near(x, y, reach, |k| {
                 let led = &LED_MAP[k];
                 let q = ((led.wx - x).powi(2) + (led.wy - y).powi(2)) * inv_r2;
@@ -410,7 +434,7 @@ impl Pattern for Squall {
         }
 
         // Cloud cover, densest where lobes overlap.
-        for &(x, y, inv_r2, reach) in &lobes {
+        for &Lobe { x, y, inv_r2, reach } in &lobes {
             grid::for_each_near(x, y, reach, |k| {
                 let led = &LED_MAP[k];
                 let q = ((led.wx - x).powi(2) + (led.wy - y).powi(2)) * inv_r2;
