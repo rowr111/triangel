@@ -133,13 +133,8 @@ impl I2sAudio {
         let mut this =
             Self { bio_ss, rx, _rx_handle: rx_handle, resource_grant, starved_frames: 0 };
 
-        // Drop the first samples while the mic settles. Stops early if nothing is
-        // arriving, so a silent mic does not hang here.
-        for _ in 0..STARTUP_DISCARD {
-            if this.try_read_raw().is_none() {
-                break;
-            }
-        }
+        // Drop the first samples while the mic settles.
+        this.discard(STARTUP_DISCARD);
         this
     }
 
@@ -181,6 +176,11 @@ impl I2sAudio {
 
     /// Frames abandoned so far because nothing was arriving.
     pub fn starved_frames(&self) -> u32 { self.starved_frames }
+
+    /// Drop `samples` raw samples. False if none are arriving.
+    pub fn discard(&mut self, samples: usize) -> bool {
+        (0..samples).all(|_| self.try_read_raw().is_some())
+    }
 
     /// Discard everything currently queued in FIFO0, without blocking.
     pub fn flush(&mut self) {

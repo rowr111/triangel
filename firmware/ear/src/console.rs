@@ -184,12 +184,7 @@ fn perf(d: &Diag) {
 /// Drain and discard `samples`. False if nothing is arriving.
 fn settle(mic: &mut I2sAudio, samples: usize) -> bool {
     mic.flush();
-    for _ in 0..samples {
-        if mic.try_read_raw().is_none() {
-            return false;
-        }
-    }
-    true
+    mic.discard(samples)
 }
 
 /// Hex-dump the raw 24-bit words the BIO pushes.
