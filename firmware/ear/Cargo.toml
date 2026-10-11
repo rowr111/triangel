@@ -15,7 +15,7 @@ triangel-shared = { path = "../shared" }
 
 [profile.release]
 # The soft-float intrinsics live in compiler_builtins, so they only inline across
-# the crate boundary with LTO on. This loop is 98k of them per frame.
+# the crate boundary with LTO on.
 lto = true
 codegen-units = 1
 

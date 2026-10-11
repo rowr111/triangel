@@ -5,15 +5,13 @@ edition = "2021"
 
 [dependencies]
 utralib = { version = "0.1.27", optional = true, default-features = false }
-xous-names = { package = "xous-api-names", version = "0.9.72" }
 ticktimer = { package = "xous-api-ticktimer", version = "0.9.71" }
 xous = "0.9.71"
-bao1x-hal = { git = "https://github.com/betrusted-io/xous-core", rev = "a9a996d4102afefb9b418bb08c320134e8a5d152", features = ["std"], optional = true }
+bao1x-hal = { git = "https://github.com/betrusted-io/xous-core", rev = "a9a996d4102afefb9b418bb08c320134e8a5d152", features = ["std"] }
 bao1x-api = { git = "https://github.com/betrusted-io/xous-core", rev = "a9a996d4102afefb9b418bb08c320134e8a5d152" }
-bao1x-hal-service = { git = "https://github.com/betrusted-io/xous-core", rev = "a9a996d4102afefb9b418bb08c320134e8a5d152", optional = true }
+bao1x-hal-service = { git = "https://github.com/betrusted-io/xous-core", rev = "a9a996d4102afefb9b418bb08c320134e8a5d152" }
 usb-bao1x = { git = "https://github.com/betrusted-io/xous-core", rev = "a9a996d4102afefb9b418bb08c320134e8a5d152" }
 
-bio-lib = { git = "https://github.com/betrusted-io/xous-core", rev = "a9a996d4102afefb9b418bb08c320134e8a5d152" }
 arbitrary-int = "1.2"
 # Stay on 0.2, the version xous-core patches below.
 getrandom = "0.2"
@@ -28,7 +26,6 @@ board-dabao = [
     "bao1x-hal-service/board-dabao",
     "bao1x-hal/board-dabao",
     "usb-bao1x/board-dabao",
-    "bio-lib/ws2812",
 ]
 # Send frames to the browser previewer via USB serial instead of real WS2812 LEDs.
 # Use this when developing without triangle boards connected.
