@@ -5,7 +5,8 @@ use std::sync::atomic::{AtomicU32, Ordering};
 
 use crate::audio::FRAME_PERIOD_MS;
 
-use crate::audio::{I2sAudio, RAW_RATE_HZ, SAMPLE_RATE_HZ};
+use crate::audio::{I2sAudio, BCLK_HZ, RAW_RATE_HZ, SAMPLE_RATE_HZ};
+use crate::pins::{MIC_BCLK_BIO_PIN, MIC_WS_BIO_PIN};
 use triangel_shared::frame::{BAND_COUNT, LEVEL_DB_FLOOR};
 use crate::diag::{self, Diag};
 
@@ -18,16 +19,17 @@ const MEASURE_MS: u64 = 1000;
 const METER_MS: u64 = 15_000;
 /// How many windows `c` records.
 const CAPTURE_WINDOWS: usize = 30;
-/// One window of `m` or `c`: 100 ms.
-const WINDOW_SAMPLES: usize = RAW_RATE_HZ as usize / 10;
+/// One window of `m` or `c`.
+const WINDOW_MS:      usize = 100;
+const WINDOW_SAMPLES: usize = RAW_RATE_HZ as usize * WINDOW_MS / 1000;
 /// Octave band centers for `f`. A Q of 1.41 makes each filter about an octave wide.
-const BANDS:   usize        = 6;
-const BAND_HZ: [f32; BANDS] = [125.0, 250.0, 500.0, 1000.0, 2000.0, 4000.0];
-const BAND_Q:  f32          = 1.41;
+const OCTAVE_COUNT: usize               = 6;
+const OCTAVE_HZ:    [f32; OCTAVE_COUNT] = [125.0, 250.0, 500.0, 1000.0, 2000.0, 4000.0];
+const OCTAVE_Q:     f32                 = 1.41;
 /// `f` records one second at the pipeline's rate, then filters it.
 const ANALYZE_SAMPLES: usize = SAMPLE_RATE_HZ as usize;
 /// A band this far above its own quiet reading counts as heard.
-const BAND_RISE_DB: f32 = 6.0;
+const OCTAVE_RISE_DB: f32 = 6.0;
 /// Pause after the prompt, so there is time to start making noise.
 const READY_MS: usize = 1500;
 /// Samples discarded before a measurement, so it starts on fresh, settled audio.
@@ -129,15 +131,16 @@ pub fn service(d: &Diag, tt: &ticktimer::Ticktimer, mic: &mut I2sAudio) {
 }
 
 pub fn help(d: &Diag) {
-    d.line("  c  record 3 s silently, then print the level per 100 ms - the test that");
+    d.line(&format!("  c  record {} s silently, then print the level per {} ms - the test that",
+        CAPTURE_WINDOWS * WINDOW_MS / 1000, WINDOW_MS));
     d.line("     answers whether the mic hears you");
     d.line("  f  measure a quiet second, then a noisy one, and compare them per octave");
     d.line("     band - about 30 dB more sensitive than c, and works with any sound");
     d.line("  r  hex-dump the raw 24-bit words after settling");
-    d.line(&format!("  s  count samples for 1 s, compare against the expected {} Hz",
-        RAW_RATE_HZ));
-    d.line("  t  1 s of statistics: min, max, DC offset, RMS");
-    d.line("  m  live level meter for 15 s");
+    d.line(&format!("  s  count samples for {} s, compare against the expected {} Hz",
+        MEASURE_MS / 1000, RAW_RATE_HZ));
+    d.line(&format!("  t  {} s of statistics: min, max, DC offset, RMS", MEASURE_MS / 1000));
+    d.line(&format!("  m  live level meter for {} s", METER_MS / 1000));
     d.line("  p  filterbank time per frame");
     d.line("  n  live low/high normalization references and the level they scale");
     d.line("  ?  this help");
@@ -247,8 +250,10 @@ fn rate_check(d: &Diag, tt: &ticktimer::Ticktimer, mic: &mut I2sAudio) {
         count, elapsed, rate, expected));
 
     if count == 0 {
-        d.line("nothing arriving at all: check that BCLK (PB1) and WS (PB3) are really");
-        d.line("toggling - 3.072 MHz and 48 kHz respectively");
+        d.line(&format!("nothing arriving at all: check that BCLK (PB{}) and WS (PB{}) are really",
+            MIC_BCLK_BIO_PIN, MIC_WS_BIO_PIN));
+        d.line(&format!("toggling - {:.3} MHz and {} kHz respectively",
+            BCLK_HZ as f32 / 1e6, RAW_RATE_HZ / 1000));
     } else if starved {
         d.line("a read timed out on an empty FIFO - the BIO stopped pushing partway");
     } else if rate * 4 < expected * 3 || rate * 3 > expected * 4 {
@@ -416,18 +421,18 @@ fn spectrum(d: &Diag, tt: &ticktimer::Ticktimer, mic: &mut I2sAudio) {
     if !record(d, mic, &mut buf) {
         return;
     }
-    let quiet = band_levels(&buf);
+    let quiet = octave_levels(&buf);
 
     d.line("now MAKE NOISE - whistle, clap, talk - starting in a moment");
     tt.sleep_ms(READY_MS).ok();
     if !settle(mic, METER_SETTLE_SAMPLES) || !record(d, mic, &mut buf) {
         return;
     }
-    let loud = band_levels(&buf);
+    let loud = octave_levels(&buf);
 
     d.line("  band     quiet      loud      diff");
     let mut heard = false;
-    for (i, &hz) in BAND_HZ.iter().enumerate() {
+    for (i, &hz) in OCTAVE_HZ.iter().enumerate() {
         // Zero has no dB value; dbfs()'s floor would read as a rise.
         if quiet[i] <= 0.0 || loud[i] <= 0.0 {
             d.line(&format!("{:6.0}   no reading - this band produced no energy", hz));
@@ -436,9 +441,9 @@ fn spectrum(d: &Diag, tt: &ticktimer::Ticktimer, mic: &mut I2sAudio) {
         let q = dbfs(quiet[i], 1.0);
         let l = dbfs(loud[i], 1.0);
         let diff = l - q;
-        heard |= diff >= BAND_RISE_DB;
+        heard |= diff >= OCTAVE_RISE_DB;
         d.line(&format!("{:6.0} {:9.1} {:9.1} {:9.1} dB{}", hz, q, l, diff,
-            if diff >= BAND_RISE_DB { "  <-" } else { "" }));
+            if diff >= OCTAVE_RISE_DB { "  <-" } else { "" }));
     }
 
     if heard {
@@ -464,16 +469,16 @@ fn record(d: &Diag, mic: &mut I2sAudio, buf: &mut Vec<i16>) -> bool {
 }
 
 /// RMS per octave band.
-fn band_levels(buf: &[i16]) -> [f64; BANDS] {
+fn octave_levels(buf: &[i16]) -> [f64; OCTAVE_COUNT] {
     let mean = buf.iter().map(|&s| s as f64).sum::<f64>() / buf.len() as f64;
-    let mut filters = BAND_HZ.map(Bandpass::new);
+    let mut filters = OCTAVE_HZ.map(Bandpass::new);
     for &s in buf {
         let x = ((s as f64 - mean) / 32768.0) as f32;
         for f in filters.iter_mut() {
             f.feed(x);
         }
     }
-    let mut out = [0f64; BANDS];
+    let mut out = [0f64; OCTAVE_COUNT];
     for (o, f) in out.iter_mut().zip(filters.iter()) {
         *o = f.rms(buf.len());
     }
@@ -495,7 +500,7 @@ struct Bandpass {
 impl Bandpass {
     fn new(hz: f32) -> Self {
         let w0 = 2.0 * std::f32::consts::PI * hz / SAMPLE_RATE_HZ as f32;
-        let alpha = w0.sin() / (2.0 * BAND_Q);
+        let alpha = w0.sin() / (2.0 * OCTAVE_Q);
         let a0 = 1.0 + alpha;
         Self {
             b0: alpha / a0,

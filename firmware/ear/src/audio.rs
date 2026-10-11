@@ -16,8 +16,10 @@ const BCLK_PER_FRAME: u32 = 64;
 /// Decimation factor from the mic's rate down to the pipeline's.
 const DECIMATE: usize = 2;
 
+/// The mic's bit clock.
+pub const BCLK_HZ: u32 = BIO_QUANTUM_HZ / 2;
 /// The rate the mic is clocked at - one 24-bit sample per WS frame.
-pub const RAW_RATE_HZ: u32 = BIO_QUANTUM_HZ / 2 / BCLK_PER_FRAME;
+pub const RAW_RATE_HZ: u32 = BCLK_HZ / BCLK_PER_FRAME;
 /// The rate read_frame returns, after decimation.
 pub const SAMPLE_RATE_HZ: u32 = RAW_RATE_HZ / DECIMATE as u32;
 /// Milliseconds of audio in one frame. Frames arrive farther apart than this, because
