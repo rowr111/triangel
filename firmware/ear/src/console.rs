@@ -7,7 +7,7 @@ use crate::audio::FRAME_PERIOD_MS;
 
 use crate::audio::{I2sAudio, BCLK_HZ, RAW_RATE_HZ, SAMPLE_RATE_HZ};
 use crate::pins::{MIC_BCLK_BIO_PIN, MIC_WS_BIO_PIN};
-use triangel_shared::frame::{BAND_COUNT, LEVEL_DB_FLOOR};
+use triangel_shared::frame::{level_to_norm, BAND_COUNT, LEVEL_DB_FLOOR};
 use crate::diag::{self, Diag};
 
 /// Raw FIFO words shown by `r`, and how many are printed per line.
@@ -551,7 +551,7 @@ fn dbfs(rms: f64, full_scale: f64) -> f32 {
 
 /// A dBFS bar with the number after it.
 fn bar(db: f32) -> String {
-    let filled = (((db - LEVEL_DB_FLOOR) / -LEVEL_DB_FLOOR).clamp(0.0, 1.0) * BAR_WIDTH as f32) as usize;
+    let filled = (level_to_norm(db).clamp(0.0, 1.0) * BAR_WIDTH as f32) as usize;
 
     let mut s = String::with_capacity(BAR_WIDTH + 24);
     s.push('[');

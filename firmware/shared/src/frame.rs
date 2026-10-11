@@ -10,14 +10,19 @@ pub const BAND_COUNT: usize = 24;
 /// Quietest level the wire carries. LEVEL_DB_FLOOR..0 dBFS maps onto 0..=65535.
 pub const LEVEL_DB_FLOOR: f32 = -90.0;
 
+/// Where a dBFS level sits between LEVEL_DB_FLOOR and 0, as 0.0-1.0. Not clamped.
+pub fn level_to_norm(dbfs: f32) -> f32 {
+    (dbfs - LEVEL_DB_FLOOR) / -LEVEL_DB_FLOOR
+}
+
 /// Encode dBFS for the wire.
 pub fn level_to_wire(dbfs: f32) -> u16 {
-    norm_to_wire((dbfs - LEVEL_DB_FLOOR) / -LEVEL_DB_FLOOR)
+    norm_to_wire(level_to_norm(dbfs))
 }
 
 /// Decode a wire level back to absolute dBFS.
 pub fn level_from_wire(level: u16) -> f32 {
-    LEVEL_DB_FLOOR + (level as f32 / 65535.0) * -LEVEL_DB_FLOOR
+    LEVEL_DB_FLOOR + norm_from_wire(level) * -LEVEL_DB_FLOOR
 }
 
 /// Encode a 0.0-1.0 level for the wire.
@@ -30,9 +35,11 @@ pub fn norm_from_wire(norm: u16) -> f32 {
     norm as f32 / 65535.0
 }
 
-/// Wire frame length in bytes: 1 sync + BAND_COUNT*2 bands + 2 level + 2 level_norm
-/// + 2 flux + 2 bass + 1 checksum.
-pub const FRAME_LEN: usize = 1 + BAND_COUNT * 2 + 2 + 2 + 2 + 2 + 1; // 58 bytes
+/// The u16 values after the bands: level, level_norm, flux, bass.
+const SCALARS: usize = 4;
+
+/// Wire frame length in bytes: a sync byte, the u16 values, a checksum byte.
+pub const FRAME_LEN: usize = 1 + (BAND_COUNT + SCALARS) * 2 + 1; // 58 bytes
 
 /// One frame from the ear to the eye. On the wire, little-endian: the sync byte, then
 /// these fields in order as u16s, then an XOR checksum.
@@ -53,7 +60,8 @@ impl BandFrame {
     /// Write the frame into a wire buffer.
     pub fn encode(&self, buf: &mut [u8; FRAME_LEN]) {
         buf[0] = SYNC_BYTE;
-        let words = self.bands.iter().chain([&self.level, &self.level_norm, &self.flux, &self.bass]);
+        let scalars: [u16; SCALARS] = [self.level, self.level_norm, self.flux, self.bass];
+        let words = self.bands.iter().chain(&scalars);
         for (bytes, word) in buf[1..FRAME_LEN - 1].chunks_exact_mut(2).zip(words) {
             bytes.copy_from_slice(&word.to_le_bytes());
         }
@@ -66,13 +74,9 @@ impl BandFrame {
             return None;
         }
         let word = |i: usize| u16::from_le_bytes([buf[1 + i * 2], buf[2 + i * 2]]);
-        Some(BandFrame {
-            bands:      std::array::from_fn(word),
-            level:      word(BAND_COUNT),
-            level_norm: word(BAND_COUNT + 1),
-            flux:       word(BAND_COUNT + 2),
-            bass:       word(BAND_COUNT + 3),
-        })
+        let [level, level_norm, flux, bass]: [u16; SCALARS] =
+            std::array::from_fn(|i| word(BAND_COUNT + i));
+        Some(BandFrame { bands: std::array::from_fn(word), level, level_norm, flux, bass })
     }
 }
 
@@ -116,7 +120,14 @@ impl FrameAssembler {
         self.pos = 0;
         match BandFrame::decode(&self.buf) {
             Some(frame) => Fed::Frame(frame),
-            None => Fed::Bad,
+            None => {
+                // A frame may have started inside this one: keep from the next sync byte on.
+                if let Some(i) = self.buf[1..].iter().position(|&b| b == SYNC_BYTE) {
+                    self.buf.copy_within(1 + i.., 0);
+                    self.pos = FRAME_LEN - 1 - i;
+                }
+                Fed::Bad
+            }
         }
     }
 }
