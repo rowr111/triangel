@@ -1,6 +1,6 @@
 # triangel - eye firmware
 
-LED controller firmware for the triangel fixture. Runs on a Baochip-1x under [Xous OS](https://betrusted.io/xous-book/) (DABAO dev board used during development). See [`../README.md`](../README.md) for the overall system and physical fixture description.
+LED controller firmware for the triangel fixture. Runs on a Baochip-1x under [Xous OS](https://betrusted.io/xous-book/) (dabao dev board used during development). See [`../README.md`](../README.md) for the overall system and physical fixture description.
 
 ## What this is
 
@@ -24,37 +24,6 @@ The **eye** chip drives 600 WS2812 LEDs across 25 triangle PCBs. It manages:
 
 All pin assignments are in [`src/pins.rs`](src/pins.rs).
 
-## Project structure
-
-```
-src/
-+-- main.rs      - entry point; 30 fps render loop
-+-- setlist.rs   - the two setlists, cycling, transitions, brightness, sound mode
-+-- audio.rs     - receives ear frames; beat, drop and activity detection
-+-- pins.rs      - pin assignments
-+-- diag.rs      - boot stages and heartbeat over USB serial
-+-- led/
-|   +-- mod.rs          - LedOutput: the WS2812 chains, or the USB previewer
-|   +-- ws2812_pair.rs  - two-chain WS2812 driver
-|   +-- map.rs          - LED_MAP: world position of every LED
-|   +-- geom.rs         - per-LED distances, angles and grid buckets (generated)
-|   +-- grid.rs         - spatial lookup: the LEDs near a point or segment
-|   +-- world.rs        - the fixture's left, right and half-width, from geom.rs
-+-- patterns/
-|   +-- mod.rs          - Pattern trait and shared helpers
-|   +-- transition.rs   - blends from one pattern to the next
-|   +-- glints.rs       - brief white flashes on single LEDs, shared by Shimmer and Rainbow
-|   +-- ripples.rs      - raindrop ring trains on black, shared by Raindrop and Drizzle
-|   +-- ambient/        - patterns that ignore sound
-|   +-- reactive/       - patterns driven by sound
-+-- input/
-    +-- mod.rs          - InputEvent queue
-    +-- buttons.rs      - d-pad and switch polling, debounce
-    +-- buttons/        - gpio.rs (wired direct) or expander.rs (input board over I2C)
-    +-- ir.rs, nec_capture.rs, nec_rx.rs - IR remote, NEC decoded on a BIO core
-    +-- previewer.rs    - on-screen controls from the previewer
-```
-
 Code shared with the ear (frame format, sound tuning) lives in [`../shared/`](../shared/).
 
 ## Building
@@ -72,11 +41,11 @@ Build via the Baochip VSCode extension (`buildMode: out-of-tree`). Optional feat
 The previewer is a browser-based LED simulator at `../../triangel previewer/`. It can receive live frames from this firmware over USB serial.
 
 1. Enable the `previewer` feature in the Baochip extension settings and build
-2. Flash and boot the DABAO
+2. Flash and boot the dabao
 3. In the previewer directory: `npm install` (first time), then `node bridge.js`
 4. Open `index.html` in a browser - it will show the live pattern output
 
-Bridge defaults: COM3, 921600 baud, WebSocket port 8080. Override via `bridge.config.json` or CLI flags.
+Bridge defaults: COM3, 921600 baud, WebSocket port 8080. Override via `bridge.config.json`.
 
 ## Adding a pattern
 

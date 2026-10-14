@@ -1,10 +1,10 @@
 # triangel-shared
 
-Code both chips build against, so the **ear** (audio) and the **eye** (LEDs) cannot disagree. No dependencies and no OS requirements.
+Code both chips build against. Flash both the **ear** (audio) and the **eye** (LEDs) if you change this code.
 
 ## `frame` - the ear -> eye frame
 
-The ear sends one `BandFrame` for each 32 ms of audio it captures, about 28 per second, over UART. Baud rate, band count and frame length are constants in [`src/frame.rs`](src/frame.rs) (`EAR_UART_BAUD`, `BAND_COUNT`, `FRAME_LEN`).
+The ear sends `BandFrame`s to the eye over UART. Baud rate, band count and frame length are constants in [`src/frame.rs`](src/frame.rs) (`EAR_UART_BAUD`, `BAND_COUNT`, `FRAME_LEN`).
 
 ### Wire format (58 bytes, little-endian)
 

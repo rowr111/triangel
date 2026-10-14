@@ -1,12 +1,12 @@
 # triangel - ear firmware
 
-Audio processor firmware for the triangel fixture. Runs on a Baochip-1x under [Xous OS](https://betrusted.io/xous-book/) (DABAO dev board used during development). See [`../README.md`](../README.md) for the overall system and physical fixture description.
+Audio processor firmware for the triangel fixture. Runs on a Baochip-1x under [Xous OS](https://betrusted.io/xous-book/) (dabao dev board used during development). See [`../README.md`](../README.md) for the overall system and physical fixture description.
 
 ## What this is
 
-The **ear** chip captures audio, measures it in 24 frequency bands, and streams the result to the **eye** chip over UART at about 28 fps.
+The **ear** chip captures audio, measures it in 24 frequency bands, and streams the result to the **eye** chip over UART.
 
-Pipeline per frame (32 ms):
+Pipeline per frame (32 ms of sound):
 
 ```
 mic (I2S, 48 kHz)  ->  2:1 decimate  ->  768-sample frame  ->  24 bandpass filters  ->  normalize  ->  UART TX  ->  eye
@@ -37,23 +37,9 @@ It also carries the level normalized against recent loudness, and the spectral f
 | Pipeline sample rate | 24 kHz | 2:1 box-average decimation; 12 kHz Nyquist |
 | Bit depth | 24-bit | Top 16 bits used |
 | Channels | Mono | Select pin tied low on PCB = left channel |
-| Frame size | 768 samples | 32 ms of audio per frame. About 28 fps, because audio that arrives while a frame is being processed is skipped |
+| Frame size | 768 samples | 32 ms of sound per frame. The sound that arrives while a frame is being processed is skipped, so a frame goes out about every 36 ms |
 
 All of these derive from three constants at the top of [`src/audio.rs`](src/audio.rs).
-
-## Project structure
-
-```
-src/
-+-- main.rs       - entry point; capture -> filterbank -> UART loop
-+-- audio.rs      - I2sAudio: ICS43434 mic through a BIO core
-+-- i2s_bio.rs    - the BIO program that clocks the mic (generated)
-+-- bands.rs      - BandProcessor: the 24-band filterbank and normalization
-+-- uart_out.rs   - UartOut: sends each frame to the eye
-+-- pins.rs       - pin assignments
-+-- diag.rs       - USB-serial output: boot stages, heartbeat, command input
-+-- console.rs    - mic diagnostic commands
-```
 
 Code shared with the eye (frame format, tuning) lives in [`../shared/`](../shared/).
 

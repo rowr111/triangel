@@ -1,10 +1,17 @@
-# triangel
+# Triangel!
 
-A ceiling light shaped like a triangle about 50 cm across, made to sit in the corner of a room. It is built from 25 triangle tiles carrying 600 LEDs, and runs ambient and sound-reactive patterns.
+## A unique lighting fixture..
+
+- 25 triangle-shaped tiles
+- 600 LEDs! 
+- ambient and sound-reactive patterns
+
+## Why the name?
+
+Each triangle tile has a stylized eye design in the middle.. After I decided to cover it in eyes, I was inspired/by biblical angel descriptions to name it..triangle + angel = triangel!
+
 
 <img src="docs/images/triangel.jpg" width="480" alt="triangel: 25 triangle tiles joined into one large triangle, point down, with some of its LEDs lit">
-
-To work on triangel you need DABAO boards. Every page here assumes you have them.
 
 ## The parts
 
@@ -12,17 +19,17 @@ To work on triangel you need DABAO boards. Every page here assumes you have them
 |---|---|
 | triangel | The whole project: the tiles and the boards that run them |
 | tile | One of the 25 triangle circuit boards, with 24 LEDs. Also called a triangel. The code calls a tile a `board` |
-| controller board | Holds the two DABAO boards, the microphone and the power supply for the tiles |
-| DABAO board | A Baochip-1x development board. triangel uses two: the **eye** and the **ear** |
+| controller board | Holds the two dabao boards, the microphone and the power supply for the tiles |
+| dabao board | A [dabao](https://www.crowdsupply.com/baochip/dabao), a Baochip-1x development board. triangel uses two: the **eye** and the **ear** |
 | input board | The five buttons, the sound switch and the IR receiver |
 | remote | A 7-button IR remote that does what the buttons do |
 
 ## How it works
 
-The two DABAO boards each run their own firmware under [Xous](https://betrusted.io/xous-book/):
+The two dabao boards each run their own firmware under [Xous](https://betrusted.io/xous-book/):
 
 - The **eye** draws the patterns and sends them to the 600 LEDs 30 times a second. It also reads the buttons, the switch and the remote.
-- The **ear** listens through the microphone, measures the sound in 24 frequency bands, and sends the result to the eye about 28 times a second.
+- The **ear** listens through the microphone, measures the sound in 24 frequency bands, and sends the result to the eye.
 
 ## Where to go
 

@@ -21,7 +21,7 @@ Nothing is remembered when the power goes off. The fixture starts at middle brig
 
 ## Updating the firmware
 
-Two small boards, called DABAO boards, sit in sockets on the controller board and
+Two small boards, called dabao boards, sit in sockets on the controller board and
 each runs its own firmware. The sockets are labeled EYE and EAR. Each board has a
 RESET and a PROG button, and its own USB-C connector.
 

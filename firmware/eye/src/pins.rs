@@ -24,7 +24,7 @@ pub use combined_board::*;
 mod combined_board {
     use super::IoxPort;
 
-    // D-pad buttons, active-low with external pull-ups (eye DABAO, socket U1 left edge).
+    // D-pad buttons, active-low with external pull-ups (eye dabao, socket U1 left edge).
     pub const BTN_UP_PORT:     IoxPort = IoxPort::PC;
     pub const BTN_UP_PIN:      u8      = 0;
     pub const BTN_DOWN_PORT:   IoxPort = IoxPort::PC;
@@ -36,7 +36,7 @@ mod combined_board {
     pub const BTN_CENTER_PORT: IoxPort = IoxPort::PC;
     pub const BTN_CENTER_PIN:  u8      = 2;
 
-    // 3-position sound switch (eye DABAO, socket U2 right edge). Its common is tied to +3.3V
+    // 3-position sound switch (eye dabao, socket U2 right edge). Its common is tied to +3.3V
     // and each throw has a 10k pull-down, so the selected line reads HIGH and the center
     // position reads both LOW. On the schematic ON is SW_A and OFF is SW_B.
     pub const SW_ON_PORT:  IoxPort = IoxPort::PB;

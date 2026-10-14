@@ -3,7 +3,7 @@
 # controller and input boards as two separate PCBs.
 #
 # A flat plate with four standoffs under the board's M3 holes, plus three support pads
-# that take the load when a DABAO module is pressed into its sockets. The wall screws go
+# that take the load when a dabao module is pressed into its sockets. The wall screws go
 # through tabs either side of the board rather than underneath it, so they stay reachable
 # with the board bolted on and the whole assembly comes off the wall in one piece.
 #

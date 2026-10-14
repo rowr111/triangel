@@ -16,12 +16,12 @@ pub struct UartOut {
 impl UartOut {
     /// Initialize the UART TX peripheral.
     ///
-    /// UART2 TX is physical pin 15 (PB14) on the DABAO header - the only UART
+    /// UART2 TX is physical pin 15 (PB14) on the dabao header - the only UART
     /// broken out. Wire to eye board physical pin 16 (PB13, UART2 RX) + GND.
     pub fn new() -> Self {
         // Uart::new only maps the CSR and sets baud/format - it neither muxes the pin nor
         // gates the UDMA clock on, so do both here (the eye does the same on its RX side)
-        // or nothing leaves PB14. Values match the DABAO UART2 pins: output, AF1, 4mA.
+        // or nothing leaves PB14. Values match the dabao UART2 pins: output, AF1, 4mA.
         let iox = IoxHal::new();
         iox.setup_pin(
             crate::pins::AUDIO_UART_TX_PORT,
