@@ -43,11 +43,10 @@ To set up a computer, see [How to set up a development machine](../docs/how-to/s
 If the PCB geometry or board gap changes:
 
 ```powershell
-# 1. In triangel-previewer/: regenerate led_map.js
-node generate_map.js
+# In firmware/eye/:
+# 1. Regenerate src/led/map.rs and triangel-previewer/led_map.js
+python tools/gen_map.py
 
-# 2. Convert each entry of led_map.js to a `Led { .. }` line in firmware/eye/src/led/map.rs
-
-# 3. In firmware/eye/: regenerate src/led/geom.rs from map.rs
+# 2. Regenerate src/led/geom.rs from map.rs
 python tools/gen_geom.py
 ```

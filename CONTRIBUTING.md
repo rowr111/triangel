@@ -9,7 +9,7 @@ Install the commit hook once, from the repository root:
     pip install pre-commit
     pre-commit install
 
-Every commit then runs clippy on each build of the eye, the ear and the shared code, with warnings treated as errors, and checks that the generated LED tables are current.
+Every commit then runs clippy on each build of the eye, the ear and the shared code, with warnings treated as errors.
 
 There are no automated tests. What a change does to the lights has to be looked at: build the eye with `previewer` and watch it in the [previewer](docs/how-to/run-the-previewer.md), or run it on a triangel.
 
@@ -19,7 +19,7 @@ There are no automated tests. What a change does to the lights has to be looked 
 
 - Idiomatic Rust, with no clippy warnings.
 - Sound tuning values go in `firmware/shared/src/tuning.rs`, not in the pattern that uses them.
-- Do not edit generated files by hand: `firmware/eye/src/led/geom.rs` (run `tools/gen_geom.py`), `firmware/ear/src/i2s_bio.rs` and `firmware/eye/src/input/nec_rx.rs`.
+- Do not edit generated files by hand: `firmware/eye/src/led/map.rs` and `triangel-previewer/led_map.js` (run `tools/gen_map.py`), `firmware/eye/src/led/geom.rs` (run `tools/gen_geom.py`), `firmware/ear/src/i2s_bio.rs` and `firmware/eye/src/input/nec_rx.rs`.
 - The Rust version, the xous-core revision in both `Cargo.toml` files, and the kernels move together. Do not change one alone.
 
 ### Patterns

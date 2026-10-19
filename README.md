@@ -51,7 +51,7 @@ The two dabao boards each run their own firmware under [Xous](https://betrusted.
 | [`firmware/ear/`](firmware/ear/README.md) | The ear's firmware: microphone, frequency bands, the link to the eye |
 | [`firmware/shared/`](firmware/shared/README.md) | Code both use: the format of what the ear sends, and the sound tuning |
 | [`triangel-previewer/`](triangel-previewer/) | Shows the eye's LED output in a browser |
-| `hardware/` | The circuit boards (KiCad) and the brackets |
+| [`hardware/`](hardware/) | The circuit boards (KiCad) and the brackets |
 | [`graphics/`](graphics/README.md) | Artwork and the sticker sheets |
 
 ## License
