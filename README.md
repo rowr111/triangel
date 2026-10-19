@@ -36,7 +36,7 @@ The two dabao boards each run their own firmware under [Xous](https://betrusted.
 | If you want to | Read |
 |---|---|
 | Use a triangel: the controls, updating its firmware | [USER_GUIDE.md](USER_GUIDE.md) |
-| Set up your machine and build the firmware | [firmware/README.md](firmware/README.md) |
+| Set up your machine | [docs/how-to/set-up-a-development-machine.md](docs/how-to/set-up-a-development-machine.md) |
 | Watch the patterns in a browser | [triangel-previewer/README.md](triangel-previewer/README.md) |
 | Write a pattern | [firmware/eye/PATTERNS.md](firmware/eye/PATTERNS.md) |
 | Know the checks and conventions before changing something | [CONTRIBUTING.md](CONTRIBUTING.md) |

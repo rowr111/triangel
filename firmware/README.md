@@ -36,22 +36,7 @@ The baud rate and frame layout are defined once, in the [`shared/`](shared/) cra
 
 ## Building
 
-Rust stays at 1.96.1: the Xous library that `install-toolkit` downloads only works with the version it was built for. One-time setup:
-
-```powershell
-rustup toolchain install 1.96.1
-rustup override set 1.96.1   # in the xous-core checkout and in this repo's root
-cargo xtask install-toolkit  # in the xous-core checkout
-```
-
-Install the pre-commit hook, which runs the checks in `.pre-commit-config.yaml` before each commit (needs Python):
-
-```powershell
-pip install pre-commit
-pre-commit install   # in this repo's root
-```
-
-Build and flash with the Baochip VS Code extension: out-of-tree, kernel mode manual, kernel files from `firmware/xous_build`. Never use ci-sync; it replaces the kernels from [How to build the kernels](../docs/how-to/build-the-kernels.md).
+To set up a computer, see [How to set up a development machine](../docs/how-to/set-up-a-development-machine.md). Before sending changes, install the commit hook described in [CONTRIBUTING.md](../CONTRIBUTING.md).
 
 ## Regenerating the LED map
 
