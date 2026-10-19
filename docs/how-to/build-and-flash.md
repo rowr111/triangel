@@ -43,7 +43,7 @@ For the ear, run the same from `firmware/ear`, with `ear` at the end of the path
 ## 2. Put the board in its bootloader
 
 - **A new dabao:** press RESET. It starts in its bootloader.
-- **A dabao set to start its firmware at power-up** (see [Start without pressing PROG](#start-without-pressing-prog)): hold PROG, press and release RESET, and keep holding PROG for about another second.
+- **A dabao set to start its firmware at power-up** (see [Start without pressing PROG](#start-without-pressing-prog)): hold PROG, press and release RESET, and keep holding PROG for about another second. On these boards, RESET alone just restarts the firmware.
 
 Either way, the board appears on your computer as a drive.
 
