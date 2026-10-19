@@ -33,16 +33,15 @@ The two dabao boards each run their own firmware under [Xous](https://betrusted.
 
 ## Where to go
 
-| If you want to | Read |
-|---|---|
-| Use a triangel: the controls, updating its firmware | [USER_GUIDE.md](USER_GUIDE.md) |
-| Set up your machine | [docs/how-to/set-up-a-development-machine.md](docs/how-to/set-up-a-development-machine.md) |
-| Watch the patterns in a browser | [triangel-previewer/README.md](triangel-previewer/README.md) |
-| Write a pattern | [firmware/eye/PATTERNS.md](firmware/eye/PATTERNS.md) |
-| Know the checks and conventions before changing something | [CONTRIBUTING.md](CONTRIBUTING.md) |
-| Build the kernels the boards run | [docs/how-to/build-the-kernels.md](docs/how-to/build-the-kernels.md) |
-| Change the microphone's pins | [docs/how-to/regenerate-the-mic-program.md](docs/how-to/regenerate-the-mic-program.md) |
-| Print the stickers and overlays | [graphics/README.md](graphics/README.md) |
+- [Use an existing triangel](USER_GUIDE.md): the controls, and updating its firmware
+- [Set up your machine](docs/how-to/set-up-a-development-machine.md)
+- [Build and flash the boards](docs/how-to/build-and-flash.md)
+- [Watch the patterns in a browser](triangel-previewer/README.md)
+- [Write a pattern](firmware/eye/PATTERNS.md)
+- [Contributing](CONTRIBUTING.md)
+- [Build the kernels](docs/how-to/build-the-kernels.md)
+- [Change the microphone's pins](docs/how-to/regenerate-the-mic-program.md)
+- [Print the stickers and overlays](graphics/README.md)
 
 ## What is in this repository
 
