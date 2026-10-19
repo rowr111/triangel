@@ -1,6 +1,6 @@
 # triangel - ear firmware
 
-Audio processor firmware for the triangel fixture. Runs on a Baochip-1x under [Xous OS](https://betrusted.io/xous-book/) (dabao dev board used during development). See [`../README.md`](../README.md) for the overall system and physical fixture description.
+Audio processor firmware for the triangel. Runs on a Baochip-1x under [Xous OS](https://betrusted.io/xous-book/) (dabao dev board used during development). See [`../README.md`](../README.md) for the overall system and physical triangel description.
 
 ## What this is
 
@@ -12,7 +12,7 @@ Pipeline per frame (32 ms of sound):
 mic (I2S, 48 kHz)  ->  2:1 decimate  ->  768-sample frame  ->  24 bandpass filters  ->  normalize  ->  UART TX  ->  eye
 ```
 
-The 24 bands span 40 Hz to 12 kHz, each a constant ratio above the last (about a third of an octave), so every band covers the same musical interval. It is built like a hardware spectrum analyzer: one bandpass filter per band, squaring and averaging each filter's output over the frame. No FFT is involved, so there is no windowing and the filters run continuously across frame boundaries.
+The 24 bands span 40 Hz to 12 kHz, each a constant ratio above the last (about a third of an octave), so every band covers the same musical interval. It is built like a hardware spectrum analyzer: one bandpass filter per band, squaring and averaging each filter's output over the frame. No FFT is involved, so there is no windowing, and each filter keeps its state from one frame to the next.
 
 Each frame carries two kinds of value, on purpose:
 

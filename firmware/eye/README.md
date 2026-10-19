@@ -1,6 +1,6 @@
 # triangel - eye firmware
 
-LED controller firmware for the triangel fixture. Runs on a Baochip-1x under [Xous OS](https://betrusted.io/xous-book/) (dabao dev board used during development). See [`../README.md`](../README.md) for the overall system and physical fixture description.
+LED controller firmware for the triangel. Runs on a Baochip-1x under [Xous OS](https://betrusted.io/xous-book/) (dabao dev board used during development). See [`../README.md`](../README.md) for the overall system and physical triangel description.
 
 ## What this is
 
@@ -38,14 +38,7 @@ Build via the Baochip VSCode extension (`buildMode: out-of-tree`). Optional feat
 
 ## Using the previewer
 
-The previewer is a browser-based LED simulator at `../../triangel-previewer/`. It can receive live frames from this firmware over USB serial.
-
-1. Enable the `previewer` feature in the Baochip extension settings and build
-2. Flash and boot the dabao
-3. In the previewer directory: `npm install` (first time), then `node bridge.js`
-4. Open `index.html` in a browser - it will show the live pattern output
-
-Bridge defaults: COM3, 921600 baud, WebSocket port 8080. Override via `bridge.config.json`.
+See [How to run the previewer](../../docs/how-to/run-the-previewer.md).
 
 ## Adding a pattern
 

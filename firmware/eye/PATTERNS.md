@@ -8,15 +8,19 @@ A pattern implements the `Pattern` trait in `src/patterns/mod.rs`: called once p
 // src/patterns/ambient/your_pattern.rs
 use crate::audio::Audio;
 use crate::led::map::LED_MAP;
-use crate::patterns::{Frame, Pattern};
+use crate::led::world::{WORLD_LEFT, WORLD_RIGHT};
+use crate::patterns::{Frame, Pattern, cycle, hsv};
 
 pub struct YourPattern;
 
 impl Pattern for YourPattern {
     fn render(&mut self, t_ms: u32, _audio: &Audio, out: &mut Frame) {
+        // A rainbow across the triangel that scrolls once every 10 seconds.
+        let shift = cycle(t_ms, 10_000);
         for (i, led) in LED_MAP.iter().enumerate() {
             // led.wx, led.wy - position in mm
-            out[i] = [r, g, b];
+            let across = (led.wx - WORLD_LEFT) / (WORLD_RIGHT - WORLD_LEFT);
+            out[i] = hsv((across + shift).fract() * 360.0, 1.0, 1.0);
         }
     }
 }
@@ -34,7 +38,7 @@ A pattern is only rendered while it is on screen or fading out, so time jumps wh
 ## World coordinates
 
 ```
-origin: top-left of fixture
+origin: top-left of the triangel
 x: increases rightward, 0-517 mm
 y: increases downward,  0-436 mm
 
@@ -87,7 +91,7 @@ The chip has no floating-point hardware, so every `f32` operation is a library c
 - Integer math per LED where possible, as Shimmer and Flame do: values in Q12 (x4096 = 1.0), lookup tables for curves and colors. A few float calls per frame are fine.
 - Wrap time to the term's period before converting to `f32` (`(t_ms % PERIOD_MS) as f32`): raw `t_ms` loses sub-frame precision after hours of uptime.
 
-The previewer caps at 30 fps and runs a few ms faster than the fixture, so it can show a pattern is too slow but can't confirm one is fast enough.
+The previewer caps at 30 fps and runs a few ms faster than the triangel, so it can show a pattern is too slow but can't confirm one is fast enough.
 
 ## Sound-reactive patterns
 

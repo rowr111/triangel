@@ -18,7 +18,7 @@ Each triangle tile has a stylized eye design in the middle.. After I decided to 
 | Name | What it is |
 |---|---|
 | triangel | The whole project: the tiles and the boards that run them |
-| tile | One of the 25 triangle circuit boards, with 24 LEDs. Also called a triangel. The code calls a tile a `board` |
+| tile | One of the 25 triangle circuit boards, each with 24 LEDs. |
 | controller board | Holds the two dabao boards, the microphone and the power supply for the tiles |
 | dabao board | A [dabao](https://www.crowdsupply.com/baochip/dabao), a Baochip-1x development board. triangel uses two: the **eye** and the **ear** |
 | input board | The five buttons, the sound switch and the IR receiver |
@@ -36,7 +36,7 @@ The two dabao boards each run their own firmware under [Xous](https://betrusted.
 - [Use an existing triangel](USER_GUIDE.md): the controls, and updating its firmware
 - [Set up your machine](docs/how-to/set-up-a-development-machine.md)
 - [Build and flash the boards](docs/how-to/build-and-flash.md)
-- [Watch the patterns in a browser](triangel-previewer/README.md)
+- [Watch the patterns in a browser](docs/how-to/run-the-previewer.md)
 - [Write a pattern](firmware/eye/PATTERNS.md)
 - [Contributing](CONTRIBUTING.md)
 - [Build the kernels](docs/how-to/build-the-kernels.md)
@@ -50,7 +50,7 @@ The two dabao boards each run their own firmware under [Xous](https://betrusted.
 | [`firmware/eye/`](firmware/eye/README.md) | The eye's firmware: LED output, patterns, controls |
 | [`firmware/ear/`](firmware/ear/README.md) | The ear's firmware: microphone, frequency bands, the link to the eye |
 | [`firmware/shared/`](firmware/shared/README.md) | Code both use: the format of what the ear sends, and the sound tuning |
-| [`triangel-previewer/`](triangel-previewer/README.md) | Shows the eye's LED output in a browser |
+| [`triangel-previewer/`](triangel-previewer/) | Shows the eye's LED output in a browser |
 | `hardware/` | The circuit boards (KiCad) and the brackets |
 | [`graphics/`](graphics/README.md) | Artwork and the sticker sheets |
 

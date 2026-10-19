@@ -11,7 +11,7 @@ See [`eye/`](eye/) and [`ear/`](ear/) for crate-level documentation.
 
 ## Physical fixture
 
-The fixture mounts in the corner of a room - an equilateral triangle cutting off the corner tip. It is made of 25 triangle PCBs (24 LEDs each) arranged in a larger triangle:
+The Triangel mounts in the corner of a room - an equilateral triangle cutting off the corner tip. It is made of 25 triangle PCBs (24 LEDs each) arranged in a larger triangle:
 
 ```
 ->  1   2   3   4   5   6   7   8   9
