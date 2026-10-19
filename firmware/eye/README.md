@@ -38,7 +38,7 @@ Build via the Baochip VSCode extension (`buildMode: out-of-tree`). Optional feat
 
 ## Using the previewer
 
-The previewer is a browser-based LED simulator at `../../triangel previewer/`. It can receive live frames from this firmware over USB serial.
+The previewer is a browser-based LED simulator at `../../triangel-previewer/`. It can receive live frames from this firmware over USB serial.
 
 1. Enable the `previewer` feature in the Baochip extension settings and build
 2. Flash and boot the dabao

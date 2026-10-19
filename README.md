@@ -37,7 +37,7 @@ The two dabao boards each run their own firmware under [Xous](https://betrusted.
 |---|---|
 | Use a triangel: the controls, updating its firmware | [USER_GUIDE.md](USER_GUIDE.md) |
 | Set up your machine and build the firmware | [firmware/README.md](firmware/README.md) |
-| Watch the patterns in a browser | [triangel previewer/README.md](triangel%20previewer/README.md) |
+| Watch the patterns in a browser | [triangel-previewer/README.md](triangel-previewer/README.md) |
 | Write a pattern | [firmware/eye/PATTERNS.md](firmware/eye/PATTERNS.md) |
 | Know the checks and conventions before changing something | [CONTRIBUTING.md](CONTRIBUTING.md) |
 | Build the kernels the boards run | [docs/how-to/build-the-kernels.md](docs/how-to/build-the-kernels.md) |
@@ -51,7 +51,7 @@ The two dabao boards each run their own firmware under [Xous](https://betrusted.
 | [`firmware/eye/`](firmware/eye/README.md) | The eye's firmware: LED output, patterns, controls |
 | [`firmware/ear/`](firmware/ear/README.md) | The ear's firmware: microphone, frequency bands, the link to the eye |
 | [`firmware/shared/`](firmware/shared/README.md) | Code both use: the format of what the ear sends, and the sound tuning |
-| [`triangel previewer/`](triangel%20previewer/README.md) | Shows the eye's LED output in a browser |
+| [`triangel-previewer/`](triangel-previewer/README.md) | Shows the eye's LED output in a browser |
 | `hardware/` | The circuit boards (KiCad) and the brackets |
 | [`graphics/`](graphics/README.md) | Artwork and the sticker sheets |
 

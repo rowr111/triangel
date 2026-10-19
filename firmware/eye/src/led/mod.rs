@@ -67,7 +67,7 @@ impl LedOutput {
 
         #[cfg(feature = "previewer")]
         {
-            // Frame start marker; must match FRAME_MAGIC in triangel previewer/bridge.js.
+            // Frame start marker; must match FRAME_MAGIC in triangel-previewer/bridge.js.
             // Colors are capped at 254 so the marker never appears in the data.
             const MAGIC: [u8; 4] = [0xFF, 0xFF, 0xFF, 0xFF];
             let mut buf = [0u8; 4 + LED_COUNT * 3];

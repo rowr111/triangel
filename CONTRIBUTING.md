@@ -11,7 +11,7 @@ Install the commit hook once, from the repository root:
 
 Every commit then runs clippy on each build of the eye, the ear and the shared code, with warnings treated as errors, and checks that the generated LED tables are current.
 
-There are no automated tests. What a change does to the lights has to be looked at: build the eye with `previewer` and watch it in the [previewer](triangel%20previewer/README.md), or run it on a triangel.
+There are no automated tests. What a change does to the lights has to be looked at: build the eye with `previewer` and watch it in the [previewer](triangel-previewer/README.md), or run it on a triangel.
 
 ## Conventions
 

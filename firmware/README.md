@@ -58,7 +58,7 @@ Build and flash with the Baochip VS Code extension: out-of-tree, kernel mode man
 If the PCB geometry or board gap changes:
 
 ```powershell
-# 1. In "triangel previewer/": regenerate led_map.js
+# 1. In triangel-previewer/: regenerate led_map.js
 node generate_map.js
 
 # 2. Convert each entry of led_map.js to a `Led { .. }` line in firmware/eye/src/led/map.rs
