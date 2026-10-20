@@ -39,39 +39,35 @@ The **eye** draws the patterns and the **ear** listens to the room. See [How Tri
 
 ### If you want to develop
 
-#### Learn
-
-- [Try it on one dabao](docs/tutorials/first-run.md): start here if you are new
-- [Write your first pattern](docs/tutorials/first-pattern.md)
-- [Write a sound pattern](docs/tutorials/first-sound-pattern.md)
-
-#### How to
-
-- [Set up your machine](docs/how-to/set-up-a-development-machine.md)
-- [Build the firmware and flash the boards](docs/how-to/build-and-flash.md)
-- [Make a dabao start by itself](docs/how-to/make-a-dabao-start-by-itself.md)
-- [Watch the patterns in a browser](docs/how-to/run-the-previewer.md)
-- [Add a pattern](docs/how-to/add-a-pattern.md)
-- [Make a pattern fast enough](docs/how-to/make-a-pattern-fast-enough.md)
-- [Tune the sound response](docs/how-to/tune-the-sound-response.md)
-- [Build the kernels](docs/how-to/build-the-kernels.md)
-- [Check a microphone that is not working](docs/how-to/check-the-microphone.md)
-- [Change the microphone's pins](docs/how-to/regenerate-the-mic-program.md)
-- [Regenerate the LED map](docs/how-to/regenerate-the-led-map.md)
-
-#### Understand
-
-- [How Triangel works](docs/explanation/how-triangel-works.md): the two boards, a frame, the setlists and the kernel
-- [How sound becomes light](docs/explanation/how-sound-becomes-light.md): from the microphone, through the 24 bands, to beats and drops
-
-#### Look things up
-
-- [Pattern toolkit](docs/reference/pattern-toolkit.md): the helpers, the measurements and the sound
-- [Triangle tiles and wiring](docs/reference/triangle-tiles-and-wiring.md): the layout, the numbering and the two chains
-- [Pins](docs/reference/pins.md): which dabao pins each board uses
-- [The ear-to-eye link](docs/reference/ear-to-eye-link.md): the frames the ear sends, byte by byte
-- [Diagnostic output](docs/reference/diagnostic-output.md): the status lines the eye and the ear can print, for troubleshooting
-- [Contributing](CONTRIBUTING.md)
+- **Learn**
+  - [Build and preview Triangel patterns with one dabao](docs/tutorials/first-run.md): start here if you are new, or don't have Triangel hardware
+  - [Write your first pattern](docs/tutorials/first-pattern.md)
+  - [Write a sound pattern](docs/tutorials/first-sound-pattern.md)
+- **How to**
+  - **Get set up**
+    - [Set up your machine](docs/how-to/set-up-a-development-machine.md)
+    - [Build the firmware and flash the boards](docs/how-to/build-and-flash.md)
+    - [Make a dabao start by itself](docs/how-to/make-a-dabao-start-by-itself.md)
+    - [Watch the patterns in a browser](docs/how-to/run-the-previewer.md)
+  - **Work on patterns**
+    - [Add a pattern](docs/how-to/add-a-pattern.md)
+    - [Make a pattern fast enough](docs/how-to/make-a-pattern-fast-enough.md)
+    - [Tune the sound response](docs/how-to/tune-the-sound-response.md)
+  - **Hardware and the deeper parts**
+    - [Check a microphone that is not working](docs/how-to/check-the-microphone.md)
+    - [Change the microphone's pins](docs/how-to/regenerate-the-mic-program.md)
+    - [Regenerate the LED map](docs/how-to/regenerate-the-led-map.md)
+    - [Build the kernels](docs/how-to/build-the-kernels.md)
+- **Understand**
+  - [How Triangel works](docs/explanation/how-triangel-works.md): the two boards, a frame, the setlists and the kernel
+  - [How sound becomes light](docs/explanation/how-sound-becomes-light.md): from the microphone, through the 24 bands, to beats and drops
+- **Look things up**
+  - [Pattern toolkit](docs/reference/pattern-toolkit.md): the helpers, the measurements and the sound
+  - [Triangle tiles and wiring](docs/reference/triangle-tiles-and-wiring.md): the layout, the numbering and the two chains
+  - [Pins](docs/reference/pins.md): which dabao pins each board uses
+  - [The ear-to-eye link](docs/reference/ear-to-eye-link.md): the frames the ear sends, byte by byte
+  - [Diagnostic output](docs/reference/diagnostic-output.md): the status lines the eye and the ear can print, for troubleshooting
+  - [Contributing](CONTRIBUTING.md)
 
 ## What is in this repository
 
