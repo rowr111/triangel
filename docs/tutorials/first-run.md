@@ -1,6 +1,6 @@
 # Your first run
 
-In this tutorial you will put triangel's firmware on a single dabao and watch its patterns in your browser. You do not need any tiles or other boards: the previewer draws all 600 LEDs on the screen.
+In this tutorial you will put triangel's firmware on a single dabao and watch its patterns in your browser. You do not need any triangle tiles or other boards: the previewer draws all 600 LEDs on the screen.
 
 ## Before you start
 
@@ -15,7 +15,7 @@ The dabao has two buttons you will use: **RESET** near one end and **PROG** near
 
 ## 1. Build the eye with the previewer
 
-The eye is the board that draws the patterns. Built with the `previewer` option, it sends each frame to your computer instead of to the tiles.
+The eye is the board that draws the patterns. Built with the `previewer` option, it sends each frame to your computer instead of to the triangle tiles.
 
 Open the `firmware/eye` folder in VS Code, and click the Baochip icon in the bar on the left. The Baochip sidebar opens. Every command in this tutorial is there.
 
@@ -47,7 +47,7 @@ The bootloader is the small program that accepts new firmware.
 Plug the dabao into your computer. A new drive should appear on your computer. If it does not, press **RESET**.
 
 > [!NOTE]
-> If the dabao has been set to start its firmware at power-up (with `bootwait disable`, as boards in a finished triangel are), RESET only restarts it. Instead, hold **PROG**, press and release **RESET**, and keep holding **PROG** for about another second.
+> If the dabao has been set to start its firmware at power-up (with `bootwait disable`, as boards in a finished triangel are), RESET only restarts it. Instead, hold **PROG** while you press **RESET**, or while you plug it in.
 
 > [!NOTE]
 > No drive? Try another cable. A charge-only cable powers the board but your computer never sees it.

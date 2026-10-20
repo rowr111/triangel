@@ -4,7 +4,7 @@ LED controller firmware for the triangel. Runs on a Baochip-1x under [Xous OS](h
 
 ## What this is
 
-The **eye** chip drives 600 WS2812 LEDs across 25 triangle PCBs. It manages:
+The **eye** chip drives 600 WS2812 LEDs across 25 triangle tiles. It manages:
 
 - A 30 fps render loop driving two LED chains in parallel, one BIO co-processor core each
 - Two pattern setlists (ambient and sound-reactive), stepping every 3 minutes (ambient) or 5 minutes (sound-reactive) with a transition between patterns
@@ -42,9 +42,11 @@ See [How to run the previewer](../../docs/how-to/run-the-previewer.md).
 
 ## Adding a pattern
 
-Start with [Your first pattern](../../docs/tutorials/first-pattern.md), then see [PATTERNS.md](PATTERNS.md).
+Start with [Your first pattern](../../docs/tutorials/first-pattern.md), then see [How to add a pattern](../../docs/how-to/add-a-pattern.md) and the [Pattern toolkit](../../docs/reference/pattern-toolkit.md).
 
 ## Sound reactivity
+
+New to sound patterns? Start with [Your first sound pattern](../../docs/tutorials/first-sound-pattern.md).
 
 Each render frame, reactive patterns get an `Audio` snapshot built from the ear's frames: 24 band levels, a per-band onset (`rise`), overall loudness relative to recent music, and one-frame `beat` and `drop` flags. Detection thresholds and the patterns' sound tuning are in [`../shared/src/tuning.rs`](../shared/src/tuning.rs).
 

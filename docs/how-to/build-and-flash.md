@@ -39,8 +39,11 @@ For the ear, run the same from `firmware/ear`, with `ear` at the end of the path
 
 ## 2. Put the board in its bootloader
 
+> [!CAUTION]
+> On controller boards v1 and v2, do not connect the triangle tiles while the 12 V supply is unplugged. Power from a dabao's USB cable can leak backwards through the board, and the triangle tiles, up to 60 watts of lights, then try to run off the dabao's small internal supply. To flash a dabao on one of these boards, either keep the 12 V supply plugged in, or unplug both the 12 V supply *and* the triangle tiles. Safest of all, take the dabao out of its socket and flash it on its own.
+
 - **A new dabao:** press RESET. It starts in its bootloader.
-- **A dabao set to start its firmware at power-up** (see [Start without pressing PROG](#start-without-pressing-prog)): hold PROG, press and release RESET, and keep holding PROG for about another second. On these boards, RESET alone just restarts the firmware.
+- **A dabao set to start its firmware at power-up** (see [Start without pressing PROG](#start-without-pressing-prog)): hold PROG while you press RESET, or while you plug it in. On these boards, RESET alone just restarts the firmware.
 
 Either way, the board appears on your computer as a drive.
 

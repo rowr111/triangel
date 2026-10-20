@@ -2,7 +2,7 @@
 
 ## A unique lighting fixture..
 
-- 25 triangle-shaped tiles
+- 25 triangle tiles
 - 600 LEDs! 
 - ambient and sound-reactive patterns
 
@@ -17,9 +17,9 @@ Each triangle tile has a stylized eye design in the middle.. After I decided to 
 
 | Name | What it is |
 |---|---|
-| triangel | The whole project: the tiles and the boards that run them |
-| tile | One of the 25 triangle circuit boards, each with 24 LEDs. |
-| controller board | Holds the two dabao boards, the microphone and the power supply for the tiles |
+| triangel | The whole project: the triangle tiles and the boards that run them |
+| triangle tile | One of the 25 triangle circuit boards, each with 24 LEDs. |
+| controller board | Holds the two dabao boards, the microphone and the power supply for the triangle tiles |
 | dabao board | A [dabao](https://www.crowdsupply.com/baochip/dabao), a Baochip-1x development board. triangel uses two: the **eye** and the **ear** |
 | input board | The five buttons, the sound switch and the IR receiver |
 | remote | A 7-button IR remote that does what the buttons do |
@@ -35,14 +35,18 @@ The two dabao boards each run their own firmware under [Xous](https://betrusted.
 
 - [Try it on one dabao](docs/tutorials/first-run.md): start here if you are new
 - [Write your first pattern](docs/tutorials/first-pattern.md)
+- [Write a sound pattern](docs/tutorials/first-sound-pattern.md)
 - [Use an existing triangel](USER_GUIDE.md): the controls, and updating its firmware
 - [Set up your machine](docs/how-to/set-up-a-development-machine.md)
 - [Build and flash the boards](docs/how-to/build-and-flash.md)
 - [Watch the patterns in a browser](docs/how-to/run-the-previewer.md)
-- [Writing patterns](firmware/eye/PATTERNS.md): the helpers, the measurements, and keeping a pattern fast
+- [Add a pattern](docs/how-to/add-a-pattern.md)
+- [Make a pattern fast enough](docs/how-to/make-a-pattern-fast-enough.md)
+- [Pattern toolkit](docs/reference/pattern-toolkit.md): the helpers, the measurements and the sound
 - [Contributing](CONTRIBUTING.md)
 - [Build the kernels](docs/how-to/build-the-kernels.md)
 - [Change the microphone's pins](docs/how-to/regenerate-the-mic-program.md)
+- [Regenerate the LED map](docs/how-to/regenerate-the-led-map.md)
 - [Print the stickers and overlays](graphics/README.md)
 
 ## What is in this repository

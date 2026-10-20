@@ -6,7 +6,7 @@ Artwork and the assembly sticker sheets. Every sheet is 89 x 127 mm - Japanese L
 | File | What |
 |---|---|
 | `triangel graphic.*` | artwork for triangle shapes |
-| `triangel_stickers_L.*` | Tile orientation stickers, 12 mm, 25 numbered + 5 blanks |
+| `triangel_stickers_L.*` | Triangle tile orientation stickers, 12 mm, 25 numbered + 5 blanks |
 | `triangel_input_overlay_L.*` | Input plate overlay, 81 x 61 mm, 1 per sheet |
 | `triangel_remote_overlay_L.*` | IR remote overlay, 31 x 51 mm, 4 per sheet |
 

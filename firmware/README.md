@@ -11,22 +11,7 @@ See [`eye/`](eye/) and [`ear/`](ear/) for crate-level documentation.
 
 ## Physical fixture
 
-The Triangel mounts in the corner of a room - an equilateral triangle cutting off the corner tip. It is made of 25 triangle PCBs (24 LEDs each) arranged in a larger triangle:
-
-```
-->  1   2   3   4   5   6   7   8   9
-<-     10  11  12  13  14  15  16
-->         17  18  19  20  21
-<-             22  23  24
-                   25
-```
-
-Boards are numbered left-to-right, top-to-bottom by position. The data path snakes for shortest inter-board wire lengths (~52 mm per jump) and is split into two chains, driven in parallel:
-
-| Chain | Eye pin | Enters at | Boards, in order | LEDs |
-|---|---|---|---|---|
-| 1 | PB4 | board 1 | 1-9, 16, 15, 14 | 288 |
-| 2 | PB5 | board 13 | 13, 12, 11, 10, 17-21, 24, 23, 22, 25 | 312 |
+See [Triangle tiles and wiring](../docs/reference/triangle-tiles-and-wiring.md).
 
 ## Eye <-> ear communication
 
@@ -40,13 +25,4 @@ To set up a computer, see [How to set up a development machine](../docs/how-to/s
 
 ## Regenerating the LED map
 
-If the PCB geometry or board gap changes:
-
-```powershell
-# In firmware/eye/:
-# 1. Regenerate src/led/map.rs and triangel-previewer/led_map.js
-python tools/gen_map.py
-
-# 2. Regenerate src/led/geom.rs from map.rs
-python tools/gen_geom.py
-```
+See [How to regenerate the LED map](../docs/how-to/regenerate-the-led-map.md).

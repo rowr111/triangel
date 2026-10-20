@@ -72,7 +72,7 @@ In the browser, the status goes to `no frames` for a moment and back to `bridge 
 ![The previewer with every LED orange](../images/first-pattern-orange.png)
 
 > [!NOTE]
-> If you set your dabao to start its firmware at power-up, RESET only restarts it. Hold **PROG** while pressing **RESET** instead, as in the first run.
+> If your dabao starts its firmware at power-up, RESET only restarts it. Hold **PROG** while you press **RESET**, or while you plug it in.
 
 ## 4. Make it change over time
 
@@ -158,4 +158,6 @@ When you are done, take `Box::new(MyPattern)` out of the front of `ambient_patte
 
 Next:
 
-- [Writing patterns](../../firmware/eye/PATTERNS.md), for the helpers, the triangel's measurements and how to keep a pattern fast enough
+- [Your first sound pattern](first-sound-pattern.md), to make it react to music
+- [Pattern toolkit](../reference/pattern-toolkit.md), for the helpers and the triangel's measurements
+- [How to make a pattern fast enough](../how-to/make-a-pattern-fast-enough.md)

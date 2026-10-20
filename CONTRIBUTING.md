@@ -21,9 +21,9 @@ There are no automated tests. What a change does to the lights has to be looked 
 
 - Idiomatic Rust, with no clippy warnings.
 - Sound tuning values go in `firmware/shared/src/tuning.rs`, not in the pattern that uses them.
-- Do not edit generated files by hand: `firmware/eye/src/led/map.rs` and `triangel-previewer/led_map.js` (run `tools/gen_map.py`), `firmware/eye/src/led/geom.rs` (run `tools/gen_geom.py`), `firmware/ear/src/i2s_bio.rs` and `firmware/eye/src/input/nec_rx.rs`.
+- Do not edit generated files by hand: `firmware/eye/src/led/map.rs`, `triangel-previewer/led_map.js` and `firmware/eye/src/led/geom.rs` (see [How to regenerate the LED map](docs/how-to/regenerate-the-led-map.md)), `firmware/ear/src/i2s_bio.rs` (see [How to regenerate the mic program](docs/how-to/regenerate-the-mic-program.md)) and `firmware/eye/src/input/nec_rx.rs`.
 - The Rust version, the xous-core revision in both `Cargo.toml` files, and the kernels move together. Do not change one alone.
 
 ### Patterns
 
-See [firmware/eye/PATTERNS.md](firmware/eye/PATTERNS.md) for how a pattern is built and what keeps it fast enough.
+See [How to add a pattern](docs/how-to/add-a-pattern.md), [How to make a pattern fast enough](docs/how-to/make-a-pattern-fast-enough.md) and the [Pattern toolkit](docs/reference/pattern-toolkit.md).
