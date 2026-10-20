@@ -1,6 +1,6 @@
 # Contributing to triangel
 
-What a change to triangel should look like. To set up your machine, see [firmware/README.md](firmware/README.md). You need dabao boards.
+What a change to triangel should look like. To set up your machine, see [How to set up a development machine](docs/how-to/set-up-a-development-machine.md). You need dabao boards.
 
 New to triangel? Start with [Your first run](docs/tutorials/first-run.md).
 

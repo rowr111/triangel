@@ -39,7 +39,7 @@ The two dabao boards each run their own firmware under [Xous](https://betrusted.
 - [Set up your machine](docs/how-to/set-up-a-development-machine.md)
 - [Build and flash the boards](docs/how-to/build-and-flash.md)
 - [Watch the patterns in a browser](docs/how-to/run-the-previewer.md)
-- [Write a pattern](firmware/eye/PATTERNS.md)
+- [Writing patterns](firmware/eye/PATTERNS.md): the helpers, the measurements, and keeping a pattern fast
 - [Contributing](CONTRIBUTING.md)
 - [Build the kernels](docs/how-to/build-the-kernels.md)
 - [Change the microphone's pins](docs/how-to/regenerate-the-mic-program.md)
