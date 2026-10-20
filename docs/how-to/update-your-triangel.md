@@ -12,7 +12,7 @@ No programming tools needed: you copy files onto each dabao board.
 
 Download the zip from the [latest release](https://github.com/rowr111/triangel/releases/latest) and unzip it. It has two folders, `eye` and `ear`, one for each board.
 
-## 2. Put the eye in its bootloader
+## 2. Put the eye in bootloader mode
 
 The eye and ear boards sit in sockets on the controller board labeled EYE and EAR.
 
@@ -23,7 +23,7 @@ Hold **PROG** on the eye while you plug its USB cable into your computer. If the
 A new drive appears on your computer.
 
 > [!NOTE]
-> A brand-new dabao, such as a replacement, behaves differently: it starts in its bootloader every time it gets power, so the drive appears without holding PROG. That also means a triangel with a new dabao will not start its patterns at power-up until someone presses PROG. To make it start by itself, see [How to make a dabao start by itself](make-a-dabao-start-by-itself.md).
+> A brand-new dabao, such as a replacement, behaves differently: it starts in bootloader mode every time it gets power, so the drive appears without holding PROG. That also means a triangel with a new dabao will not start its patterns at power-up until someone presses PROG. To make it start by itself, see [How to make a dabao start by itself](make-a-dabao-start-by-itself.md).
 
 ## 3. Copy the files
 

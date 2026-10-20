@@ -37,7 +37,7 @@ xous-app-uf2 --elf target/riscv32imac-unknown-xous-elf/release/eye
 
 For the ear, run the same from `firmware/ear`, with `ear` at the end of the path.
 
-## 2. Put the board in its bootloader
+## 2. Put the board in bootloader mode
 
 > [!CAUTION]
 > **Controller boards v1 and v2:** never plug a dabao into USB while the triangle tiles are connected and the 12 V supply is not. The triangle tiles, up to 60 watts of lights, would try to run off the dabao. Instead, either:
@@ -45,7 +45,7 @@ For the ear, run the same from `firmware/ear`, with `ear` at the end of the path
 > - unplug the triangle tiles, or
 > - take the dabao out of its socket.
 
-- **A new dabao:** press RESET. It starts in its bootloader.
+- **A new dabao:** press RESET. It starts in bootloader mode.
 - **A dabao set to start its firmware at power-up** (see [Start without pressing PROG](#start-without-pressing-prog)): hold PROG while you press RESET, or while you plug it in. On these boards, RESET alone just restarts the firmware.
 
 Either way, the board appears on your computer as a drive.
@@ -72,4 +72,4 @@ When the kernel files change, flash both boards, kernel and firmware together.
 
 ## Start without pressing PROG
 
-A new dabao waits in its bootloader at every power-up until you press PROG. To have it start its firmware straight away, see [How to make a dabao start by itself](make-a-dabao-start-by-itself.md). Do this once on each board.
+A new dabao waits in bootloader mode at every power-up until you press PROG. To have it start its firmware straight away, see [How to make a dabao start by itself](make-a-dabao-start-by-itself.md). Do this once on each board.

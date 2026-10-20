@@ -24,7 +24,7 @@ A running dabao shows up as a serial port. In VS Code, **Set run mode serial por
 | Linux | `/dev/ttyACM0` |
 | macOS | `/dev/cu.usbmodem...` |
 
-The dabao shows two serial ports: one while it is in its bootloader and one while its firmware runs. The previewer needs the second.
+The dabao shows two serial ports: one while it is in bootloader mode and one while its firmware runs. The previewer needs the second.
 
 On Linux, your user needs to be in the `dialout` group to open the port: `sudo usermod -aG dialout $USER`, then log out and back in.
 

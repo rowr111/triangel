@@ -24,11 +24,11 @@ The triangle tiles and the 12 V supply are not required: the dabaos run off thei
 
 The ear is the board that listens. It measures the sound in 24 frequency bands, from low notes to high, and sends them to the eye.
 
-Plug the ear into your computer with a USB cable, and put it in its bootloader by holding **PROG** while you press **RESET**.
+Plug the ear into your computer with a USB cable, and put it in bootloader mode by holding **PROG** while you press **RESET**.
 
 Open the `firmware/ear` folder in VS Code and click **Build - Flash - Boot** in the Baochip sidebar. The ear has no build options.
 
-> **From the command line:** from `firmware/ear`, run
+> **Or, instead, from the command line:** from `firmware/ear`, run
 >
 > ```
 > cargo build --release

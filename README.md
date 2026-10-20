@@ -26,10 +26,7 @@ Each triangle tile has a stylized eye design in the middle.. After I decided to 
 
 ## How it works
 
-The two dabao boards each run their own firmware under [Xous](https://betrusted.io/xous-book/):
-
-- The **eye** draws the patterns and sends them to the 600 LEDs 30 times a second. It also reads the buttons, the switch and the remote.
-- The **ear** listens through the microphone, measures the sound in 24 frequency bands, and sends the result to the eye.
+The **eye** draws the patterns and the **ear** listens to the room. See [How triangel works](docs/explanation/how-triangel-works.md).
 
 ## Where to go
 
@@ -59,6 +56,10 @@ The two dabao boards each run their own firmware under [Xous](https://betrusted.
 - [Build the kernels](docs/how-to/build-the-kernels.md)
 - [Change the microphone's pins](docs/how-to/regenerate-the-mic-program.md)
 - [Regenerate the LED map](docs/how-to/regenerate-the-led-map.md)
+
+#### Understand
+
+- [How triangel works](docs/explanation/how-triangel-works.md): the two boards, a frame, the setlists and the kernel
 
 #### Look things up
 

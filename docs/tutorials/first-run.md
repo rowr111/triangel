@@ -9,6 +9,8 @@ You need:
 - one dabao and a USB-C cable that carries data (some cables only charge)
 - a computer set up as in [How to set up a development machine](../how-to/set-up-a-development-machine.md), including Node.js for the previewer
 
+You can follow this with VS Code and the Baochip extension, or from the command line. The steps show VS Code; the boxes marked "Or, instead, from the command line" show the other way.
+
 ![A dabao with its RESET and PROG buttons marked](../images/first-run-dabao-buttons.jpg)
 
 The dabao has two buttons you will use: **RESET** near one end and **PROG** near the USB-C connector.
@@ -31,7 +33,7 @@ When it finishes, the output panel shows no errors.
 
 ![VS Code's output panel after a successful build](../images/first-run-build-done.png)
 
-> **From the command line:** from `firmware/eye`, run
+> **Or, instead, from the command line:** from `firmware/eye`, run
 >
 > ```
 > cargo build --release --features previewer
@@ -40,7 +42,7 @@ When it finishes, the output panel shows no errors.
 >
 > The second command writes `apps.uf2`.
 
-## 2. Put the dabao in its bootloader
+## 2. Put the dabao in bootloader mode
 
 The bootloader is the small program that accepts new firmware.
 
@@ -58,7 +60,7 @@ Click **Flash device** in the Baochip sidebar.
 
 When it finishes, press **PROG** to start the firmware. The drive goes away.
 
-> **From the command line:** copy these onto the drive:
+> **Or, instead, from the command line:** copy these onto the drive:
 >
 > - `firmware/xous_build/loader.uf2`
 > - `firmware/xous_build/xous.uf2`
@@ -78,7 +80,7 @@ npm install
 
 Now find the dabao's serial port. With the firmware running, click **Set run mode serial port** under **Setup** in the Baochip sidebar. The list it shows includes the dabao's port.
 
-> **From the command line:** look for the port here:
+> **Or, instead, from the command line:** look for the port here:
 >
 > | System | Where to look | Looks like |
 > |---|---|---|
@@ -97,7 +99,7 @@ It prints `Serial open:` with the port name, then a `frames/s:` line every secon
 ![The bridge running in a terminal](../images/first-run-bridge.png)
 
 > [!NOTE]
-> The dabao shows a different serial port while it is in its bootloader. If the port you found disappears when you press **PROG**, look again after the firmware starts.
+> The dabao shows a different serial port while it is in bootloader mode. If the port you found disappears when you press **PROG**, look again after the firmware starts.
 
 > [!NOTE]
 > Only one program can use the port at a time. If the bridge says `Serial open failed`, close any serial monitor that has it open, including the one in the Baochip extension.

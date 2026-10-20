@@ -58,7 +58,7 @@ fn ambient_patterns() -> Vec<Box<dyn Pattern>> {
 
 Press **RESET** on the dabao. The drive appears. Then click **Build - Flash - Boot**, the last item in the Baochip sidebar. It builds, flashes and starts the firmware in one go.
 
-> **From the command line:** from `firmware/eye`, run
+> **Or, instead, from the command line:** from `firmware/eye`, run
 >
 > ```
 > cargo build --release --features previewer

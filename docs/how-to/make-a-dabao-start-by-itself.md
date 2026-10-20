@@ -1,10 +1,10 @@
 # How to make a dabao start by itself
 
-A new dabao by default waits in its bootloader (drive mode) every time it starts up, until someone presses PROG. In a triangel that means the patterns do not start at power-up. Set each board, once, to start its firmware by itself.
+A new dabao by default waits in bootloader mode (drive mode) every time it starts up, until someone presses PROG. In a triangel that means the patterns do not start at power-up. Set each board, once, to start its firmware by itself.
 
-## 1. Put it in its bootloader
+## 1. Put it in bootloader mode
 
-Plug the dabao into your computer. A new dabao starts in its bootloader, so a drive appears. If it does not, hold **PROG** while you press **RESET**.
+Plug the dabao into your computer. A new dabao starts in bootloader mode, so a drive appears. If it does not, hold **PROG** while you press **RESET**.
 
 > [!CAUTION]
 > **Controller boards v1 and v2:** never plug a dabao into USB while the triangle tiles are connected and the 12 V supply is not. The triangle tiles, up to 60 watts of lights, would try to run off the dabao. Instead, either:
@@ -16,7 +16,7 @@ Plug the dabao into your computer. A new dabao starts in its bootloader, so a dr
 
 Open its serial port with a terminal program: PuTTY on Windows, or `screen` on Linux and macOS. The speed setting does not matter.
 
-In VS Code with the Baochip extension instead: with the dabao in its bootloader, click **Set bootloader mode serial port** in the Baochip sidebar and pick the dabao's port. Make sure **Default monitor** says **Bootloader** (click it to change it), then click **Monitor**.
+In VS Code with the Baochip extension instead: with the dabao in bootloader mode, click **Set bootloader mode serial port** in the Baochip sidebar and pick the dabao's port. Make sure **Default monitor** says **Bootloader** (click it to change it), then click **Monitor**.
 
 ## 3. Turn off the wait
 
