@@ -28,7 +28,11 @@ The triangle tiles form one large triangle, point down, which mounts across the 
 
 In each row the triangle tiles alternate: the first one points down, the next up, and so on. Triangle tile 25, at the bottom, points down into the corner of the room. There is a 2 mm gap between neighboring triangle tiles.
 
-The numbered stickers in [graphics](../../graphics/README.md) mark each triangle tile's number for assembly.
+Turn each triangle tile so that its OUT connector is toward its point. Seen from the back, everything is mirrored: triangle tile 1 is at the top right.
+
+![The back of an assembled triangel, showing how the triangle tiles line up](../images/back-triangle-tile-alignment.jpg)
+
+If you like, print the numbered stickers in [graphics](../../graphics/README.md) to mark each triangle tile's number during assembly. Each sticker is a small triangle that points the same way as its triangle tile.
 
 ## Wiring
 
