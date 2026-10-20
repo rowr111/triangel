@@ -20,10 +20,10 @@ The triangle tiles form one large triangle, point down, which mounts across the 
 
 ```
  1   2   3   4   5   6   7   8   9
-  16  15  14  13  12  11  10
-      17  18  19  20  21
-          24  23  22
-              25
+    16  15  14  13  12  11  10
+        17  18  19  20  21
+            24  23  22
+                25
 ```
 
 In each row the triangle tiles alternate: the first one points down, the next up, and so on. Triangle tile 25, at the bottom, points down into the corner of the room. There is a 2 mm gap between neighboring triangle tiles.
