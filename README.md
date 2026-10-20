@@ -33,22 +33,38 @@ The two dabao boards each run their own firmware under [Xous](https://betrusted.
 
 ## Where to go
 
+### If you have a triangel
+
+- [Use your triangel](USER_GUIDE.md#controls): the controls
+- [Update its firmware](docs/how-to/update-your-triangel.md)
+- [Make a dabao start by itself](docs/how-to/make-a-dabao-start-by-itself.md), after replacing one
+- [Print the stickers and overlays](graphics/README.md)
+
+### If you want to develop
+
+#### Learn
+
 - [Try it on one dabao](docs/tutorials/first-run.md): start here if you are new
 - [Write your first pattern](docs/tutorials/first-pattern.md)
 - [Write a sound pattern](docs/tutorials/first-sound-pattern.md)
-- [Use an existing triangel](USER_GUIDE.md): the controls, and updating its firmware
+
+#### How to
+
 - [Set up your machine](docs/how-to/set-up-a-development-machine.md)
 - [Build and flash the boards](docs/how-to/build-and-flash.md)
+- [Make a dabao start by itself](docs/how-to/make-a-dabao-start-by-itself.md)
 - [Watch the patterns in a browser](docs/how-to/run-the-previewer.md)
 - [Add a pattern](docs/how-to/add-a-pattern.md)
 - [Make a pattern fast enough](docs/how-to/make-a-pattern-fast-enough.md)
-- [Pattern toolkit](docs/reference/pattern-toolkit.md): the helpers, the measurements and the sound
-- [Triangle tiles and wiring](docs/reference/triangle-tiles-and-wiring.md): the layout, the numbering and the two chains
-- [Contributing](CONTRIBUTING.md)
 - [Build the kernels](docs/how-to/build-the-kernels.md)
 - [Change the microphone's pins](docs/how-to/regenerate-the-mic-program.md)
 - [Regenerate the LED map](docs/how-to/regenerate-the-led-map.md)
-- [Print the stickers and overlays](graphics/README.md)
+
+#### Look things up
+
+- [Pattern toolkit](docs/reference/pattern-toolkit.md): the helpers, the measurements and the sound
+- [Triangle tiles and wiring](docs/reference/triangle-tiles-and-wiring.md): the layout, the numbering and the two chains
+- [Contributing](CONTRIBUTING.md)
 
 ## What is in this repository
 

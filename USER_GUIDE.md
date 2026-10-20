@@ -22,6 +22,9 @@ Nothing is remembered when the power goes off. Triangel starts at middle brightn
 ## Updating the firmware
 
 > [!CAUTION]
-> On controller boards v1 and v2, do not connect the triangle tiles while the 12 V supply is unplugged. Power from a dabao's USB cable can leak backwards through the board, and the triangle tiles, up to 60 watts of lights, then try to run off the dabao's small internal supply. To flash a dabao on one of these boards, either keep the 12 V supply plugged in, or unplug both the 12 V supply *and* the triangle tiles. Safest of all, take the dabao out of its socket and flash it on its own.
+> **Controller boards v1 and v2:** never plug a dabao into USB while the triangle tiles are connected and the 12 V supply is not. The triangle tiles, up to 60 watts of lights, would try to run off the dabao. Instead, either:
+> - keep the 12 V supply plugged in,
+> - unplug the triangle tiles, or
+> - take the dabao out of its socket.
 
-The eye and ear boards sit in sockets on the controller board labeled EYE and EAR, each with its own USB-C connector. To load new firmware onto one, follow [How to build and flash the boards](docs/how-to/build-and-flash.md), from [Put the board in its bootloader](docs/how-to/build-and-flash.md#2-put-the-board-in-its-bootloader).
+The eye and ear boards sit in sockets on the controller board labeled EYE and EAR, each with its own USB-C connector. To load new firmware onto them, follow [How to update your triangel's firmware](docs/how-to/update-your-triangel.md). If you build the firmware yourself, see [How to build and flash the boards](docs/how-to/build-and-flash.md) instead.

@@ -40,7 +40,10 @@ For the ear, run the same from `firmware/ear`, with `ear` at the end of the path
 ## 2. Put the board in its bootloader
 
 > [!CAUTION]
-> On controller boards v1 and v2, do not connect the triangle tiles while the 12 V supply is unplugged. Power from a dabao's USB cable can leak backwards through the board, and the triangle tiles, up to 60 watts of lights, then try to run off the dabao's small internal supply. To flash a dabao on one of these boards, either keep the 12 V supply plugged in, or unplug both the 12 V supply *and* the triangle tiles. Safest of all, take the dabao out of its socket and flash it on its own.
+> **Controller boards v1 and v2:** never plug a dabao into USB while the triangle tiles are connected and the 12 V supply is not. The triangle tiles, up to 60 watts of lights, would try to run off the dabao. Instead, either:
+> - keep the 12 V supply plugged in,
+> - unplug the triangle tiles, or
+> - take the dabao out of its socket.
 
 - **A new dabao:** press RESET. It starts in its bootloader.
 - **A dabao set to start its firmware at power-up** (see [Start without pressing PROG](#start-without-pressing-prog)): hold PROG while you press RESET, or while you plug it in. On these boards, RESET alone just restarts the firmware.
@@ -69,8 +72,4 @@ When the kernel files change, flash both boards, kernel and firmware together.
 
 ## Start without pressing PROG
 
-A new dabao waits in its bootloader at every power-up until you press PROG. To have it start its firmware straight away, open its bootloader serial port with a terminal or the extension's monitor, and type:
-
-    bootwait disable
-
-Do this once on each board. `bootwait enable` undoes it.
+A new dabao waits in its bootloader at every power-up until you press PROG. To have it start its firmware straight away, see [How to make a dabao start by itself](make-a-dabao-start-by-itself.md). Do this once on each board.

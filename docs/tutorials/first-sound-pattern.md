@@ -18,7 +18,7 @@ This time you need both dabao boards and the controller board. The ear does the 
 The triangle tiles and the 12 V supply are not required: the dabaos run off their USB cables, and the previewer shows the patterns.
 
 > [!CAUTION]
-> On controller boards v1 and v2, do not connect the triangle tiles while the 12 V supply is unplugged. Power from a dabao's USB cable can leak backwards through the board, and the triangle tiles, up to 60 watts of lights, then try to run off the dabao's small internal supply. For this tutorial, leave the triangle tiles unplugged.
+> **Controller boards v1 and v2:** never plug a dabao into USB while the triangle tiles are connected and the 12 V supply is not. The triangle tiles, up to 60 watts of lights, would try to run off the dabao. For this tutorial, leave the triangle tiles unplugged.
 
 ## 1. Flash the ear
 
