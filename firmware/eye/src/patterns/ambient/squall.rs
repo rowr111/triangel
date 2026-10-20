@@ -457,14 +457,14 @@ impl Pattern for Squall {
             });
         }
 
-        for (i, led) in LED_MAP.iter().enumerate() {
+        for (i, px) in out.iter_mut().enumerate() {
             let energy = energy_buf[i];
 
             // Water color, then twinkling froth above the threshold.
             let mut c = ramp(&WATER_RAMP, energy);
             let excess = ((energy - FOAM_THRESH) * FOAM_GAIN).clamp(0.0, 1.0);
             if excess > 0.0 {
-                let k = (knuth_hash(led.chain_idx as u32) % PHASE_STEPS as u32) as usize;
+                let k = (knuth_hash(i as u32) % PHASE_STEPS as u32) as usize;
                 let tw = sin_sum(ph_sin[k], ph_cos[k], fp_sin, fp_cos) * 0.5 + 0.5;
                 c = mix_rgb(c, FOAM_COLOR, excess * tw * tw);
             }
@@ -477,7 +477,7 @@ impl Pattern for Squall {
                 c = mix_rgb(c, FLASH_COLOR, bolt);
             }
 
-            out[i] = [c[0] as u8, c[1] as u8, c[2] as u8];
+            *px = [c[0] as u8, c[1] as u8, c[2] as u8];
         }
     }
 }

@@ -35,7 +35,7 @@ WORLD_H   = 430 mm    - total height
 
 These constants, plus `WORLD_CENTROID_X` / `WORLD_CENTROID_Y`, are in `crate::led::map`. The triangle's left and right edges are `WORLD_LEFT` / `WORLD_RIGHT` in `crate::led::world`.
 
-Each entry of `LED_MAP` has the LED's position, `wx` and `wy` in mm, its triangle tile (`board_id`), its number on that triangle tile (`local_idx`, 1-24) and its place in the wiring (`chain_idx`).
+Each entry of `LED_MAP` has the LED's position, `wx` and `wy` in mm, its triangle tile (`board_id`) and its number on that triangle tile (`local_idx`, 1-24). `LED_MAP` is in wiring order, so an LED's index is also its place on the chain.
 
 Fixed values worked out from the map are in `crate::led::geom`:
 

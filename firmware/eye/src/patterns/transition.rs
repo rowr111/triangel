@@ -4,7 +4,7 @@ use core::f32::consts::TAU;
 
 use super::{Frame, knuth_hash, smoothstep};
 use crate::led::geom::{BOARD_CENTER, BOARD_COUNT, DIST_C, DIST_C_MAX};
-use crate::led::map::{Led, LED_MAP, WORLD_CENTROID_X, WORLD_CENTROID_Y};
+use crate::led::map::{LED_MAP, WORLD_CENTROID_X, WORLD_CENTROID_Y};
 
 const CENTER_X: f32 = WORLD_CENTROID_X;
 const CENTER_Y: f32 = WORLD_CENTROID_Y;
@@ -30,16 +30,16 @@ pub enum TransitionStyle {
 pub fn blend(style: TransitionStyle, progress: f32, from: &Frame, out: &mut Frame) {
     let ranks = board_spiral_ranks();
     for (i, led) in LED_MAP.iter().enumerate() {
-        let alpha = alpha_for(style, led, DIST_C[i], progress, DIST_C_MAX, ranks[led.board_id as usize]);
+        let alpha = alpha_for(style, i, DIST_C[i], progress, DIST_C_MAX, ranks[led.board_id as usize]);
         out[i] = lerp_rgb(from[i], out[i], alpha);
     }
 }
 
-/// Mix for one LED: 0 is the outgoing frame, 1 the incoming. `dist_c` is the LED's
-/// distance from the center.
+/// Mix for one LED: 0 is the outgoing frame, 1 the incoming. `i` is the LED's index and
+/// `dist_c` its distance from the center.
 fn alpha_for(
     style: TransitionStyle,
-    led: &Led,
+    i: usize,
     dist_c: f32,
     progress: f32,
     maxd: f32,
@@ -56,12 +56,12 @@ fn alpha_for(
             smoothstep((dist_c - front) / FEATHER_MM)
         }
         TransitionStyle::Sparkle => {
-            let threshold = hash01(led) * (1.0 - SPARKLE_EDGE);
+            let threshold = hash01(i) * (1.0 - SPARKLE_EDGE);
             smoothstep((progress - threshold) / SPARKLE_EDGE)
         }
         TransitionStyle::RadialSparkle => {
             let radial = dist_c / maxd;
-            let threshold = (0.5 * radial + 0.5 * hash01(led)) * (1.0 - SPARKLE_EDGE);
+            let threshold = (0.5 * radial + 0.5 * hash01(i)) * (1.0 - SPARKLE_EDGE);
             smoothstep((progress - threshold) / SPARKLE_EDGE)
         }
         TransitionStyle::SpiralOut => {
@@ -110,9 +110,9 @@ fn compute_spiral_ranks() -> [f32; BOARD_COUNT + 1] {
     ranks
 }
 
-/// Per-LED value in [0, 1) from a hash of the chain index.
-fn hash01(led: &Led) -> f32 {
-    let h = knuth_hash(led.chain_idx as u32) ^ 0x9E37_79B9;
+/// Per-LED value in [0, 1) from a hash of the LED's index, which is its place on the chain.
+fn hash01(i: usize) -> f32 {
+    let h = knuth_hash(i as u32) ^ 0x9E37_79B9;
     (h % 1000) as f32 / 1000.0
 }
 

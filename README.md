@@ -43,6 +43,7 @@ The two dabao boards each run their own firmware under [Xous](https://betrusted.
 - [Add a pattern](docs/how-to/add-a-pattern.md)
 - [Make a pattern fast enough](docs/how-to/make-a-pattern-fast-enough.md)
 - [Pattern toolkit](docs/reference/pattern-toolkit.md): the helpers, the measurements and the sound
+- [Triangle tiles and wiring](docs/reference/triangle-tiles-and-wiring.md): the layout, the numbering and the two chains
 - [Contributing](CONTRIBUTING.md)
 - [Build the kernels](docs/how-to/build-the-kernels.md)
 - [Change the microphone's pins](docs/how-to/regenerate-the-mic-program.md)

@@ -115,7 +115,7 @@ impl ApexFlame {
         let (fl_sin, fl_cos) = phase_phasors();
         // Two hashed flicker phases per LED; phases stepping along the chain would look
         // like a sweep.
-        let hash = |i: usize| knuth_hash(LED_MAP[i].chain_idx as u32);
+        let hash = |i: usize| knuth_hash(i as u32);
         let k1_of = |i: usize| (hash(i) % PHASE_STEPS as u32) as usize;
         let k2_of = |i: usize| ((hash(i) >> 16) % PHASE_STEPS as u32) as usize;
         ApexFlame {
