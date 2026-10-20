@@ -4,7 +4,7 @@ The previewer shows triangel's 600 LEDs in a browser, live from an eye on your d
 
 ## 1. Flash the eye with `previewer`
 
-Build and flash the eye with the `previewer` option, as in [How to build and flash the boards](build-and-flash.md). A bare dabao on a USB cable is enough.
+Build and flash the eye with the `previewer` option, as in [How to build the firmware and flash the boards](build-and-flash.md). A bare dabao on a USB cable is enough.
 
 ## 2. Install the packages
 

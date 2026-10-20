@@ -48,7 +48,7 @@ The **eye** draws the patterns and the **ear** listens to the room. See [How tri
 #### How to
 
 - [Set up your machine](docs/how-to/set-up-a-development-machine.md)
-- [Build and flash the boards](docs/how-to/build-and-flash.md)
+- [Build the firmware and flash the boards](docs/how-to/build-and-flash.md)
 - [Make a dabao start by itself](docs/how-to/make-a-dabao-start-by-itself.md)
 - [Watch the patterns in a browser](docs/how-to/run-the-previewer.md)
 - [Add a pattern](docs/how-to/add-a-pattern.md)

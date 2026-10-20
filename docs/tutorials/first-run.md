@@ -140,4 +140,4 @@ Next:
 
 - [Write your first pattern](first-pattern.md)
 - [The controls](../../USER_GUIDE.md#controls), in the user guide
-- [How to build and flash the boards](../how-to/build-and-flash.md), for the build options and the ear
+- [How to build the firmware and flash the boards](../how-to/build-and-flash.md), for the build options and the ear

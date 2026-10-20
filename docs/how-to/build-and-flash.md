@@ -1,4 +1,4 @@
-# How to build and flash the boards
+# How to build the firmware and flash the boards
 
 The eye and the ear are built and flashed the same way. Both use the kernel files in `firmware/xous_build/`; to get them, see [Get the kernel files](set-up-a-development-machine.md#4-get-the-kernel-files).
 
