@@ -2,7 +2,7 @@
 
 The LED map is where every one of the 600 LEDs sits, in millimeters, and its place in the wiring. Patterns read it through `LED_MAP`, and the previewer uses it to draw the triangel.
 
-You only need to regenerate it if the triangle tiles change shape, the gap between them changes, or they are wired in a different order. The map is generated, so do not edit it by hand.
+You only need to regenerate it if the triangle tiles change shape or the gap between them changes. The map is generated, so do not edit it by hand.
 
 ## 1. Change the layout
 
@@ -11,9 +11,8 @@ The layout is set at the top of `firmware/eye/tools/gen_map.py`:
 - `LOCAL_LEDS`: where the 24 LEDs sit on one triangle tile, from the KiCad board file
 - `LOCAL_CX`, `LOCAL_CY`: the center of one triangle tile, in the same coordinates
 - `BOARD_GAP`: the gap between neighboring triangle tiles, in mm
-- `CHAIN_ORDER`: the order the data wire runs through the triangle tiles
 
-If you change `CHAIN_ORDER`, also update the chain split at the top of the generated `map.rs`. It is written out in `MAP_RS_HEAD` in the same script: the board lists in the comments, and `CHAIN1_LED_COUNT` and `CHAIN2_LED_COUNT`.
+The triangle tiles are numbered in wiring order, as in [Triangle tiles and wiring](../reference/triangle-tiles-and-wiring.md). Wiring them differently would mean changing `build_boards` in the same script, and the chain split written out in `MAP_RS_HEAD`.
 
 ## 2. Regenerate the map
 

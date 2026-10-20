@@ -45,9 +45,6 @@ The data runs through the triangle tiles in number order, so each cable only has
 
 ## LED order in the firmware
 
-The firmware uses two orders for the 600 LEDs:
-
-- **Map order:** `LED_MAP`, and the frame a pattern fills in, go triangle tile by triangle tile, 1 to 25, and D1 to D24 within each. `out[i]` is the color of `LED_MAP[i]`.
-- **Wiring order:** each LED's `chain_idx`, 0 to 599, is its place along the data path: 0-287 for chain 1 and 288-599 for chain 2. The eye reorders each frame into this order before sending it, so patterns never need it.
+`LED_MAP`, and the frame a pattern fills in, go in wiring order: triangle tile 1 to 25, and D1 to D24 within each. `out[i]` is the color of `LED_MAP[i]`, and LEDs 0-287 are chain 1, 288-599 chain 2.
 
 To change any of this, see [How to regenerate the LED map](../how-to/regenerate-the-led-map.md).
