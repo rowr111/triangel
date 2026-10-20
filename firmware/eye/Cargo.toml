@@ -32,7 +32,7 @@ board-dabao = [
 previewer = []
 # Stream boot progress, IR activity, and panics to the USB serial monitor.
 bringup = []
-# For the older all-in-one controller board, where the buttons and switch are wired straight
+# For the older all-in-one controller board (v1), where the buttons and switch are wired straight
 # to eye GPIOs. Without it they are read from the separate input board over I2C.
 combined-board = []
 default = ["bao1x", "board-dabao"]

@@ -99,7 +99,29 @@ stage: prompt ready
 ear alive 12 s, stage: prompt ready, rx 0 bytes
 ```
 
-with the last stage reached and how many bytes it has received from you. After `mic>`, single keys run tests on the microphone; see [Mic diagnostic console](../../firmware/ear/README.md#mic-diagnostic-console) for the keys.
+with the last stage reached and how many bytes it has received from you.
+
+The ear has no other console: its serial port for log messages carries the link to the eye instead, so everything it reports comes over USB.
+
+### Mic test keys
+
+After the `mic>` prompt, each key runs a command straight away, with no Enter:
+
+| Key | What it does |
+|---|---|
+| `c` | Record 3 s silently, then print the level per 100 ms. The test that answers whether the mic hears you |
+| `f` | Measure a quiet second against a noisy one, per octave band. About 30 dB more sensitive than `c`, and works with any sound |
+| `r` | Hex-dump the raw 24-bit words after settling |
+| `s` | Count samples for 1 s and compare against the expected 48000 Hz |
+| `t` | 1 s of statistics: min, max, DC offset, RMS |
+| `m` | Live level meter for 15 s |
+| `p` | Filterbank time per frame |
+| `n` | The bands' range, the level reference, and the level it scales |
+| `?` | Help |
+
+`p`, `n` and `?` do not interrupt the sound. The others stop frames to the eye while they run: up to 15 s for `m`, under 5 s for the rest. The eye fades to silence and recovers on its own, and no command is long enough to switch it out of the sound patterns.
+
+To use these to track down a microphone problem, see [How to check a microphone that is not working](../how-to/check-the-microphone.md).
 
 ## The previewer stream
 

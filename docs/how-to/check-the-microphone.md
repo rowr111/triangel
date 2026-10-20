@@ -46,4 +46,4 @@ Press `c` again, and while it records, tap the board hard right beside the micro
 
 Replace the microphone. Its datasheet warns that washing the board, ultrasonic cleaning, blowing it off with air, or vacuum pickup on its bottom face can kill the diaphragm in exactly this way, so solder the replacement by hand rather than sending the board through cleaning again.
 
-For what every key does, see [Mic diagnostic console](../../firmware/ear/README.md#mic-diagnostic-console).
+For what every key does, see [Mic test keys](../reference/diagnostic-output.md#mic-test-keys).

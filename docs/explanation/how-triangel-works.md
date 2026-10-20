@@ -11,6 +11,8 @@ The controller board holds two dabao boards, each with its own Baochip-1x chip a
 
 Splitting the work this way keeps the two jobs from getting in each other's way. Sending colors to 600 LEDs needs exact timing, and listening to sound means steady number crunching. On separate chips, neither one can delay the other.
 
+The Baochip-1x runs at 350 MHz with 2 MB of memory and 4 MB of storage, and has no hardware for decimal-point math, which shapes how patterns are written; see [How to make a pattern fast enough](../how-to/make-a-pattern-fast-enough.md). Besides its main processor it has four small helper cores, its BIO cores: the eye uses two to send the LED data and one for the remote's receiver, and the ear uses one to clock the microphone.
+
 ## What the eye does each frame
 
 The eye draws a new frame every 33 ms, about 30 times a second. Each time, it:
@@ -45,7 +47,7 @@ The eye turns that into what the sound patterns use: band levels, which bands ju
 
 ## Buttons, switch and remote
 
-The five buttons and the sound switch are on the input board, which connects to the eye over I2C, a two-wire connection for small chips. The IR receiver for the remote is there too. On the older all-in-one controller board the buttons connect to the eye directly instead, which is what the `combined-board` build option is for.
+The five buttons and the sound switch are on the input board, which connects to the eye over I2C, a two-wire connection for small chips. The IR receiver for the remote is there too. On the older all-in-one controller board, v1, the buttons connect to the eye directly instead, which is what the `combined-board` build option is for.
 
 ## Xous and the kernel
 

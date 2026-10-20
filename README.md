@@ -62,11 +62,14 @@ The **eye** draws the patterns and the **ear** listens to the room. See [How Tri
 #### Understand
 
 - [How Triangel works](docs/explanation/how-triangel-works.md): the two boards, a frame, the setlists and the kernel
+- [How sound becomes light](docs/explanation/how-sound-becomes-light.md): from the microphone, through the 24 bands, to beats and drops
 
 #### Look things up
 
 - [Pattern toolkit](docs/reference/pattern-toolkit.md): the helpers, the measurements and the sound
 - [Triangle tiles and wiring](docs/reference/triangle-tiles-and-wiring.md): the layout, the numbering and the two chains
+- [Pins](docs/reference/pins.md): which dabao pins each board uses
+- [The ear-to-eye link](docs/reference/ear-to-eye-link.md): the frames the ear sends, byte by byte
 - [Diagnostic output](docs/reference/diagnostic-output.md): the status lines the eye and the ear can print, for troubleshooting
 - [Contributing](CONTRIBUTING.md)
 
@@ -74,9 +77,9 @@ The **eye** draws the patterns and the **ear** listens to the room. See [How Tri
 
 | Folder | Contents |
 |---|---|
-| [`firmware/eye/`](firmware/eye/README.md) | The eye's firmware: LED output, patterns, controls |
-| [`firmware/ear/`](firmware/ear/README.md) | The ear's firmware: microphone, frequency bands, the link to the eye |
-| [`firmware/shared/`](firmware/shared/README.md) | Code both use: the format of what the ear sends, and the sound tuning |
+| [`firmware/eye/`](firmware/eye/) | The eye's firmware: LED output, patterns, controls |
+| [`firmware/ear/`](firmware/ear/) | The ear's firmware: microphone, frequency bands, the link to the eye |
+| [`firmware/shared/`](firmware/shared/) | Code both use: the format of what the ear sends, and the sound tuning |
 | [`triangel-previewer/`](triangel-previewer/) | Shows the eye's LED output in a browser |
 | [`hardware/`](hardware/) | The circuit boards (KiCad) and the brackets |
 | [`graphics/`](graphics/README.md) | Artwork and the sticker sheets |
