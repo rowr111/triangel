@@ -1,6 +1,6 @@
 # How to run the previewer
 
-The previewer shows triangel's 600 LEDs in a browser, live from an eye on your desk. It needs [Node.js](https://nodejs.org).
+The previewer shows Triangel's 600 LEDs in a browser, live from an eye on your desk. It needs [Node.js](https://nodejs.org).
 
 ## 1. Flash the eye with `previewer`
 

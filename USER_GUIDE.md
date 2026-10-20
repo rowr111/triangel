@@ -27,4 +27,4 @@ Nothing is remembered when the power goes off. Triangel starts at middle brightn
 > - unplug the triangle tiles, or
 > - take the dabao out of its socket.
 
-The eye and ear boards sit in sockets on the controller board labeled EYE and EAR, each with its own USB-C connector. To load new firmware onto them, follow [How to update your triangel's firmware](docs/how-to/update-your-triangel.md). If you build the firmware yourself, see [How to build the firmware and flash the boards](docs/how-to/build-and-flash.md) instead.
+The eye and ear boards sit in sockets on the controller board labeled EYE and EAR, each with its own USB-C connector. To load new firmware onto them, follow [How to update your Triangel's firmware](docs/how-to/update-your-triangel.md). If you build the firmware yourself, see [How to build the firmware and flash the boards](docs/how-to/build-and-flash.md) instead.

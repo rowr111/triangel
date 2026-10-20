@@ -1,4 +1,4 @@
-# How to update your triangel's firmware
+# How to update your Triangel's firmware
 
 No programming tools needed: you copy files onto each dabao board.
 
@@ -23,7 +23,7 @@ Hold **PROG** on the eye while you plug its USB cable into your computer. If the
 A new drive appears on your computer.
 
 > [!NOTE]
-> A brand-new dabao, such as a replacement, behaves differently: it starts in bootloader mode every time it gets power, so the drive appears without holding PROG. That also means a triangel with a new dabao will not start its patterns at power-up until someone presses PROG. To make it start by itself, see [How to make a dabao start by itself](make-a-dabao-start-by-itself.md).
+> A brand-new dabao, such as a replacement, behaves differently: it starts in bootloader mode every time it gets power, so the drive appears without holding PROG. That also means a Triangel with a new dabao will not start its patterns at power-up until someone presses PROG. To make it start by itself, see [How to make a dabao start by itself](make-a-dabao-start-by-itself.md).
 
 ## 3. Copy the files
 

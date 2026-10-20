@@ -6,16 +6,16 @@ You need a dabao board with a USB-C cable and Git. These steps work on Windows, 
 
 Install Rust with [rustup](https://rustup.rs). Rust also needs a C compiler on your computer; on Windows the rustup installer sets one up.
 
-## 2. Use Rust 1.96.1 for triangel
+## 2. Use Rust 1.96.1 for Triangel
 
-From the root of your triangel clone:
+From the root of your Triangel clone:
 
 ```
 rustup toolchain install 1.96.1
 rustup override set 1.96.1
 ```
 
-`rustc --version`, run anywhere inside the clone, should now print 1.96.1. The Xous library only works with the Rust version it was built for, so triangel stays on this one.
+`rustc --version`, run anywhere inside the clone, should now print 1.96.1. The Xous library only works with the Rust version it was built for, so Triangel stays on this one.
 
 ## 3. Install the Xous library
 
@@ -53,7 +53,7 @@ Install the [Baochip extension](https://marketplace.visualstudio.com/items?itemN
 
 You can also set these from the gear icon in the [Baochip sidebar](../images/baochip-sidebar.png), which opens from the Baochip icon in VS Code's left bar. The gear appears when the mouse is over the **Baochip** heading.
 
-Do not choose `ci-sync` as the kernel mode. It changes the xous-core revision in `Cargo.toml` and downloads kernels that lack a fix triangel needs.
+Do not choose `ci-sync` as the kernel mode. It changes the xous-core revision in `Cargo.toml` and downloads kernels that lack a fix Triangel needs.
 
 To work on the ear, do the same in `firmware/ear`.
 

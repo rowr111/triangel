@@ -1,6 +1,6 @@
 # Pattern toolkit
 
-What a pattern has to work with: the `Pattern` trait, the triangel's measurements, the helpers, and the sound. To write your first pattern, see [Your first pattern](../tutorials/first-pattern.md). Paths here are relative to `firmware/eye/`.
+What a pattern has to work with: the `Pattern` trait, the Triangel's measurements, the helpers, and the sound. To write your first pattern, see [Your first pattern](../tutorials/first-pattern.md). Paths here are relative to `firmware/eye/`.
 
 ## The Pattern trait
 
@@ -20,10 +20,10 @@ pub trait Pattern: Send {
 
 Ambient patterns live in `src/patterns/ambient/`, sound-reactive ones in `src/patterns/reactive/`.
 
-## The triangel's measurements
+## The Triangel's measurements
 
 ```
-origin: top-left of the triangel
+origin: top-left of the Triangel
 x: increases rightward, 0-517 mm
 y: increases downward,  0-436 mm
 

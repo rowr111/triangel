@@ -1,8 +1,8 @@
-# Contributing to triangel
+# Contributing to Triangel
 
-What a change to triangel should look like. To set up your machine, see [How to set up a development machine](docs/how-to/set-up-a-development-machine.md). You need dabao boards.
+What a change to Triangel should look like. To set up your machine, see [How to set up a development machine](docs/how-to/set-up-a-development-machine.md). You need dabao boards.
 
-New to triangel? Start with [Your first run](docs/tutorials/first-run.md).
+New to Triangel? Start with [Your first run](docs/tutorials/first-run.md).
 
 ## Checks
 
@@ -13,7 +13,7 @@ Install the commit hook once, from the repository root:
 
 Every commit then runs clippy on each build of the eye, the ear and the shared code, with warnings treated as errors.
 
-There are no automated tests. What a change does to the lights has to be looked at: build the eye with `previewer` and watch it in the [previewer](docs/how-to/run-the-previewer.md), or run it on a triangel.
+There are no automated tests. What a change does to the lights has to be looked at: build the eye with `previewer` and watch it in the [previewer](docs/how-to/run-the-previewer.md), or run it on a Triangel.
 
 ## Conventions
 

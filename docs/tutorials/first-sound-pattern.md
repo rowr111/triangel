@@ -1,6 +1,6 @@
 # Your first sound pattern
 
-In this tutorial you will write a pattern that reacts to music: it gets brighter when the music is louder, flashes on the beat, and shows the low and high notes across the triangel.
+In this tutorial you will write a pattern that reacts to music: it gets brighter when the music is louder, flashes on the beat, and shows the low and high notes across the Triangel.
 
 ## Before you start
 
@@ -35,7 +35,7 @@ Open the `firmware/ear` folder in VS Code and click **Build - Flash - Boot** in 
 > xous-app-uf2 --elf target/riscv32imac-unknown-xous-elf/release/ear
 > ```
 >
-> Copy `apps.uf2` onto the drive, then press **PROG**. If this dabao has never had triangel's kernel, copy `firmware/xous_build/loader.uf2` and `firmware/xous_build/xous.uf2` as well.
+> Copy `apps.uf2` onto the drive, then press **PROG**. If this dabao has never had Triangel's kernel, copy `firmware/xous_build/loader.uf2` and `firmware/xous_build/xous.uf2` as well.
 
 You only need to flash the ear once. Everything you change in this tutorial is in the eye.
 
@@ -43,7 +43,7 @@ You only need to flash the ear once. Everything you change in this tutorial is i
 
 Plug the eye into your computer, hold **PROG** while you press **RESET**, and flash it with the `previewer` option as in [Your first run](first-run.md). Start the bridge and open the previewer page.
 
-Set the switch on the page to **On**. triangel changes to its sound patterns. The sound switch on the input board works too: whichever one you change last wins. Play some music: the first sound pattern, Tiles, lights whole triangle tiles on the beat.
+Set the switch on the page to **On**. Triangel changes to its sound patterns. The sound switch on the input board works too: whichever one you change last wins. Play some music: the first sound pattern, Tiles, lights whole triangle tiles on the beat.
 
 If nothing reacts, check that the ear was flashed and that both boards are seated in the controller board.
 
@@ -104,9 +104,9 @@ fn reactive_patterns() -> Vec<Box<dyn Pattern>> {
         ...
 ```
 
-Hold **PROG** while you press **RESET** on the eye, then click **Build - Flash - Boot**. Make sure the sound switch is on **On**, on the page or the input board. Play music, and the whole triangel pulses blue with the loudness.
+Hold **PROG** while you press **RESET** on the eye, then click **Build - Flash - Boot**. Make sure the sound switch is on **On**, on the page or the input board. Play music, and the whole Triangel pulses blue with the loudness.
 
-![The previewer with the triangel pulsing blue](../images/first-sound-pattern-loudness.png)
+![The previewer with the Triangel pulsing blue](../images/first-sound-pattern-loudness.png)
 
 ## 5. Flash on the beat
 
@@ -150,9 +150,9 @@ impl Pattern for MySound {
 
 `wrapping_sub` gives how long ago the beat was. Use it rather than `-` for times: `t_ms` starts again from 0 after about 49 days, and `wrapping_sub` still gives the right answer when it does.
 
-Build, flash and play music. The triangel now flashes white on each beat.
+Build, flash and play music. The Triangel now flashes white on each beat.
 
-## 6. Show the notes across the triangel
+## 6. Show the notes across the Triangel
 
 `audio.bands` holds the 24 bands, lowest notes first, each from 0 to 1. Give each LED the band for where it sits, low notes on the left and high notes on the right. Change the `use` lines at the top to:
 
@@ -178,9 +178,9 @@ and replace everything in `render` after the `flash` calculation, from `let brig
         }
 ```
 
-Build, flash and play music. The bass moves the left side, the high notes move the right side, and the whole triangel still flashes on the beat.
+Build, flash and play music. The bass moves the left side, the high notes move the right side, and the whole Triangel still flashes on the beat.
 
-![The previewer showing the bands across the triangel](../images/first-sound-pattern-bands.png)
+![The previewer showing the bands across the Triangel](../images/first-sound-pattern-bands.png)
 
 ## 7. Make it your own
 
@@ -188,7 +188,7 @@ Try a few changes:
 
 - **Flash length:** change `FLASH_MS` to `120` for a sharp flick, or `800` for a long glow.
 - **Jumpier:** use `audio.rise[band]` in place of `audio.bands[band]`. `rise` is how far each band has just jumped above its own recent level, so it lights up on new notes and drums instead of following the overall shape.
-- **Your own colors:** change the hue range. Keep it to a few related colors; they read better on the triangel than a full rainbow.
+- **Your own colors:** change the hue range. Keep it to a few related colors; they read better on the Triangel than a full rainbow.
 
 ## What you did
 

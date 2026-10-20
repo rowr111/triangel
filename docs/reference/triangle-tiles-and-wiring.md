@@ -30,7 +30,7 @@ In each row the triangle tiles alternate: the first one points down, the next up
 
 Turn each triangle tile so that its OUT connector is toward its point. Seen from the back, everything is mirrored: triangle tile 1 is at the top right.
 
-![The back of an assembled triangel, showing how the triangle tiles line up](../images/back-triangle-tile-alignment.jpg)
+![The back of an assembled Triangel, showing how the triangle tiles line up](../images/back-triangle-tile-alignment.jpg)
 
 If you like, print the numbered stickers in [graphics](../../graphics/README.md) to mark each triangle tile's number during assembly. Each sticker is a small triangle that points the same way as its triangle tile.
 

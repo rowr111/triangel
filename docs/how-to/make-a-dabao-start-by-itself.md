@@ -1,6 +1,6 @@
 # How to make a dabao start by itself
 
-A new dabao by default waits in bootloader mode (drive mode) every time it starts up, until someone presses PROG. In a triangel that means the patterns do not start at power-up. Set each board, once, to start its firmware by itself.
+A new dabao by default waits in bootloader mode (drive mode) every time it starts up, until someone presses PROG. In a Triangel that means the patterns do not start at power-up. Set each board, once, to start its firmware by itself.
 
 ## 1. Put it in bootloader mode
 

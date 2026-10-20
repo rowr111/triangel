@@ -24,6 +24,6 @@ Where you can, do the per-LED math with whole numbers, as Shimmer and Flame do: 
 
 Wrap time to the period you need before converting it to `f32`, as in `(t_ms % PERIOD_MS) as f32`. Raw `t_ms` loses precision after hours of running.
 
-## Check it on a real triangel
+## Check it on a real Triangel
 
-The previewer caps at 30 frames a second and runs a few ms faster than the real triangel, so it can show that a pattern is too slow but cannot confirm that one is fast enough. Watch the pattern on a real triangel: a pattern that is too slow stutters.
+The previewer caps at 30 frames a second and runs a few ms faster than the real Triangel, so it can show that a pattern is too slow but cannot confirm that one is fast enough. Watch the pattern on a real Triangel: a pattern that is too slow stutters.

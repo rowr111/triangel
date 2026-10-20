@@ -1,6 +1,6 @@
-# How triangel works
+# How Triangel works
 
-A triangel is 25 triangle tiles of LEDs, two dabao boards that run them, and a few boards that connect everything. This page explains how those pieces work together. For the names of the parts, see [The parts](../../README.md#the-parts) on the front page.
+A Triangel is 25 triangle tiles of LEDs, two dabao boards that run them, and a few boards that connect everything. This page explains how those pieces work together. For the names of the parts, see [The parts](../../README.md#the-parts) on the front page.
 
 ## Two boards, two jobs
 
@@ -51,9 +51,9 @@ The five buttons and the sound switch are on the input board, which connects to 
 
 Both dabao boards run [Xous](https://betrusted.io/xous-book/), a small operating system written in Rust. Each board's firmware is a Xous program, and Xous itself, the kernel, is a separate pair of files flashed beside it.
 
-triangel uses its own build of the kernel for two reasons:
+Triangel uses its own build of the kernel for two reasons:
 
 - The ear-to-eye wire uses a serial port that a normal Xous kernel keeps for its own log messages. Building the kernel with the `gdb-stub` option leaves it free.
 - It includes a fix to the I2C driver, which the eye uses to read the input board, that is not yet in the main Xous code.
 
-That is why the docs say to download the kernel files from triangel's releases rather than letting the Baochip extension fetch standard ones. See [How to build the kernels](../how-to/build-the-kernels.md) to build them yourself.
+That is why the docs say to download the kernel files from Triangel's releases rather than letting the Baochip extension fetch standard ones. See [How to build the kernels](../how-to/build-the-kernels.md) to build them yourself.

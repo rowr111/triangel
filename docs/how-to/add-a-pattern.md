@@ -34,4 +34,4 @@ For a sound-reactive pattern, put its tuning constants in their own module in `f
 
 Build the eye with the `previewer` option and watch it, as in [How to run the previewer](run-the-previewer.md). For a sound-reactive pattern, play music from real speakers: a phone speaker cannot play the low notes.
 
-Then check it on a real triangel. The previewer cannot show whether a pattern is fast enough; see [How to make a pattern fast enough](make-a-pattern-fast-enough.md).
+Then check it on a real Triangel. The previewer cannot show whether a pattern is fast enough; see [How to make a pattern fast enough](make-a-pattern-fast-enough.md).

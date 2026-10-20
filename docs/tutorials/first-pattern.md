@@ -1,6 +1,6 @@
 # Your first pattern
 
-In this tutorial you will write a pattern of your own, watch it in the previewer, and change it a few times until it moves across the triangel.
+In this tutorial you will write a pattern of your own, watch it in the previewer, and change it a few times until it moves across the Triangel.
 
 ## Before you start
 
@@ -67,7 +67,7 @@ Press **RESET** on the dabao. The drive appears. Then click **Build - Flash - Bo
 >
 > Press **RESET**, copy `apps.uf2` onto the drive, then press **PROG**. The kernel files are already on the dabao from the first run, so only `apps.uf2` needs copying.
 
-In the browser, the status goes to `no frames` for a moment and back to `bridge live`. The whole triangel is orange.
+In the browser, the status goes to `no frames` for a moment and back to `bridge live`. The whole Triangel is orange.
 
 ![The previewer with every LED orange](../images/first-pattern-orange.png)
 
@@ -92,7 +92,7 @@ In the browser, the status goes to `no frames` for a moment and back to `bridge 
 use crate::patterns::{Frame, Pattern, cycle, hsv};
 ```
 
-Build and flash again. The whole triangel now fades slowly through every color.
+Build and flash again. The whole Triangel now fades slowly through every color.
 
 ## 5. Make it depend on where each LED is
 
@@ -113,7 +113,7 @@ impl Pattern for MyPattern {
         // Once around the color wheel every 10 seconds.
         let shift = cycle(t_ms, 10_000);
         for (i, led) in LED_MAP.iter().enumerate() {
-            // How far across the triangel this LED is: 0 at the left edge, 1 at the right.
+            // How far across the Triangel this LED is: 0 at the left edge, 1 at the right.
             let across = (led.wx - WORLD_LEFT) / (WORLD_RIGHT - WORLD_LEFT);
             out[i] = hsv((across + shift).fract() * 360.0, 1.0, 1.0);
         }
@@ -121,18 +121,18 @@ impl Pattern for MyPattern {
 }
 ```
 
-`out[i]` is the color of `LED_MAP[i]`. `WORLD_LEFT` and `WORLD_RIGHT` are the triangel's left and right edges. Adding `shift` moves the colors along over time, and `fract()` keeps the result between 0 and 1.
+`out[i]` is the color of `LED_MAP[i]`. `WORLD_LEFT` and `WORLD_RIGHT` are the Triangel's left and right edges. Adding `shift` moves the colors along over time, and `fract()` keeps the result between 0 and 1.
 
-Build and flash. A rainbow now runs across the triangel from left to right, and scrolls.
+Build and flash. A rainbow now runs across the Triangel from left to right, and scrolls.
 
-![The previewer with a rainbow across the triangel](../images/first-pattern-rainbow.png)
+![The previewer with a rainbow across the Triangel](../images/first-pattern-rainbow.png)
 
 ## 6. Make it your own
 
 Try a few changes, building and flashing after each one:
 
 - **Speed:** change `10_000` to `3_000` for a faster scroll, or `60_000` for a slow one.
-- **Direction:** run the colors from top to bottom instead. Use `wy` in place of `wx`, with the triangel's top and height:
+- **Direction:** run the colors from top to bottom instead. Use `wy` in place of `wx`, with the Triangel's top and height:
 
   ```rust
   use crate::led::map::{LED_MAP, WORLD_H, WORLD_TOP};
@@ -152,12 +152,12 @@ Try a few changes, building and flashing after each one:
 
 ## What you did
 
-You wrote a pattern, added it to the setlist, and changed it step by step: one color, then color over time, then color by position. Every pattern in triangel is built from those same pieces.
+You wrote a pattern, added it to the setlist, and changed it step by step: one color, then color over time, then color by position. Every pattern in Triangel is built from those same pieces.
 
 When you are done, take `Box::new(MyPattern)` out of the front of `ambient_patterns()`, or move it to where you want it in the list.
 
 Next:
 
 - [Your first sound pattern](first-sound-pattern.md), to make it react to music
-- [Pattern toolkit](../reference/pattern-toolkit.md), for the helpers and the triangel's measurements
+- [Pattern toolkit](../reference/pattern-toolkit.md), for the helpers and the Triangel's measurements
 - [How to make a pattern fast enough](../how-to/make-a-pattern-fast-enough.md)

@@ -1,6 +1,6 @@
 # How to regenerate the LED map
 
-The LED map is where every one of the 600 LEDs sits, in millimeters, and its place in the wiring. Patterns read it through `LED_MAP`, and the previewer uses it to draw the triangel.
+The LED map is where every one of the 600 LEDs sits, in millimeters, and its place in the wiring. Patterns read it through `LED_MAP`, and the previewer uses it to draw the Triangel.
 
 You only need to regenerate it if the triangle tiles change shape or the gap between them changes. The map is generated, so do not edit it by hand.
 

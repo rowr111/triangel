@@ -1,6 +1,6 @@
-# triangel - eye firmware
+# Triangel - eye firmware
 
-LED controller firmware for the triangel. Runs on a Baochip-1x under [Xous OS](https://betrusted.io/xous-book/) (dabao dev board used during development). See [`../README.md`](../README.md) for the overall system and physical triangel description.
+LED controller firmware for the Triangel. Runs on a Baochip-1x under [Xous OS](https://betrusted.io/xous-book/) (dabao dev board used during development). See [`../README.md`](../README.md) for the overall system and physical Triangel description.
 
 ## What this is
 

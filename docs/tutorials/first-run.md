@@ -1,6 +1,6 @@
 # Your first run
 
-In this tutorial you will put triangel's firmware on a single dabao and watch its patterns in your browser. You do not need any triangle tiles or other boards: the previewer draws all 600 LEDs on the screen.
+In this tutorial you will put Triangel's firmware on a single dabao and watch its patterns in your browser. You do not need any triangle tiles or other boards: the previewer draws all 600 LEDs on the screen.
 
 ## Before you start
 
@@ -49,7 +49,7 @@ The bootloader is the small program that accepts new firmware.
 Plug the dabao into your computer. A new drive should appear on your computer. If it does not, press **RESET**.
 
 > [!NOTE]
-> If the dabao has been set to start its firmware at power-up (with `bootwait disable`, as boards in a finished triangel are), RESET only restarts it. Instead, hold **PROG** while you press **RESET**, or while you plug it in.
+> If the dabao has been set to start its firmware at power-up (with `bootwait disable`, as boards in a finished Triangel are), RESET only restarts it. Instead, hold **PROG** while you press **RESET**, or while you plug it in.
 
 > [!NOTE]
 > No drive? Try another cable. A charge-only cable powers the board but your computer never sees it.
@@ -114,7 +114,7 @@ It prints `Serial open:` with the port name, then a `frames/s:` line every secon
 
 Open `triangel-previewer/index.html` in your browser.
 
-The status in the corner says `bridge live`, and the triangel lights up with the first pattern.
+The status in the corner says `bridge live`, and the Triangel lights up with the first pattern.
 
 ![The previewer showing a pattern](../images/first-run-previewer.png)
 
@@ -122,19 +122,19 @@ If the status says `no bridge`, the bridge is not running. If it says `no frames
 
 ## 6. Try the controls
 
-The buttons in the lower-left corner do what the buttons on a triangel do:
+The buttons in the lower-left corner do what the buttons on a Triangel do:
 
 1. Press **Next** a few times. Each press fades to the next pattern.
 2. Press **Prev** to go back.
 3. Press **Br-**, then **Br+**, to change the brightness.
-4. Press **Hold**. The button stays lit, and triangel stays on this pattern instead of moving on by itself after a few minutes. Press it again to let go.
-5. Set the switch to **On**. triangel changes to its sound patterns.
+4. Press **Hold**. The button stays lit, and Triangel stays on this pattern instead of moving on by itself after a few minutes. Press it again to let go.
+5. Set the switch to **On**. Triangel changes to its sound patterns.
 
 The sound patterns listen to the ear, the second dabao. With no ear connected they see silence. Set the switch back to **Off** to return to the ambient patterns.
 
 ## What you did
 
-You built triangel's eye firmware, flashed it onto a dabao, and watched it run in the previewer, the same way you will check your own changes.
+You built Triangel's eye firmware, flashed it onto a dabao, and watched it run in the previewer, the same way you will check your own changes.
 
 Next:
 
