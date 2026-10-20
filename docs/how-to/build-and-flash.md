@@ -16,18 +16,15 @@ The ear has no options.
 
 ### With VS Code and the Baochip VSCode Extension
 
-Open `firmware/eye` and check its workspace settings. The first three are needed for every build; the last one lists your build options:
+Open `firmware/eye`. With the extension set up as in [Set up a way to build](set-up-a-development-machine.md#5-set-up-a-way-to-build), put your build options in the workspace settings:
 
 ```json
-"baochip.buildTarget": "dabao",
-"baochip.outOfTree.kernelMode": "manual",
-"baochip.outOfTree.kernelFilesPath": "../xous_build",
 "baochip.outOfTree.extraFeatures": ["previewer"]
 ```
 
-You can also set these from the gear icon in the Baochip extension's sidebar.
+You can also set them under **Extra features** from the gear icon in the [Baochip sidebar](../images/baochip-sidebar.png); the gear appears when the mouse is over the **Baochip** heading.
 
-Then run **Baochip: Build**.
+Then click **Build (cargo build)** in the sidebar.
 
 ### From the command line
 
@@ -51,15 +48,15 @@ Either way, the board appears on your computer as a drive.
 
 ### With VS Code
 
-Run **Baochip: Flash**.
+Click **Flash device** in the Baochip sidebar. Or, to build, flash and start the firmware in one go, click **Build - Flash - Boot** instead of building first.
 
 ### From the command line
 
-Copy these onto the drive, in this order:
+Copy these onto the drive:
 
-1. `firmware/xous_build/loader.uf2`
-2. `firmware/xous_build/xous.uf2`
-3. the `apps.uf2` you built
+- `firmware/xous_build/loader.uf2`
+- `firmware/xous_build/xous.uf2`
+- the `apps.uf2` you built
 
 ## 4. Start the firmware
 

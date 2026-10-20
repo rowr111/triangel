@@ -128,7 +128,9 @@
       ws.onerror = () => ws.close();
     }
 
-    connectBridge('ws://localhost:8080');
+    // The bridge's port: 8080 unless the page is opened as index.html?port=9000.
+    const bridgePort = new URLSearchParams(location.search).get('port') ?? '8080';
+    connectBridge(`ws://localhost:${bridgePort}`);
 
     // --- On-screen input -> bridge -> firmware (fire-and-forget) -----------
     document.querySelectorAll('#controls button').forEach((btn) => {

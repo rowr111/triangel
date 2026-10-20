@@ -33,6 +33,8 @@ The two dabao boards each run their own firmware under [Xous](https://betrusted.
 
 ## Where to go
 
+- [Try it on one dabao](docs/tutorials/first-run.md): start here if you are new
+- [Write your first pattern](docs/tutorials/first-pattern.md)
 - [Use an existing triangel](USER_GUIDE.md): the controls, and updating its firmware
 - [Set up your machine](docs/how-to/set-up-a-development-machine.md)
 - [Build and flash the boards](docs/how-to/build-and-flash.md)

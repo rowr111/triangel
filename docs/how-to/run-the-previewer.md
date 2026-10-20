@@ -14,18 +14,9 @@ Once, from `triangel-previewer/`:
 npm install
 ```
 
-## 3. Set the serial port
+## 3. Find the serial port
 
-A running dabao shows up as a serial port. Put its name in `triangel-previewer/bridge.config.json`:
-
-```json
-{
-  "serial": "COM3",
-  "baud": 921600
-}
-```
-
-Port names look like this:
+A running dabao shows up as a serial port. In VS Code, **Set run mode serial port** in the [Baochip sidebar](../images/baochip-sidebar.png) lists it. Port names look like this:
 
 | System | Name |
 |---|---|
@@ -39,18 +30,34 @@ On Linux, your user needs to be in the `dialout` group to open the port: `sudo u
 
 ## 4. Start the bridge
 
-From `triangel-previewer/`:
+From `triangel-previewer/`, with your port:
 
 ```
-node bridge.js
+node bridge.js --serial COM10
 ```
 
 It prints `Serial open:` with the port name once it reaches the eye, and `frames/s:` with a count once frames arrive.
 
-The port can also be given on the command line, without editing the file: `node bridge.js --serial /dev/ttyACM0`.
+To skip `--serial` each time, create `triangel-previewer/bridge.config.json` with your port; then `node bridge.js` is enough:
+
+```json
+{
+  "serial": "COM10"
+}
+```
 
 ## 5. Open the page
 
 Open `triangel-previewer/index.html` in a browser. The patterns appear, and the buttons in the lower-left corner work like the ones on a triangel.
 
 The corner of the page says `bridge live` while frames arrive, `no frames` when the bridge is running but the eye is not sending, and `no bridge` when the page cannot reach the bridge.
+
+## If port 8080 is taken
+
+The bridge and the page talk over port 8080. If another program already uses it, the bridge fails to start. Pick another port for both: start the bridge with `--ws-port`, and add the same port to the page's address:
+
+```
+node bridge.js --serial COM10 --ws-port 9000
+```
+
+Then open `triangel-previewer/index.html?port=9000`.

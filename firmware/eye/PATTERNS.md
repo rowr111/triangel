@@ -1,5 +1,7 @@
 # Writing patterns
 
+New to patterns? Start with [Your first pattern](../../docs/tutorials/first-pattern.md).
+
 A pattern implements the `Pattern` trait in `src/patterns/mod.rs`: called once per frame with the current time and this frame's `Audio`, it fills in a color per LED. Ambient patterns live in `src/patterns/ambient/` and ignore `audio`; sound-reactive ones live in `src/patterns/reactive/`.
 
 ## Minimal example

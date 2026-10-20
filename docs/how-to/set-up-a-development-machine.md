@@ -51,7 +51,7 @@ Install the [Baochip extension](https://marketplace.visualstudio.com/items?itemN
 "baochip.outOfTree.kernelFilesPath": "../xous_build"
 ```
 
-You can also set these from the gear icon in the Baochip extension's sidebar.
+You can also set these from the gear icon in the [Baochip sidebar](../images/baochip-sidebar.png), which opens from the Baochip icon in VS Code's left bar. The gear appears when the mouse is over the **Baochip** heading.
 
 Do not choose `ci-sync` as the kernel mode. It changes the xous-core revision in `Cargo.toml` and downloads kernels that lack a fix triangel needs.
 

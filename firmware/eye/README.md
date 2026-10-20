@@ -42,7 +42,7 @@ See [How to run the previewer](../../docs/how-to/run-the-previewer.md).
 
 ## Adding a pattern
 
-See [PATTERNS.md](PATTERNS.md).
+Start with [Your first pattern](../../docs/tutorials/first-pattern.md), then see [PATTERNS.md](PATTERNS.md).
 
 ## Sound reactivity
 

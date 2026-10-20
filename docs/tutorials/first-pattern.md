@@ -1,0 +1,161 @@
+# Your first pattern
+
+In this tutorial you will write a pattern of your own, watch it in the previewer, and change it a few times until it moves across the triangel.
+
+## Before you start
+
+Do [Your first run](first-run.md) first. You need the same dabao, with the bridge running and the previewer open in your browser. Leaving the previewer running is fine: it reconnects by itself each time you flash.
+
+## 1. Create the pattern
+
+A pattern is a piece of code the eye calls about 30 times a second. Each time, it fills in a color for every one of the 600 LEDs.
+
+Create the file `firmware/eye/src/patterns/ambient/my_pattern.rs` with this in it:
+
+```rust
+use crate::audio::Audio;
+use crate::patterns::{Frame, Pattern, hsv};
+
+pub struct MyPattern;
+
+impl Pattern for MyPattern {
+    fn render(&mut self, _t_ms: u32, _audio: &Audio, out: &mut Frame) {
+        // Every LED orange.
+        out.fill(hsv(30.0, 1.0, 1.0));
+    }
+}
+```
+
+`render` is the part the eye calls. `out` holds the colors it fills in. `hsv` makes a color from a place on the color wheel (0 to 360, where 30 is orange), how strong the color is (0 to 1) and how bright it is (0 to 1).
+
+## 2. Add it to the setlist
+
+The eye only plays patterns it knows about. Two small edits tell it about yours.
+
+In `firmware/eye/src/patterns/ambient/mod.rs`, add a line for the new file:
+
+```rust
+pub mod my_pattern;
+```
+
+In `firmware/eye/src/setlist.rs`, add `my_pattern::MyPattern` to the list of ambient patterns it uses:
+
+```rust
+use crate::patterns::ambient::{drizzle::Drizzle, effervesce::Effervesce, flame::ApexFlame, fubuki::Fubuki, my_pattern::MyPattern, rainbow::Rainbow, ricochet::Ricochet, shimmer::CenterShimmer, squall::Squall, uzumaki::Uzumaki};
+```
+
+Then, in the same file, put it first in `ambient_patterns()`, so it is the pattern you see when the eye starts:
+
+```rust
+fn ambient_patterns() -> Vec<Box<dyn Pattern>> {
+    vec![
+        Box::new(MyPattern),
+        Box::new(Fubuki::new()),
+        ...
+```
+
+## 3. Build, flash and look
+
+Press **RESET** on the dabao. The drive appears. Then click **Build - Flash - Boot**, the last item in the Baochip sidebar. It builds, flashes and starts the firmware in one go.
+
+> **From the command line:** from `firmware/eye`, run
+>
+> ```
+> cargo build --release --features previewer
+> xous-app-uf2 --elf target/riscv32imac-unknown-xous-elf/release/eye
+> ```
+>
+> Press **RESET**, copy `apps.uf2` onto the drive, then press **PROG**. The kernel files are already on the dabao from the first run, so only `apps.uf2` needs copying.
+
+In the browser, the status goes to `no frames` for a moment and back to `bridge live`. The whole triangel is orange.
+
+![The previewer with every LED orange](../images/first-pattern-orange.png)
+
+> [!NOTE]
+> If you set your dabao to start its firmware at power-up, RESET only restarts it. Hold **PROG** while pressing **RESET** instead, as in the first run.
+
+## 4. Make it change over time
+
+`t_ms` is the time in milliseconds. Use it to move around the color wheel. Change `render` to:
+
+```rust
+    fn render(&mut self, t_ms: u32, _audio: &Audio, out: &mut Frame) {
+        // Once around the color wheel every 10 seconds.
+        let hue = cycle(t_ms, 10_000) * 360.0;
+        out.fill(hsv(hue, 1.0, 1.0));
+    }
+```
+
+`cycle` gives how far through a repeating period the time is, from 0 to 1. Add it to the `use` line at the top:
+
+```rust
+use crate::patterns::{Frame, Pattern, cycle, hsv};
+```
+
+Build and flash again. The whole triangel now fades slowly through every color.
+
+## 5. Make it depend on where each LED is
+
+So far every LED gets the same color. To give each LED its own, look up where it is. `LED_MAP` lists every LED with its position in millimeters: `wx` from left to right and `wy` from top to bottom.
+
+Replace the whole file with:
+
+```rust
+use crate::audio::Audio;
+use crate::led::map::LED_MAP;
+use crate::led::world::{WORLD_LEFT, WORLD_RIGHT};
+use crate::patterns::{Frame, Pattern, cycle, hsv};
+
+pub struct MyPattern;
+
+impl Pattern for MyPattern {
+    fn render(&mut self, t_ms: u32, _audio: &Audio, out: &mut Frame) {
+        // Once around the color wheel every 10 seconds.
+        let shift = cycle(t_ms, 10_000);
+        for (i, led) in LED_MAP.iter().enumerate() {
+            // How far across the triangel this LED is: 0 at the left edge, 1 at the right.
+            let across = (led.wx - WORLD_LEFT) / (WORLD_RIGHT - WORLD_LEFT);
+            out[i] = hsv((across + shift).fract() * 360.0, 1.0, 1.0);
+        }
+    }
+}
+```
+
+`out[i]` is the color of `LED_MAP[i]`. `WORLD_LEFT` and `WORLD_RIGHT` are the triangel's left and right edges. Adding `shift` moves the colors along over time, and `fract()` keeps the result between 0 and 1.
+
+Build and flash. A rainbow now runs across the triangel from left to right, and scrolls.
+
+![The previewer with a rainbow across the triangel](../images/first-pattern-rainbow.png)
+
+## 6. Make it your own
+
+Try a few changes, building and flashing after each one:
+
+- **Speed:** change `10_000` to `3_000` for a faster scroll, or `60_000` for a slow one.
+- **Direction:** run the colors from top to bottom instead. Use `wy` in place of `wx`, with the triangel's top and height:
+
+  ```rust
+  use crate::led::map::{LED_MAP, WORLD_H, WORLD_TOP};
+  ```
+
+  ```rust
+  // 0 at the top, 1 at the bottom point.
+  let down = (led.wy - WORLD_TOP) / WORLD_H;
+  ```
+
+- **Fewer colors:** a full rainbow is a lot. Keep to part of the color wheel, such as the blues and purples from 200 to 280. To avoid a hard edge where 280 jumps back to 200, swing back and forth instead of going around. With `down` from the last change (or `across` from step 5):
+
+  ```rust
+  let hue = 200.0 + 80.0 * (0.5 - 0.5 * ((down + shift) * core::f32::consts::TAU).cos());
+  out[i] = hsv(hue, 1.0, 1.0);
+  ```
+
+## What you did
+
+You wrote a pattern, added it to the setlist, and changed it step by step: one color, then color over time, then color by position. Every pattern in triangel is built from those same pieces.
+
+When you are done, take `Box::new(MyPattern)` out of the front of `ambient_patterns()`, or move it to where you want it in the list.
+
+Next:
+
+- [Writing patterns](../../firmware/eye/PATTERNS.md), for the helpers, the triangel's measurements and how to keep a pattern fast enough

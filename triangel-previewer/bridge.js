@@ -2,7 +2,8 @@
 //
 // Usage:
 //   node bridge.js
-//   node bridge.js --serial COM4 --baud 460800 --ws-port 9000
+//   node bridge.js --serial COM4
+//   node bridge.js --serial COM4 --ws-port 9000   (then open index.html?port=9000)
 //
 // Config file bridge.config.json is read first; CLI args override it.
 // The Baochip sends 1804 bytes per frame: 4-byte magic + 1800 RGB bytes (600 LEDs x RGB) in chain order.
@@ -30,14 +31,13 @@ function cliArg(name) {
 }
 
 const SERIAL_PATH  = cliArg('serial')  ?? fileConfig.serial  ?? 'COM3';
-const BAUD_RATE    = parseInt(cliArg('baud')    ?? fileConfig.baud    ?? 921600);
-const WS_PORT      = parseInt(cliArg('ws-port') ?? fileConfig.wsPort  ?? 8080);
+const WS_PORT      = parseInt(cliArg('ws-port') ?? 8080); // the page takes it as ?port=
 const FRAME_MAGIC  = Buffer.from([0xFF, 0xFF, 0xFF, 0xFF]); // must match MAGIC in led/mod.rs
 const FRAME_SIZE   = 600 * 3;                                // 1800 bytes payload
 const PACKET_SIZE  = FRAME_MAGIC.length + FRAME_SIZE;        // 1804 bytes on the wire
 const RECONNECT_MS = 2000;
 
-console.log(`Config: serial=${SERIAL_PATH}  baud=${BAUD_RATE}  ws-port=${WS_PORT}`);
+console.log(`Config: serial=${SERIAL_PATH}`);
 
 // --- WebSocket server -----------------------------------------------------
 
@@ -88,7 +88,8 @@ let lastOpenError = null;
 function connect() {
   buf = Buffer.alloc(0);
 
-  const serial = new SerialPort({ path: SERIAL_PATH, baudRate: BAUD_RATE, autoOpen: false });
+  // SerialPort needs a baud rate; the dabao's USB serial ignores it.
+  const serial = new SerialPort({ path: SERIAL_PATH, baudRate: 921600, autoOpen: false });
 
   serial.open((err) => {
     if (err) {
@@ -101,7 +102,7 @@ function connect() {
     }
     activeSerial = serial;
     lastOpenError = null;
-    console.log(`Serial open: ${SERIAL_PATH} @ ${BAUD_RATE} baud`);
+    console.log(`Serial open: ${SERIAL_PATH}`);
   });
 
   serial.on('data', (chunk) => {

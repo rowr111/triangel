@@ -2,6 +2,8 @@
 
 What a change to triangel should look like. To set up your machine, see [firmware/README.md](firmware/README.md). You need dabao boards.
 
+New to triangel? Start with [Your first run](docs/tutorials/first-run.md).
+
 ## Checks
 
 Install the commit hook once, from the repository root:
