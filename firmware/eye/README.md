@@ -48,7 +48,7 @@ Start with [Your first pattern](../../docs/tutorials/first-pattern.md), then see
 
 New to sound patterns? Start with [Your first sound pattern](../../docs/tutorials/first-sound-pattern.md).
 
-Each render frame, reactive patterns get an `Audio` snapshot built from the ear's frames: 24 band levels, a per-band onset (`rise`), overall loudness relative to recent music, and one-frame `beat` and `drop` flags. Detection thresholds and the patterns' sound tuning are in [`../shared/src/tuning.rs`](../shared/src/tuning.rs).
+Each render frame, reactive patterns get an `Audio` snapshot built from the ear's frames: 24 band levels, a per-band onset (`rise`), overall loudness relative to recent music, and one-frame `beat` and `drop` flags. Detection thresholds and the patterns' sound tuning are in [`../shared/src/tuning.rs`](../shared/src/tuning.rs); see [How to tune the sound response](../../docs/how-to/tune-the-sound-response.md).
 
 Sound mode is set by the 3-position switch, or cycled by the remote's gear button:
 

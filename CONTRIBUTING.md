@@ -20,7 +20,7 @@ There are no automated tests. What a change does to the lights has to be looked 
 ### Code
 
 - Idiomatic Rust, with no clippy warnings.
-- Sound tuning values go in `firmware/shared/src/tuning.rs`, not in the pattern that uses them.
+- Sound tuning values go in `firmware/shared/src/tuning.rs`, not in the pattern that uses them. See [How to tune the sound response](docs/how-to/tune-the-sound-response.md).
 - Do not edit generated files by hand: `firmware/eye/src/led/map.rs`, `triangel-previewer/led_map.js` and `firmware/eye/src/led/geom.rs` (see [How to regenerate the LED map](docs/how-to/regenerate-the-led-map.md)), `firmware/ear/src/i2s_bio.rs` (see [How to regenerate the mic program](docs/how-to/regenerate-the-mic-program.md)) and `firmware/eye/src/input/nec_rx.rs`.
 - The Rust version, the xous-core revision in both `Cargo.toml` files, and the kernels move together. Do not change one alone.
 

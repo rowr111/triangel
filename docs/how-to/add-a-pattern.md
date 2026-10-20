@@ -28,7 +28,7 @@ The setlist plays the patterns in the order listed. While you work on it, puttin
 
 ## 4. Put sound tuning in the shared crate
 
-For a sound-reactive pattern, put its tuning constants in their own module in `firmware/shared/src/tuning.rs`, next to the detection thresholds they interact with, not in the pattern's file.
+For a sound-reactive pattern, put its tuning constants in their own module in `firmware/shared/src/tuning.rs`, next to the detection thresholds they interact with, not in the pattern's file. See [How to tune the sound response](tune-the-sound-response.md).
 
 ## 5. Check it
 

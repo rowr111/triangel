@@ -53,6 +53,7 @@ The **eye** draws the patterns and the **ear** listens to the room. See [How Tri
 - [Watch the patterns in a browser](docs/how-to/run-the-previewer.md)
 - [Add a pattern](docs/how-to/add-a-pattern.md)
 - [Make a pattern fast enough](docs/how-to/make-a-pattern-fast-enough.md)
+- [Tune the sound response](docs/how-to/tune-the-sound-response.md)
 - [Build the kernels](docs/how-to/build-the-kernels.md)
 - [Check a microphone that is not working](docs/how-to/check-the-microphone.md)
 - [Change the microphone's pins](docs/how-to/regenerate-the-mic-program.md)

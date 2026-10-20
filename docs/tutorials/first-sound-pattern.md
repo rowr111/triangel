@@ -199,4 +199,5 @@ When you are done, take `Box::new(MySound::new())` out of the front of `reactive
 Next:
 
 - [Sound](../reference/pattern-toolkit.md#sound), in the Pattern toolkit, for everything `audio` offers and where sound tuning values go
+- [How to tune the sound response](../how-to/tune-the-sound-response.md), to make the patterns react the way you like
 - [How to add a pattern](../how-to/add-a-pattern.md), for your next one

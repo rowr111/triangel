@@ -87,4 +87,4 @@ Shared building blocks:
 
 A sound-reactive pattern has to look good at every level, silence included.
 
-A sound-reactive pattern's tuning constants go in their own module in `firmware/shared/src/tuning.rs`, alongside the detection thresholds they interact with.
+A sound-reactive pattern's tuning constants go in their own module in `firmware/shared/src/tuning.rs`, alongside the detection thresholds they interact with. See [How to tune the sound response](../how-to/tune-the-sound-response.md).
