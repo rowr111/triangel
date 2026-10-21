@@ -18,7 +18,7 @@ ART!!! Made of 25 triangle tiles and 600 LEDs, for a wall or the corner of a roo
 - 14 patterns: slow ambient ones, and ones that move with the beat, the drops and the shape of the music
 - Audio-reactive mode: set on/off or auto-detected when music is playing
 - Controlled by: buttons, a sound switch or a remote; no app/connected computer needed
-- Open source: the circuit boards, the brackets and the firmware are all here, in Rust, on two Baochip-1x boards running Xous
+- Open source: the circuit boards, the brackets and the firmware are all here, in Rust, on two [dabao](https://www.crowdsupply.com/baochip/dabao) boards using the [Baochip-1x](https://github.com/baochip/baochip-1x), running [Xous](https://github.com/betrusted-io/xous-core)
 
 You don't need a Triangel to write patterns for it: one dabao board and a browser will do. [Start here](docs/tutorials/first-run.md).
 
