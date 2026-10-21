@@ -6,11 +6,11 @@ ART!!! Made of 25 triangle tiles and 600 LEDs, for a wall or the corner of a roo
 
 <table align="center">
   <tr>
-    <td align="center"><img src="docs/images/pattern-flame.gif" width="150" alt="The Flame pattern on a real Triangel"><br>Flame</td>
-    <td align="center"><img src="docs/images/pattern-uzumaki.gif" width="150" alt="The Uzumaki pattern on a real Triangel"><br>Uzumaki</td>
-    <td align="center"><img src="docs/images/pattern-fubuki.gif" width="150" alt="The Fubuki pattern on a real Triangel"><br>Fubuki</td>
-    <td align="center"><img src="docs/images/pattern-raindrop.gif" width="150" alt="The Raindrop (sound) pattern on a real Triangel"><br>Raindrop (sound)</td>
-    <td align="center"><img src="docs/images/pattern-spectrum.gif" width="150" alt="The Spectrum (sound) pattern on a real Triangel"><br>Spectrum (sound)</td>
+    <td align="center"><img src="docs/images/pattern-flame.gif" width="140" alt="The Flame pattern on a real Triangel"><br>Flame</td>
+    <td align="center"><img src="docs/images/pattern-uzumaki.gif" width="140" alt="The Uzumaki pattern on a real Triangel"><br>Uzumaki</td>
+    <td align="center"><img src="docs/images/pattern-fubuki.gif" width="140" alt="The Fubuki pattern on a real Triangel"><br>Fubuki</td>
+    <td align="center"><img src="docs/images/pattern-raindrop.gif" width="140" alt="The Raindrop (sound) pattern on a real Triangel"><br>Raindrop (sound)</td>
+    <td align="center"><img src="docs/images/pattern-spectrum.gif" width="140" alt="The Spectrum (sound) pattern on a real Triangel"><br>Spectrum (sound)</td>
   </tr>
 </table>
 
