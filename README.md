@@ -11,7 +11,7 @@
 Each triangle tile has a stylized eye design in the middle.. After I decided to cover it in eyes, I was inspired/by biblical angel descriptions to name it..triangle + angel = Triangel!
 
 
-<img src="docs/images/triangel.jpg" width="480" alt="Triangel: 25 triangle tiles joined into one large triangle, point down, with some of its LEDs lit">
+<p align="center"><img src="docs/images/triangel.jpg" width="480" alt="Triangel: 25 triangle tiles joined into one large triangle, point down, with some of its LEDs lit"></p>
 
 ## The parts
 

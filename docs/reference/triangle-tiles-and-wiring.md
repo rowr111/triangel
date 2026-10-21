@@ -6,11 +6,11 @@ How the 25 triangle tiles are laid out, numbered and wired.
 
 Each triangle tile is a triangle circuit board, 10 cm on a side, with 24 LEDs around its edge.
 
-![The front of a triangle tile, with its 24 LEDs around the edge](../images/tile-v3-front.jpg)
+<p align="center"><img src="../images/tile-v3-front.jpg" alt="The front of a triangle tile, with its 24 LEDs around the edge"></p>
 
 On the back are two USB-C connectors, **IN** and **OUT**. The cables between triangle tiles carry 12 V power and the LED data together: data comes in on IN, runs through the 24 LEDs, and goes out on OUT to the next triangle tile.
 
-![The back of a triangle tile, with its IN and OUT connectors](../images/tile-v3-back.jpg)
+<p align="center"><img src="../images/tile-v3-back.jpg" alt="The back of a triangle tile, with its IN and OUT connectors"></p>
 
 The LEDs are numbered D1 to D24 on the board. Seen from the front with the triangle tile point up, D1 is the bottom-left corner, D9 the bottom-right corner and D17 the top corner, and the numbers run around the edge in that order.
 
@@ -30,7 +30,7 @@ In each row the triangle tiles alternate: the first one points down, the next up
 
 Turn each triangle tile so that its OUT connector is toward its point. Seen from the back, everything is mirrored: triangle tile 1 is at the top right.
 
-![The back of an assembled Triangel, showing how the triangle tiles line up](../images/back-triangle-tile-alignment.jpg)
+<p align="center"><img src="../images/back-triangle-tile-alignment.jpg" alt="The back of an assembled Triangel, showing how the triangle tiles line up"></p>
 
 If you like, print the numbered stickers in [graphics](../../graphics/README.md) to mark each triangle tile's number during assembly. Each sticker is a small triangle that points the same way as its triangle tile.
 

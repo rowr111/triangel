@@ -1,6 +1,6 @@
 # Your first sound pattern
 
-In this tutorial you will write a pattern that reacts to music: it gets brighter when the music is louder, flashes on the beat, and shows the low and high notes across the Triangel.
+In this tutorial you will write a pattern that reacts to music: it gets brighter when the music is louder, flashes on the beat, and shows the low and high notes as bars across the Triangel.
 
 ## Before you start
 
@@ -104,13 +104,15 @@ fn reactive_patterns() -> Vec<Box<dyn Pattern>> {
         ...
 ```
 
-Hold **PROG** while you press **RESET** on the eye, then click **Build - Flash - Boot**. Make sure the sound switch is on **On**, on the page or the input board. Play music, and the whole Triangel pulses blue with the loudness.
+Hold **PROG** while you press **RESET** on the eye, then click **Build - Flash - Boot**. Only the eye needs flashing, here and in the steps below; the ear keeps running what you gave it in step 1. Make sure the sound switch is on **On**, on the page or the input board. Play music, and the whole Triangel pulses blue with the loudness.
 
-![The previewer with the Triangel pulsing blue](../images/first-sound-pattern-loudness.png)
+<p align="center"><img src="../images/first-sound-pattern-loudness.gif" alt="The previewer with the Triangel pulsing blue"></p>
 
 ## 5. Flash on the beat
 
-`audio.beat` is true for one frame when a beat comes. One frame is too short to see, so the pattern needs to remember when the beat came and fade a flash out over the next few hundred milliseconds. That means `MySound` needs to hold something. Replace the file with:
+Now add a white flash on each beat. The Triangel stays blue and keeps pulsing with the loudness, and on each beat it flashes white, then fades back to blue over 300 ms.
+
+`audio.beat` is true for only one frame when a beat comes, which is too short to see. So the pattern remembers when the beat came and fades the flash out over the next 300 ms. That means `MySound` needs to hold something. Replace the file with:
 
 ```rust
 use crate::audio::Audio;
@@ -150,15 +152,23 @@ impl Pattern for MySound {
 
 `wrapping_sub` gives how long ago the beat was. Use it rather than `-` for times: `t_ms` starts again from 0 after about 49 days, and `wrapping_sub` still gives the right answer when it does.
 
-Build, flash and play music. The Triangel now flashes white on each beat.
+Build and flash the eye again, and play music. The Triangel is still blue and pulsing, and now flashes white on each beat.
 
-## 6. Show the notes across the Triangel
+<p align="center"><img src="../images/first-sound-pattern-loudness-beat.gif" alt="The previewer with the Triangel pulsing blue and flashing white on each beat"></p>
 
-`audio.bands` holds the 24 bands, lowest notes first, each from 0 to 1. Give each LED the band for where it sits, low notes on the left and high notes on the right. Change the `use` lines at the top to:
+## 6. Show the notes as bars
+
+`audio.bands` holds the 24 bands, lowest notes first, each from 0 to 1. Show them as a bar graph, the way a stereo's spectrum display does: one bar per band, low notes on the left and high notes on the right. Each bar hangs down from the Triangel's top edge, and the louder its band, the further down it reaches.
+
+This builds on step 5: the white flash on each beat stays. The overall loudness from step 4 is replaced by the bars. Lit LEDs are at full brightness, the rest of each column stays dim, and the color runs from blue on the left to purple on the right.
+
+The Triangel narrows toward its bottom point, so the columns near the sides are shorter than the ones in the middle. The code measures each LED against its own column's length, so a loud band fills its column wherever it is.
+
+Change the `use` lines at the top to:
 
 ```rust
 use crate::audio::Audio;
-use crate::led::map::LED_MAP;
+use crate::led::map::{LED_MAP, WORLD_H, WORLD_TOP};
 use crate::led::world::{WORLD_LEFT, WORLD_RIGHT};
 use crate::patterns::{Frame, Pattern, hsv};
 use triangel_shared::frame::BAND_COUNT;
@@ -171,16 +181,23 @@ and replace everything in `render` after the `flash` calculation, from `let brig
             // Low notes on the left, high notes on the right.
             let across = (led.wx - WORLD_LEFT) / (WORLD_RIGHT - WORLD_LEFT);
             let band = ((across * BAND_COUNT as f32) as usize).min(BAND_COUNT - 1);
-            // Blue for the low bands through to purple for the high ones.
+            // How far down this LED's column it sits: 0 at the top edge, 1 at the column's end.
+            // The columns get shorter toward the sides, where the Triangel narrows.
+            let column = 1.0 - (2.0 * across - 1.0).abs();
+            let down = (led.wy - WORLD_TOP) / (WORLD_H * column.max(0.05));
+            // Light the column from the top down, as far as the band is loud.
+            let lit = down < audio.bands[band];
             let hue = 200.0 + 80.0 * across;
-            let brightness = 0.2 + 0.8 * audio.bands[band];
+            let brightness: f32 = if lit { 1.0 } else { 0.08 };
             out[i] = hsv(hue, 1.0 - flash, brightness.max(flash));
         }
 ```
 
-Build, flash and play music. The bass moves the left side, the high notes move the right side, and the whole Triangel still flashes on the beat.
+`brightness` needs `: f32` here: written as plain `1.0` and `0.08`, Rust cannot tell which kind of decimal number they are, and `.max()` needs to know.
 
-![The previewer showing the bands across the Triangel](../images/first-sound-pattern-bands.png)
+Build and flash the eye again, and play music. The bars on the left jump with the bass and the ones on the right with the high notes, and the whole Triangel still flashes on the beat.
+
+<p align="center"><img src="../images/first-sound-pattern-bands.gif" alt="The previewer showing a bar for each band, hanging from the top edge"></p>
 
 ## 7. Make it your own
 

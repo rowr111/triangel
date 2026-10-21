@@ -69,7 +69,7 @@ Press **RESET** on the dabao. The drive appears. Then click **Build - Flash - Bo
 
 In the browser, the status goes to `no frames` for a moment and back to `bridge live`. The whole Triangel is orange.
 
-![The previewer with every LED orange](../images/first-pattern-orange.png)
+<p align="center"><img src="../images/first-pattern-orange.png" alt="The previewer with every LED orange"></p>
 
 > [!NOTE]
 > If your dabao starts its firmware at power-up, RESET only restarts it. Hold **PROG** while you press **RESET**, or while you plug it in.
@@ -125,25 +125,30 @@ impl Pattern for MyPattern {
 
 Build and flash. A rainbow now runs across the Triangel from left to right, and scrolls.
 
-![The previewer with a rainbow across the Triangel](../images/first-pattern-rainbow.png)
+<p align="center"><img src="../images/first-pattern-rainbow.png" alt="The previewer with a rainbow across the Triangel"></p>
 
 ## 6. Make it your own
 
 Try a few changes, building and flashing after each one:
 
 - **Speed:** change `10_000` to `3_000` for a faster scroll, or `60_000` for a slow one.
-- **Direction:** run the colors from top to bottom instead. Use `wy` in place of `wx`, with the Triangel's top and height:
+- **Direction:** run the colors from top to bottom instead. Change the `use` lines for the map and the edges to:
 
   ```rust
   use crate::led::map::{LED_MAP, WORLD_H, WORLD_TOP};
   ```
 
+  and delete the `use crate::led::world::...` line, which is no longer needed. Then change the loop to use each LED's `wy`, its distance from the top:
+
   ```rust
-  // 0 at the top, 1 at the bottom point.
-  let down = (led.wy - WORLD_TOP) / WORLD_H;
+  for (i, led) in LED_MAP.iter().enumerate() {
+      // 0 at the top, 1 at the bottom point.
+      let down = (led.wy - WORLD_TOP) / WORLD_H;
+      out[i] = hsv((down + shift).fract() * 360.0, 1.0, 1.0);
+  }
   ```
 
-- **Fewer colors:** a full rainbow is a lot. Keep to part of the color wheel, such as the blues and purples from 200 to 280. To avoid a hard edge where 280 jumps back to 200, swing back and forth instead of going around. With `down` from the last change (or `across` from step 5):
+- **Fewer colors:** a full rainbow is a lot. Keep to part of the color wheel, such as the blues and purples from 200 to 280. To avoid a hard edge where 280 jumps back to 200, swing back and forth instead of going around. Change the `out[i] = ...` line in the loop to these two lines, using `down` (or `across` if you skipped the last change):
 
   ```rust
   let hue = 200.0 + 80.0 * (0.5 - 0.5 * ((down + shift) * core::f32::consts::TAU).cos());

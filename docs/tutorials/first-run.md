@@ -11,7 +11,7 @@ You need:
 
 You can follow this with VS Code and the Baochip extension, or from the command line. The steps show VS Code; the boxes marked "Or, instead, from the command line" show the other way.
 
-![A dabao with its RESET and PROG buttons marked](../images/first-run-dabao-buttons.jpg)
+<p align="center"><img src="../images/first-run-dabao-buttons.jpg" width="250" alt="A dabao with its RESET and PROG buttons marked"></p>
 
 The dabao has two buttons you will use: **RESET** near one end and **PROG** near the USB-C connector.
 
@@ -21,17 +21,17 @@ The eye is the board that draws the patterns. Built with the `previewer` option,
 
 Open the `firmware/eye` folder in VS Code, and click the Baochip icon in the bar on the left. The Baochip sidebar opens. Every command in this tutorial is there.
 
-![The Baochip sidebar](../images/baochip-sidebar.png)
+<p align="center"><img src="../images/baochip-sidebar.png" alt="The Baochip sidebar"></p>
 
 Move the mouse over the **Baochip** heading at the top, and a gear icon appears next to it. Click it and set **Extra features** to `previewer`.
 
-![The Baochip extension's settings, opened from the gear icon](../images/first-run-extension-settings.png)
+<p align="center"><img src="../images/first-run-extension-settings.png" alt="The Baochip extension's settings, opened from the gear icon"></p>
 
 Then click **Build (cargo build)** under **Build & Run**.
 
 When it finishes, the output panel shows no errors.
 
-![VS Code's output panel after a successful build](../images/first-run-build-done.png)
+<p align="center"><img src="../images/first-run-build-done.png" alt="VS Code's output panel after a successful build"></p>
 
 > **Or, instead, from the command line:** from `firmware/eye`, run
 >
@@ -96,7 +96,7 @@ node bridge.js --serial COM10
 
 It prints `Serial open:` with the port name, then a `frames/s:` line every second. The count should be close to 30.
 
-![The bridge running in a terminal](../images/first-run-bridge.png)
+<p align="center"><img src="../images/first-run-bridge.png" alt="The bridge running in a terminal"></p>
 
 > [!NOTE]
 > The dabao shows a different serial port while it is in bootloader mode. If the port you found disappears when you press **PROG**, look again after the firmware starts.
@@ -116,7 +116,7 @@ Open `triangel-previewer/index.html` in your browser.
 
 The status in the corner says `bridge live`, and the Triangel lights up with the first pattern.
 
-![The previewer showing a pattern](../images/first-run-previewer.png)
+<p align="center"><img src="../images/first-run-previewer.png" alt="The previewer showing a pattern"></p>
 
 If the status says `no bridge`, the bridge is not running. If it says `no frames`, the bridge is running but the dabao is not sending: check that the firmware has started.
 
