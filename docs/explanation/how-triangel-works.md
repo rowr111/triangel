@@ -1,6 +1,17 @@
 # How Triangel works
 
-A Triangel is 25 triangle tiles of LEDs, two dabao boards that run them, and a few boards that connect everything. This page explains how those pieces work together. For the names of the parts, see [The parts](../../README.md#the-parts) on the front page.
+A Triangel is 25 triangle tiles of LEDs, two dabao boards that run them, and a few boards that connect everything. This page explains how those pieces work together.
+
+## The parts
+
+| Name | What it is |
+|---|---|
+| Triangel | The whole project: the triangle tiles and the boards that run them |
+| triangle tile | One of the 25 triangle circuit boards, each with 24 LEDs. |
+| controller board | Holds the two dabao boards, the microphone and the power supply for the triangle tiles |
+| dabao board | A [dabao](https://www.crowdsupply.com/baochip/dabao), a Baochip-1x development board. Triangel uses two: the **eye** and the **ear** |
+| input board | The five buttons, the sound switch and the IR receiver |
+| remote | A 7-button IR remote that does what the buttons do |
 
 ## Two boards, two jobs
 
