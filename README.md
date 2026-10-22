@@ -24,7 +24,7 @@ You don't need a Triangel to write patterns for it: one dabao board and a browse
 
 ## Why the name?
 
-Each triangle tile has a stylized eye design in the middle.. After I decided to cover it in eyes, I was inspired/by biblical angel descriptions to name it... triangle + angel = Triangel!
+Each triangle tile has a stylized eye design in the middle.. After I decided to cover it in eyes, I was inspired by biblical angel descriptions to name it... triangle + angel = Triangel!
 
 ## Where to go
 
