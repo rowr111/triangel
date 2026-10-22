@@ -37,6 +37,8 @@ xous-app-uf2 --elf target/riscv32imac-unknown-xous-elf/release/eye
 
 For the ear, run the same from `firmware/ear`, with `ear` at the end of the path.
 
+`apps.uf2` must be under 1,785,856 bytes. A bigger one does not start, and the dabao shows no serial port until you flash a smaller one.
+
 ## 2. Put the board in bootloader mode
 
 > [!CAUTION]

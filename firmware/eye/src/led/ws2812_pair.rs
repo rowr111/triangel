@@ -88,7 +88,7 @@ impl Ws2812Pair {
         bio_ss.claim_dynamic_pin(pin1.as_u8(), &claimer)?;
         bio_ss.claim_dynamic_pin(pin2.as_u8(), &claimer)?;
         // SetOnly leaves the pins other drivers have mapped alone; Overwrite would
-        // unmap the IR receiver's pin, and each chain would unmap the other's.
+        // unmap the IR receiver's pin.
         let io_config = IoConfig {
             mapped: (1 << pin1.as_u32()) | (1 << pin2.as_u32()),
             mode: IoConfigMode::SetOnly,
@@ -137,8 +137,8 @@ impl Ws2812Pair {
     /// Waits for both strips to finish. Skipping this before the next `send_async`
     /// risks overflowing a FIFO while its core is busy.
     pub fn send_await(&self) {
-        // Both FIFOs live in one register block, so either CSR view reaches the
-        // shared event register.
+        // Each FIFO's page also reaches the shared event register, so either CSR view
+        // can read it.
         while self.fifo1.csr.r(bio_bdma::SFR_EVENT_STATUS) & BOTH_DONE != BOTH_DONE {
             xous::yield_slice();
         }

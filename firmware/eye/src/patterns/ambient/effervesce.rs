@@ -5,7 +5,8 @@ use core::f32::consts::{PI, TAU};
 
 // Effervesce: a bright field of slowly drifting hue, with rings, bars and stars appearing
 // at random spots, each in its own color, under a fine glitter. Each slot's shape comes
-// from a hash of (slot, generation), so the pattern keeps no state.
+// from a hash of (slot, generation) and a seed drawn each time
+// the pattern comes on.
 
 // Base field
 const HUE_DRIFT_MS: u32 = 40_000; // time for the field hue to go around the wheel

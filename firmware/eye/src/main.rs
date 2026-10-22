@@ -18,8 +18,7 @@ fn hardware_random() -> Option<u32> {
 }
 
 fn main() -> ! {
-    // On a bringup build a panic prints over USB serial. A panic on the main thread then
-    // ends the process; one on another thread ends only that thread.
+    // On a bringup build, print panics over USB serial.
     std::panic::set_hook(Box::new(|info| {
         diag::Diag::new().line(&format!("PANIC: {}", info));
     }));

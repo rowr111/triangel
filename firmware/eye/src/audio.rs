@@ -32,13 +32,13 @@ impl LinkStatus {
 
 static UART_STATUS:        AtomicU8  = AtomicU8::new(LinkStatus::Pending as u8);
 static UART_FIRST_BYTE:    AtomicU8  = AtomicU8::new(0);
-/// Frames that decoded, and frames dropped on a bad sync or checksum.
+/// Frames that decoded, and frames dropped on a bad checksum.
 static UART_FRAMES_OK:     AtomicU32 = AtomicU32::new(0);
 static UART_FRAMES_BAD:    AtomicU32 = AtomicU32::new(0);
 /// Latest decoded level, as f32 bits: absolute dBFS and the ear's normalized 0.0-1.0.
 static UART_LAST_DBFS:     AtomicU32 = AtomicU32::new(LEVEL_DB_FLOOR.to_bits());
 static UART_LAST_NORM:     AtomicU32 = AtomicU32::new(0);
-/// Drop detector state for the heartbeat: in a breakdown, drops so far, and the raw
+/// Drop detector state for the heartbeat: in a breakdown, drops so far, and the smoothed
 /// bass level against its reference, both in dB as f32 bits.
 static DROP_BREAKDOWN:     AtomicBool = AtomicBool::new(false);
 static DROP_COUNT:         AtomicU32  = AtomicU32::new(0);
@@ -90,8 +90,7 @@ pub fn stats() -> LinkStats {
 const RX_DMA_BUF_START: usize = 2048;
 const RX_DMA_BUF_LEN:   usize = 2048;
 
-// The bass follower rises with the kicks and holds across the gaps between them, so a
-// single bar's rest does not read as the bass leaving.
+// The bass follower rises fast with the kicks and falls slowly between them.
 const BASS_ATTACK: f32 = 0.5;
 const BASS_DECAY: f32 = 0.05;
 /// How fast the reference, the normal level of the bass, follows while music plays.
@@ -100,7 +99,8 @@ const BASS_REF_RATE: f32 = 0.008;
 /// Custom cache-flush instruction, so the CPU re-reads what the DMA engine wrote.
 #[inline(always)]
 fn cache_flush() {
-    // Safety: a hint instruction with no memory operands of its own.
+    // Safety: only invalidates the data cache; with no asm options the compiler keeps the
+    // ring reads after it.
     unsafe {
         core::arch::asm!(".word 0x500F", "nop", "nop", "nop", "nop", "nop");
     }
@@ -448,8 +448,8 @@ impl AudioReceiver {
                 true
             }
             Fed::Bad => {
-                // Bad checksum (we locked onto a 0xAA inside the data). Drop it; the
-                // stream self-resyncs on the next real sync byte.
+                // Bad checksum: a lost or corrupted byte, or a 0xAA inside the data taken for
+                // sync at startup. Drop it; the assembler resyncs from the next sync byte.
                 UART_FRAMES_BAD.fetch_add(1, Ordering::Relaxed);
                 false
             }
@@ -563,7 +563,7 @@ fn init_uart() -> Option<DmaRx> {
         Uart::get_handle(csr_virt, bao1x_hal::board::APP_UART_IFRAM_ADDR, ifram_virt)
     };
 
-    // The HAL's set_baud writes without its poll bit 0x10, so RX streams into the UDMA engine.
+    // The same writes as the HAL's set_baud, minus its poll bit 0x10, so RX streams into the UDMA engine.
     let clk_counter: u32 = PERCLK_HZ / EAR_UART_BAUD;
     // Safety: Bank::Custom + UartReg::Setup is the Setup register of the mapped UART CSR.
     unsafe {

@@ -31,7 +31,7 @@ pub mod onset {
 
 /// Drop detection: the bass leaving for a while, then coming back.
 pub mod drop_detect {
-    /// Below this the bass is room noise and no breakdown can start.
+    /// While the normal bass level is below this, it is room noise and no breakdown can start.
     pub const BASS_MIN_DB: f32 = -75.0;
     /// How far below normal the bass has to fall, and for how long, to be a breakdown.
     pub const BREAKDOWN_DB: f32 = 10.0;
@@ -81,13 +81,13 @@ pub mod spectrum {
     pub const FRONT_EDGE: f32 = 3.0;
 }
 
-/// Raindrop. Has its own trigger, separate from `beat`.
+/// Raindrop, with its own trigger separate from `beat`. Drizzle uses the knobs from RIPPLE_SPEED on.
 pub mod raindrop {
     /// Fires when a bass band's onset reaches this. Lower fires more often.
     pub const TRIGGER: f32 = 0.20;
     /// It fires again only after dropping back under this.
     pub const RELEASE: f32 = 0.10;
-    /// Shortest gap between drops.
+    /// Shortest gap between bursts of drops.
     pub const REFRACTORY_MS: u32 = 120;
     /// Drops per beat: at least BURST_MIN, plus up to BURST_EXTRA on a hard beat.
     pub const BURST_MIN: usize = 2;
@@ -177,7 +177,8 @@ pub mod ear {
     pub const BAND_VISIBLE_RANGE_DB: f32 = 26.0;
     /// How much each band is scaled to its own range: 0 keeps true loudness, 1 evens them out.
     pub const PER_BAND_MIX: f32 = 0.45;
-    /// Smallest range a band gets stretched over. Only acts with PER_BAND_MIX above 0.7.
+    /// Smallest range a band gets stretched over. Acts only above
+    /// BAND_VISIBLE_RANGE_DB * (1 - PER_BAND_MIX), 14.3 dB today.
     pub const BAND_MIN_SPAN_DB: f32 = 8.0;
     /// Smallest range the level gets stretched over.
     pub const LEVEL_MIN_SPAN_DB: f32 = 6.0;

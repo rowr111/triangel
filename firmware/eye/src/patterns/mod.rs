@@ -219,7 +219,7 @@ pub fn set_random_source(source: fn() -> Option<u32>) {
     RANDOM_SOURCE.set(source).ok();
 }
 
-/// A new random number. A fixed sequence if no source is set or it fails.
+/// A new random number. A fixed sequence if no source is set.
 pub fn random_u32() -> u32 {
     RANDOM_SOURCE
         .get()

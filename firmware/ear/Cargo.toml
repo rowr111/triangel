@@ -14,8 +14,7 @@ usb-bao1x = { git = "https://github.com/betrusted-io/xous-core", rev = "a9a996d4
 triangel-shared = { path = "../shared" }
 
 [profile.release]
-# The soft-float intrinsics live in compiler_builtins, so they only inline across
-# the crate boundary with LTO on.
+# LTO keeps apps.uf2 smaller.
 lto = true
 codegen-units = 1
 

@@ -19,9 +19,7 @@ const BANDS_TIMING_FRAMES: u32 = 32;
 const BANDS_REPORT_DELTA_MS: f32 = 1.0;
 
 fn main() -> ! {
-    // A panic anywhere prints over USB serial before the process dies; the USB
-    // server owns the message once sent, so it still reaches the host. Without
-    // this, a failed BIO resource claim in I2sAudio::new() is invisible.
+    // Print panics over USB serial.
     std::panic::set_hook(Box::new(|info| {
         Diag::new().line(&format!("PANIC: {}", info));
     }));

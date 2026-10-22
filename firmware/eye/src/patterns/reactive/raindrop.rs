@@ -30,8 +30,8 @@ const BEAT_EASE: f32 = 0.2;
 /// After this many gaps in a row that do not fit, the tempo restarts from the latest.
 const BEAT_MISSES: u8 = 4;
 
-/// Rain on black water. Each beat lands drops that send out rings, the leading edge
-/// white and the rings behind it colored.
+/// Rain on black water. Each beat starts drops that send out rings, white while the drop
+/// is young and taking on its color as it spreads.
 pub struct Raindrop {
     ripples:      Ripples,
     armed:        bool,

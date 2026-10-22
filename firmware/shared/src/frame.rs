@@ -46,7 +46,7 @@ pub const FRAME_LEN: usize = 1 + (BAND_COUNT + SCALARS) * 2 + 1; // 58 bytes
 pub struct BandFrame {
     /// Normalized against recent music: spectral shape, never dark in a quiet room.
     pub bands:      [u16; BAND_COUNT],
-    /// Overall loudness in absolute dBFS. dB SPL is dBFS + 120 with this microphone.
+    /// Overall loudness in absolute dBFS. dB SPL is roughly dBFS + 120 with this microphone.
     pub level:      u16,
     /// Loudness against the loudest and quietest the room has been recently, 0..1.
     pub level_norm: u16,
