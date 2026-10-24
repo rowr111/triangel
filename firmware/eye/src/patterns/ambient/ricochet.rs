@@ -222,8 +222,12 @@ impl Ricochet {
                 c.vy -= 2.0 * vn * n.1;
 
                 let a = (rng.f32() - 0.5) * 2.0 * BOUNCE_PERTURB;
-                let (sa, ca) = a.sin_cos();
+                let (mut sa, ca) = a.sin_cos();
                 let (vx, vy) = (c.vx, c.vy);
+                // Turn the other way if this turn would point back out through the wall.
+                if (vx * ca - vy * sa) * n.0 + (vx * sa + vy * ca) * n.1 <= 0.0 {
+                    sa = -sa;
+                }
                 c.vx = vx * ca - vy * sa;
                 c.vy = vx * sa + vy * ca;
 

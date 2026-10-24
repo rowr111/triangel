@@ -14,6 +14,8 @@ const MAX_LINES: usize = LINES_PER_FAMILY * 3;
 const DIR_TOLERANCE: f32 = 12.0 * PI / 180.0;
 /// LEDs in one row share an offset to within this; neighboring rows are 12 mm apart.
 const ROW_MERGE_MM: f32 = 1.0;
+/// Most lines one beat lights.
+const MAX_BEAT_LINES: usize = 1 + EXTRA_LINES as usize;
 
 /// (hue, sat): half white, plus pale blue, lavender and violet.
 const PALETTE: [(f32, f32); 6] =
@@ -137,6 +139,12 @@ impl Spiderweb {
 }
 
 impl Pattern for Spiderweb {
+    fn on_enter(&mut self, _t_ms: u32) {
+        for line in &mut self.lines {
+            line.shots = [Shot::NONE; 2];
+        }
+    }
+
     fn render(&mut self, t_ms: u32, audio: &Audio, out: &mut Frame) {
         if audio.drop {
             for li in 0..self.lines.len() {
@@ -144,8 +152,14 @@ impl Pattern for Spiderweb {
             }
         } else if audio.beat {
             let count = 1 + (audio.beat_strength * EXTRA_LINES) as usize;
-            for _ in 0..count {
-                let li = self.rng.below(self.lines.len());
+            let mut picked = [usize::MAX; MAX_BEAT_LINES];
+            for i in 0..count {
+                let mut li = self.rng.below(self.lines.len());
+                // Redraw a line this beat has already lit.
+                while picked[..i].contains(&li) {
+                    li = self.rng.below(self.lines.len());
+                }
+                picked[i] = li;
                 self.fire(li, t_ms, 0.5 + 0.5 * audio.beat_strength, 0.0, FADE_MS);
             }
         }
@@ -161,9 +175,13 @@ impl Pattern for Spiderweb {
 
         // One color per line, shared by all its LEDs.
         let mut color = [[0u8; 3]; MAX_LINES];
-        for (c, line) in color.iter_mut().zip(self.lines.iter()) {
+        for (c, line) in color.iter_mut().zip(self.lines.iter_mut()) {
             let mut best = (0.0f32, 0.0f32, 0.0f32); // brightness, hue, saturation
-            for shot in &line.shots {
+            for shot in line.shots.iter_mut() {
+                // Forget a finished flash; its end time goes stale.
+                if shot.strength > 0.0 && t_ms.wrapping_sub(shot.end_ms()) as i32 >= 0 {
+                    shot.strength = 0.0;
+                }
                 let Some((v, sat)) = shot.lit(t_ms, WHITE_MS, HIT_BOOST) else { continue };
                 if v > best.0 {
                     best = (v, shot.hue, sat);

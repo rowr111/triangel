@@ -1,5 +1,5 @@
 use crate::led::geom::{BOARD_COUNT, BOARD_Y_RANGE, DIST_APEX};
-use crate::patterns::{Frame, Pattern, cycle, cycle_q16, knuth_hash, phase_phasors, ramp, random_u32, PHASE_STEPS};
+use crate::patterns::{Frame, Pattern, cycle, cycle_q16, hash2, knuth_hash, phase_phasors, ramp, random_u32, PHASE_STEPS};
 use crate::audio::Audio;
 use crate::led::map::{LED_MAP, WORLD_BOT, WORLD_CX, WORLD_H, LED_COUNT};
 use core::f32::consts::{PI, TAU};
@@ -196,7 +196,7 @@ impl Pattern for ApexFlame {
         for (k, ember) in embers.iter_mut().enumerate() {
             let period = EMBER_PERIOD_MS + k as u32 * EMBER_STAGGER_MS;
             let phase = cycle(t_ms, period);
-            let h = knuth_hash((t_ms / period) ^ self.seed) ^ (k as u32).wrapping_mul(0x9E37_79B9);
+            let h = hash2(t_ms / period, self.seed ^ k as u32);
             let y0 = WORLD_BOT - 6.0 - ((h >> 8) % 130) as f32;
             let half_w = (WORLD_BOT - y0) / WORLD_H * 250.0; // triangle half-width at y0
             let x0 = WORLD_CX + ((h % 201) as f32 - 100.0) / 100.0 * half_w;
