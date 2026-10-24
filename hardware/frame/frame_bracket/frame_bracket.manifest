@@ -1,0 +1,10 @@
+{
+    "autodeskProduct": "Fusion360",
+    "type": "script",
+    "author": "",
+    "description": {
+        "": "Triangel edge bracket with frame tab"
+    },
+    "supportedOS": "windows|mac",
+    "editEnabled": true
+}
