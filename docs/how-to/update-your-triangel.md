@@ -10,7 +10,7 @@ No programming tools needed: you copy files onto each dabao board.
 
 ## 1. Download the firmware
 
-Download the zip from the [latest release](https://github.com/rowr111/triangel/releases/latest) and unzip it. It has two folders, `eye` and `ear`, one for each board.
+Download the zip from the newest [firmware release](https://github.com/rowr111/triangel/releases?q=firmware&expanded=true), the one whose name starts with `firmware-`, and unzip it. It has two folders, `eye` and `ear`, one for each board.
 
 ## 2. Put the eye in bootloader mode
 

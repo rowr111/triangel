@@ -33,7 +33,7 @@ Both boards need `loader.uf2` and `xous.uf2` in `firmware/xous_build/`.
 
 ### Download them
 
-From the [latest release](https://github.com/rowr111/triangel/releases/latest).
+From the newest [kernel release](https://github.com/rowr111/triangel/releases?q=kernel&expanded=true), the one whose name starts with `kernel-`.
 
 ### Build them
 
