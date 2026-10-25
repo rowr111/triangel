@@ -27,7 +27,8 @@ TRUNK_W    = 6.0    # trunk width, where the tree leaves its piece
 TRUNK_L    = 2.5    # trunk length before the triangle
 TRI_SIDE   = 10.0   # side of the equilateral triangle
 
-CLEAR      = 0.25   # gap between tree and socket, per side (room for the adhesive)
+CLEAR      = 0.35   # gap between tree and socket, per side (room for the adhesive)
+DEPTH_PLAY = 0.5    # socket floor sits this far below the tree, so the tree's top never sticks out past the front
 JOINT_R    = 0.5    # fillet on the front edges of the tree and the socket
 
 # Straight piece profile: Y=0 is the inner face, next to the tiles
@@ -43,7 +44,10 @@ END_SOLID  = 3.0    # solid length at the tree end, for the trunk to grow from
 # Slot for the edge bracket tab, in the middle of the straight piece
 TAB_W      = 10.0   # tab width (X)
 TAB_T      = 3.0    # tab thickness, flush with the bracket back
-SLOT_REACH = 13.0   # how far the slot runs in from the inner face (Y)
+SLOT_REACH = 13.0   # how far the tab reaches in from the inner face (Y)
+SLOT_PLAY_X = 1.0   # slot play each side along the frame: piece lengths drift along a side
+SLOT_PLAY_Y = 1.0   # slot play past the tab's end
+SLOT_PLAY_Z = 0.5   # slot play above the tab
 INSERT_Y   = 8.0    # insert center, measured from the inner face
 INSERT_HOLE_D = 3.6 # JLC3DP M3x4x3 insert, same as the tile brackets
 INSERT_DEPTH  = 5.0 # JLC requires a 5.0mm-deep hole for that insert
@@ -54,8 +58,6 @@ INNER_OFF  = 1.0    # frame inner face, out from the line through the bracket ce
 FAKE_W     = 0.5    # fake joint groove width (a 0.25mm slit won't print cleanly)
 FAKE_D     = 1.0    # fake joint groove depth
 FAKE_EDGE  = 1.0    # how close the fake joint's groove comes to the outer curve
-
-PART_GAP   = 20.0   # spacing between the parts in the viewport
 # ------------------------------------------------------------------------------
 
 MM = 0.1
@@ -244,14 +246,15 @@ def run(context):
         tail = tree_outline(piece_l, cy)
         extrude(polygon_sketch(tail, FLOOR_T), FLOOR_T, TOP, FO.JoinFeatureOperation, piece)
         sock = offset_outline(tree_outline(-CLEAR, cy), CLEAR)
-        extrude(polygon_sketch(sock, FLOOR_T), FLOOR_T, TOP + 1.0, FO.CutFeatureOperation, piece)
+        extrude(polygon_sketch(sock, FLOOR_T - DEPTH_PLAY), FLOOR_T - DEPTH_PLAY, TOP + 1.0,
+                FO.CutFeatureOperation, piece)
         sock_tip = max(p[0] for p in sock)
 
         # tab slot, open at the back, then the insert pocket in its ceiling
-        slot_top = TAB_T + CLEAR
-        hw = TAB_W / 2.0 + CLEAR
+        slot_top = TAB_T + SLOT_PLAY_Z
+        hw = TAB_W / 2.0 + SLOT_PLAY_X
         slot = [(xc - hw, oy - 1.0), (xc + hw, oy - 1.0),
-                (xc + hw, oy + SLOT_REACH + CLEAR), (xc - hw, oy + SLOT_REACH + CLEAR)]
+                (xc + hw, oy + SLOT_REACH + SLOT_PLAY_Y), (xc - hw, oy + SLOT_REACH + SLOT_PLAY_Y)]
         extrude(polygon_sketch(slot, -1.0), -1.0, slot_top, FO.CutFeatureOperation, piece)
         skc = root.sketches.add(plane_at(slot_top))
         skc.sketchCurves.sketchCircles.addByCenterRadius(
@@ -280,7 +283,8 @@ def run(context):
         piece_vol.append(piece.physicalProperties.volume)
 
         # --- corner piece: built with the big corner's grid vertex at the origin, side A
-        #     along +X and side B at +60 degrees, frame outside both; moved aside at the end ---
+        #     along +X and side B at +60 degrees, frame outside both; mirrored, then placed
+        #     against the straight piece at the end ---
         S3 = math.sqrt(3.0)
         dB = (0.5, S3 / 2.0)                     # along side B
         nB = (-S3 / 2.0, 0.5)                    # out from side B
@@ -318,7 +322,7 @@ def run(context):
         # the last piece along side B travels toward the corner, so its tree root is CLEAR
         # past b_end; built in that piece's frame (side A's turned 240 degrees), then turned into place
         sock_c = offset_outline(tree_outline(-b_end - CLEAR, cy_c), CLEAR)
-        extrude(polygon_sketch(rotate(sock_c, 240.0), FLOOR_T), FLOOR_T, TOP + 1.0,
+        extrude(polygon_sketch(rotate(sock_c, 240.0), FLOOR_T - DEPTH_PLAY), FLOOR_T - DEPTH_PLAY, TOP + 1.0,
                 FO.CutFeatureOperation, corner)
         sock_c_tip = max(p[0] for p in sock_c)
 
@@ -383,12 +387,22 @@ def run(context):
                 FO.CutFeatureOperation)
         corner_vol.append(corner.physicalProperties.volume)
 
-        # move it clear of the straight piece
+        # mirror it across XZ: built this way, the tiles sit on the opposite side from the
+        # straight piece's, so its tree would meet a straight piece's tree
+        src = adsk.core.ObjectCollection.create()
+        src.add(corner)
+        mirrored = root.features.mirrorFeatures.add(
+            root.features.mirrorFeatures.createInput(src, root.xZConstructionPlane)).bodies.item(0)
+        root.features.removeFeatures.add(corner)
+        corner = mirrored
+        corner.name = 'CornerPiece'
+
+        # place it against the straight piece: arm A's tree ends CLEAR before the socket
+        # end at x=0, inner faces in line
         moved = adsk.core.ObjectCollection.create()
         moved.add(corner)
         mt = adsk.core.Matrix3D.create()
-        mt.translation = adsk.core.Vector3D.create(
-            (piece_l + tree_end + PART_GAP + S3 * (INNER_OFF + PROFILE_W)) * MM, 0, 0)
+        mt.translation = adsk.core.Vector3D.create(-PITCH / 2.0 * MM, -INNER_OFF * MM, 0)
         mi = root.features.moveFeatures.createInput2(moved)
         mi.defineAsFreeMove(mt)
         root.features.moveFeatures.add(mi)
