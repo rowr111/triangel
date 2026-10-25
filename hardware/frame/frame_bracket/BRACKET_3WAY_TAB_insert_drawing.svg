@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1180" height="760" viewBox="0 0 1180 760" font-family="Arial,'Microsoft YaHei','SimHei',sans-serif">
+<defs><pattern id="hatch" width="7" height="7" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="7" stroke="#2e8b57" stroke-width="0.9"/></pattern></defs>
+<rect x="0" y="0" width="1180" height="760" fill="#fff"/>
+<rect x="12" y="12" width="1156" height="736" stroke="#123" stroke-width="1.5" fill="none"/>
+<g font-family="Arial,'Microsoft YaHei','SimHei',sans-serif" font-size="15" fill="#123">
+<path d="M 164.0 300.0 A 136.0 136.0 0 0 1 436.0 300.0 L 320.0 300.0 L 320.0 356.0 L 280.0 356.0 L 280.0 300.0 Z" stroke="#123" stroke-width="1.4" fill="none"/>
+<path d="M 361.57512886940356 187.74874831559185 L 366.42487113059644 190.54874831559187 L 303.2331615074619 300.0 L 296.7668384925381 300.0 Z" stroke="#7a5a12" stroke-width="1.0" fill="#f3d59a"/>
+<path d="M 233.5751288694036 190.54874831559187 L 238.42487113059644 187.74874831559185 L 303.2331615074619 300.0 L 296.7668384925381 300.0 Z" stroke="#7a5a12" stroke-width="1.0" fill="#f3d59a"/>
+<path d="M 185.6 300.0 A 114.4 114.4 0 0 1 414.4 300.0" stroke="#123" stroke-width="0.8" fill="none" stroke-dasharray="7 4"/>
+<line x1="146.0" y1="300.0" x2="454.0" y2="300.0" stroke="#c33" stroke-width="0.8" fill="none" stroke-dasharray="10 3 2 3"/>
+<circle cx="399.0733061929398" cy="242.8" r="7.2" stroke="#123" stroke-width="1.2" fill="#dfe7f2"/>
+<line x1="390.0733061929398" y1="242.8" x2="408.0733061929398" y2="242.8" stroke="#123" stroke-width="0.8" fill="none"/>
+<line x1="399.0733061929398" y1="233.8" x2="399.0733061929398" y2="251.8" stroke="#123" stroke-width="0.8" fill="none"/>
+<circle cx="300.0" cy="185.6" r="7.2" stroke="#123" stroke-width="1.2" fill="#dfe7f2"/>
+<line x1="291.0" y1="185.6" x2="309.0" y2="185.6" stroke="#123" stroke-width="0.8" fill="none"/>
+<line x1="300.0" y1="176.6" x2="300.0" y2="194.6" stroke="#123" stroke-width="0.8" fill="none"/>
+<circle cx="200.9266938070602" cy="242.8" r="7.2" stroke="#123" stroke-width="1.2" fill="#dfe7f2"/>
+<line x1="191.9266938070602" y1="242.8" x2="209.9266938070602" y2="242.8" stroke="#123" stroke-width="0.8" fill="none"/>
+<line x1="200.9266938070602" y1="233.8" x2="200.9266938070602" y2="251.8" stroke="#123" stroke-width="0.8" fill="none"/>
+<circle cx="300.0" cy="336.0" r="6.8" stroke="#123" stroke-width="1.2" fill="#fff"/>
+<line x1="300.0" y1="130.0" x2="300.0" y2="386.0" stroke="#c33" stroke-width="1.5" fill="none"/>
+<text x="292.0" y="126.0" font-family="Arial,'Microsoft YaHei','SimHei',sans-serif" font-size="17" font-weight="bold" fill="#123">A</text>
+<text x="292.0" y="402.0" font-family="Arial,'Microsoft YaHei','SimHei',sans-serif" font-size="17" font-weight="bold" fill="#123">A</text>
+<text x="250.0" y="104.0" font-family="Arial,'Microsoft YaHei','SimHei',sans-serif" font-size="17" font-weight="bold" fill="#123">TOP VIEW</text>
+<line x1="399.0733061929398" y1="242.8" x2="519.0733061929398" y2="172.8" stroke="#123" stroke-width="0.8" fill="none"/>
+<line x1="519.0733061929398" y1="172.8" x2="679.0733061929398" y2="172.8" stroke="#123" stroke-width="0.8" fill="none"/>
+<text x="523.0733061929398" y="150.8" font-family="Arial,'Microsoft YaHei','SimHei',sans-serif" font-size="17" font-weight="bold" fill="#123">3x Ø3.6 x 5 deep</text>
+<text x="523.0733061929398" y="168.8" font-family="Arial,'Microsoft YaHei','SimHei',sans-serif" font-size="15" fill="#123">M3x4x3 insert</text>
+<line x1="293.2" y1="336.0" x2="230.0" y2="376.0" stroke="#123" stroke-width="0.8" fill="none"/>
+<line x1="230.0" y1="376.0" x2="70.0" y2="376.0" stroke="#123" stroke-width="0.8" fill="none"/>
+<text x="74.0" y="372.0" font-family="Arial,'Microsoft YaHei','SimHei',sans-serif" font-size="15" font-weight="bold" fill="#b00">无螺母</text>
+<text x="74.0" y="392.0" font-family="Arial,'Microsoft YaHei','SimHei',sans-serif" font-size="15" font-weight="bold" fill="#b00">NO INSERT</text>
+<rect x="164" y="560" width="26" height="10" stroke="#7a5a12" stroke-width="1.0" fill="#f3d59a"/>
+<text x="196" y="569" font-family="Arial,'Microsoft YaHei','SimHei',sans-serif" font-size="12" fill="#123">凸筋 ridges</text>
+<text x="780.0" y="340" font-family="Arial,'Microsoft YaHei','SimHei',sans-serif" font-size="17" font-weight="bold" fill="#123">SECTION A-A</text>
+<path d="M 670.0 470.0 L 790.0 470.0 L 790.0 452.0 L 896.8 452.0 L 896.8 470.0 L 958.0 470.0 L 958.0 440.0 L 754.0 440.0 L 754.0 452.0 L 670.0 452.0 Z" stroke="#123" stroke-width="1.4" fill="url(#hatch)"/>
+<rect x="689.8" y="452.0" width="20.40000000000009" height="18.0" fill="#fff" stroke="#123" stroke-width="1.2"/>
+<rect x="914.8" y="440.0" width="21.600000000000136" height="30.0" fill="#fff" stroke="#123" stroke-width="1.2"/>
+<rect x="754.0" y="428.0" width="204.0" height="12.0" fill="#f3d59a" fill-opacity="0.4" stroke="#7a5a12" stroke-width="0.7" stroke-dasharray="4 3"/>
+<line x1="856.0" y1="428.0" x2="872.0" y2="408.0" stroke="#123" stroke-width="0.8" fill="none"/>
+<text x="876.0" y="411.0" font-family="Arial,'Microsoft YaHei','SimHei',sans-serif" font-size="12" fill="#123">凸筋 ridges (behind cut)</text>
+<line x1="914.8" y1="430.0" x2="914.8" y2="370.0" stroke="#123" stroke-width="0.8" fill="none"/>
+<line x1="936.4000000000001" y1="430.0" x2="936.4000000000001" y2="370.0" stroke="#123" stroke-width="0.8" fill="none"/>
+<line x1="914.8" y1="374.0" x2="936.4000000000001" y2="374.0" stroke="#123" stroke-width="1" fill="none"/>
+<path d="M 914.8 374.0 l 5 -3 l 0 6 z" fill="#123"/>
+<path d="M 936.4000000000001 374.0 l -5 -3 l 0 6 z" fill="#123"/>
+<text x="904.8" y="366.0" font-family="Arial,'Microsoft YaHei','SimHei',sans-serif" font-size="17" font-weight="bold" fill="#123">Ø3.6</text>
+<line x1="936.4000000000001" y1="466.0" x2="976.4000000000001" y2="504.0" stroke="#123" stroke-width="0.8" fill="none"/>
+<line x1="976.4000000000001" y1="504.0" x2="1086.4" y2="504.0" stroke="#123" stroke-width="0.8" fill="none"/>
+<text x="980.4000000000001" y="500.0" font-family="Arial,'Microsoft YaHei','SimHei',sans-serif" font-size="12" fill="#123">Ø3.6 thru (typ. 3x)</text>
+<line x1="961.0" y1="440.0" x2="984.0" y2="440.0" stroke="#123" stroke-width="0.8" fill="none"/>
+<line x1="961.0" y1="470.0" x2="984.0" y2="470.0" stroke="#123" stroke-width="0.8" fill="none"/>
+<line x1="976.0" y1="440.0" x2="976.0" y2="470.0" stroke="#123" stroke-width="1" fill="none"/>
+<path d="M 976.0 440.0 l -3 5 l 6 0 z" fill="#123"/>
+<path d="M 976.0 470.0 l -3 -5 l 6 0 z" fill="#123"/>
+<text x="984.0" y="460.0" font-family="Arial,'Microsoft YaHei','SimHei',sans-serif" font-size="12" fill="#123">5</text>
+<rect x="700" y="598" width="402" height="72" stroke="#b00" stroke-width="2.5" fill="#fff5f5"/>
+<text x="716" y="630" font-family="Arial,'Microsoft YaHei','SimHei',sans-serif" font-size="20" font-weight="bold" fill="#b00">螺母只装凸筋面</text>
+<text x="716" y="656" font-family="Arial,'Microsoft YaHei','SimHei',sans-serif" font-size="20" font-weight="bold" fill="#b00">INSERTS: RIBBED FACE ONLY</text>
+<rect x="60" y="640" width="418" height="108" stroke="#123" stroke-width="1.4" fill="none"/>
+<line x1="60" y1="676" x2="478" y2="676" stroke="#123" stroke-width="0.8" fill="none"/>
+<line x1="60" y1="712" x2="478" y2="712" stroke="#123" stroke-width="0.8" fill="none"/>
+<line x1="269" y1="676" x2="269" y2="748" stroke="#123" stroke-width="0.8" fill="none"/>
+<text x="70" y="665" font-family="Arial,'Microsoft YaHei','SimHei',sans-serif" font-size="17" font-weight="bold" fill="#123">BRACKET_3WAY_TAB</text>
+<text x="70" y="700" font-family="Arial,'Microsoft YaHei','SimHei',sans-serif" font-size="15" fill="#123">Material:  MJF nylon (PA12)</text>
+<text x="279" y="700" font-family="Arial,'Microsoft YaHei','SimHei',sans-serif" font-size="15" fill="#123">Qty:  12 off</text>
+<text x="70" y="736" font-family="Arial,'Microsoft YaHei','SimHei',sans-serif" font-size="15" fill="#123">Inserts:  3x M3x4x3</text>
+<text x="279" y="736" font-family="Arial,'Microsoft YaHei','SimHei',sans-serif" font-size="12" fill="#123">Units: mm  (not to scale)</text>
+</g></svg>
