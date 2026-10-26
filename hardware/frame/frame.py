@@ -360,8 +360,16 @@ def run(context):
         t0, t1, h = -5.0, 2.0 * (INNER_OFF + PROFILE_W) + 5.0, FAKE_W / 2.0
         slab = [(m[0] * t + w[0] * k, m[1] * t + w[1] * k) for t, k in ((t0, -h), (t1, -h), (t1, h), (t0, h))]
 
+        # at the sharp point the groove would split the tip into two thin slivers; take the
+        # whole tip back to where the groove's depth meets inside the point (2 x FAKE_D, the
+        # point being 60 degrees), so the groove ends in a clean notch there
+        t_tip = 2.0 * (INNER_OFF + PROFILE_W)
+        tip = [(m[0] * t + w[0] * k, m[1] * t + w[1] * k)
+               for t, k in ((t_tip - 2.0 * FAKE_D, -5.0), (t1, -5.0), (t1, 5.0), (t_tip - 2.0 * FAKE_D, 5.0))]
+
         groove = new_body(ring, -1.0, TOP + 1.0)
         combine(groove, new_body(slab, -1.0, TOP + 1.0), FO.JoinFeatureOperation)
+        combine(groove, new_body(tip, -1.0, TOP + 1.0), FO.JoinFeatureOperation)
         combine(groove, new_body(fake_tree, -1.0, TOP + 1.0), FO.CutFeatureOperation)  # seam breaks at the trunk
         combine(groove, build_v(FAKE_D, -1.0, 'FakeCore'), FO.CutFeatureOperation)     # keep the outer skin only
         cut = combine(corner, groove, FO.CutFeatureOperation)
