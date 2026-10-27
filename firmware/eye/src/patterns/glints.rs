@@ -1,5 +1,5 @@
 use crate::led::map::LED_COUNT;
-use crate::patterns::{Frame, Rng};
+use crate::patterns::{time_step_ms, Frame, Rng};
 
 const MAX_GLINTS: usize = 24;
 
@@ -51,8 +51,7 @@ impl Glints {
     pub fn update(&mut self, t_ms: u32, out: &mut Frame) {
         let s = self.style;
         // Capped so a long gap cannot start a burst of tries.
-        let dt_ms = t_ms.wrapping_sub(self.last_ms).min(100);
-        self.last_ms = t_ms;
+        let dt_ms = time_step_ms(&mut self.last_ms, t_ms, 100);
         self.tries += dt_ms as f32 * s.tries_per_sec / 1000.0;
         while self.tries >= 1.0 {
             self.tries -= 1.0;

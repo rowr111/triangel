@@ -4,7 +4,7 @@ use crate::audio::Audio;
 use crate::led::map::LED_COUNT;
 use crate::patterns::ambient::{
     drizzle::Drizzle, effervesce::Effervesce, flame::Flame, fubuki::Fubuki, rainbow::Rainbow,
-    ricochet::Ricochet, shimmer::CenterShimmer, squall::Squall, uzumaki::Uzumaki,
+    ricochet::Ricochet, shimmer::Shimmer, squall::Squall, uzumaki::Uzumaki,
 };
 use crate::patterns::reactive::{
     firework::Firework, raindrop::Raindrop, spectrum::Spectrum, spiderweb::Spiderweb, tiles::Tiles,
@@ -50,7 +50,7 @@ fn ambient_patterns() -> Vec<Box<dyn Pattern>> {
     vec![
         Box::new(Fubuki::new()),
         Box::new(Squall::new()),
-        Box::new(CenterShimmer::new()),
+        Box::new(Shimmer::new()),
         Box::new(Flame::new()),
         Box::new(Uzumaki::new()),
         Box::new(Effervesce::new()),

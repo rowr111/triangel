@@ -39,6 +39,19 @@ pub fn hsv(h: f32, s: f32, v: f32) -> [u8; 3] {
     ]
 }
 
+/// HSV to RGB in whole numbers. `h6` is sixths of a turn x4096, `s` is x4096, `v` is 0-255.
+pub fn hsv_int(h6: i32, s: i32, v: i32) -> [u8; 3] {
+    let channel = |offset: i32| -> u8 {
+        let mut pos = offset * 4096 + h6;
+        if pos >= 6 * 4096 {
+            pos -= 6 * 4096;
+        }
+        let cut = pos.min(4 * 4096 - pos).clamp(0, 4096);
+        ((v * (4096 - ((s * cut) >> 12))) >> 12) as u8
+    };
+    [channel(5), channel(3), channel(1)]
+}
+
 pub fn lerp(a: f32, b: f32, t: f32) -> f32 {
     a + (b - a) * t
 }
@@ -137,6 +150,13 @@ pub fn slot_life(slot: u32, salt: u32, t_ms: u32, min_ms: u32, max_ms: u32) -> (
 pub fn fold_ms(t_ms: u32, rate: f32) -> f32 {
     let period = (TAU / rate) as u32;
     (t_ms % period.max(1)) as f32
+}
+
+/// Milliseconds since `last_ms`, at most `max_ms`; also sets `last_ms` to `t_ms`.
+pub fn time_step_ms(last_ms: &mut u32, t_ms: u32, max_ms: u32) -> u32 {
+    let step = t_ms.wrapping_sub(*last_ms).min(max_ms);
+    *last_ms = t_ms;
+    step
 }
 
 /// Hash of two u32s.

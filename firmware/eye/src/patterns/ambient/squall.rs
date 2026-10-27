@@ -4,8 +4,8 @@ use crate::led::grid::{self, CELL_MM};
 use crate::led::map::{LED_COUNT, LED_MAP, WORLD_BOT, WORLD_CX, WORLD_H, WORLD_TOP};
 use crate::led::world::{half_width_at, WORLD_LEFT, WORLD_RIGHT};
 use crate::patterns::{
-    cycle, hash01, knuth_hash, lerp, mix_rgb, phase_phasors, ramp, random_u32, Frame, Pattern,
-    Phasor, Rng, PHASE_STEPS,
+    cycle, hash01, knuth_hash, lerp, mix_rgb, phase_phasors, ramp, random_u32, time_step_ms, Frame,
+    Pattern, Phasor, Rng, PHASE_STEPS,
 };
 use core::f32::consts::{PI, TAU};
 
@@ -283,8 +283,7 @@ impl Pattern for Squall {
     }
 
     fn render(&mut self, t_ms: u32, _audio: &Audio, out: &mut Frame) {
-        let dt_s = (t_ms.wrapping_sub(self.last_ms) as f32 / 1000.0).min(0.1);
-        self.last_ms = t_ms;
+        let dt_s = time_step_ms(&mut self.last_ms, t_ms, 100) as f32 / 1000.0;
         self.update_clouds(t_ms, dt_s);
         self.update_strikes(t_ms);
 

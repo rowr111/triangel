@@ -2,7 +2,7 @@ use crate::audio::Audio;
 use crate::led::grid::{self, CELL_MM};
 use crate::led::map::{LED_COUNT, LED_MAP, WORLD_BOT, WORLD_CENTROID_Y, WORLD_CX, WORLD_TOP};
 use crate::led::world::{WORLD_LEFT, WORLD_RIGHT};
-use crate::patterns::{hsv, lerp, random_u32, wrap360, Frame, Pattern, Rng};
+use crate::patterns::{hsv, lerp, random_u32, time_step_ms, wrap360, Frame, Pattern, Rng};
 
 // Ricochet: a few comets bounce around inside the triangle on black, trailing tails. Each
 // bounce throws sparks and costs energy; a spent comet relaunches after a pause.
@@ -39,7 +39,7 @@ const SPARK_R_MM: f32 = 15.0; // must exceed the LED spacing (about 10 mm)
 const SPARK_BRIGHT: f32 = 2.5; // above 1 holds sparks at full brightness before fading
 const SPARK_GRAVITY: f32 = 0.000_15; // downward pull (mm/ms^2)
 
-const MAX_DT_MS: f32 = 60.0; // longest time step
+const MAX_DT_MS: u32 = 60; // longest time step
 
 // The three walls' inward unit normals. The left and right walls are measured from their
 // top corners.
@@ -360,8 +360,7 @@ impl Pattern for Ricochet {
     }
 
     fn render(&mut self, t_ms: u32, _audio: &Audio, out: &mut Frame) {
-        let dt = (t_ms.wrapping_sub(self.prev_ms) as f32).min(MAX_DT_MS);
-        self.prev_ms = t_ms;
+        let dt = time_step_ms(&mut self.prev_ms, t_ms, MAX_DT_MS) as f32;
 
         for i in 0..MAX_COMETS {
             if self.comets[i].alive {

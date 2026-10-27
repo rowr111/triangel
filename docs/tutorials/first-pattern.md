@@ -43,7 +43,7 @@ In `firmware/eye/src/setlist.rs`, add `my_pattern::MyPattern` to the list of amb
 ```rust
 use crate::patterns::ambient::{
     drizzle::Drizzle, effervesce::Effervesce, flame::Flame, fubuki::Fubuki, my_pattern::MyPattern,
-    rainbow::Rainbow, ricochet::Ricochet, shimmer::CenterShimmer, squall::Squall, uzumaki::Uzumaki,
+    rainbow::Rainbow, ricochet::Ricochet, shimmer::Shimmer, squall::Squall, uzumaki::Uzumaki,
 };
 ```
 
