@@ -45,15 +45,15 @@ pub const FRAME_LEN: usize = 1 + (BAND_COUNT + SCALARS) * 2 + 1; // 58 bytes
 /// these fields in order as u16s, then an XOR checksum.
 pub struct BandFrame {
     /// Normalized against recent music: spectral shape, never dark in a quiet room.
-    pub bands:      [u16; BAND_COUNT],
+    pub bands: [u16; BAND_COUNT],
     /// Overall loudness in absolute dBFS. dB SPL is roughly dBFS + 120 with this microphone.
-    pub level:      u16,
+    pub level: u16,
     /// Loudness against the loudest and quietest the room has been recently, 0..1.
     pub level_norm: u16,
     /// How much the whole spectrum rose this frame, before smoothing or normalizing.
-    pub flux:       u16,
+    pub flux: u16,
     /// The lowest bands' level in dBFS, before normalizing, so the eye can see the bass leave.
-    pub bass:       u16,
+    pub bass: u16,
 }
 
 impl BandFrame {
@@ -76,7 +76,13 @@ impl BandFrame {
         let word = |i: usize| u16::from_le_bytes([buf[1 + i * 2], buf[2 + i * 2]]);
         let [level, level_norm, flux, bass]: [u16; SCALARS] =
             std::array::from_fn(|i| word(BAND_COUNT + i));
-        Some(BandFrame { bands: std::array::from_fn(word), level, level_norm, flux, bass })
+        Some(BandFrame {
+            bands: std::array::from_fn(word),
+            level,
+            level_norm,
+            flux,
+            bass,
+        })
     }
 }
 
@@ -97,7 +103,10 @@ pub struct FrameAssembler {
 
 impl Default for FrameAssembler {
     fn default() -> Self {
-        Self { buf: [0; FRAME_LEN], pos: 0 }
+        Self {
+            buf: [0; FRAME_LEN],
+            pos: 0,
+        }
     }
 }
 

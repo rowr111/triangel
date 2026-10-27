@@ -1,5 +1,5 @@
 use crate::led::map::{LED_COUNT, LED_MAP};
-use crate::patterns::{Frame, Rng, hsv};
+use crate::patterns::{hsv, Frame, Rng};
 
 /// Enough that a drop is rarely replaced while its ripple is still crossing the fixture.
 const MAX_DROPS: usize = 18;
@@ -14,36 +14,36 @@ const DROP_SAT: f32 = 0.62;
 #[derive(Clone, Copy)]
 pub struct RippleStyle {
     /// Ripple speed in mm per ms, and how far one travels before it is gone.
-    pub ripple_speed:    f32,
-    pub ripple_max_mm:   f32,
+    pub ripple_speed: f32,
+    pub ripple_max_mm: f32,
     /// Brightness of a soft drop, and how much more a hard one gets.
-    pub gain_base:       f32,
-    pub gain_hit:        f32,
+    pub gain_base: f32,
+    pub gain_hit: f32,
     /// Size a drop starts at, in mm.
     pub start_radius_mm: f32,
     /// How far a ripple travels while still white, and how much brighter it is then.
-    pub white_mm:        f32,
-    pub hit_boost:       f32,
+    pub white_mm: f32,
+    pub hit_boost: f32,
 }
 
 /// Where a drop lands, and its hue.
 #[derive(Clone, Copy)]
 pub struct Spot {
-    x:   f32,
-    y:   f32,
+    x: f32,
+    y: f32,
     hue: f32,
 }
 
 struct Droplet {
-    x:        f32,
-    y:        f32,
+    x: f32,
+    y: f32,
     start_ms: u32,
     strength: f32,
-    hue:      f32,
-    spacing:  f32,
+    hue: f32,
+    spacing: f32,
     /// Distance from the leading edge back to the last ring.
-    train:    f32,
-    alive:    bool,
+    train: f32,
+    alive: bool,
 }
 
 impl Droplet {
@@ -61,7 +61,9 @@ impl Droplet {
     fn glow(&self, t_ms: u32, s: &RippleStyle) -> f32 {
         let (r, _, amp) = self.front(t_ms, s);
         let inner = (r - self.train).max(0.0);
-        let at = ((s.ripple_max_mm + r - self.train) * 0.5).max(inner).min(r.min(s.ripple_max_mm));
+        let at = ((s.ripple_max_mm + r - self.train) * 0.5)
+            .max(inner)
+            .min(r.min(s.ripple_max_mm));
         amp * (1.0 - (r - at) / self.train) * (1.0 - at / s.ripple_max_mm)
     }
 }
@@ -69,24 +71,24 @@ impl Droplet {
 /// One live drop's geometry for this frame.
 #[derive(Clone, Copy)]
 struct Ring {
-    x:           f32,
-    y:           f32,
-    r:           f32,
-    u_inner:     f32,
-    u_outer:     f32,
+    x: f32,
+    y: f32,
+    r: f32,
+    u_inner: f32,
+    u_outer: f32,
     /// Includes the drop's gain and the boost while it is young.
-    amp:         f32,
-    hue:         f32,
+    amp: f32,
+    hue: f32,
     /// Saturation: 0 while the ripple is still white, rising to DROP_SAT.
-    sat_w:       f32,
+    sat_w: f32,
     inv_spacing: f32,
-    inv_train:   f32,
+    inv_train: f32,
 }
 
 /// Drops rippling out across black water, shared by Raindrop and Drizzle. The pattern
 /// decides when a drop lands; this draws it.
 pub struct Ripples {
-    rng:   Rng,
+    rng: Rng,
     style: RippleStyle,
     drops: [Droplet; MAX_DROPS],
 }
@@ -97,8 +99,14 @@ impl Ripples {
             rng: Rng::new(seed),
             style,
             drops: core::array::from_fn(|_| Droplet {
-                x: 0.0, y: 0.0, start_ms: 0, strength: 0.0, hue: HUE_MIN,
-                spacing: 0.0, train: 0.0, alive: false,
+                x: 0.0,
+                y: 0.0,
+                start_ms: 0,
+                strength: 0.0,
+                hue: HUE_MIN,
+                spacing: 0.0,
+                train: 0.0,
+                alive: false,
             }),
         }
     }
@@ -121,7 +129,9 @@ impl Ripples {
     pub fn land(&mut self, spot: Spot, t_ms: u32, strength: f32, spacing: f32, count: f32) {
         let slot = self.drops.iter().position(|d| !d.alive).unwrap_or_else(|| {
             let glow = |i: &usize| self.drops[*i].glow(t_ms, &self.style);
-            (0..MAX_DROPS).min_by(|a, b| glow(a).total_cmp(&glow(b))).unwrap_or(0)
+            (0..MAX_DROPS)
+                .min_by(|a, b| glow(a).total_cmp(&glow(b)))
+                .unwrap_or(0)
         });
         self.drops[slot] = Droplet {
             x: spot.x,
@@ -138,8 +148,16 @@ impl Ripples {
     pub fn draw(&mut self, t_ms: u32, out: &mut Frame) {
         let s = self.style;
         let blank = Ring {
-            x: 0.0, y: 0.0, r: 0.0, u_inner: 0.0, u_outer: 0.0, amp: 0.0, hue: 0.0,
-            sat_w: 0.0, inv_spacing: 0.0, inv_train: 0.0,
+            x: 0.0,
+            y: 0.0,
+            r: 0.0,
+            u_inner: 0.0,
+            u_outer: 0.0,
+            amp: 0.0,
+            hue: 0.0,
+            sat_w: 0.0,
+            inv_spacing: 0.0,
+            inv_train: 0.0,
         };
         let mut live = [blank; MAX_DROPS];
         let mut n_live = 0;
@@ -202,7 +220,11 @@ impl Ripples {
 
             if ripple > 1e-3 {
                 let inv = 1.0 / ripple;
-                *o = hsv(hue_acc * inv, (sat_acc * inv).clamp(0.0, 1.0), ripple.min(1.0));
+                *o = hsv(
+                    hue_acc * inv,
+                    (sat_acc * inv).clamp(0.0, 1.0),
+                    ripple.min(1.0),
+                );
             } else {
                 *o = [0, 0, 0];
             }

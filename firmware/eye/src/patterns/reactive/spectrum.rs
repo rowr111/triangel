@@ -3,13 +3,14 @@ use core::f32::consts::TAU;
 use crate::audio::Audio;
 use crate::led::geom::{DIST_C, THETA_C};
 use crate::led::map::LED_COUNT;
-use crate::patterns::{Frame, Pattern, cycle, lerp, sin_sum};
+use crate::patterns::{cycle, lerp, Frame, Pattern, Phasor};
 use triangel_shared::frame::BAND_COUNT;
 use triangel_shared::tuning::spectrum::*;
 
 // Color ramps from the core to the rim. Every stop has its brightest channel at 255, so
 // brightness is set only by `v`.
 const STOPS: usize = 5;
+#[rustfmt::skip]
 const PALETTES: [[[f32; 3]; STOPS]; 6] = [
     // Ember: red through orange and gold to a blue-white core.
     [[255.0, 28.0, 0.0], [255.0, 90.0, 0.0], [255.0, 190.0, 40.0], [255.0, 240.0, 200.0],
@@ -41,9 +42,8 @@ const LOBES: f32 = 3.0;
 pub struct Spectrum {
     /// Fractional band index per LED, 0.0 to BAND_COUNT-1.
     band_pos: [f32; LED_COUNT],
-    /// sin and cos of LOBES * theta.
-    swirl_s: [f32; LED_COUNT],
-    swirl_c: [f32; LED_COUNT],
+    /// The LED's angle in the swirl, LOBES * theta.
+    swirl_angle: [Phasor; LED_COUNT],
 }
 
 impl Spectrum {
@@ -57,8 +57,7 @@ impl Spectrum {
         }
         Spectrum {
             band_pos,
-            swirl_s: core::array::from_fn(|i| (LOBES * THETA_C[i]).sin()),
-            swirl_c: core::array::from_fn(|i| (LOBES * THETA_C[i]).cos()),
+            swirl_angle: core::array::from_fn(|i| Phasor::new(LOBES * THETA_C[i])),
         }
     }
 }
@@ -66,8 +65,7 @@ impl Spectrum {
 impl Pattern for Spectrum {
     fn render(&mut self, t_ms: u32, audio: &Audio, out: &mut Frame) {
         let loud = QUIET_FLOOR + (1.0 - QUIET_FLOOR) * audio.level_norm;
-        let w = cycle(t_ms, SWIRL_PERIOD_MS) * TAU;
-        let (ws, wc) = w.sin_cos();
+        let swirl_turn = Phasor::new(cycle(t_ms, SWIRL_PERIOD_MS) * TAU);
         let slot = (t_ms / PALETTE_MS) as usize % PALETTES.len();
         let within = t_ms % PALETTE_MS;
         let held = PALETTE_MS - PALETTE_FADE_MS;
@@ -90,7 +88,7 @@ impl Pattern for Spectrum {
             let energy = lerp(audio.bands[k], audio.bands[k + 1], f);
             let hit = lerp(audio.rise[k], audio.rise[k + 1], f);
 
-            let swirl = sin_sum(self.swirl_s[i], self.swirl_c[i], ws, wc);
+            let swirl = self.swirl_angle[i].sin_plus(swirl_turn);
             let lit = energy * loud * GAIN * (1.0 + SWIRL_DEPTH * swirl);
             let v = (lit + hit * HIT_GAIN).clamp(0.0, 1.0);
 

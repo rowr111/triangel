@@ -5,13 +5,13 @@ use triangel_shared::tuning::raindrop::*;
 use triangel_shared::tuning::BASS_BANDS;
 
 const STYLE: RippleStyle = RippleStyle {
-    ripple_speed:    RIPPLE_SPEED,
-    ripple_max_mm:   RIPPLE_MAX_MM,
-    gain_base:       GAIN_BASE,
-    gain_hit:        GAIN_HIT,
+    ripple_speed: RIPPLE_SPEED,
+    ripple_max_mm: RIPPLE_MAX_MM,
+    gain_base: GAIN_BASE,
+    gain_hit: GAIN_HIT,
     start_radius_mm: START_RADIUS_MM,
-    white_mm:        WHITE_MM,
-    hit_boost:       HIT_BOOST,
+    white_mm: WHITE_MM,
+    hit_boost: HIT_BOOST,
 };
 
 /// Ring spacing range once a tempo has been found.
@@ -33,23 +33,23 @@ const BEAT_MISSES: u8 = 4;
 /// Rain on black water. Each beat starts drops that send out rings, white while the drop
 /// is young and taking on its color as it spreads.
 pub struct Raindrop {
-    ripples:      Ripples,
-    armed:        bool,
+    ripples: Ripples,
+    armed: bool,
     /// Beat period, or 0 when no tempo has been found.
-    beat_ms:         f32,
+    beat_ms: f32,
     last_trigger_ms: u32,
     /// Gaps in a row that did not fit the tempo.
-    misses:          u8,
+    misses: u8,
 }
 
 impl Raindrop {
     pub fn new() -> Self {
         Raindrop {
-            ripples:      Ripples::new(0x9E37_79B9, STYLE),
-            armed:        true,
-            beat_ms:         0.0,
+            ripples: Ripples::new(0x9E37_79B9, STYLE),
+            armed: true,
+            beat_ms: 0.0,
             last_trigger_ms: 0,
-            misses:          0,
+            misses: 0,
         }
     }
 
@@ -94,8 +94,7 @@ impl Raindrop {
         let rng = self.ripples.rng();
         let spacing = if self.beat_ms > 0.0 {
             let div = rng.pick(&DIVISIONS);
-            (RIPPLE_SPEED * self.beat_ms * div)
-                .clamp(SPACING_LOCKED_MIN_MM, SPACING_LOCKED_MAX_MM)
+            (RIPPLE_SPEED * self.beat_ms * div).clamp(SPACING_LOCKED_MIN_MM, SPACING_LOCKED_MAX_MM)
         } else {
             rng.range_f32(SPACING_MIN_MM, SPACING_MAX_MM)
         };
@@ -106,7 +105,10 @@ impl Raindrop {
 
 impl Pattern for Raindrop {
     fn render(&mut self, t_ms: u32, audio: &Audio, out: &mut Frame) {
-        let hit = audio.rise[..BASS_BANDS].iter().copied().fold(0.0f32, f32::max);
+        let hit = audio.rise[..BASS_BANDS]
+            .iter()
+            .copied()
+            .fold(0.0f32, f32::max);
         let clear = t_ms.wrapping_sub(self.last_trigger_ms) >= REFRACTORY_MS;
         if self.armed && hit >= TRIGGER && clear {
             self.armed = false;

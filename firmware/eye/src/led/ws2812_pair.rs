@@ -1,4 +1,4 @@
-use arbitrary_int::{Number, u5};
+use arbitrary_int::{u5, Number};
 use bao1x_api::bio::*;
 use bao1x_api::bio_code;
 use bao1x_api::bio_resources::*;
@@ -15,12 +15,14 @@ use crate::led::map::{CHAIN1_LED_COUNT, CHAIN2_LED_COUNT};
 /// Bits 0-23 are free for software use; 24-31 are hard-wired FIFO level flags.
 const CHAIN1_DONE: u32 = 1 << 0;
 const CHAIN2_DONE: u32 = 1 << 1;
-const BOTH_DONE:   u32 = CHAIN1_DONE | CHAIN2_DONE;
+const BOTH_DONE: u32 = CHAIN1_DONE | CHAIN2_DONE;
 
 /// Byte offset in a core's memory where its pixel buffer starts; the kernel code
 /// (~140 bytes) sits below it. A macro so the kernel can use the same number.
 macro_rules! buffer_start {
-    () => { 0x400 };
+    () => {
+        0x400
+    };
 }
 const BUFFER_START: usize = buffer_start!();
 /// A BIO core's total memory, kernel code and pixel buffer together.
@@ -28,8 +30,11 @@ const CORE_MEM_BYTES: usize = 4096;
 /// Longest chain a core's buffer can hold, at 4 bytes per LED.
 const MAX_LEDS: usize = (CORE_MEM_BYTES - BUFFER_START) / 4;
 
-const LONGEST_CHAIN: usize =
-    if CHAIN1_LED_COUNT > CHAIN2_LED_COUNT { CHAIN1_LED_COUNT } else { CHAIN2_LED_COUNT };
+const LONGEST_CHAIN: usize = if CHAIN1_LED_COUNT > CHAIN2_LED_COUNT {
+    CHAIN1_LED_COUNT
+} else {
+    CHAIN2_LED_COUNT
+};
 const _: () = assert!(
     LONGEST_CHAIN <= MAX_LEDS,
     "a chain exceeds the BIO core's pixel buffer; lower buffer_start! to fit"
@@ -68,9 +73,15 @@ impl Drop for Ws2812Pair {
             self.bio_ss.de_init_core(core).unwrap();
         }
         let claimer = Ws2812Pair::resource_spec().claimer;
-        self.bio_ss.release_dynamic_pin(self.pin1.as_u8(), &claimer).unwrap();
-        self.bio_ss.release_dynamic_pin(self.pin2.as_u8(), &claimer).unwrap();
-        self.bio_ss.release_resources(self.resource_grant.grant_id).unwrap();
+        self.bio_ss
+            .release_dynamic_pin(self.pin1.as_u8(), &claimer)
+            .unwrap();
+        self.bio_ss
+            .release_dynamic_pin(self.pin2.as_u8(), &claimer)
+            .unwrap();
+        self.bio_ss
+            .release_resources(self.resource_grant.grant_id)
+            .unwrap();
     }
 }
 
@@ -79,7 +90,9 @@ impl Ws2812Pair {
     pub fn new(pin1: u5, pin2: u5) -> Result<Self, BioError> {
         let mut bio_ss = Bio::new();
         let resource_grant = bio_ss.claim_resources(&Self::resource_spec())?;
-        let config = CoreConfig { clock_mode: ClockMode::TargetFreqInt(QUANTUM_HZ) };
+        let config = CoreConfig {
+            clock_mode: ClockMode::TargetFreqInt(QUANTUM_HZ),
+        };
         bio_ss.init_core(resource_grant.cores[0], ws2812b_fifo1_kernel(), config)?;
         bio_ss.init_core(resource_grant.cores[1], ws2812b_fifo2_kernel(), config)?;
         bio_ss.set_core_run_state(&resource_grant, true);
@@ -97,8 +110,10 @@ impl Ws2812Pair {
         bio_ss.setup_io_config(io_config).unwrap();
 
         // safety: the handles are stored in the struct so they outlive the CoreCsr views
-        let fifo1_handle = unsafe { bio_ss.get_core_handle(Fifo::Fifo1) }?.expect("Didn't get FIFO1 handle");
-        let fifo2_handle = unsafe { bio_ss.get_core_handle(Fifo::Fifo2) }?.expect("Didn't get FIFO2 handle");
+        let fifo1_handle =
+            unsafe { bio_ss.get_core_handle(Fifo::Fifo1) }?.expect("Didn't get FIFO1 handle");
+        let fifo2_handle =
+            unsafe { bio_ss.get_core_handle(Fifo::Fifo2) }?.expect("Didn't get FIFO2 handle");
         let mut fifo1 = CoreCsr::from_handle(&fifo1_handle);
         let mut fifo2 = CoreCsr::from_handle(&fifo2_handle);
 
@@ -156,7 +171,9 @@ fn load_strip(fifo: &mut CoreCsr, txf: utralib::Register, leds: &[u32]) {
 }
 
 /// Packs RGB into the GRB word order the WS2812 expects.
-pub fn rgb_to_u32(r: u8, g: u8, b: u8) -> u32 { ((g as u32) << 16) | ((r as u32) << 8) | (b as u32) }
+pub fn rgb_to_u32(r: u8, g: u8, b: u8) -> u32 {
+    ((g as u32) << 16) | ((r as u32) << 8) | (b as u32)
+}
 
 // WS2812B kernel. `$fifo` is the register of the FIFO the core reads pixel data
 // from: x17 for FIFO1, x18 for FIFO2.
@@ -175,7 +192,7 @@ pub fn rgb_to_u32(r: u8, g: u8, b: u8) -> u32 { ((g as u32) << 16) | ((r as u32)
 // Expects the quantum clock to be set to a 150ns period (6.66666..7 MHz).
 macro_rules! ws2812b_kernel {
     ($fn_name:ident, $start:ident, $end:ident, $fifo:literal) => {
-        #[rustfmt::skip]
+#[rustfmt::skip]
         bio_code!($fn_name, $start, $end,
             concat!("mv x4, ", $fifo), // first startup word: the GPIO pin mask to transmit on
             concat!("mv x15, ", $fifo), // second startup word: the event bit to raise when a strip is sent
@@ -274,5 +291,15 @@ macro_rules! ws2812b_kernel {
     };
 }
 
-ws2812b_kernel!(ws2812b_fifo1_kernel, WS2812B_FIFO1_START, WS2812B_FIFO1_END, "x17");
-ws2812b_kernel!(ws2812b_fifo2_kernel, WS2812B_FIFO2_START, WS2812B_FIFO2_END, "x18");
+ws2812b_kernel!(
+    ws2812b_fifo1_kernel,
+    WS2812B_FIFO1_START,
+    WS2812B_FIFO1_END,
+    "x17"
+);
+ws2812b_kernel!(
+    ws2812b_fifo2_kernel,
+    WS2812B_FIFO2_START,
+    WS2812B_FIFO2_END,
+    "x18"
+);

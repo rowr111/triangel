@@ -1,7 +1,7 @@
-use crate::patterns::{Frame, Pattern, cycle, hsv, mix_rgb, smoothstep};
-use crate::led::geom::{DIST_C, DIST_C_MAX, THETA_C};
 use crate::audio::Audio;
+use crate::led::geom::{DIST_C, DIST_C_MAX, THETA_C};
 use crate::led::map::LED_COUNT;
+use crate::patterns::{cycle, hsv, mix_rgb, smoothstep, Frame, Pattern};
 use core::f32::consts::TAU;
 
 // Uzumaki (spiral): bright lines spiraling out of a glowing core, each trailing a glow of
@@ -9,16 +9,16 @@ use core::f32::consts::TAU;
 // sweep outward.
 
 // Shape and motion
-const ARMS:   usize = 3;     // spiral arms, and how many hue families show at once
-const ROT_MS: u32   = 6_000; // one full revolution
-const R0_MM:  f32   = 40.0;  // radius of the core, where the log scale flattens
+const ARMS: usize = 3; // spiral arms, and how many hue families show at once
+const ROT_MS: u32 = 6_000; // one full revolution
+const R0_MM: f32 = 40.0; // radius of the core, where the log scale flattens
 
-const WIND_MID:   f32 = 5.0;    // average number of bands between core and rim
-const WIND_SWING: f32 = 1.5;    // how far the winding swings either side of WIND_MID
-const BREATH_MS:  u32 = 32_000; // one tighten-and-loosen cycle
+const WIND_MID: f32 = 5.0; // average number of bands between core and rim
+const WIND_SWING: f32 = 1.5; // how far the winding swings either side of WIND_MID
+const BREATH_MS: u32 = 32_000; // one tighten-and-loosen cycle
 
-const WOBBLE: f32 = 0.15;    // once-around wobble, in band widths (0 = a perfect disc)
-const WOB_MS: u32 = 17_000;  // time for the wobble to travel once around
+const WOBBLE: f32 = 0.15; // once-around wobble, in band widths (0 = a perfect disc)
+const WOB_MS: u32 = 17_000; // time for the wobble to travel once around
 
 // Otherwise the outer bands move inward for part of the cycle.
 const _: () = assert!(
@@ -27,16 +27,16 @@ const _: () = assert!(
 );
 
 // Band profile, in fractions of one band width
-const STRIPE_HALF:   f32 = 0.10; // half-width of the bright line on each band edge
-const STRIPE_SOFT:   f32 = 0.05; // softness of that line's edge
+const STRIPE_HALF: f32 = 0.10; // half-width of the bright line on each band edge
+const STRIPE_SOFT: f32 = 0.05; // softness of that line's edge
 const STRIPE_WHITEN: f32 = 0.55; // how far the line goes toward white
-// How far the glow reaches from its line. At 0.40 the glows meet at black in the middle of each band.
-const GLOW_W:    f32 = 0.40;
-const GAP_LEVEL: f32 = 0.0;  // brightness left in the gap
+                                 // How far the glow reaches from its line. At 0.40 the glows meet at black in the middle of each band.
+const GLOW_W: f32 = 0.40;
+const GAP_LEVEL: f32 = 0.0; // brightness left in the gap
 
 // Core
-const EYE_FRAC:    f32 = 0.35; // depth the core fades out over
-const CORE_WHITEN: f32 = 0.5;  // how far the core goes toward white
+const EYE_FRAC: f32 = 0.35; // depth the core fades out over
+const CORE_WHITEN: f32 = 0.5; // how far the core goes toward white
 
 // Color: each family is a (hue, sat, val) pair, the deep stop next to the line and the
 // bright stop where the glow dims. The arms show three neighboring families at a time,
@@ -48,17 +48,17 @@ const PALETTE: [[(f32, f32, f32); 2]; FAMILIES] = [
     [(272.0, 0.85, 0.95), (272.0, 0.45, 1.00)], // violet
     [(212.0, 0.95, 1.00), (208.0, 0.50, 1.00)], // electric blue
     [(178.0, 0.90, 1.00), (176.0, 0.45, 1.00)], // cyan
-    [(100.0, 0.85, 0.95), ( 95.0, 0.45, 1.00)], // lime
-    [( 28.0, 0.95, 1.00), ( 35.0, 0.50, 1.00)], // orange
+    [(100.0, 0.85, 0.95), (95.0, 0.45, 1.00)],  // lime
+    [(28.0, 0.95, 1.00), (35.0, 0.50, 1.00)],   // orange
 ];
 
 const STEP_MS: u32 = 9_000; // how long the arms hold one set of families
-const FADE:    f32 = 0.35;  // fraction of that step spent crossfading to the next set
+const FADE: f32 = 0.35; // fraction of that step spent crossfading to the next set
 
 const WHITE: [f32; 3] = [255.0, 255.0, 255.0];
 
 const INV_STRIPE_SOFT: f32 = 1.0 / STRIPE_SOFT;
-const INV_GLOW_W:      f32 = 1.0 / GLOW_W;
+const INV_GLOW_W: f32 = 1.0 / GLOW_W;
 
 pub struct Uzumaki {
     // Fixed part of the band phase, in band widths.
@@ -69,9 +69,9 @@ pub struct Uzumaki {
     wob_s: [f32; LED_COUNT],
     wob_c: [f32; LED_COUNT],
     // How much of the core covers this LED: 1 at the center, 0 outside it.
-    eye:   [f32; LED_COUNT],
+    eye: [f32; LED_COUNT],
     // The palette as RGB.
-    deep:   [[f32; 3]; FAMILIES],
+    deep: [[f32; 3]; FAMILIES],
     bright: [[f32; 3]; FAMILIES],
 }
 
@@ -87,8 +87,8 @@ impl Uzumaki {
             turn0: core::array::from_fn(|i| ARMS as f32 * THETA_C[i] / TAU + 2.0 * ARMS as f32),
             wob_s: core::array::from_fn(|i| THETA_C[i].sin()),
             wob_c: core::array::from_fn(|i| THETA_C[i].cos()),
-            eye:   core::array::from_fn(|i| 1.0 - smoothstep(depth[i] / EYE_FRAC)),
-            deep:   core::array::from_fn(|k| stop(PALETTE[k][0])),
+            eye: core::array::from_fn(|i| 1.0 - smoothstep(depth[i] / EYE_FRAC)),
+            deep: core::array::from_fn(|k| stop(PALETTE[k][0])),
             bright: core::array::from_fn(|k| stop(PALETTE[k][1])),
             depth,
         }
@@ -102,7 +102,10 @@ impl Uzumaki {
         core::array::from_fn(|j| {
             let a = (idx + j) % FAMILIES;
             let b = (a + 1) % FAMILIES;
-            (mix_rgb(self.deep[a], self.deep[b], mix), mix_rgb(self.bright[a], self.bright[b], mix))
+            (
+                mix_rgb(self.deep[a], self.deep[b], mix),
+                mix_rgb(self.bright[a], self.bright[b], mix),
+            )
         })
     }
 }
@@ -119,14 +122,14 @@ impl Pattern for Uzumaki {
         let avg: [f32; 3] =
             core::array::from_fn(|j| stops.iter().map(|s| s.1[j]).sum::<f32>() / ARMS as f32);
         let stripe_rgb = mix_rgb(avg, WHITE, STRIPE_WHITEN);
-        let core_rgb   = mix_rgb(avg, WHITE, CORE_WHITEN);
+        let core_rgb = mix_rgb(avg, WHITE, CORE_WHITEN);
 
         for (i, slot) in out.iter_mut().enumerate() {
             let ph = self.turn0[i] + wind * self.depth[i] - rot
                 + WOBBLE * (self.wob_s[i] * wob_c - self.wob_c[i] * wob_s);
             let n = ph as u32;
             let f = ph - n as f32;
-            let s = f.min(1.0 - f);    // distance to the nearer band edge, 0 to 0.5
+            let s = f.min(1.0 - f); // distance to the nearer band edge, 0 to 0.5
 
             let (deep, bright) = &stops[n as usize % ARMS];
             let glow = 1.0 - smoothstep((s - STRIPE_HALF) * INV_GLOW_W);

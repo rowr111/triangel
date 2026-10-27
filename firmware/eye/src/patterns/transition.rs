@@ -2,14 +2,14 @@ use std::sync::OnceLock;
 
 use core::f32::consts::TAU;
 
-use super::{Frame, knuth_hash, smoothstep};
+use super::{knuth_hash, smoothstep, Frame};
 use crate::led::geom::{BOARD_CENTER, BOARD_COUNT, DIST_C, DIST_C_MAX};
 use crate::led::map::{LED_MAP, WORLD_CENTROID_X, WORLD_CENTROID_Y};
 
 const CENTER_X: f32 = WORLD_CENTROID_X;
 const CENTER_Y: f32 = WORLD_CENTROID_Y;
 
-const FEATHER_MM: f32 = 60.0;   // width of the soft edge on radial wipes
+const FEATHER_MM: f32 = 60.0; // width of the soft edge on radial wipes
 const SPARKLE_EDGE: f32 = 0.15; // time each LED takes to change, as a fraction of progress
 
 const SPIRAL_TURNS: f32 = 1.5; // turns the spiral makes from center to edge
@@ -30,7 +30,14 @@ pub enum TransitionStyle {
 pub fn blend(style: TransitionStyle, progress: f32, from: &Frame, out: &mut Frame) {
     let ranks = board_spiral_ranks();
     for (i, led) in LED_MAP.iter().enumerate() {
-        let alpha = alpha_for(style, i, DIST_C[i], progress, DIST_C_MAX, ranks[led.board_id as usize]);
+        let alpha = alpha_for(
+            style,
+            i,
+            DIST_C[i],
+            progress,
+            DIST_C_MAX,
+            ranks[led.board_id as usize],
+        );
         out[i] = lerp_rgb(from[i], out[i], alpha);
     }
 }
@@ -117,7 +124,11 @@ fn hash01(i: usize) -> f32 {
 }
 
 fn lerp_rgb(a: [u8; 3], b: [u8; 3], t: f32) -> [u8; 3] {
-    [lerp_u8(a[0], b[0], t), lerp_u8(a[1], b[1], t), lerp_u8(a[2], b[2], t)]
+    [
+        lerp_u8(a[0], b[0], t),
+        lerp_u8(a[1], b[1], t),
+        lerp_u8(a[2], b[2], t),
+    ]
 }
 
 fn lerp_u8(a: u8, b: u8, t: f32) -> u8 {

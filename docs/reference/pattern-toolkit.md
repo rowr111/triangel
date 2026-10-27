@@ -27,7 +27,7 @@ origin: top-left of the Triangel
 x: increases rightward, 0-517 mm
 y: increases downward,  0-436 mm
 
-WORLD_CX  = 258.7 mm  - horizontal centre
+WORLD_CX  = 258.7 mm  - horizontal center
 WORLD_TOP =   6 mm    - topmost LED
 WORLD_BOT = 436 mm    - apex (triangle tile 25, room corner)
 WORLD_H   = 430 mm    - total height
@@ -52,7 +52,7 @@ In `src/patterns/mod.rs`:
 ```rust
 hsv(h, s, v) -> [u8; 3]     // h: 0-360, s/v: 0-1
 lerp(a, b, t) -> f32
-sin_sum(a_sin, a_cos, b_sin, b_cos)  // sin(a + b); see How to make a pattern fast enough
+Phasor::new(angle)          // .sin, .cos, .sin_plus(b), .sin_minus(b); see How to make a pattern fast enough
 mix_rgb(a, b, t)            // lerp per channel, f32 RGB
 ramp(&stops, t)             // color along (position, color) stops
 smoothstep(t) -> f32        // clamped to 0-1

@@ -3,12 +3,15 @@ use core::f32::consts::TAU;
 use crate::audio::Audio;
 use crate::led::grid::{self, CELL_MM};
 use crate::led::map::{LED_COUNT, LED_MAP};
-use crate::patterns::{Frame, Pattern, Rng, free_or_oldest, hsv};
+use crate::patterns::{free_or_oldest, hsv, Frame, Pattern, Rng};
 use triangel_shared::tuning::firework::*;
 
 /// Must stay under 255: each LED stores the index of its strongest spark in a byte.
 const MAX_SPARKS: usize = 192;
-const _: () = assert!(MAX_SPARKS <= NO_OWNER as usize, "a spark index must fit below NO_OWNER");
+const _: () = assert!(
+    MAX_SPARKS <= NO_OWNER as usize,
+    "a spark index must fit below NO_OWNER"
+);
 const _: () = assert!(
     DROP_BURSTS * (BURST_MIN + BURST_EXTRA as usize) <= MAX_SPARKS,
     "a drop's bursts need more sparks than MAX_SPARKS"
@@ -17,8 +20,13 @@ const _: () = assert!(
 const DROP_TRIES: usize = 12;
 
 /// (hue, sat). The cooler hues are less saturated, or they would look dim.
-const PALETTE: [(f32, f32); 5] =
-    [(45.0, 0.95), (12.0, 0.97), (330.0, 0.90), (190.0, 0.82), (130.0, 0.88)];
+const PALETTE: [(f32, f32); 5] = [
+    (45.0, 0.95),
+    (12.0, 0.97),
+    (330.0, 0.90),
+    (190.0, 0.82),
+    (130.0, 0.88),
+];
 
 /// Squared distance from `p` to the nearest of `others`, or f32::MAX if there are none.
 fn nearest_d2(p: (f32, f32), others: &[(f32, f32)]) -> f32 {
@@ -32,51 +40,58 @@ fn nearest_d2(p: (f32, f32), others: &[(f32, f32)]) -> f32 {
 const NO_OWNER: u8 = u8::MAX;
 
 struct Spark {
-    x:        f32,
-    y:        f32,
-    vx:       f32,
-    vy:       f32,
-    hue:      f32,
-    sat:      f32,
+    x: f32,
+    y: f32,
+    vx: f32,
+    vy: f32,
+    hue: f32,
+    sat: f32,
     start_ms: u32,
     strength: f32,
-    alive:    bool,
+    alive: bool,
 }
 
 /// One live spark's position, size and color for this frame.
 #[derive(Clone, Copy)]
 struct Live {
-    px:     f32,
-    py:     f32,
-    r2:     f32,
+    px: f32,
+    py: f32,
+    r2: f32,
     inv_r2: f32,
-    amp:    f32,
-    hue:    f32,
-    sat:    f32,
-    reach:  usize,
+    amp: f32,
+    hue: f32,
+    sat: f32,
+    reach: usize,
 }
 
 /// Fireworks. Each beat throws a burst of sparks from one point; they start white, take
 /// on the burst's color, fall and fade.
 pub struct Firework {
-    rng:    Rng,
+    rng: Rng,
     sparks: [Spark; MAX_SPARKS],
     /// Per LED: total brightness, the strongest spark's brightness, and its index.
-    tot:   [f32; LED_COUNT],
-    best:  [f32; LED_COUNT],
+    tot: [f32; LED_COUNT],
+    best: [f32; LED_COUNT],
     owner: [u8; LED_COUNT],
 }
 
 impl Firework {
     pub fn new() -> Self {
         Firework {
-            rng:    Rng::new(0x1234_5678),
+            rng: Rng::new(0x1234_5678),
             sparks: core::array::from_fn(|_| Spark {
-                x: 0.0, y: 0.0, vx: 0.0, vy: 0.0, hue: 0.0, sat: 0.0,
-                start_ms: 0, strength: 0.0, alive: false,
+                x: 0.0,
+                y: 0.0,
+                vx: 0.0,
+                vy: 0.0,
+                hue: 0.0,
+                sat: 0.0,
+                start_ms: 0,
+                strength: 0.0,
+                alive: false,
             }),
-            tot:   [0.0; LED_COUNT],
-            best:  [0.0; LED_COUNT],
+            tot: [0.0; LED_COUNT],
+            best: [0.0; LED_COUNT],
             owner: [NO_OWNER; LED_COUNT],
         }
     }
@@ -152,7 +167,14 @@ impl Pattern for Firework {
         }
 
         let blank = Live {
-            px: 0.0, py: 0.0, r2: 0.0, inv_r2: 0.0, amp: 0.0, hue: 0.0, sat: 0.0, reach: 0,
+            px: 0.0,
+            py: 0.0,
+            r2: 0.0,
+            inv_r2: 0.0,
+            amp: 0.0,
+            hue: 0.0,
+            sat: 0.0,
+            reach: 0,
         };
         let mut live = [blank; MAX_SPARKS];
         let mut n_live = 0;
@@ -181,7 +203,9 @@ impl Pattern for Firework {
             n_live += 1;
         }
 
-        let Firework { tot, best, owner, .. } = self;
+        let Firework {
+            tot, best, owner, ..
+        } = self;
         tot.fill(0.0);
         best.fill(0.0);
         owner.fill(NO_OWNER);

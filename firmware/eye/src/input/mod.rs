@@ -32,17 +32,22 @@ pub fn channel() -> (EventSender, Receiver<InputEvent>) {
 /// Drain all pending events and apply them to the setlist manager. `activity` is the
 /// audio activity flag; sound_active is derived per event so a mode change earlier in
 /// the batch redirects later steps to the setlist the user is now looking at.
-pub fn apply_events(events: &Receiver<InputEvent>, setlist: &mut SetlistManager, now_ms: u32, activity: bool) {
+pub fn apply_events(
+    events: &Receiver<InputEvent>,
+    setlist: &mut SetlistManager,
+    now_ms: u32,
+    activity: bool,
+) {
     while let Ok(event) = events.try_recv() {
         let sound_active = setlist.sound_active(activity);
         match event {
-            InputEvent::BrightnessUp      => setlist.adjust_brightness(1),
-            InputEvent::BrightnessDown    => setlist.adjust_brightness(-1),
-            InputEvent::PatternNext       => setlist.step(Step::Next, now_ms, sound_active),
-            InputEvent::PatternPrev       => setlist.step(Step::Prev, now_ms, sound_active),
-            InputEvent::ToggleHold        => setlist.toggle_hold(),
-            InputEvent::SetSoundMode(m)   => setlist.sound_mode = m,
-            InputEvent::CycleSoundMode    => setlist.sound_mode = setlist.sound_mode.next(),
+            InputEvent::BrightnessUp => setlist.adjust_brightness(1),
+            InputEvent::BrightnessDown => setlist.adjust_brightness(-1),
+            InputEvent::PatternNext => setlist.step(Step::Next, now_ms, sound_active),
+            InputEvent::PatternPrev => setlist.step(Step::Prev, now_ms, sound_active),
+            InputEvent::ToggleHold => setlist.toggle_hold(),
+            InputEvent::SetSoundMode(m) => setlist.sound_mode = m,
+            InputEvent::CycleSoundMode => setlist.sound_mode = setlist.sound_mode.next(),
         }
     }
 }

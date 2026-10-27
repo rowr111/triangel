@@ -1,81 +1,84 @@
-use crate::patterns::{Frame, Pattern, Rng, cycle, knuth_hash, lerp, mix_rgb, phase_phasors, ramp, random_u32, sin_sum, PHASE_STEPS};
+use crate::audio::Audio;
 use crate::led::geom::{LATTICE_ROW_H, LATTICE_SIDE, LATTICE_TOP_Y};
 use crate::led::grid::{self, CELL_MM};
-use crate::audio::Audio;
-use crate::led::map::{WORLD_BOT, WORLD_CX, WORLD_H, WORLD_TOP, LED_COUNT, LED_MAP};
+use crate::led::map::{LED_COUNT, LED_MAP, WORLD_BOT, WORLD_CX, WORLD_H, WORLD_TOP};
 use crate::led::world::{WORLD_HALF_W, WORLD_LEFT, WORLD_RIGHT};
+use crate::patterns::{
+    cycle, knuth_hash, lerp, mix_rgb, phase_phasors, ramp, random_u32, Frame, Pattern, Phasor, Rng,
+    PHASE_STEPS,
+};
 use core::f32::consts::{PI, TAU};
 
 // Water floor: the resting level, plus a slow boil in place.
 const WATER_FLOOR: f32 = 0.40;
-const BOIL_DEPTH:  f32 = 0.10;
-const BOIL_CELL_MM: f32 = 140.0;    // size of the churn
-const BOIL_PERIOD_MS:  u32 = 4_900; // two unrelated periods, so it boils
+const BOIL_DEPTH: f32 = 0.10;
+const BOIL_CELL_MM: f32 = 140.0; // size of the churn
+const BOIL_PERIOD_MS: u32 = 4_900; // two unrelated periods, so it boils
 const BOIL2_PERIOD_MS: u32 = 3_100; // rather than sweeps
 const BOIL_CROSS_Y: f32 = 0.83; // each axis' modulating sine, relative to the cell size;
 const BOIL_CROSS_X: f32 = 0.71; // off-integer so the two never line up
 
 // Upwellings: blooms that swell out of the dark, spread and dissolve.
 const BLOOM_SLOTS: usize = 8;
-const BLOOM_PERIOD_MS:  u32 = 4_600; // base lifetime
-const BLOOM_STAGGER_MS: u32 = 733;   // added per slot, so they respawn out of step
-const BLOOM_R0_MM: f32 = 45.0;  // radius at birth
+const BLOOM_PERIOD_MS: u32 = 4_600; // base lifetime
+const BLOOM_STAGGER_MS: u32 = 733; // added per slot, so they respawn out of step
+const BLOOM_R0_MM: f32 = 45.0; // radius at birth
 const BLOOM_R1_MM: f32 = 175.0; // radius at full spread
-const BLOOM_PEAK:  f32 = 0.6;   // energy a young bloom adds at its center
-const BLOOM_RIM:   f32 = 0.55;  // 0 fades in place, 1 dies as an expanding ring
+const BLOOM_PEAK: f32 = 0.6; // energy a young bloom adds at its center
+const BLOOM_RIM: f32 = 0.55; // 0 fades in place, 1 dies as an expanding ring
 
 // Whitecaps: twinkling froth where the energy passes the threshold.
 const FOAM_THRESH: f32 = 0.8;
-const FOAM_GAIN:   f32 = 2.5;      // how fast froth saturates past the threshold
-const FOAM_PERIOD_MS: u32 = 530;   // twinkle period
+const FOAM_GAIN: f32 = 2.5; // how fast froth saturates past the threshold
+const FOAM_PERIOD_MS: u32 = 530; // twinkle period
 
 // Clouds: pale masses that drift, turn toward a new heading now and then, and come back
 // in from another edge after leaving.
 const CLOUD_COUNT: usize = 3;
-const CLOUD_LOBES: usize = 3;        // overlapping soft lobes per cloud
-const CLOUD_SPEED_MIN: f32 = 12.0;   // mm/s
+const CLOUD_LOBES: usize = 3; // overlapping soft lobes per cloud
+const CLOUD_SPEED_MIN: f32 = 12.0; // mm/s
 const CLOUD_SPEED_MAX: f32 = 40.0;
-const CLOUD_TURN_RATE: f32 = 0.8;    // 1/s, how fast velocity eases to its target
+const CLOUD_TURN_RATE: f32 = 0.8; // 1/s, how fast velocity eases to its target
 const CLOUD_RETARGET_MIN_MS: u32 = 3_000; // how long a heading holds
 const CLOUD_RETARGET_MAX_MS: u32 = 9_000;
-const CLOUD_LOBE_R_MM:   f32 = 90.0;
+const CLOUD_LOBE_R_MM: f32 = 90.0;
 const CLOUD_LOBE_OFF_MM: f32 = 60.0; // lobe orbit radius around the cloud center
-const CLOUD_BREATHE: f32 = 0.3;      // lobe radius swing
-const CLOUD_BRIGHT:  f32 = 0.7;      // opacity at full density
-const CLOUD_MARGIN_MM: f32 = 170.0;  // how far past an edge before re-entering
+const CLOUD_BREATHE: f32 = 0.3; // lobe radius swing
+const CLOUD_BRIGHT: f32 = 0.7; // opacity at full density
+const CLOUD_MARGIN_MM: f32 = 170.0; // how far past an edge before re-entering
 
 // Lightning: a white bolt builds along the tile edges one side at a time, flickers
 // through a few return strokes, then dies.
-const BOLT_SLOTS: usize = 2;         // bolts that can be alive at once
-const STRIKE_GAP_MIN_MS: u32 = 4_000;  // per slot
+const BOLT_SLOTS: usize = 2; // bolts that can be alive at once
+const STRIKE_GAP_MIN_MS: u32 = 4_000; // per slot
 const STRIKE_GAP_MAX_MS: u32 = 14_000;
-const BOLT_SEGS_MIN: usize = 3;      // bolt length, in tile sides
+const BOLT_SEGS_MIN: usize = 3; // bolt length, in tile sides
 const BOLT_SEGS_MAX: usize = 8;
-const BOLT_STEP_MS: u32 = 150;       // time per tile side while building
-const FLICKER_FADE_MS: f32 = 180.0;  // decay of each return stroke
-const BOLT_PULSES_MIN: usize = 2;    // return strokes per strike
+const BOLT_STEP_MS: u32 = 150; // time per tile side while building
+const FLICKER_FADE_MS: f32 = 180.0; // decay of each return stroke
+const BOLT_PULSES_MIN: usize = 2; // return strokes per strike
 const BOLT_PULSES_MAX: usize = 5;
-const BOLT_TAIL_MS: u32 = 1_400;     // slot held after the last stroke; must cover the fade
-const BOLT_CORE_MM: f32 = 12.0;      // reaches the two LED rows either side of a tile edge
-const BOLT_GAIN: f32 = 1.6;          // LEDs near the line saturate to full white
+const BOLT_TAIL_MS: u32 = 1_400; // slot held after the last stroke; must cover the fade
+const BOLT_CORE_MM: f32 = 12.0; // reaches the two LED rows either side of a tile edge
+const BOLT_GAIN: f32 = 1.6; // LEDs near the line saturate to full white
 
 // The bolts walk the tile-corner lattice. Neighbors as (row, index) steps: left, right, and
 // the four diagonals.
 const LATTICE_NEIGHBORS: [(i32, i32); 6] = [(0, -1), (0, 1), (-1, 0), (-1, 1), (1, -1), (1, 0)];
 
-const FOAM_COLOR:  [f32; 3] = [235.0, 245.0, 250.0];
+const FOAM_COLOR: [f32; 3] = [235.0, 245.0, 250.0];
 const CLOUD_COLOR: [f32; 3] = [168.0, 178.0, 196.0]; // pale blue-gray
 const FLASH_COLOR: [f32; 3] = [255.0, 255.0, 255.0];
 
 struct Cloud {
-    x:   f32,
-    y:   f32,
-    vx:  f32,
-    vy:  f32,
+    x: f32,
+    y: f32,
+    vx: f32,
+    vy: f32,
     tvx: f32, // target velocity
     tvy: f32,
     retarget_start_ms: u32,
-    retarget_len_ms:   u32,
+    retarget_len_ms: u32,
     seed: u32, // makes this cloud's lobes move differently from the others'
 }
 
@@ -87,7 +90,7 @@ struct Bolt {
 
 struct Strike {
     start_ms: u32,
-    bolt:     Bolt,
+    bolt: Bolt,
     // When each return stroke starts, from start_ms; the first is when the bolt finishes
     // building. u32::MAX marks an unused slot.
     pulse_ms: [u32; BOLT_PULSES_MAX],
@@ -95,56 +98,66 @@ struct Strike {
 
 /// One lightning scheduler: a gap countdown and at most one bolt.
 struct StrikeSlot {
-    strike:       Option<Strike>,
+    strike: Option<Strike>,
     gap_start_ms: u32,
-    gap_len_ms:   u32,
+    gap_len_ms: u32,
 }
 
 /// One upwelling this frame.
 #[derive(Clone, Copy)]
 struct Bloom {
-    x:      f32,
-    y:      f32,
+    x: f32,
+    y: f32,
     inv_r2: f32,
-    amp:    f32,
-    ring:   f32, // 0 a filled disc, 1 a ring
-    reach:  usize,
+    amp: f32,
+    ring: f32, // 0 a filled disc, 1 a ring
+    reach: usize,
 }
 
 impl Bloom {
-    const ZERO: Bloom = Bloom { x: 0.0, y: 0.0, inv_r2: 0.0, amp: 0.0, ring: 0.0, reach: 0 };
+    const ZERO: Bloom = Bloom {
+        x: 0.0,
+        y: 0.0,
+        inv_r2: 0.0,
+        amp: 0.0,
+        ring: 0.0,
+        reach: 0,
+    };
 }
 
 /// One soft disc of a cloud this frame.
 #[derive(Clone, Copy)]
 struct Lobe {
-    x:      f32,
-    y:      f32,
+    x: f32,
+    y: f32,
     inv_r2: f32,
-    reach:  usize,
+    reach: usize,
 }
 
 impl Lobe {
-    const ZERO: Lobe = Lobe { x: 0.0, y: 0.0, inv_r2: 0.0, reach: 0 };
+    const ZERO: Lobe = Lobe {
+        x: 0.0,
+        y: 0.0,
+        inv_r2: 0.0,
+        reach: 0,
+    };
 }
 
 /// A night storm seen from above: dark water boiling with upwellings, pale clouds
 /// drifting, and sparse lightning.
 pub struct Squall {
-    clouds:  [Cloud; CLOUD_COUNT],
-    slots:   [StrikeSlot; BOLT_SLOTS],
-    rng:     Rng,
+    clouds: [Cloud; CLOUD_COUNT],
+    slots: [StrikeSlot; BOLT_SLOTS],
+    rng: Rng,
     last_ms: u32,
-    seed:    u32,         // new each time it comes on screen, so the blooms differ
-    // sin and cos of the per-LED part of the boil's two inner sines.
-    by_sin: [f32; LED_COUNT],
-    by_cos: [f32; LED_COUNT],
-    bx_sin: [f32; LED_COUNT],
-    bx_cos: [f32; LED_COUNT],
+    seed: u32, // new each time it comes on screen, so the blooms differ
+    // The per-LED part of the boil's two inner sines.
+    boil_y: [Phasor; LED_COUNT],
+    boil_x: [Phasor; LED_COUNT],
     // Per-LED totals for this frame.
-    energy:  [f32; LED_COUNT],
+    energy: [f32; LED_COUNT],
     density: [f32; LED_COUNT],
-    bolt:    [f32; LED_COUNT],
+    bolt: [f32; LED_COUNT],
 }
 
 impl Squall {
@@ -157,16 +170,21 @@ impl Squall {
             let speed = rng.range_f32(CLOUD_SPEED_MIN, CLOUD_SPEED_MAX);
             let (vx, vy) = (ang.cos() * speed, ang.sin() * speed);
             Cloud {
-                x, y, vx, vy, tvx: vx, tvy: vy,
+                x,
+                y,
+                vx,
+                vy,
+                tvx: vx,
+                tvy: vy,
                 retarget_start_ms: 0,
-                retarget_len_ms:   0,
+                retarget_len_ms: 0,
                 seed: rng.next_u32(),
             }
         });
         let slots = core::array::from_fn(|_| StrikeSlot {
-            strike:       None,
+            strike: None,
             gap_start_ms: 0,
-            gap_len_ms:   rng.range_u32(STRIKE_GAP_MIN_MS, STRIKE_GAP_MAX_MS),
+            gap_len_ms: rng.range_u32(STRIKE_GAP_MIN_MS, STRIKE_GAP_MAX_MS),
         });
         let k = TAU / BOIL_CELL_MM;
         Squall {
@@ -175,13 +193,11 @@ impl Squall {
             rng,
             last_ms: 0,
             seed: 0,
-            by_sin: core::array::from_fn(|i| (LED_MAP[i].wy * k * BOIL_CROSS_Y).sin()),
-            by_cos: core::array::from_fn(|i| (LED_MAP[i].wy * k * BOIL_CROSS_Y).cos()),
-            bx_sin: core::array::from_fn(|i| (LED_MAP[i].wx * k * BOIL_CROSS_X).sin()),
-            bx_cos: core::array::from_fn(|i| (LED_MAP[i].wx * k * BOIL_CROSS_X).cos()),
-            energy:  [0.0; LED_COUNT],
+            boil_y: core::array::from_fn(|i| Phasor::new(LED_MAP[i].wy * k * BOIL_CROSS_Y)),
+            boil_x: core::array::from_fn(|i| Phasor::new(LED_MAP[i].wx * k * BOIL_CROSS_X)),
+            energy: [0.0; LED_COUNT],
             density: [0.0; LED_COUNT],
-            bolt:    [0.0; LED_COUNT],
+            bolt: [0.0; LED_COUNT],
         }
     }
 
@@ -202,8 +218,10 @@ impl Squall {
             c.vy += (c.tvy - c.vy) * ease;
             c.x += c.vx * dt_s;
             c.y += c.vy * dt_s;
-            if c.x < WORLD_LEFT - CLOUD_MARGIN_MM || c.x > WORLD_RIGHT + CLOUD_MARGIN_MM
-                || c.y < WORLD_TOP - CLOUD_MARGIN_MM || c.y > WORLD_BOT + CLOUD_MARGIN_MM
+            if c.x < WORLD_LEFT - CLOUD_MARGIN_MM
+                || c.x > WORLD_RIGHT + CLOUD_MARGIN_MM
+                || c.y < WORLD_TOP - CLOUD_MARGIN_MM
+                || c.y > WORLD_BOT + CLOUD_MARGIN_MM
             {
                 respawn(c, rng, t_ms);
             }
@@ -214,14 +232,19 @@ impl Squall {
     fn update_strikes(&mut self, t_ms: u32) {
         for k in 0..BOLT_SLOTS {
             let expired = self.slots[k].strike.as_ref().is_some_and(|s| {
-                let last = s.pulse_ms.iter().rev().copied().find(|&p| p != u32::MAX).unwrap_or(0);
+                let last = s
+                    .pulse_ms
+                    .iter()
+                    .rev()
+                    .copied()
+                    .find(|&p| p != u32::MAX)
+                    .unwrap_or(0);
                 t_ms.wrapping_sub(s.start_ms) >= last + BOLT_TAIL_MS
             });
             if expired {
                 self.slots[k].strike = None;
                 self.slots[k].gap_start_ms = t_ms;
-                self.slots[k].gap_len_ms =
-                    self.rng.range_u32(STRIKE_GAP_MIN_MS, STRIKE_GAP_MAX_MS);
+                self.slots[k].gap_len_ms = self.rng.range_u32(STRIKE_GAP_MIN_MS, STRIKE_GAP_MAX_MS);
             }
             if self.slots[k].strike.is_none()
                 && t_ms.wrapping_sub(self.slots[k].gap_start_ms) >= self.slots[k].gap_len_ms
@@ -246,7 +269,11 @@ impl Squall {
             *p = at;
             at += 60 + self.rng.next_u32() % 360;
         }
-        Strike { start_ms: t_ms, bolt, pulse_ms }
+        Strike {
+            start_ms: t_ms,
+            bolt,
+            pulse_ms,
+        }
     }
 
     /// Random walk along the lattice from the vertex nearest (cx, cy). Each hop goes
@@ -255,8 +282,8 @@ impl Squall {
         let r0 = (((cy - LATTICE_TOP_Y) / LATTICE_ROW_H).round() as i32).clamp(0, 5);
         let i0 = (((cx - WORLD_CX) / LATTICE_SIDE + (5 - r0) as f32 / 2.0).round() as i32)
             .clamp(0, 5 - r0);
-        let segs = BOLT_SEGS_MIN
-            + self.rng.next_u32() as usize % (BOLT_SEGS_MAX - BOLT_SEGS_MIN + 1);
+        let segs =
+            BOLT_SEGS_MIN + self.rng.next_u32() as usize % (BOLT_SEGS_MAX - BOLT_SEGS_MIN + 1);
 
         let (mut r, mut i) = (r0, i0);
         let mut pts = [(0.0f32, 0.0f32); BOLT_SEGS_MAX + 1];
@@ -311,7 +338,7 @@ impl Pattern for Squall {
     fn render(&mut self, t_ms: u32, _audio: &Audio, out: &mut Frame) {
         let boil1 = cycle(t_ms, BOIL_PERIOD_MS) * TAU;
         let boil2 = cycle(t_ms, BOIL2_PERIOD_MS) * TAU;
-        let foam_phase = cycle(t_ms, FOAM_PERIOD_MS) * TAU;
+        let foam_phase = Phasor::new(cycle(t_ms, FOAM_PERIOD_MS) * TAU);
 
         let dt_s = (t_ms.wrapping_sub(self.last_ms) as f32 / 1000.0).min(0.1);
         self.last_ms = t_ms;
@@ -392,18 +419,15 @@ impl Pattern for Squall {
         let segs = &segs[..n_segs];
 
         let boil_k = TAU / BOIL_CELL_MM;
-        let (b1_sin, b1_cos) = boil1.sin_cos();
-        let (b2_sin, b2_cos) = boil2.sin_cos();
-        let (fp_sin, fp_cos) = foam_phase.sin_cos();
-        let (ph_sin, ph_cos) = phase_phasors();
+        let boil1_phasor = Phasor::new(boil1);
+        let boil2_phasor = Phasor::new(boil2);
+        let phasors = phase_phasors();
 
         // Boiling floor. The inner sines come from the tables; the outer two cannot, since
         // their arguments contain the inner results.
         let Squall {
-            by_sin,
-            by_cos,
-            bx_sin,
-            bx_cos,
+            boil_y,
+            boil_x,
             energy: energy_buf,
             density: density_buf,
             bolt: bolt_buf,
@@ -412,8 +436,8 @@ impl Pattern for Squall {
         for (i, led) in LED_MAP.iter().enumerate() {
             let bx = led.wx * boil_k;
             let by = led.wy * boil_k;
-            let mod_y = sin_sum(by_sin[i], by_cos[i], b2_sin, b2_cos);
-            let mod_x = sin_sum(bx_sin[i], bx_cos[i], b1_sin, b1_cos);
+            let mod_y = boil_y[i].sin_plus(boil2_phasor);
+            let mod_x = boil_x[i].sin_plus(boil1_phasor);
             let boil = ((bx + mod_y + boil1).sin() + (by + mod_x + boil2).sin()) * 0.5;
             energy_buf[i] = WATER_FLOOR + BOIL_DEPTH * boil;
             density_buf[i] = 0.0;
@@ -421,7 +445,15 @@ impl Pattern for Squall {
         }
 
         // Upwellings: a young bloom is a filled disc that turns into a ring as it ages.
-        for &Bloom { x, y, inv_r2, amp, ring, reach } in &blooms {
+        for &Bloom {
+            x,
+            y,
+            inv_r2,
+            amp,
+            ring,
+            reach,
+        } in &blooms
+        {
             grid::for_each_near(x, y, reach, |k| {
                 let led = &LED_MAP[k];
                 let q = ((led.wx - x).powi(2) + (led.wy - y).powi(2)) * inv_r2;
@@ -434,7 +466,13 @@ impl Pattern for Squall {
         }
 
         // Cloud cover, densest where lobes overlap.
-        for &Lobe { x, y, inv_r2, reach } in &lobes {
+        for &Lobe {
+            x,
+            y,
+            inv_r2,
+            reach,
+        } in &lobes
+        {
             grid::for_each_near(x, y, reach, |k| {
                 let led = &LED_MAP[k];
                 let q = ((led.wx - x).powi(2) + (led.wy - y).powi(2)) * inv_r2;
@@ -465,7 +503,7 @@ impl Pattern for Squall {
             let excess = ((energy - FOAM_THRESH) * FOAM_GAIN).clamp(0.0, 1.0);
             if excess > 0.0 {
                 let k = (knuth_hash(i as u32) % PHASE_STEPS as u32) as usize;
-                let tw = sin_sum(ph_sin[k], ph_cos[k], fp_sin, fp_cos) * 0.5 + 0.5;
+                let tw = phasors[k].sin_plus(foam_phase) * 0.5 + 0.5;
                 c = mix_rgb(c, FOAM_COLOR, excess * tw * tw);
             }
 
@@ -486,10 +524,22 @@ impl Pattern for Squall {
 fn respawn(c: &mut Cloud, rng: &mut Rng, t_ms: u32) {
     let along = rng.f32();
     let (x, y) = match rng.next_u32() % 4 {
-        0 => (lerp(WORLD_LEFT, WORLD_RIGHT, along), WORLD_TOP - CLOUD_MARGIN_MM + 1.0),
-        1 => (lerp(WORLD_LEFT, WORLD_RIGHT, along), WORLD_BOT + CLOUD_MARGIN_MM - 1.0),
-        2 => (WORLD_LEFT - CLOUD_MARGIN_MM + 1.0, lerp(WORLD_TOP, WORLD_BOT, along)),
-        _ => (WORLD_RIGHT + CLOUD_MARGIN_MM - 1.0, lerp(WORLD_TOP, WORLD_BOT, along)),
+        0 => (
+            lerp(WORLD_LEFT, WORLD_RIGHT, along),
+            WORLD_TOP - CLOUD_MARGIN_MM + 1.0,
+        ),
+        1 => (
+            lerp(WORLD_LEFT, WORLD_RIGHT, along),
+            WORLD_BOT + CLOUD_MARGIN_MM - 1.0,
+        ),
+        2 => (
+            WORLD_LEFT - CLOUD_MARGIN_MM + 1.0,
+            lerp(WORLD_TOP, WORLD_BOT, along),
+        ),
+        _ => (
+            WORLD_RIGHT + CLOUD_MARGIN_MM - 1.0,
+            lerp(WORLD_TOP, WORLD_BOT, along),
+        ),
     };
     let tx = lerp(WORLD_LEFT, WORLD_RIGHT, 0.25 + 0.5 * rng.f32());
     let ty = lerp(WORLD_TOP, WORLD_BOT, 0.25 + 0.5 * rng.f32());
@@ -525,21 +575,34 @@ fn lattice_pos(r: i32, i: i32) -> (f32, f32) {
 /// One lit bolt side, with the per-segment terms of the distance test worked out once.
 #[derive(Clone, Copy)]
 struct Seg {
-    a:    (f32, f32),
-    b:    (f32, f32),
-    ex:   f32,
-    ey:   f32,
+    a: (f32, f32),
+    b: (f32, f32),
+    ex: f32,
+    ey: f32,
     len2: f32,
-    env:  f32,
+    env: f32,
 }
 
 impl Seg {
-    const ZERO: Seg =
-        Seg { a: (0.0, 0.0), b: (0.0, 0.0), ex: 0.0, ey: 0.0, len2: 1.0, env: 0.0 };
+    const ZERO: Seg = Seg {
+        a: (0.0, 0.0),
+        b: (0.0, 0.0),
+        ex: 0.0,
+        ey: 0.0,
+        len2: 1.0,
+        env: 0.0,
+    };
 
     fn new(a: (f32, f32), b: (f32, f32), env: f32) -> Self {
         let (ex, ey) = (b.0 - a.0, b.1 - a.1);
-        Seg { a, b, ex, ey, len2: (ex * ex + ey * ey).max(1.0), env }
+        Seg {
+            a,
+            b,
+            ex,
+            ey,
+            len2: (ex * ex + ey * ey).max(1.0),
+            env,
+        }
     }
 }
 

@@ -1,73 +1,73 @@
 use crate::patterns::glints::{GlintStyle, Glints};
-use crate::patterns::{Frame, Pattern, Rng, cycle, cycle_q16, tile_hash, TILE_HASH_STEPS};
+use crate::patterns::{cycle, cycle_q16, tile_hash, Frame, Pattern, Rng, TILE_HASH_STEPS};
 
-use crate::led::geom::{DIST_C, THETA_C};
 use crate::audio::Audio;
+use crate::led::geom::{DIST_C, THETA_C};
 use crate::led::map::{LED_COUNT, LED_MAP};
 use core::f32::consts::TAU;
 
 // Radial shimmer: a wave of brightness moves out from the center, with glints on its
 // crests. The hue also goes by distance from the center, across a cool arc, with a slow
 // three-armed spiral on top.
-const WAVE_SPEED:      f32 = 60.0;   // base wave speed, mm/s outward
-const WAVELENGTH:      f32 = 120.0;  // mm per cycle
-const HUE_PERIOD_MS:   u32 = 24_000; // time for the colors to move through one full cycle
-const RADIAL_SPAN_MM:  f32 = 350.0;  // distance over which the hue covers the arc once
-const HASH_JITTER:     f32 = 0.06;   // per-LED hue scatter
-const WAVE_FALLOFF:    f32 = 0.7;    // below 1 widens the bright crests, above 1 narrows them
-const WAVE_BITS:       u32 = 8;      // the wave table has 2^WAVE_BITS entries per cycle
-const WAVE_STEPS:      usize = 1 << WAVE_BITS;
+const WAVE_SPEED: f32 = 60.0; // base wave speed, mm/s outward
+const WAVELENGTH: f32 = 120.0; // mm per cycle
+const HUE_PERIOD_MS: u32 = 24_000; // time for the colors to move through one full cycle
+const RADIAL_SPAN_MM: f32 = 350.0; // distance over which the hue covers the arc once
+const HASH_JITTER: f32 = 0.06; // per-LED hue scatter
+const WAVE_FALLOFF: f32 = 0.7; // below 1 widens the bright crests, above 1 narrows them
+const WAVE_BITS: u32 = 8; // the wave table has 2^WAVE_BITS entries per cycle
+const WAVE_STEPS: usize = 1 << WAVE_BITS;
 
 // Each dark ring gets its own brightness at its darkest, picked when it starts at the center.
-const DARK_MIN:   f32   = 0.0;
-const DARK_MAX:   f32   = 0.5;
-const RING_BITS:  u32   = 6;   // 2^RING_BITS rings remembered, far more than fit on the fixture
+const DARK_MIN: f32 = 0.0;
+const DARK_MAX: f32 = 0.5;
+const RING_BITS: u32 = 6; // 2^RING_BITS rings remembered, far more than fit on the fixture
 const RING_SLOTS: usize = 1 << RING_BITS;
 
 // Wave speed: now and then a new target is picked and the wave eases to it.
-const SPEED_SCALE_MIN:     f32 = 0.5;
-const SPEED_SCALE_MAX:     f32 = 1.6;
+const SPEED_SCALE_MIN: f32 = 0.5;
+const SPEED_SCALE_MAX: f32 = 1.6;
 const SPEED_CHANGE_MIN_MS: u32 = 6_000; // wait before the next target
 const SPEED_CHANGE_MAX_MS: u32 = 14_000;
-const SPEED_EASE_MS:       i32 = 2_000; // roughly how long the change takes
+const SPEED_EASE_MS: i32 = 2_000; // roughly how long the change takes
 
 const GLINTS: GlintStyle = GlintStyle {
     tries_per_sec: 14.0, // about half succeed, since brighter LEDs are likelier to take one
-    min_ms:        250,  // fade time
-    max_ms:        450,
-    white:         0.75, // how far toward white a glint starts
+    min_ms: 250,         // fade time
+    max_ms: 450,
+    white: 0.75, // how far toward white a glint starts
 };
 
 // Hue arc in degrees. The hue goes up the arc and back down, so there is no seam.
-const HUE_START:  f32 = 180.0; // cyan
-const HUE_SPAN:   f32 = 140.0; // through blue and violet toward magenta
+const HUE_START: f32 = 180.0; // cyan
+const HUE_SPAN: f32 = 140.0; // through blue and violet toward magenta
 const SATURATION: f32 = 1.0;
 
 // Hue in sixths of a turn and saturation, both x4096.
 const HUE_START_Q: u32 = (HUE_START / 60.0 * 4096.0) as u32;
-const HUE_SPAN_Q:  u32 = (HUE_SPAN / 60.0 * 4096.0) as u32;
+const HUE_SPAN_Q: u32 = (HUE_SPAN / 60.0 * 4096.0) as u32;
 const SATURATION_Q: i32 = (SATURATION * 4096.0) as i32;
 
 // Spiral: sectors of hue twisted by radius and rotating. The twist swings one way and back.
-const SPIRAL_ARMS:      f32 = 3.0;
-const SPIRAL_TWIST:     f32 = 0.004;  // most hue cycles added per mm of radius
-const TWIST_PERIOD_MS:  u32 = 45_000; // one full swing of the twist
+const SPIRAL_ARMS: f32 = 3.0;
+const SPIRAL_TWIST: f32 = 0.004; // most hue cycles added per mm of radius
+const TWIST_PERIOD_MS: u32 = 45_000; // one full swing of the twist
 
 pub struct CenterShimmer {
     // Positions are in wave or hue cycles x65536, so the low 16 bits are the fraction of a cycle.
     ring_pos: [u32; LED_COUNT], // each LED's distance from the center
     hue_base: [u32; LED_COUNT], // the fixed part of each LED's hue position
-    dist_q4:  [i32; LED_COUNT], // distance in mm x16
+    dist_q4: [i32; LED_COUNT],  // distance in mm x16
     // One wave cycle, crest to trough and back, x4096.
     wave_lut: [u16; WAVE_STEPS],
     // How far the wave has traveled. Its whole part numbers the rings.
     wave_phase: u32,
-    phase_rem:  u32, // remainder carried to the next advance
-    ring_dark:  [u8; RING_SLOTS],
-    speed_q8:        i32, // current speed in mm/s x256
+    phase_rem: u32, // remainder carried to the next advance
+    ring_dark: [u8; RING_SLOTS],
+    speed_q8: i32, // current speed in mm/s x256
     speed_target_q8: i32,
-    speed_pick_ms:   u32, // when the target was picked
-    speed_gap_ms:    u32, // wait until the next pick
+    speed_pick_ms: u32, // when the target was picked
+    speed_gap_ms: u32,  // wait until the next pick
     rng: Rng,
     glints: Glints,
     last_ms: u32,
@@ -136,7 +136,6 @@ impl CenterShimmer {
             self.ring_dark[ring as usize & (RING_SLOTS - 1)] = self.random_dark();
         }
     }
-
 }
 
 /// HSV to RGB in integer math. `h6` is the hue in sixths of a turn x4096, `v` is 0-255.
@@ -161,9 +160,8 @@ impl Pattern for CenterShimmer {
         // Moves every LED's hue position back, which drifts the gradient and turns the spiral.
         let hue_shift = cycle_q16(t_ms, HUE_PERIOD_MS).wrapping_neg();
         // The spiral's current twist, in cycles per mm x2^20.
-        let twist = (SPIRAL_TWIST
-            * (cycle(t_ms, TWIST_PERIOD_MS) * TAU).sin()
-            * 1_048_576.0) as i32;
+        let twist =
+            (SPIRAL_TWIST * (cycle(t_ms, TWIST_PERIOD_MS) * TAU).sin() * 1_048_576.0) as i32;
 
         for (i, o) in out.iter_mut().enumerate() {
             // The ring number changes at the crest, where every ring is at full brightness,
@@ -179,7 +177,11 @@ impl Pattern for CenterShimmer {
 
             // Fold p into a triangle wave, so the hue goes up the arc and back down.
             let frac = p & 0xFFFF;
-            let tri = if frac < 0x8000 { frac << 1 } else { (0xFFFF - frac) << 1 };
+            let tri = if frac < 0x8000 {
+                frac << 1
+            } else {
+                (0xFFFF - frac) << 1
+            };
             let hue = HUE_START_Q + ((HUE_SPAN_Q * tri) >> 16);
             *o = hsv_q(hue as i32, v);
         }

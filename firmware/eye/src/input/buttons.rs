@@ -18,12 +18,12 @@ const DEBOUNCE_TICKS: u8 = 3; // consecutive matching reads required to confirm 
 /// button and selected for a switch throw, whichever polarity the board happens to wire.
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub struct Inputs {
-    pub up:     bool,
-    pub down:   bool,
-    pub left:   bool,
-    pub right:  bool,
+    pub up: bool,
+    pub down: bool,
+    pub left: bool,
+    pub right: bool,
     pub center: bool,
-    pub sw_on:  bool,
+    pub sw_on: bool,
     pub sw_off: bool,
 }
 
@@ -39,12 +39,16 @@ pub fn spawn(events: EventSender) {
 struct Debouncer {
     confirmed: bool, // last stable state (true = pressed)
     candidate: bool, // value accumulating toward a new confirmed state
-    count:     u8,
+    count: u8,
 }
 
 impl Debouncer {
     const fn new() -> Self {
-        Debouncer { confirmed: false, candidate: false, count: 0 }
+        Debouncer {
+            confirmed: false,
+            candidate: false,
+            count: 0,
+        }
     }
 
     fn update(&mut self, pressed: bool) -> bool {
@@ -69,10 +73,10 @@ impl Debouncer {
 /// Decode the two switch throws. Only one can be selected at a time; neither = center.
 fn switch_position(inputs: &Inputs) -> SoundMode {
     match (inputs.sw_on, inputs.sw_off) {
-        (true,  false) => SoundMode::On,
-        (false, true)  => SoundMode::Off,
+        (true, false) => SoundMode::On,
+        (false, true) => SoundMode::Off,
         (false, false) => SoundMode::Auto, // center: neither throw connected
-        (true,  true)  => SoundMode::Auto, // can't occur (common feeds one throw); default to center
+        (true, true) => SoundMode::Auto, // can't occur (common feeds one throw); default to center
     }
 }
 
@@ -97,11 +101,11 @@ fn poll_loop(events: EventSender) {
 
         if let Some(inputs) = inputs {
             let buttons = [
-                (InputEvent::BrightnessUp,   inputs.up),
+                (InputEvent::BrightnessUp, inputs.up),
                 (InputEvent::BrightnessDown, inputs.down),
-                (InputEvent::PatternPrev,    inputs.left),
-                (InputEvent::PatternNext,    inputs.right),
-                (InputEvent::ToggleHold,     inputs.center),
+                (InputEvent::PatternPrev, inputs.left),
+                (InputEvent::PatternNext, inputs.right),
+                (InputEvent::ToggleHold, inputs.center),
             ];
             for (db, (event, pressed)) in debouncers.iter_mut().zip(buttons) {
                 if db.update(pressed) {

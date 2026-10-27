@@ -3,7 +3,7 @@ use core::f32::consts::PI;
 use crate::audio::Audio;
 use crate::led::geom::{BOARD_COUNT, LEDS_PER_BOARD};
 use crate::led::map::{Led, LED_COUNT, LED_MAP};
-use crate::patterns::{Frame, Pattern, Rng, Shot, hsv};
+use crate::patterns::{hsv, Frame, Pattern, Rng, Shot};
 use triangel_shared::tuning::spiderweb::*;
 
 /// The tile outlines form straight lines across the fixture, nine in each of three
@@ -18,26 +18,32 @@ const ROW_MERGE_MM: f32 = 1.0;
 const MAX_BEAT_LINES: usize = 1 + EXTRA_LINES as usize;
 
 /// (hue, sat): half white, plus pale blue, lavender and violet.
-const PALETTE: [(f32, f32); 6] =
-    [(0.0, 0.0), (0.0, 0.0), (0.0, 0.0), (205.0, 0.30), (260.0, 0.32), (278.0, 0.50)];
+const PALETTE: [(f32, f32); 6] = [
+    (0.0, 0.0),
+    (0.0, 0.0),
+    (0.0, 0.0),
+    (205.0, 0.30),
+    (260.0, 0.32),
+    (278.0, 0.50),
+];
 
 struct Line {
     family: usize,
     offset: f32,
     /// The latest two shots; the brighter one shows.
-    shots:  [Shot; 2],
+    shots: [Shot; 2],
 }
 
 /// A faint web that pulses on each beat. A beat lights whole lines, white at first, then
 /// fading through their color; a drop lights every line.
 pub struct Spiderweb {
-    rng:      Rng,
-    lines:    Vec<Line>,
+    rng: Rng,
+    lines: Vec<Line>,
     /// Which line each LED is on.
     led_line: [u8; LED_COUNT],
     /// When the last beat came and how hard.
     pulse_ms: u32,
-    pulse:    f32,
+    pulse: f32,
 }
 
 impl Spiderweb {
@@ -105,7 +111,11 @@ impl Spiderweb {
             }
             rows.sort_unstable_by_key(|row| core::cmp::Reverse(row.0));
             for &(_, offset) in rows.iter().take(LINES_PER_FAMILY) {
-                lines.push(Line { family: f, offset, shots: [Shot::NONE; 2] });
+                lines.push(Line {
+                    family: f,
+                    offset,
+                    shots: [Shot::NONE; 2],
+                });
             }
         }
 
@@ -122,7 +132,13 @@ impl Spiderweb {
             led_line[i] = best.0 as u8;
         }
 
-        Spiderweb { rng: Rng::new(0x5157_3EB0), lines, led_line, pulse_ms: 0, pulse: 0.0 }
+        Spiderweb {
+            rng: Rng::new(0x5157_3EB0),
+            lines,
+            led_line,
+            pulse_ms: 0,
+            pulse: 0.0,
+        }
     }
 
     /// Lights line `li`, replacing whichever of its two shots ends sooner, so a long drop
@@ -131,10 +147,25 @@ impl Spiderweb {
         let (hue, sat) = self.rng.pick(&PALETTE);
         let line = &mut self.lines[li];
         let remaining = |s: &Shot| {
-            if s.strength <= 0.0 { i32::MIN } else { s.end_ms().wrapping_sub(t_ms) as i32 }
+            if s.strength <= 0.0 {
+                i32::MIN
+            } else {
+                s.end_ms().wrapping_sub(t_ms) as i32
+            }
         };
-        let slot = if remaining(&line.shots[0]) <= remaining(&line.shots[1]) { 0 } else { 1 };
-        line.shots[slot] = Shot { start_ms: t_ms, strength, hue, sat, hold_ms: hold, fade_ms: fade };
+        let slot = if remaining(&line.shots[0]) <= remaining(&line.shots[1]) {
+            0
+        } else {
+            1
+        };
+        line.shots[slot] = Shot {
+            start_ms: t_ms,
+            strength,
+            hue,
+            sat,
+            hold_ms: hold,
+            fade_ms: fade,
+        };
     }
 }
 
@@ -165,7 +196,11 @@ impl Pattern for Spiderweb {
         }
         if audio.beat || audio.drop {
             self.pulse_ms = t_ms;
-            self.pulse = if audio.drop { 1.0 } else { 0.5 + 0.5 * audio.beat_strength };
+            self.pulse = if audio.drop {
+                1.0
+            } else {
+                0.5 + 0.5 * audio.beat_strength
+            };
         }
 
         // Background glow, brighter just after a beat.
@@ -182,7 +217,9 @@ impl Pattern for Spiderweb {
                 if shot.strength > 0.0 && t_ms.wrapping_sub(shot.end_ms()) as i32 >= 0 {
                     shot.strength = 0.0;
                 }
-                let Some((v, sat)) = shot.lit(t_ms, WHITE_MS, HIT_BOOST) else { continue };
+                let Some((v, sat)) = shot.lit(t_ms, WHITE_MS, HIT_BOOST) else {
+                    continue;
+                };
                 if v > best.0 {
                     best = (v, shot.hue, sat);
                 }

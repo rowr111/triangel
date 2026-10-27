@@ -30,14 +30,14 @@ fn recv_loop(events: EventSender) {
 
 fn parse_command(cmd: &str) -> Option<InputEvent> {
     match cmd {
-        "U"  => Some(InputEvent::BrightnessUp),
-        "D"  => Some(InputEvent::BrightnessDown),
-        "L"  => Some(InputEvent::PatternPrev),
-        "R"  => Some(InputEvent::PatternNext),
-        "C"  => Some(InputEvent::ToggleHold),
+        "U" => Some(InputEvent::BrightnessUp),
+        "D" => Some(InputEvent::BrightnessDown),
+        "L" => Some(InputEvent::PatternPrev),
+        "R" => Some(InputEvent::PatternNext),
+        "C" => Some(InputEvent::ToggleHold),
         "S0" => Some(InputEvent::SetSoundMode(SoundMode::Off)),
         "S1" => Some(InputEvent::SetSoundMode(SoundMode::Auto)),
         "S2" => Some(InputEvent::SetSoundMode(SoundMode::On)),
-        _    => None,
+        _ => None,
     }
 }

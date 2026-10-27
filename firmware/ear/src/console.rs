@@ -6,12 +6,12 @@ use std::sync::atomic::{AtomicU32, Ordering};
 use crate::audio::FRAME_PERIOD_MS;
 
 use crate::audio::{I2sAudio, BCLK_HZ, RAW_RATE_HZ, SAMPLE_RATE_HZ};
+use crate::diag::{self, Diag};
 use crate::pins::{MIC_BCLK_BIO_PIN, MIC_WS_BIO_PIN};
 use triangel_shared::frame::{level_to_norm, BAND_COUNT, LEVEL_DB_FLOOR};
-use crate::diag::{self, Diag};
 
 /// Raw FIFO words shown by `r`, and how many are printed per line.
-const RAW_DUMP_WORDS:    usize = 32;
+const RAW_DUMP_WORDS: usize = 32;
 const RAW_DUMP_PER_LINE: usize = 8;
 /// Measurement window for `s` and `t`.
 const MEASURE_MS: u64 = 1000;
@@ -20,12 +20,12 @@ const METER_MS: u64 = 15_000;
 /// How many windows `c` records.
 const CAPTURE_WINDOWS: usize = 30;
 /// One window of `m` or `c`.
-const WINDOW_MS:      usize = 100;
+const WINDOW_MS: usize = 100;
 const WINDOW_SAMPLES: usize = RAW_RATE_HZ as usize * WINDOW_MS / 1000;
 /// Octave band centers for `f`. A Q of 1.41 makes each filter about an octave wide.
-const OCTAVE_COUNT: usize               = 6;
-const OCTAVE_HZ:    [f32; OCTAVE_COUNT] = [125.0, 250.0, 500.0, 1000.0, 2000.0, 4000.0];
-const OCTAVE_Q:     f32                 = 1.41;
+const OCTAVE_COUNT: usize = 6;
+const OCTAVE_HZ: [f32; OCTAVE_COUNT] = [125.0, 250.0, 500.0, 1000.0, 2000.0, 4000.0];
+const OCTAVE_Q: f32 = 1.41;
 /// `f` records one second at the pipeline's rate, then filters it.
 const ANALYZE_SAMPLES: usize = SAMPLE_RATE_HZ as usize;
 /// A band this far above its own quiet reading counts as heard.
@@ -33,7 +33,7 @@ const OCTAVE_RISE_DB: f32 = 6.0;
 /// Pause after the prompt, so there is time to start making noise.
 const READY_MS: usize = 1500;
 /// Samples discarded before a measurement, so it starts on fresh, settled audio.
-const SETTLE_SAMPLES:       usize = RAW_RATE_HZ as usize / 5;  // 200 ms
+const SETTLE_SAMPLES: usize = RAW_RATE_HZ as usize / 5; // 200 ms
 const METER_SETTLE_SAMPLES: usize = RAW_RATE_HZ as usize / 20; // 50 ms, between windows
 /// Samples read between clock checks; the clock is a syscall, too slow per sample.
 const SAMPLE_BLOCK: usize = 256;
@@ -49,7 +49,7 @@ const COMMAND_POLL_MS: usize = 20;
 
 /// Messages more than one command prints.
 const NO_SAMPLES: &str = "no samples: the BIO core is not pushing anything";
-const STARVED:    &str = "recording starved - the BIO stopped pushing partway";
+const STARVED: &str = "recording starved - the BIO stopped pushing partway";
 
 /// The key waiting to be run, or 0. The audio thread runs it: the mic is not `Send`.
 static PENDING: AtomicU32 = AtomicU32::new(0);
@@ -58,15 +58,17 @@ static PENDING: AtomicU32 = AtomicU32::new(0);
 static BANDS_US: AtomicU32 = AtomicU32::new(0);
 
 /// Publish the filterbank's cost per frame for `p`.
-pub fn record_bands_time(us: u32) { BANDS_US.store(us, Ordering::Relaxed); }
+pub fn record_bands_time(us: u32) {
+    BANDS_US.store(us, Ordering::Relaxed);
+}
 
 /// The bands' range, the level reference and the level, as f32 bits, for `n`.
 static BAND_RANGE_LO: AtomicU32 = AtomicU32::new(0);
 static BAND_RANGE_HI: AtomicU32 = AtomicU32::new(0);
-static REF_LVL_LO:  AtomicU32 = AtomicU32::new(0);
-static REF_LVL_HI:  AtomicU32 = AtomicU32::new(0);
-static LAST_DBFS:   AtomicU32 = AtomicU32::new(0);
-static LAST_NORM:   AtomicU32 = AtomicU32::new(0);
+static REF_LVL_LO: AtomicU32 = AtomicU32::new(0);
+static REF_LVL_HI: AtomicU32 = AtomicU32::new(0);
+static LAST_DBFS: AtomicU32 = AtomicU32::new(0);
+static LAST_NORM: AtomicU32 = AtomicU32::new(0);
 static BAND_DB: [AtomicU32; BAND_COUNT] = [const { AtomicU32::new(0) }; BAND_COUNT];
 
 /// Publish the band levels for `n`.
@@ -131,15 +133,24 @@ pub fn service(d: &Diag, tt: &ticktimer::Ticktimer, mic: &mut I2sAudio) {
 }
 
 pub fn help(d: &Diag) {
-    d.line(&format!("  c  record {} s silently, then print the level per {} ms - the test that",
-        CAPTURE_WINDOWS * WINDOW_MS / 1000, WINDOW_MS));
+    d.line(&format!(
+        "  c  record {} s silently, then print the level per {} ms - the test that",
+        CAPTURE_WINDOWS * WINDOW_MS / 1000,
+        WINDOW_MS
+    ));
     d.line("     answers whether the mic hears you");
     d.line("  f  measure a quiet second, then a noisy one, and compare them per octave");
     d.line("     band - about 30 dB more sensitive than c, and works with any sound");
     d.line("  r  hex-dump the raw 24-bit words after settling");
-    d.line(&format!("  s  count samples for {} s, compare against the expected {} Hz",
-        MEASURE_MS / 1000, RAW_RATE_HZ));
-    d.line(&format!("  t  {} s of statistics: min, max, DC offset, RMS", MEASURE_MS / 1000));
+    d.line(&format!(
+        "  s  count samples for {} s, compare against the expected {} Hz",
+        MEASURE_MS / 1000,
+        RAW_RATE_HZ
+    ));
+    d.line(&format!(
+        "  t  {} s of statistics: min, max, DC offset, RMS",
+        MEASURE_MS / 1000
+    ));
     d.line(&format!("  m  live level meter for {} s", METER_MS / 1000));
     d.line("  p  filterbank time per frame");
     d.line("  n  the bands' range, the level reference, and the level it scales");
@@ -151,16 +162,33 @@ fn references(d: &Diag) {
     let g = |a: &AtomicU32| f32::from_bits(a.load(Ordering::Relaxed));
     let (blo, bhi) = (g(&BAND_RANGE_LO), g(&BAND_RANGE_HI));
     let (llo, lhi) = (g(&REF_LVL_LO), g(&REF_LVL_HI));
-    d.line(&format!("band range {:>7.1} .. {:>7.1} dB, span {:.1}", blo, bhi, bhi - blo));
-    d.line(&format!("level ref  {:>7.1} .. {:>7.1} dBFS, span {:.1}", llo, lhi, lhi - llo));
-    d.line(&format!("level now  {:>7.1} dBFS -> norm {:.2}", g(&LAST_DBFS), g(&LAST_NORM)));
+    d.line(&format!(
+        "band range {:>7.1} .. {:>7.1} dB, span {:.1}",
+        blo,
+        bhi,
+        bhi - blo
+    ));
+    d.line(&format!(
+        "level ref  {:>7.1} .. {:>7.1} dBFS, span {:.1}",
+        llo,
+        lhi,
+        lhi - llo
+    ));
+    d.line(&format!(
+        "level now  {:>7.1} dBFS -> norm {:.2}",
+        g(&LAST_DBFS),
+        g(&LAST_NORM)
+    ));
     let mut line = String::from("band dB  ");
     for (m, slot) in BAND_DB.iter().enumerate() {
         if m == 12 {
             d.line(&line);
             line = String::from("         ");
         }
-        line.push_str(&format!("{:5.0}", f32::from_bits(slot.load(Ordering::Relaxed))));
+        line.push_str(&format!(
+            "{:5.0}",
+            f32::from_bits(slot.load(Ordering::Relaxed))
+        ));
     }
     d.line(&line);
 }
@@ -241,14 +269,21 @@ fn rate_check(d: &Diag, tt: &ticktimer::Ticktimer, mic: &mut I2sAudio) {
     let elapsed = (tt.elapsed_ms() - start).max(1);
     let rate = count * 1000 / elapsed;
     let expected = RAW_RATE_HZ as u64;
-    d.line(&format!("{} samples in {} ms = {} Hz (expected {})",
-        count, elapsed, rate, expected));
+    d.line(&format!(
+        "{} samples in {} ms = {} Hz (expected {})",
+        count, elapsed, rate, expected
+    ));
 
     if count == 0 {
-        d.line(&format!("nothing arriving at all: check that BCLK (PB{}) and WS (PB{}) are really",
-            MIC_BCLK_BIO_PIN, MIC_WS_BIO_PIN));
-        d.line(&format!("toggling - {:.3} MHz and {} kHz respectively",
-            BCLK_HZ as f32 / 1e6, RAW_RATE_HZ / 1000));
+        d.line(&format!(
+            "nothing arriving at all: check that BCLK (PB{}) and WS (PB{}) are really",
+            MIC_BCLK_BIO_PIN, MIC_WS_BIO_PIN
+        ));
+        d.line(&format!(
+            "toggling - {:.3} MHz and {} kHz respectively",
+            BCLK_HZ as f32 / 1e6,
+            RAW_RATE_HZ / 1000
+        ));
     } else if starved {
         d.line("a read timed out on an empty FIFO - the BIO stopped pushing partway");
     } else if rate * 4 < expected * 3 || rate * 3 > expected * 4 {
@@ -303,23 +338,43 @@ fn stats(d: &Diag, tt: &ticktimer::Ticktimer, mic: &mut I2sAudio) {
         d.line("the BIO stopped pushing partway - this covers less than the full second");
     }
     d.line(&format!("{} samples", n));
-    d.line(&format!("raw 24-bit: min {} max {} p-p {} dc {} rms {:.1}",
-        min, max, max - min, mean, rms));
+    d.line(&format!(
+        "raw 24-bit: min {} max {} p-p {} dc {} rms {:.1}",
+        min,
+        max,
+        max - min,
+        mean,
+        rms
+    ));
     let rms16 = rms / 256.0;
-    d.line(&format!("as i16    : min {} max {} p-p {} dc {} rms {:.2}",
-        min >> 8, max >> 8, (max >> 8) - (min >> 8), mean >> 8, rms16));
+    d.line(&format!(
+        "as i16    : min {} max {} p-p {} dc {} rms {:.2}",
+        min >> 8,
+        max >> 8,
+        (max >> 8) - (min >> 8),
+        mean >> 8,
+        rms16
+    ));
     let db = dbfs(rms, FULL_SCALE_RAW);
     d.line(&format!("level     : {}", bar(db)));
-    d.line(&format!("          : roughly {:.0} dB SPL", db + DBFS_TO_SPL));
+    d.line(&format!(
+        "          : roughly {:.0} dB SPL",
+        db + DBFS_TO_SPL
+    ));
 
     // The ICS43434 leaves bit 0 unused, so one stuck low bit is expected. Bit 23 always set
     // while bit 22 changes means the capture window opens a cycle early.
-    d.line(&format!("bits      : any-set {:08x} all-set {:08x}", any_set, all_set));
+    d.line(&format!(
+        "bits      : any-set {:08x} all-set {:08x}",
+        any_set, all_set
+    ));
     if any_set == 0 {
         d.line("every bit was zero for the whole window - the data line never went high");
     } else if any_set.trailing_zeros() > 1 {
-        d.line(&format!("the low {} bits never went high - only bit 0 should be stuck",
-            any_set.trailing_zeros()));
+        d.line(&format!(
+            "the low {} bits never went high - only bit 0 should be stuck",
+            any_set.trailing_zeros()
+        ));
     }
     if all_set & 0x00ff_ffff == 0x00ff_ffff {
         d.line("every bit was high in every sample - nothing is driving the data line.");
@@ -338,12 +393,19 @@ fn stats(d: &Diag, tt: &ticktimer::Ticktimer, mic: &mut I2sAudio) {
 
 /// Live level, each window on fresh samples.
 fn meter(d: &Diag, tt: &ticktimer::Ticktimer, mic: &mut I2sAudio) {
-    d.line(&format!("live level for {} s - clap, talk, play music", METER_MS / 1000));
+    d.line(&format!(
+        "live level for {} s - clap, talk, play music",
+        METER_MS / 1000
+    ));
     d.line("(if this looks unresponsive, use c - it records without stopping to print)");
     let end = tt.elapsed_ms() + METER_MS;
 
     while tt.elapsed_ms() < end {
-        let window = if settle(mic, METER_SETTLE_SAMPLES) { window_rms(mic, WINDOW_SAMPLES) } else { None };
+        let window = if settle(mic, METER_SETTLE_SAMPLES) {
+            window_rms(mic, WINDOW_SAMPLES)
+        } else {
+            None
+        };
         let Some((rms, _)) = window else {
             d.line("no samples - stopping");
             return;
@@ -354,8 +416,10 @@ fn meter(d: &Diag, tt: &ticktimer::Ticktimer, mic: &mut I2sAudio) {
 
 /// Record silently, then report, so printing cannot drop samples.
 fn capture(d: &Diag, mic: &mut I2sAudio) {
-    d.line(&format!("recording {} s silently - make noise NOW (clap, talk, music)",
-        CAPTURE_WINDOWS * WINDOW_SAMPLES / RAW_RATE_HZ as usize));
+    d.line(&format!(
+        "recording {} s silently - make noise NOW (clap, talk, music)",
+        CAPTURE_WINDOWS * WINDOW_SAMPLES / RAW_RATE_HZ as usize
+    ));
 
     if !settle(mic, SETTLE_SAMPLES) {
         d.line(NO_SAMPLES);
@@ -378,7 +442,13 @@ fn capture(d: &Diag, mic: &mut I2sAudio) {
     for (i, &(rms, peak)) in recorded.iter().enumerate() {
         quietest = quietest.min(rms);
         loudest = loudest.max(rms);
-        d.line(&format!("{:4} {:8.0} {:9} {}", i, rms, peak, bar(dbfs(rms, FULL_SCALE_RAW))));
+        d.line(&format!(
+            "{:4} {:8.0} {:9} {}",
+            i,
+            rms,
+            peak,
+            bar(dbfs(rms, FULL_SCALE_RAW))
+        ));
     }
 
     // All zeros is no mic, not a quiet one, and would give a meaningless range below.
@@ -390,9 +460,15 @@ fn capture(d: &Diag, mic: &mut I2sAudio) {
 
     let loud_db = dbfs(loudest, FULL_SCALE_RAW);
     let range_db = loud_db - dbfs(quietest.max(1.0), FULL_SCALE_RAW);
-    d.line(&format!("quietest {:.0}, loudest {:.0}, range {:.1} dB", quietest, loudest, range_db));
-    d.line(&format!("loudest window is {:.1} dBFS = roughly {:.0} dB SPL",
-        loud_db, loud_db + DBFS_TO_SPL));
+    d.line(&format!(
+        "quietest {:.0}, loudest {:.0}, range {:.1} dB",
+        quietest, loudest, range_db
+    ));
+    d.line(&format!(
+        "loudest window is {:.1} dBFS = roughly {:.0} dB SPL",
+        loud_db,
+        loud_db + DBFS_TO_SPL
+    ));
 
     // A mic that heard a clap or a voice peaks tens of dB over its own floor.
     if range_db < 20.0 {
@@ -430,15 +506,24 @@ fn spectrum(d: &Diag, tt: &ticktimer::Ticktimer, mic: &mut I2sAudio) {
     for (i, &hz) in OCTAVE_HZ.iter().enumerate() {
         // Zero has no dB value; dbfs()'s floor would read as a rise.
         if quiet[i] <= 0.0 || loud[i] <= 0.0 {
-            d.line(&format!("{:6.0}   no reading - this band produced no energy", hz));
+            d.line(&format!(
+                "{:6.0}   no reading - this band produced no energy",
+                hz
+            ));
             continue;
         }
         let q = dbfs(quiet[i], 1.0);
         let l = dbfs(loud[i], 1.0);
         let diff = l - q;
         heard |= diff >= OCTAVE_RISE_DB;
-        d.line(&format!("{:6.0} {:9.1} {:9.1} {:9.1} dB{}", hz, q, l, diff,
-            if diff >= OCTAVE_RISE_DB { "  <-" } else { "" }));
+        d.line(&format!(
+            "{:6.0} {:9.1} {:9.1} {:9.1} dB{}",
+            hz,
+            q,
+            l,
+            diff,
+            if diff >= OCTAVE_RISE_DB { "  <-" } else { "" }
+        ));
     }
 
     if heard {
@@ -537,12 +622,19 @@ fn window_rms(mic: &mut I2sAudio, samples: usize) -> Option<(f64, i32)> {
 /// The mean of `n` samples, and their RMS about that mean.
 fn mean_and_rms(sum: i64, sumsq: i64, n: i64) -> (i64, f64) {
     let mean = sum as f64 / n as f64;
-    (sum / n, (sumsq as f64 / n as f64 - mean * mean).max(0.0).sqrt())
+    (
+        sum / n,
+        (sumsq as f64 / n as f64 - mean * mean).max(0.0).sqrt(),
+    )
 }
 
 /// Level in dBFS for an RMS expressed in units of the given full scale.
 fn dbfs(rms: f64, full_scale: f64) -> f32 {
-    if rms <= 0.0 { LEVEL_DB_FLOOR } else { (20.0 * (rms / full_scale).log10()) as f32 }
+    if rms <= 0.0 {
+        LEVEL_DB_FLOOR
+    } else {
+        (20.0 * (rms / full_scale).log10()) as f32
+    }
 }
 
 /// A dBFS bar with the number after it.

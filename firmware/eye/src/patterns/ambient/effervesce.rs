@@ -1,6 +1,8 @@
 use crate::audio::Audio;
-use crate::patterns::{Frame, Pattern, cycle, fold_ms, hash2, hsv, random_u32, sin_sum, slot_life, smoothstep, wrap360};
 use crate::led::map::{Led, LED_COUNT, LED_MAP};
+use crate::patterns::{
+    cycle, fold_ms, hash2, hsv, random_u32, slot_life, smoothstep, wrap360, Frame, Pattern, Phasor,
+};
 use core::f32::consts::{PI, TAU};
 
 // Effervesce: a bright field of slowly drifting hue, with rings, bars and stars appearing
@@ -10,29 +12,29 @@ use core::f32::consts::{PI, TAU};
 
 // Base field
 const HUE_DRIFT_MS: u32 = 40_000; // time for the field hue to go around the wheel
-const BASE_SAT:     f32 = 0.9;
-const BASE_VAL:     f32 = 0.4;    // field brightness floor
+const BASE_SAT: f32 = 0.9;
+const BASE_VAL: f32 = 0.4; // field brightness floor
 
 // A slow brightness swell that drifts across the field.
-const SWELL:         f32 = 0.25;  // how much the swell lifts brightness
+const SWELL: f32 = 0.25; // how much the swell lifts brightness
 const SWELL_SPAN_MM: f32 = 260.0; // crest spacing along x or y; crests run diagonally, 184 mm apart
-const SWELL_MS:      u32 = 12_000;
+const SWELL_MS: u32 = 12_000;
 
 // Shapes
-const ELEMENTS:      usize = 7;     // shapes alive at once
+const ELEMENTS: usize = 7; // shapes alive at once
 const LIFETIME_MIN_MS: u32 = 3_500; // each slot keeps its own lifetime in this range
 const LIFETIME_MAX_MS: u32 = 8_000;
-const WHITEN:        f32   = 0.3;   // how far a shape goes toward white
+const WHITEN: f32 = 0.3; // how far a shape goes toward white
 
-const RING_MAX_MM:       f32 = 150.0; // how far a ring expands over its life
-const RING_THICKNESS_MM: f32 = 40.0;  // ring half-width
-const BAR_WIDTH_MM:      f32 = 26.0;  // bar half-width
-const BAR_LENGTH_MM:     f32 = 130.0; // bar half-length
-const SPIN:              f32 = 0.5;   // turns a bar or star makes over its life
-const EDGE_SHARP:        f32 = 2.5;   // above 1 gives shapes a solid body and a defined edge
+const RING_MAX_MM: f32 = 150.0; // how far a ring expands over its life
+const RING_THICKNESS_MM: f32 = 40.0; // ring half-width
+const BAR_WIDTH_MM: f32 = 26.0; // bar half-width
+const BAR_LENGTH_MM: f32 = 130.0; // bar half-length
+const SPIN: f32 = 0.5; // turns a bar or star makes over its life
+const EDGE_SHARP: f32 = 2.5; // above 1 gives shapes a solid body and a defined edge
 
 // Glitter
-const SHIMMER:      f32 = 0.35;  // per-LED sparkle strength
+const SHIMMER: f32 = 0.35; // per-LED sparkle strength
 const SHIMMER_RATE: f32 = 0.004; // flicker rate (rad/ms)
 
 const COS60: f32 = 0.5;
@@ -52,17 +54,16 @@ enum Shape {
 #[derive(Clone, Copy)]
 struct Elem {
     shape: Shape,
-    ox:   f32, // origin, always an LED position
-    oy:   f32,
-    env:  f32, // brightness for the current age, 0..1
+    ox: f32, // origin, always an LED position
+    oy: f32,
+    env: f32,  // brightness for the current age, 0..1
     chue: f32, // cos and sin of the hue angle
     shue: f32,
 }
 
 pub struct Effervesce {
-    // sin and cos of each LED's glitter phase.
-    ph_sin: [f32; LED_COUNT],
-    ph_cos: [f32; LED_COUNT],
+    // Each LED's offset in the glitter.
+    shimmer_offset: [Phasor; LED_COUNT],
     /// New each time the pattern comes on screen, so its shapes differ.
     seed: u32,
 }
@@ -74,8 +75,7 @@ impl Effervesce {
             (hh & 4095) as f32 / 4096.0 * TAU
         };
         Effervesce {
-            ph_sin: core::array::from_fn(|i| phase(i).sin()),
-            ph_cos: core::array::from_fn(|i| phase(i).cos()),
+            shimmer_offset: core::array::from_fn(|i| Phasor::new(phase(i))),
             seed: 0,
         }
     }
@@ -93,7 +93,7 @@ impl Pattern for Effervesce {
         let (base_shue, base_chue) = base_hue.to_radians().sin_cos();
         let swell_t = cycle(t_ms, SWELL_MS);
         let shimmer_t = fold_ms(t_ms, SHIMMER_RATE);
-        let (sh_sin, sh_cos) = (shimmer_t * SHIMMER_RATE).sin_cos();
+        let shimmer_phase = Phasor::new(shimmer_t * SHIMMER_RATE);
 
         for (i, led) in LED_MAP.iter().enumerate() {
             // Base field with the swell, a smoothed triangle wave.
@@ -125,7 +125,7 @@ impl Pattern for Effervesce {
             s *= 1.0 - WHITEN * e;
 
             // Glitter, cubed so only the peaks show.
-            let sh = sin_sum(self.ph_sin[i], self.ph_cos[i], sh_sin, sh_cos);
+            let sh = self.shimmer_offset[i].sin_plus(shimmer_phase);
             let spark = (0.5 + 0.5 * sh).powi(3);
             let g = SHIMMER * spark;
             v += (1.0 - v) * g;
@@ -142,10 +142,10 @@ fn make_elem(s: usize, t_ms: u32, show_seed: u32) -> Elem {
     let (gen, age) = slot_life(s as u32 + 1, 0x5EED, t_ms, LIFETIME_MIN_MS, LIFETIME_MAX_MS);
 
     let seed = hash2(s as u32 + 1, gen ^ show_seed);
-    let led  = &LED_MAP[(seed as usize) % LED_COUNT];
+    let led = &LED_MAP[(seed as usize) % LED_COUNT];
     let ang0 = ((seed >> 12) & 0xFFFF) as f32 / 65_536.0 * TAU;
-    let dir  = if (seed >> 28) & 1 == 0 { 1.0 } else { -1.0 };
-    let hue  = (seed & 0x1FF) as f32 / 512.0 * 360.0;
+    let dir = if (seed >> 28) & 1 == 0 { 1.0 } else { -1.0 };
+    let hue = (seed & 0x1FF) as f32 / 512.0 * 360.0;
 
     let (sn, cs) = (ang0 + dir * age * SPIN * TAU).sin_cos();
     let (shue, chue) = hue.to_radians().sin_cos();
@@ -159,16 +159,29 @@ fn make_elem(s: usize, t_ms: u32, show_seed: u32) -> Elem {
             let inner = r - RING_THICKNESS_MM;
             let d2_min = if inner > 0.0 { inner * inner } else { -1.0 };
             let outer = r + RING_THICKNESS_MM;
-            Shape::Ring { r, d2_min, d2_max: outer * outer }
+            Shape::Ring {
+                r,
+                d2_min,
+                d2_max: outer * outer,
+            }
         }
         1 => Shape::Bar { cs, sn },
         _ => {
             let d1 = rot60(cs, sn);
-            Shape::Star { dirs: [(cs, sn), d1, rot60(d1.0, d1.1)] }
+            Shape::Star {
+                dirs: [(cs, sn), d1, rot60(d1.0, d1.1)],
+            }
         }
     };
 
-    Elem { shape, ox: led.wx, oy: led.wy, env, chue, shue }
+    Elem {
+        shape,
+        ox: led.wx,
+        oy: led.wy,
+        env,
+        chue,
+        shue,
+    }
 }
 
 /// One shape's brightness at one LED, in 0..1.
@@ -196,11 +209,11 @@ fn shape_intensity(e: &Elem, led: &Led) -> f32 {
 
 /// Brightness of a bar through the origin along unit direction (cs, sn), in 0..1.
 fn line_intensity(dx: f32, dy: f32, cs: f32, sn: f32) -> f32 {
-    let perp  = (dx * -sn + dy * cs).abs(); // distance from the line
+    let perp = (dx * -sn + dy * cs).abs(); // distance from the line
     if perp >= BAR_WIDTH_MM {
         return 0.0;
     }
-    let along = (dx * cs + dy * sn).abs();  // distance along it from the origin
+    let along = (dx * cs + dy * sn).abs(); // distance along it from the origin
     let w = ((1.0 - perp / BAR_WIDTH_MM) * EDGE_SHARP).clamp(0.0, 1.0);
     let l = (1.0 - along / BAR_LENGTH_MM).max(0.0);
     w * l

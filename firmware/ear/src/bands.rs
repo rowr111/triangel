@@ -6,8 +6,8 @@
 //! kick drum near 50 Hz and a voice near 120 Hz in the same band. Here they are four
 //! bands apart.
 
-use triangel_shared::frame::{level_to_wire, norm_to_wire, BandFrame, BAND_COUNT, LEVEL_DB_FLOOR};
 use triangel_shared::follow;
+use triangel_shared::frame::{level_to_wire, norm_to_wire, BandFrame, BAND_COUNT, LEVEL_DB_FLOOR};
 use triangel_shared::tuning::ear::*;
 use triangel_shared::tuning::BASS_BANDS;
 
@@ -27,7 +27,7 @@ const SETTLE_SAMPLES: usize = 96;
 
 // How fast the smoothed RMS behind the level rises and falls, per frame.
 const LEVEL_ATTACK: f32 = 0.8;
-const LEVEL_DECAY: f32  = 0.4;
+const LEVEL_DECAY: f32 = 0.4;
 
 // The values meant for tuning come from `triangel_shared::tuning::ear`.
 
@@ -42,16 +42,16 @@ const REFRESH_FRAMES: u32 = 8;
 /// highest values in the window.
 struct RangeTracker<const N: usize> {
     history: [f32; N],
-    idx:     usize,
+    idx: usize,
     /// Values pushed so far, capped at `N`.
-    filled:  usize,
+    filled: usize,
     /// Frames since the last recompute.
-    age:     u32,
+    age: u32,
     /// What the window measures now; `low` and `high` follow it.
-    target_low:  f32,
+    target_low: f32,
     target_high: f32,
-    low:         f32,
-    high:        f32,
+    low: f32,
+    high: f32,
 }
 
 impl<const N: usize> RangeTracker<N> {
@@ -97,7 +97,7 @@ impl<const N: usize> RangeTracker<N> {
             return;
         }
         let count = EXTREME_COUNT.min(self.filled);
-        let mut lowest  = [f32::MAX; EXTREME_COUNT];
+        let mut lowest = [f32::MAX; EXTREME_COUNT];
         let mut highest = [f32::MIN; EXTREME_COUNT];
         for &sample in self.history[..self.filled].iter() {
             if sample < lowest[count - 1] {
@@ -171,7 +171,9 @@ impl Biquad {
 
     /// Q30 coefficient times Q28 signal, back to Q28.
     #[inline]
-    fn mul(coef: i32, sig: i32) -> i32 { ((coef as i64 * sig as i64) >> COEF_Q) as i32 }
+    fn mul(coef: i32, sig: i32) -> i32 {
+        ((coef as i64 * sig as i64) >> COEF_Q) as i32
+    }
 
     /// Feed one sample in, get that sample's filtered output back.
     #[inline]
@@ -201,7 +203,11 @@ impl BandBank {
         let filters = std::array::from_fn(|m| {
             Biquad::bandpass(edge_hz(m + 1), (edge_hz(m + 2) / edge_hz(m)).log2())
         });
-        Self { filters, energy: [0; BAND_COUNT], count: 0 }
+        Self {
+            filters,
+            energy: [0; BAND_COUNT],
+            count: 0,
+        }
     }
 
     /// Run one sample through every band without measuring it.
@@ -273,8 +279,7 @@ impl BandProcessor {
             band_ref: RangeTracker::new(),
             band_own: std::array::from_fn(|_| RangeTracker::new()),
             tilt: {
-                let per_band =
-                    (BAND_HIGH_HZ / BAND_LOW_HZ).log2() / (BAND_COUNT + 1) as f32;
+                let per_band = (BAND_HIGH_HZ / BAND_LOW_HZ).log2() / (BAND_COUNT + 1) as f32;
                 std::array::from_fn(|m| {
                     TILT_DB_PER_OCTAVE * (m as f32 - TILT_PIVOT_BAND) * per_band
                 })
@@ -288,13 +293,19 @@ impl BandProcessor {
     }
 
     /// Quietest and loudest band of the last frame, in dB, for the console readout.
-    pub fn band_range(&self) -> (f32, f32) { (self.band_lo, self.band_hi) }
+    pub fn band_range(&self) -> (f32, f32) {
+        (self.band_lo, self.band_hi)
+    }
 
     /// Last frame's band levels in dB, before the tilt, for the console readout.
-    pub fn band_levels(&self) -> &[f32; BAND_COUNT] { &self.last_db }
+    pub fn band_levels(&self) -> &[f32; BAND_COUNT] {
+        &self.last_db
+    }
 
     /// Live level reference (low, high) in dBFS, for the console readout.
-    pub fn level_reference(&self) -> (f32, f32) { (self.level_ref.low, self.level_ref.high) }
+    pub fn level_reference(&self) -> (f32, f32) {
+        (self.level_ref.low, self.level_ref.high)
+    }
 
     /// Turn one frame of samples into a `BandFrame`.
     pub fn process(&mut self, samples: &[i16; FRAME_SAMPLES]) -> BandFrame {
@@ -323,7 +334,10 @@ impl BandProcessor {
             self.bank.push(to_q28(s));
         }
         // Band energy in dB. The 1e-10 guards log(0) and floors silence at -100 dB.
-        let band_db = self.bank.take_energies().map(|e| 10.0 * (e + 1e-10).log10());
+        let band_db = self
+            .bank
+            .take_energies()
+            .map(|e| 10.0 * (e + 1e-10).log10());
 
         // Each band is scaled between the shared reference, which keeps relative loudness,
         // and its own, which keeps it moving. The references see tilted levels; the gate
@@ -366,6 +380,12 @@ impl BandProcessor {
             bands[m] = norm_to_wire(*sm);
         }
 
-        BandFrame { bands, level, level_norm, flux, bass }
+        BandFrame {
+            bands,
+            level,
+            level_norm,
+            flux,
+            bass,
+        }
     }
 }

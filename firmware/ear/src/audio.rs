@@ -31,7 +31,9 @@ const _: () = assert!(BIO_QUANTUM_HZ.is_multiple_of(2 * BCLK_PER_FRAME));
 const _: () = assert!(RAW_RATE_HZ.is_multiple_of(DECIMATE as u32));
 // The pins are compiled into the BIO program (i2s_bio.rs). Regenerate it to move one.
 const _: () = assert!(
-    crate::pins::MIC_BCLK_BIO_PIN == 1 && crate::pins::MIC_SD_BIO_PIN == 2 && crate::pins::MIC_WS_BIO_PIN == 3
+    crate::pins::MIC_BCLK_BIO_PIN == 1
+        && crate::pins::MIC_SD_BIO_PIN == 2
+        && crate::pins::MIC_WS_BIO_PIN == 3
 );
 // The ICS43434's high-performance mode runs from 23 kHz to 51.6 kHz.
 const _: () = assert!(RAW_RATE_HZ >= 23_000 && RAW_RATE_HZ <= 51_600);
@@ -78,7 +80,9 @@ impl Drop for I2sAudio {
         for &core in self.resource_grant.cores.iter() {
             self.bio_ss.de_init_core(core).unwrap();
         }
-        self.bio_ss.release_resources(self.resource_grant.grant_id).unwrap();
+        self.bio_ss
+            .release_resources(self.resource_grant.grant_id)
+            .unwrap();
     }
 }
 
@@ -91,16 +95,33 @@ impl I2sAudio {
             (crate::pins::MIC_WS_BIO_PIN, IoxDir::Output),
             (crate::pins::MIC_SD_BIO_PIN, IoxDir::Input),
         ] {
-            iox.setup_pin(IoxPort::PB, pin, Some(dir), Some(IoxFunction::Gpio), None, None, None, None);
+            iox.setup_pin(
+                IoxPort::PB,
+                pin,
+                Some(dir),
+                Some(IoxFunction::Gpio),
+                None,
+                None,
+                None,
+                None,
+            );
         }
 
         let mut bio_ss = Bio::new();
         let spec = Self::resource_spec();
-        let resource_grant = bio_ss.claim_resources(&spec).expect("couldn't claim BIO resources for I2S");
+        let resource_grant = bio_ss
+            .claim_resources(&spec)
+            .expect("couldn't claim BIO resources for I2S");
 
-        let config = CoreConfig { clock_mode: ClockMode::TargetFreqInt(BIO_QUANTUM_HZ) };
+        let config = CoreConfig {
+            clock_mode: ClockMode::TargetFreqInt(BIO_QUANTUM_HZ),
+        };
         bio_ss
-            .init_core(resource_grant.cores[0], crate::i2s_bio::i2s_bio_code(), config)
+            .init_core(
+                resource_grant.cores[0],
+                crate::i2s_bio::i2s_bio_code(),
+                config,
+            )
             .expect("couldn't init I2S BIO core");
 
         // Route the three pins to the BIO before the core starts driving them.
@@ -133,8 +154,13 @@ impl I2sAudio {
             .expect("FIFO0 handle error")
             .expect("no FIFO0 handle");
         let rx = CoreCsr::from_handle(&rx_handle);
-        let mut this =
-            Self { bio_ss, rx, _rx_handle: rx_handle, resource_grant, starved_frames: 0 };
+        let mut this = Self {
+            bio_ss,
+            rx,
+            _rx_handle: rx_handle,
+            resource_grant,
+            starved_frames: 0,
+        };
 
         // Drop the first samples while the mic settles.
         this.discard(STARTUP_DISCARD);
@@ -178,7 +204,9 @@ impl I2sAudio {
     }
 
     /// Frames abandoned so far because nothing was arriving.
-    pub fn starved_frames(&self) -> u32 { self.starved_frames }
+    pub fn starved_frames(&self) -> u32 {
+        self.starved_frames
+    }
 
     /// Drop `samples` raw samples. False if none are arriving.
     pub fn discard(&mut self, samples: usize) -> bool {

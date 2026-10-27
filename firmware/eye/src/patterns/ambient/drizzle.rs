@@ -15,25 +15,29 @@ const STRENGTH_MAX: f32 = 1.0;
 
 /// Raindrop's look at half its speed.
 const STYLE: RippleStyle = RippleStyle {
-    ripple_speed:    RIPPLE_SPEED * 0.5,
-    ripple_max_mm:   RIPPLE_MAX_MM,
-    gain_base:       GAIN_BASE,
-    gain_hit:        GAIN_HIT,
+    ripple_speed: RIPPLE_SPEED * 0.5,
+    ripple_max_mm: RIPPLE_MAX_MM,
+    gain_base: GAIN_BASE,
+    gain_hit: GAIN_HIT,
     start_radius_mm: START_RADIUS_MM,
-    white_mm:        WHITE_MM,
-    hit_boost:       HIT_BOOST,
+    white_mm: WHITE_MM,
+    hit_boost: HIT_BOOST,
 };
 
 /// Rain on black water: drops land at random spots and times and ripple out.
 pub struct Drizzle {
-    ripples:      Ripples,
+    ripples: Ripples,
     last_drop_ms: u32,
-    gap_ms:       u32,
+    gap_ms: u32,
 }
 
 impl Drizzle {
     pub fn new() -> Self {
-        Drizzle { ripples: Ripples::new(0x2545_F491, STYLE), last_drop_ms: 0, gap_ms: 0 }
+        Drizzle {
+            ripples: Ripples::new(0x2545_F491, STYLE),
+            last_drop_ms: 0,
+            gap_ms: 0,
+        }
     }
 }
 

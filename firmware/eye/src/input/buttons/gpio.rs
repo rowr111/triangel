@@ -21,13 +21,13 @@ impl Source {
     /// Always returns a fresh reading: the pins are local, so there is nothing worth gating.
     pub fn read(&mut self) -> Option<Inputs> {
         Some(Inputs {
-            up:     !read_pin(&self.iox, pins::BTN_UP_PORT,     pins::BTN_UP_PIN),
-            down:   !read_pin(&self.iox, pins::BTN_DOWN_PORT,   pins::BTN_DOWN_PIN),
-            left:   !read_pin(&self.iox, pins::BTN_LEFT_PORT,   pins::BTN_LEFT_PIN),
-            right:  !read_pin(&self.iox, pins::BTN_RIGHT_PORT,  pins::BTN_RIGHT_PIN),
+            up: !read_pin(&self.iox, pins::BTN_UP_PORT, pins::BTN_UP_PIN),
+            down: !read_pin(&self.iox, pins::BTN_DOWN_PORT, pins::BTN_DOWN_PIN),
+            left: !read_pin(&self.iox, pins::BTN_LEFT_PORT, pins::BTN_LEFT_PIN),
+            right: !read_pin(&self.iox, pins::BTN_RIGHT_PORT, pins::BTN_RIGHT_PIN),
             center: !read_pin(&self.iox, pins::BTN_CENTER_PORT, pins::BTN_CENTER_PIN),
-            sw_on:   read_pin(&self.iox, pins::SW_ON_PORT,      pins::SW_ON_PIN),
-            sw_off:  read_pin(&self.iox, pins::SW_OFF_PORT,     pins::SW_OFF_PIN),
+            sw_on: read_pin(&self.iox, pins::SW_ON_PORT, pins::SW_ON_PIN),
+            sw_off: read_pin(&self.iox, pins::SW_OFF_PORT, pins::SW_OFF_PIN),
         })
     }
 }
@@ -36,10 +36,10 @@ fn setup_pins(iox: &IoxHal) {
     // D-pad buttons: active-low with external pull-ups on the button board; the internal
     // pull-up adds robustness.
     let btn_pins = [
-        (pins::BTN_UP_PORT,     pins::BTN_UP_PIN),
-        (pins::BTN_DOWN_PORT,   pins::BTN_DOWN_PIN),
-        (pins::BTN_LEFT_PORT,   pins::BTN_LEFT_PIN),
-        (pins::BTN_RIGHT_PORT,  pins::BTN_RIGHT_PIN),
+        (pins::BTN_UP_PORT, pins::BTN_UP_PIN),
+        (pins::BTN_DOWN_PORT, pins::BTN_DOWN_PIN),
+        (pins::BTN_LEFT_PORT, pins::BTN_LEFT_PIN),
+        (pins::BTN_RIGHT_PORT, pins::BTN_RIGHT_PIN),
         (pins::BTN_CENTER_PORT, pins::BTN_CENTER_PIN),
     ];
     for (port, pin) in btn_pins {

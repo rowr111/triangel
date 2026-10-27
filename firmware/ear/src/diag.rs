@@ -45,7 +45,10 @@ pub struct Diag {
 
 impl Diag {
     pub fn new() -> Self {
-        Self { usb: UsbHid::new(), tt: ticktimer::Ticktimer::new().unwrap() }
+        Self {
+            usb: UsbHid::new(),
+            tt: ticktimer::Ticktimer::new().unwrap(),
+        }
     }
 
     /// Send one line. Text and line ending go in a single send so lines from

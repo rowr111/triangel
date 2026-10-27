@@ -32,34 +32,49 @@ pub fn hsv(h: f32, s: f32, v: f32) -> [u8; 3] {
         }
         v - v * s * k.min(4.0 - k).clamp(0.0, 1.0_f32)
     };
-    [(f(5.0) * 255.0) as u8, (f(3.0) * 255.0) as u8, (f(1.0) * 255.0) as u8]
+    [
+        (f(5.0) * 255.0) as u8,
+        (f(3.0) * 255.0) as u8,
+        (f(1.0) * 255.0) as u8,
+    ]
 }
 
-pub fn lerp(a: f32, b: f32, t: f32) -> f32 { a + (b - a) * t }
+pub fn lerp(a: f32, b: f32, t: f32) -> f32 {
+    a + (b - a) * t
+}
 
-/// sin(a + b), from the sin and cos of each.
-pub fn sin_sum(a_sin: f32, a_cos: f32, b_sin: f32, b_cos: f32) -> f32 {
-    a_sin * b_cos + a_cos * b_sin
+/// The sin and cos of one angle, so the sine of a sum of angles needs no `sin` call.
+#[derive(Clone, Copy)]
+pub struct Phasor {
+    pub sin: f32,
+    pub cos: f32,
+}
+
+impl Phasor {
+    pub fn new(angle: f32) -> Phasor {
+        let (sin, cos) = angle.sin_cos();
+        Phasor { sin, cos }
+    }
+
+    /// sin(self + other).
+    pub fn sin_plus(self, other: Phasor) -> f32 {
+        self.sin * other.cos + self.cos * other.sin
+    }
+
+    /// sin(self - other).
+    pub fn sin_minus(self, other: Phasor) -> f32 {
+        self.sin * other.cos - self.cos * other.sin
+    }
 }
 
 /// Number of phase offsets in `phase_phasors`, 0.01 rad apart, covering 0..TAU.
 pub const PHASE_STEPS: usize = 628;
 
-/// sin and cos of each phase offset. With sin and cos of the frame's angle, they give
+/// Each phase offset as a `Phasor`. With the frame's angle, `sin_plus` gives
 /// sin(offset + angle) without a sin call per LED.
-pub fn phase_phasors() -> &'static ([f32; PHASE_STEPS], [f32; PHASE_STEPS]) {
-    static T: std::sync::OnceLock<([f32; PHASE_STEPS], [f32; PHASE_STEPS])> =
-        std::sync::OnceLock::new();
-    T.get_or_init(|| {
-        let mut sn = [0.0; PHASE_STEPS];
-        let mut cs = [0.0; PHASE_STEPS];
-        for k in 0..PHASE_STEPS {
-            let (s, c) = (k as f32 / 100.0).sin_cos();
-            sn[k] = s;
-            cs[k] = c;
-        }
-        (sn, cs)
-    })
+pub fn phase_phasors() -> &'static [Phasor; PHASE_STEPS] {
+    static PHASORS: std::sync::OnceLock<[Phasor; PHASE_STEPS]> = std::sync::OnceLock::new();
+    PHASORS.get_or_init(|| core::array::from_fn(|k| Phasor::new(k as f32 / 100.0)))
 }
 
 /// Wraps a hue into [0, 360). The input must be within one turn of that range.
@@ -80,7 +95,11 @@ pub fn smoothstep(t: f32) -> f32 {
 }
 
 pub fn mix_rgb(a: [f32; 3], b: [f32; 3], t: f32) -> [f32; 3] {
-    [lerp(a[0], b[0], t), lerp(a[1], b[1], t), lerp(a[2], b[2], t)]
+    [
+        lerp(a[0], b[0], t),
+        lerp(a[1], b[1], t),
+        lerp(a[2], b[2], t),
+    ]
 }
 
 /// Color at `t` along a ramp of (position, color) stops, positions rising from 0 to 1.
@@ -166,15 +185,21 @@ pub fn free_or_oldest<T>(
 pub struct Shot {
     pub start_ms: u32,
     pub strength: f32,
-    pub hue:      f32,
-    pub sat:      f32,
-    pub hold_ms:  f32,
-    pub fade_ms:  f32,
+    pub hue: f32,
+    pub sat: f32,
+    pub hold_ms: f32,
+    pub fade_ms: f32,
 }
 
 impl Shot {
-    pub const NONE: Shot =
-        Shot { start_ms: 0, strength: 0.0, hue: 0.0, sat: 0.0, hold_ms: 0.0, fade_ms: 0.0 };
+    pub const NONE: Shot = Shot {
+        start_ms: 0,
+        strength: 0.0,
+        hue: 0.0,
+        sat: 0.0,
+        hold_ms: 0.0,
+        fade_ms: 0.0,
+    };
 
     /// Age in ms and brightness 0-1, or None if unlit, not started yet, or finished.
     fn level(&self, t_ms: u32) -> Option<(f32, f32)> {
@@ -185,7 +210,11 @@ impl Shot {
         if age < 0.0 || age >= self.hold_ms + self.fade_ms {
             return None;
         }
-        let fade = if age < self.hold_ms { 1.0 } else { 1.0 - (age - self.hold_ms) / self.fade_ms };
+        let fade = if age < self.hold_ms {
+            1.0
+        } else {
+            1.0 - (age - self.hold_ms) / self.fade_ms
+        };
         Some((age, fade))
     }
 
@@ -198,7 +227,8 @@ impl Shot {
     }
 
     pub fn end_ms(&self) -> u32 {
-        self.start_ms.wrapping_add((self.hold_ms + self.fade_ms) as u32)
+        self.start_ms
+            .wrapping_add((self.hold_ms + self.fade_ms) as u32)
     }
 }
 

@@ -17,18 +17,18 @@ pub struct GlintStyle {
 
 #[derive(Clone, Copy)]
 struct Glint {
-    led:      u16,
+    led: u16,
     start_ms: u32,
-    life_ms:  u32,
+    life_ms: u32,
 }
 
 /// Brief near-white flashes on single LEDs, mostly the bright ones. The pattern draws its
 /// frame first, then calls `update` on it.
 pub struct Glints {
-    style:  GlintStyle,
-    rng:    Rng,
+    style: GlintStyle,
+    rng: Rng,
     glints: [Glint; MAX_GLINTS],
-    tries:  f32, // fractional tries carried to the next frame
+    tries: f32, // fractional tries carried to the next frame
     last_ms: u32,
 }
 
@@ -37,7 +37,11 @@ impl Glints {
         Glints {
             style,
             rng: Rng::new(seed),
-            glints: [Glint { led: 0, start_ms: 0, life_ms: 0 }; MAX_GLINTS],
+            glints: [Glint {
+                led: 0,
+                start_ms: 0,
+                life_ms: 0,
+            }; MAX_GLINTS],
             tries: 0.0,
             last_ms: 0,
         }
@@ -58,10 +62,17 @@ impl Glints {
             if self.rng.f32() >= lit {
                 continue;
             }
-            let free = self.glints.iter().position(|gl| t_ms.wrapping_sub(gl.start_ms) >= gl.life_ms);
+            let free = self
+                .glints
+                .iter()
+                .position(|gl| t_ms.wrapping_sub(gl.start_ms) >= gl.life_ms);
             if let Some(slot) = free {
                 let life_ms = s.min_ms + (self.rng.f32() * (s.max_ms - s.min_ms) as f32) as u32;
-                self.glints[slot] = Glint { led: led as u16, start_ms: t_ms, life_ms };
+                self.glints[slot] = Glint {
+                    led: led as u16,
+                    start_ms: t_ms,
+                    life_ms,
+                };
             }
         }
 
