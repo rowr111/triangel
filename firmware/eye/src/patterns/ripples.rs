@@ -1,4 +1,4 @@
-use crate::led::map::{LED_COUNT, LED_MAP};
+use crate::led::map::{Led, LED_COUNT, LED_MAP};
 use crate::patterns::{hsv, Frame, Rng};
 
 /// Enough that a drop is rarely replaced while its ripple is still crossing the fixture.
@@ -9,6 +9,8 @@ const HUE_MIN: f32 = 170.0;
 const HUE_MAX: f32 = 250.0;
 /// Below 1 because a fully saturated blue lights only the blue channel and looks dim.
 const DROP_SAT: f32 = 0.62;
+/// An LED whose rings add up to less than this is black.
+const MIN_RIPPLE: f32 = 1e-3;
 
 /// How a pattern's ripples look.
 #[derive(Clone, Copy)]
@@ -48,39 +50,39 @@ struct Droplet {
 
 impl Droplet {
     /// Leading-edge radius, how young the drop is (1 to 0), and ring brightness at `t_ms`.
-    fn front(&self, t_ms: u32, s: &RippleStyle) -> (f32, f32, f32) {
-        let r = s.start_radius_mm + t_ms.wrapping_sub(self.start_ms) as f32 * s.ripple_speed;
-        let young = (1.0 - (r - s.start_radius_mm) / s.white_mm).clamp(0.0, 1.0);
+    fn front(&self, t_ms: u32, style: &RippleStyle) -> (f32, f32, f32) {
+        let radius =
+            style.start_radius_mm + t_ms.wrapping_sub(self.start_ms) as f32 * style.ripple_speed;
+        let young = (1.0 - (radius - style.start_radius_mm) / style.white_mm).clamp(0.0, 1.0);
         let amp = self.strength
-            * (s.gain_base + s.gain_hit * self.strength)
-            * (1.0 + s.hit_boost * young);
-        (r, young, amp)
+            * (style.gain_base + style.gain_hit * self.strength)
+            * (1.0 + style.hit_boost * young);
+        (radius, young, amp)
     }
 
     /// Roughly how bright the brightest point of the rings is at `t_ms`.
-    fn glow(&self, t_ms: u32, s: &RippleStyle) -> f32 {
-        let (r, _, amp) = self.front(t_ms, s);
-        let inner = (r - self.train).max(0.0);
-        let at = ((s.ripple_max_mm + r - self.train) * 0.5)
+    fn glow(&self, t_ms: u32, style: &RippleStyle) -> f32 {
+        let (radius, _, amp) = self.front(t_ms, style);
+        let inner = (radius - self.train).max(0.0);
+        let at = ((style.ripple_max_mm + radius - self.train) * 0.5)
             .max(inner)
-            .min(r.min(s.ripple_max_mm));
-        amp * (1.0 - (r - at) / self.train) * (1.0 - at / s.ripple_max_mm)
+            .min(radius.min(style.ripple_max_mm));
+        amp * (1.0 - (radius - at) / self.train) * (1.0 - at / style.ripple_max_mm)
     }
 }
 
 /// One live drop's geometry for this frame.
-#[derive(Clone, Copy)]
 struct Ring {
     x: f32,
     y: f32,
-    r: f32,
-    u_inner: f32,
-    u_outer: f32,
+    radius: f32,
+    inner_d2: f32,
+    outer_d2: f32,
     /// Includes the drop's gain and the boost while it is young.
     amp: f32,
     hue: f32,
     /// Saturation: 0 while the ripple is still white, rising to DROP_SAT.
-    sat_w: f32,
+    sat: f32,
     inv_spacing: f32,
     inv_train: f32,
 }
@@ -91,6 +93,7 @@ pub struct Ripples {
     rng: Rng,
     style: RippleStyle,
     drops: [Droplet; MAX_DROPS],
+    rings: Vec<Ring>,
 }
 
 impl Ripples {
@@ -108,6 +111,7 @@ impl Ripples {
                 train: 0.0,
                 alive: false,
             }),
+            rings: Vec::with_capacity(MAX_DROPS),
         }
     }
 
@@ -146,88 +150,82 @@ impl Ripples {
     }
 
     pub fn draw(&mut self, t_ms: u32, out: &mut Frame) {
-        let s = self.style;
-        let blank = Ring {
-            x: 0.0,
-            y: 0.0,
-            r: 0.0,
-            u_inner: 0.0,
-            u_outer: 0.0,
-            amp: 0.0,
-            hue: 0.0,
-            sat_w: 0.0,
-            inv_spacing: 0.0,
-            inv_train: 0.0,
-        };
-        let mut live = [blank; MAX_DROPS];
-        let mut n_live = 0;
+        self.collect_rings(t_ms);
+        let inv_reach = 1.0 / self.style.ripple_max_mm;
+        for (px, led) in out.iter_mut().zip(LED_MAP.iter()) {
+            *px = self.color_at(led, inv_reach);
+        }
+    }
+
+    /// Ages the drops and lists the live ones' rings for this frame.
+    fn collect_rings(&mut self, t_ms: u32) {
+        let style = self.style;
+        self.rings.clear();
         for drop in self.drops.iter_mut() {
             if !drop.alive {
                 continue;
             }
-            let (r, young, amp) = drop.front(t_ms, &s);
-            if r - drop.train > s.ripple_max_mm {
+            let (radius, young, amp) = drop.front(t_ms, &style);
+            if radius - drop.train > style.ripple_max_mm {
                 drop.alive = false;
                 continue;
             }
-            let inner = (r - drop.train).max(0.0);
-            live[n_live] = Ring {
+            let inner = (radius - drop.train).max(0.0);
+            self.rings.push(Ring {
                 x: drop.x,
                 y: drop.y,
-                r,
-                u_inner: inner * inner,
-                u_outer: r * r,
+                radius,
+                inner_d2: inner * inner,
+                outer_d2: radius * radius,
                 amp,
                 hue: drop.hue,
-                sat_w: DROP_SAT * (1.0 - young),
+                sat: DROP_SAT * (1.0 - young),
                 inv_spacing: 1.0 / drop.spacing,
                 inv_train: 1.0 / drop.train,
-            };
-            n_live += 1;
+            });
+        }
+    }
+
+    /// The color the rings give one LED.
+    fn color_at(&self, led: &Led, inv_reach: f32) -> [u8; 3] {
+        let mut ripple = 0.0f32;
+        let mut hue_acc = 0.0f32;
+        let mut sat_acc = 0.0f32;
+        for ring in &self.rings {
+            let dx = led.wx - ring.x;
+            let dy = led.wy - ring.y;
+            let d2 = dx * dx + dy * dy;
+            if d2 > ring.outer_d2 || d2 < ring.inner_d2 {
+                continue;
+            }
+            let dist = d2.sqrt();
+            // Distance behind the leading edge.
+            let behind = ring.radius - dist;
+            // The 0.5 puts a crest on the leading edge.
+            let cell = behind * ring.inv_spacing + 0.5;
+            // behind is never negative here, so the cast is a floor.
+            let frac = cell - (cell as u32) as f32;
+            // Triangle wave, squared for a sharper crest.
+            let crest = 1.0 - (2.0 * frac - 1.0).abs();
+            let brightness = ring.amp
+                * crest
+                * crest
+                * (1.0 - behind * ring.inv_train)
+                * (1.0 - dist * inv_reach).max(0.0);
+            ripple += brightness;
+            hue_acc += ring.hue * brightness;
+            sat_acc += ring.sat * brightness;
         }
 
-        let inv_reach = 1.0 / s.ripple_max_mm;
-
-        for (o, led) in out.iter_mut().zip(LED_MAP.iter()) {
-            let mut ripple = 0.0f32;
-            let mut hue_acc = 0.0f32;
-            let mut sat_acc = 0.0f32;
-            for ring in live[..n_live].iter() {
-                let dx = led.wx - ring.x;
-                let dy = led.wy - ring.y;
-                let u = dx * dx + dy * dy;
-                if u > ring.u_outer || u < ring.u_inner {
-                    continue;
-                }
-                let d = u.sqrt();
-                // Distance behind the leading edge.
-                let q = ring.r - d;
-                // The 0.5 puts a crest on the leading edge.
-                let cell = q * ring.inv_spacing + 0.5;
-                // q is never negative here, so the cast is a floor.
-                let frac = cell - (cell as u32) as f32;
-                // Triangle wave, squared for a sharper crest.
-                let crest = 1.0 - (2.0 * frac - 1.0).abs();
-                let w = ring.amp
-                    * crest
-                    * crest
-                    * (1.0 - q * ring.inv_train)
-                    * (1.0 - d * inv_reach).max(0.0);
-                ripple += w;
-                hue_acc += ring.hue * w;
-                sat_acc += ring.sat_w * w;
-            }
-
-            if ripple > 1e-3 {
-                let inv = 1.0 / ripple;
-                *o = hsv(
-                    hue_acc * inv,
-                    (sat_acc * inv).clamp(0.0, 1.0),
-                    ripple.min(1.0),
-                );
-            } else {
-                *o = [0, 0, 0];
-            }
+        if ripple > MIN_RIPPLE {
+            let inv = 1.0 / ripple;
+            hsv(
+                hue_acc * inv,
+                (sat_acc * inv).clamp(0.0, 1.0),
+                ripple.min(1.0),
+            )
+        } else {
+            [0, 0, 0]
         }
     }
 }

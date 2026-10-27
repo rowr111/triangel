@@ -1,5 +1,5 @@
 use crate::led::map::LED_COUNT;
-use crate::patterns::{time_step_ms, Frame, Rng};
+use crate::patterns::{lerp, time_step_ms, Frame, Rng};
 
 const MAX_GLINTS: usize = 24;
 
@@ -49,10 +49,10 @@ impl Glints {
 
     /// Starts new glints, then blends every live one toward white.
     pub fn update(&mut self, t_ms: u32, out: &mut Frame) {
-        let s = self.style;
+        let style = self.style;
         // Capped so a long gap cannot start a burst of tries.
         let dt_ms = time_step_ms(&mut self.last_ms, t_ms, 100);
-        self.tries += dt_ms as f32 * s.tries_per_sec / 1000.0;
+        self.tries += dt_ms as f32 * style.tries_per_sec / 1000.0;
         while self.tries >= 1.0 {
             self.tries -= 1.0;
             let led = self.rng.below(LED_COUNT);
@@ -64,9 +64,9 @@ impl Glints {
             let free = self
                 .glints
                 .iter()
-                .position(|gl| t_ms.wrapping_sub(gl.start_ms) >= gl.life_ms);
+                .position(|glint| t_ms.wrapping_sub(glint.start_ms) >= glint.life_ms);
             if let Some(slot) = free {
-                let life_ms = self.rng.range_u32(s.min_ms, s.max_ms);
+                let life_ms = self.rng.range_u32(style.min_ms, style.max_ms);
                 self.glints[slot] = Glint {
                     led: led as u16,
                     start_ms: t_ms,
@@ -75,15 +75,15 @@ impl Glints {
             }
         }
 
-        for gl in &self.glints {
-            let age = t_ms.wrapping_sub(gl.start_ms);
-            if age >= gl.life_ms {
+        for glint in &self.glints {
+            let age = t_ms.wrapping_sub(glint.start_ms);
+            if age >= glint.life_ms {
                 continue;
             }
-            let fade = 1.0 - age as f32 / gl.life_ms as f32;
-            let k = fade * fade * s.white;
-            for c in out[gl.led as usize].iter_mut() {
-                *c = (*c as f32 + (255.0 - *c as f32) * k) as u8;
+            let fade = 1.0 - age as f32 / glint.life_ms as f32;
+            let whiten = fade * fade * style.white;
+            for channel in out[glint.led as usize].iter_mut() {
+                *channel = lerp(*channel as f32, 255.0, whiten) as u8;
             }
         }
     }
