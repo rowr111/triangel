@@ -198,7 +198,6 @@ impl Pattern for Fubuki {
         for (i, led) in LED_MAP.iter().enumerate() {
             // Per-LED texture and pulse, shared by both piles.
             let hash = self.led_hash[i];
-            // sin(pulse phase + this LED's phase)
             let wave = pulse_phase.sin_plus(self.pulse_offset[i]);
             let pulse = 1.0 - PILE_PULSE * (0.5 - 0.5 * wave);
             let pile_v = self.pile_tex[i] * pulse;
