@@ -2,7 +2,9 @@ use crate::audio::Audio;
 use crate::led::grid;
 use crate::led::map::{LED_COUNT, LED_MAP, WORLD_BOT, WORLD_CENTROID_Y, WORLD_CX, WORLD_TOP};
 use crate::led::world::{WORLD_LEFT, WORLD_RIGHT};
-use crate::patterns::{hsv, lerp, random_u32, time_step_ms, wrap360, Frame, Pattern, Phasor, Rng};
+use crate::patterns::{
+    hsv, lerp, random_u32, time_step_ms, wrap360, Frame, HueMix, Pattern, Phasor, Rng,
+};
 
 // Comets and launching.
 const MAX_COMETS: usize = 4;
@@ -99,8 +101,7 @@ struct Dot {
 #[derive(Clone, Copy, Default)]
 struct LedSum {
     brightness: f32,
-    hue_x: f32,
-    hue_y: f32,
+    hue: HueMix,
 }
 
 /// Ricochet: a few comets bounce around inside the triangle on black, trailing tails. Each
@@ -187,7 +188,7 @@ impl Pattern for Ricochet {
                 *px = [0, 0, 0];
                 continue;
             }
-            let hue = sum.hue_y.atan2(sum.hue_x).to_degrees();
+            let hue = sum.hue.degrees();
             let sat = BASE_SAT * (1.0 - brightness * brightness * HEAD_WHITEN);
             *px = hsv(wrap360(hue), sat, brightness);
         }
@@ -385,8 +386,7 @@ impl Ricochet {
                     let weight = strength * dot.brightness;
                     let sum = &mut self.sums[i];
                     sum.brightness += weight;
-                    sum.hue_x += weight * dot.hue.cos;
-                    sum.hue_y += weight * dot.hue.sin;
+                    sum.hue.add(weight, dot.hue);
                 }
             });
         }

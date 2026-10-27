@@ -314,7 +314,7 @@ impl Pattern for Squall {
                 c = mix_rgb(c, FLASH_COLOR, bolt);
             }
 
-            *px = [c[0] as u8, c[1] as u8, c[2] as u8];
+            *px = c.map(|v| v as u8);
         }
     }
 }

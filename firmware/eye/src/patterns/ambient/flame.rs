@@ -340,6 +340,5 @@ fn q12(v: f32) -> i32 {
 
 /// Color for a heat in 0..1.
 fn fire_ramp(heat: f32) -> [u8; 3] {
-    let c = ramp(&FIRE_RAMP, heat);
-    [c[0] as u8, c[1] as u8, c[2] as u8]
+    ramp(&FIRE_RAMP, heat).map(|v| v as u8)
 }

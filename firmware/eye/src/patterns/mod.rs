@@ -80,6 +80,25 @@ impl Phasor {
     }
 }
 
+/// A weighted average of hues, as vectors on the color wheel, so it never jumps at 0/360.
+#[derive(Clone, Copy, Default)]
+pub struct HueMix {
+    x: f32,
+    y: f32,
+}
+
+impl HueMix {
+    pub fn add(&mut self, weight: f32, hue: Phasor) {
+        self.x += weight * hue.cos;
+        self.y += weight * hue.sin;
+    }
+
+    /// The average hue in degrees, from -180 to 180.
+    pub fn degrees(self) -> f32 {
+        self.y.atan2(self.x).to_degrees()
+    }
+}
+
 /// Number of phase offsets in `phase_phasors`, 0.01 rad apart, covering 0..TAU.
 pub const PHASE_STEPS: usize = 628;
 

@@ -54,6 +54,7 @@ hsv(h, s, v) -> [u8; 3]     // h: 0-360, s/v: 0-1
 hsv_int(h6, s, v) -> [u8; 3] // whole numbers; h6: sixths of a turn x4096, s: x4096, v: 0-255
 lerp(a, b, t) -> f32
 Phasor::new(angle)          // .sin, .cos, .sin_plus(b), .sin_minus(b); see How to make a pattern fast enough
+HueMix::default()           // average of hues with no jump at 0/360; .add(weight, hue_phasor), .degrees()
 mix_rgb(a, b, t)            // lerp per channel, f32 RGB
 ramp(&stops, t)             // color along (position, color) stops
 smoothstep(t) -> f32        // clamped to 0-1
