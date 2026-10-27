@@ -3,11 +3,13 @@ use core::f32::consts::TAU;
 use crate::audio::Audio;
 use crate::led::grid;
 use crate::led::map::{LED_COUNT, LED_MAP};
-use crate::patterns::{free_or_oldest, hsv, Frame, Pattern, Rng};
+use crate::patterns::{free_or_oldest, hsv, lerp, Frame, Pattern, Phasor, Rng};
 use triangel_shared::tuning::firework::*;
 
 /// Must stay under 255: each LED stores the index of its strongest spark in a byte.
 const MAX_SPARKS: usize = 192;
+/// No spark reaches this LED.
+const NO_OWNER: u8 = u8::MAX;
 const _: () = assert!(
     MAX_SPARKS <= NO_OWNER as usize,
     "a spark index must fit below NO_OWNER"
@@ -18,6 +20,8 @@ const _: () = assert!(
 );
 /// Spots tried for each drop burst before taking the farthest one found.
 const DROP_TRIES: usize = 12;
+/// A burst's strength on the softest beat; the hardest beat gives 1.
+const SOFTEST_BURST: f32 = 0.4;
 
 /// (hue, sat). The cooler hues are less saturated, or they would look dim.
 const PALETTE: [(f32, f32); 5] = [
@@ -27,17 +31,6 @@ const PALETTE: [(f32, f32); 5] = [
     (190.0, 0.82),
     (130.0, 0.88),
 ];
-
-/// Squared distance from `p` to the nearest of `others`, or f32::MAX if there are none.
-fn nearest_d2(p: (f32, f32), others: &[(f32, f32)]) -> f32 {
-    others.iter().fold(f32::MAX, |m, q| {
-        let (dx, dy) = (p.0 - q.0, p.1 - q.1);
-        m.min(dx * dx + dy * dy)
-    })
-}
-
-/// No spark reaches this LED.
-const NO_OWNER: u8 = u8::MAX;
 
 struct Spark {
     x: f32,
@@ -52,10 +45,9 @@ struct Spark {
 }
 
 /// One live spark's position, size and color for this frame.
-#[derive(Clone, Copy)]
 struct Live {
-    px: f32,
-    py: f32,
+    x: f32,
+    y: f32,
     r2: f32,
     inv_r2: f32,
     amp: f32,
@@ -64,15 +56,30 @@ struct Live {
     radius: f32,
 }
 
+/// One LED's total brightness, its strongest spark's brightness, and that spark's index.
+#[derive(Clone, Copy)]
+struct LedSum {
+    total: f32,
+    best: f32,
+    owner: u8,
+}
+
+impl LedSum {
+    const NONE: LedSum = LedSum {
+        total: 0.0,
+        best: 0.0,
+        owner: NO_OWNER,
+    };
+}
+
 /// Fireworks. Each beat throws a burst of sparks from one point; they start white, take
 /// on the burst's color, fall and fade.
 pub struct Firework {
     rng: Rng,
     sparks: [Spark; MAX_SPARKS],
+    live: Vec<Live>,
     /// Per LED: total brightness, the strongest spark's brightness, and its index.
-    tot: [f32; LED_COUNT],
-    best: [f32; LED_COUNT],
-    owner: [u8; LED_COUNT],
+    sums: [LedSum; LED_COUNT],
 }
 
 impl Firework {
@@ -90,12 +97,37 @@ impl Firework {
                 strength: 0.0,
                 alive: false,
             }),
-            tot: [0.0; LED_COUNT],
-            best: [0.0; LED_COUNT],
-            owner: [NO_OWNER; LED_COUNT],
+            live: Vec::with_capacity(MAX_SPARKS),
+            sums: [LedSum::NONE; LED_COUNT],
         }
     }
+}
 
+impl Pattern for Firework {
+    fn render(&mut self, t_ms: u32, audio: &Audio, out: &mut Frame) {
+        if audio.drop {
+            self.drop_bursts(t_ms);
+        } else if audio.beat {
+            let count = BURST_MIN + (audio.beat_strength * BURST_EXTRA) as usize;
+            let strength = lerp(SOFTEST_BURST, 1.0, audio.beat_strength);
+            self.burst(t_ms, strength, count);
+        }
+
+        self.collect_live(t_ms);
+        self.add_sparks();
+
+        for (i, px) in out.iter_mut().enumerate() {
+            let sum = self.sums[i];
+            let (hue, sat) = match sum.owner {
+                NO_OWNER => (0.0, 0.0),
+                owner => (self.live[owner as usize].hue, self.live[owner as usize].sat),
+            };
+            *px = hsv(hue, sat, sum.total.min(1.0));
+        }
+    }
+}
+
+impl Firework {
     /// A random LED's position.
     fn random_point(&mut self) -> (f32, f32) {
         let pick = self.rng.below(LED_COUNT);
@@ -119,10 +151,10 @@ impl Firework {
                 if best_d2 >= min2 {
                     break;
                 }
-                let p = self.random_point();
-                let d2 = nearest_d2(p, &placed[..k]);
+                let spot = self.random_point();
+                let d2 = nearest_d2(spot, &placed[..k]);
                 if d2 > best_d2 {
-                    best = p;
+                    best = spot;
                     best_d2 = d2;
                 }
             }
@@ -138,15 +170,15 @@ impl Firework {
         let step = TAU / count as f32;
         let offset = self.rng.f32() * TAU;
         for k in 0..count {
-            let angle = offset + step * k as f32 + (self.rng.f32() - 0.5) * step;
+            let angle = offset + step * k as f32 + self.rng.plus_minus(step * 0.5);
             let speed = self.rng.range_f32(SPEED_MIN, SPEED_MAX);
-            let (sn, cs) = angle.sin_cos();
+            let dir = Phasor::new(angle);
             let slot = free_or_oldest(&self.sparks, t_ms, |s| !s.alive, |s| s.start_ms);
             self.sparks[slot] = Spark {
                 x,
                 y,
-                vx: cs * speed,
-                vy: sn * speed,
+                vx: dir.cos * speed,
+                vy: dir.sin * speed,
                 hue,
                 sat,
                 start_ms: t_ms,
@@ -155,29 +187,10 @@ impl Firework {
             };
         }
     }
-}
 
-impl Pattern for Firework {
-    fn render(&mut self, t_ms: u32, audio: &Audio, out: &mut Frame) {
-        if audio.drop {
-            self.drop_bursts(t_ms);
-        } else if audio.beat {
-            let count = BURST_MIN + (audio.beat_strength * BURST_EXTRA) as usize;
-            self.burst(t_ms, 0.4 + 0.6 * audio.beat_strength, count);
-        }
-
-        let blank = Live {
-            px: 0.0,
-            py: 0.0,
-            r2: 0.0,
-            inv_r2: 0.0,
-            amp: 0.0,
-            hue: 0.0,
-            sat: 0.0,
-            radius: 0.0,
-        };
-        let mut live = [blank; MAX_SPARKS];
-        let mut n_live = 0;
+    /// Ages the sparks and lists the live ones' position, size and color for this frame.
+    fn collect_live(&mut self, t_ms: u32) {
+        self.live.clear();
         for spark in self.sparks.iter_mut() {
             if !spark.alive {
                 continue;
@@ -189,52 +202,49 @@ impl Pattern for Firework {
             }
             let life = 1.0 - age / SPARK_LIFE_MS;
             let young = (1.0 - age / (SPARK_LIFE_MS * WHITE_FRAC)).clamp(0.0, 1.0);
-            let r = SPARK_END_MM + (SPARK_START_MM - SPARK_END_MM) * life;
-            live[n_live] = Live {
-                px: spark.x + spark.vx * age,
-                py: spark.y + spark.vy * age + GRAVITY * age * age,
-                r2: r * r,
-                inv_r2: 1.0 / (r * r),
+            let radius = SPARK_END_MM + (SPARK_START_MM - SPARK_END_MM) * life;
+            self.live.push(Live {
+                x: spark.x + spark.vx * age,
+                y: spark.y + spark.vy * age + GRAVITY * age * age,
+                r2: radius * radius,
+                inv_r2: 1.0 / (radius * radius),
                 amp: spark.strength * life * life * (1.0 + HIT_BOOST * young),
                 hue: spark.hue,
                 sat: spark.sat * (1.0 - young),
-                radius: r,
-            };
-            n_live += 1;
+                radius,
+            });
         }
+    }
 
-        let Firework {
-            tot, best, owner, ..
-        } = self;
-        tot.fill(0.0);
-        best.fill(0.0);
-        owner.fill(NO_OWNER);
-
+    /// Adds the live sparks to the LEDs they cover.
+    fn add_sparks(&mut self) {
+        self.sums.fill(LedSum::NONE);
         // An LED takes the color of its strongest spark, so overlapping bursts stay distinct.
-        for (s, spark) in live[..n_live].iter().enumerate() {
-            grid::for_each_near(spark.px, spark.py, spark.radius, |i| {
-                let dx = LED_MAP[i].wx - spark.px;
-                let dy = LED_MAP[i].wy - spark.py;
-                let u = dx * dx + dy * dy;
-                if u > spark.r2 {
+        for (index, spark) in self.live.iter().enumerate() {
+            grid::for_each_near(spark.x, spark.y, spark.radius, |i| {
+                let dx = LED_MAP[i].wx - spark.x;
+                let dy = LED_MAP[i].wy - spark.y;
+                let d2 = dx * dx + dy * dy;
+                if d2 > spark.r2 {
                     return;
                 }
-                let fall = 1.0 - u * spark.inv_r2;
-                let w = spark.amp * fall * fall;
-                tot[i] += w;
-                if w > best[i] {
-                    best[i] = w;
-                    owner[i] = s as u8;
+                let fall = 1.0 - d2 * spark.inv_r2;
+                let brightness = spark.amp * fall * fall;
+                let sum = &mut self.sums[i];
+                sum.total += brightness;
+                if brightness > sum.best {
+                    sum.best = brightness;
+                    sum.owner = index as u8;
                 }
             });
         }
-
-        for (i, o) in out.iter_mut().enumerate() {
-            let (hue, sat) = match owner[i] {
-                NO_OWNER => (0.0, 0.0),
-                s => (live[s as usize].hue, live[s as usize].sat),
-            };
-            *o = hsv(hue, sat, tot[i].min(1.0));
-        }
     }
+}
+
+/// Squared distance from `p` to the nearest of `others`, or f32::MAX if there are none.
+fn nearest_d2(p: (f32, f32), others: &[(f32, f32)]) -> f32 {
+    others.iter().fold(f32::MAX, |nearest, q| {
+        let (dx, dy) = (p.0 - q.0, p.1 - q.1);
+        nearest.min(dx * dx + dy * dy)
+    })
 }

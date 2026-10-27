@@ -1,6 +1,6 @@
 use crate::audio::Audio;
 use crate::patterns::ripples::{RippleStyle, Ripples};
-use crate::patterns::{Frame, Pattern};
+use crate::patterns::{lerp, Frame, Pattern};
 use triangel_shared::tuning::raindrop::*;
 use triangel_shared::tuning::BASS_BANDS;
 
@@ -14,6 +14,8 @@ const STYLE: RippleStyle = RippleStyle {
     hit_boost: HIT_BOOST,
 };
 
+/// A drop's strength on the softest beat; the hardest beat gives 1.
+const SOFTEST_DROP: f32 = 0.35;
 /// Ring spacing range once a tempo has been found.
 const SPACING_LOCKED_MIN_MM: f32 = 16.0;
 const SPACING_LOCKED_MAX_MM: f32 = 150.0;
@@ -27,6 +29,11 @@ const BEAT_MAX_MS: f32 = 1200.0;
 const BEAT_LOST_MS: u32 = 4_000;
 /// How far the tempo estimate moves toward each accepted gap.
 const BEAT_EASE: f32 = 0.2;
+/// A gap longer than DOUBLE_BEAT beats is halved, and one shorter than HALF_BEAT is doubled.
+const DOUBLE_BEAT: f32 = 1.6;
+const HALF_BEAT: f32 = 0.65;
+/// A gap fits the tempo when it is within this share of a beat.
+const BEAT_FIT: f32 = 0.25;
 /// After this many gaps in a row that do not fit, the tempo restarts from the latest.
 const BEAT_MISSES: u8 = 4;
 
@@ -71,14 +78,14 @@ impl Raindrop {
             self.misses = 0;
             return;
         }
-        let mut g = gap;
-        if g > self.beat_ms * 1.6 {
-            g *= 0.5;
-        } else if g < self.beat_ms * 0.65 {
-            g *= 2.0;
+        let mut fitted = gap;
+        if fitted > self.beat_ms * DOUBLE_BEAT {
+            fitted *= 0.5;
+        } else if fitted < self.beat_ms * HALF_BEAT {
+            fitted *= 2.0;
         }
-        if (g - self.beat_ms).abs() < self.beat_ms * 0.25 {
-            self.beat_ms += (g - self.beat_ms) * BEAT_EASE;
+        if (fitted - self.beat_ms).abs() < self.beat_ms * BEAT_FIT {
+            self.beat_ms += (fitted - self.beat_ms) * BEAT_EASE;
             self.misses = 0;
         } else {
             self.misses += 1;
@@ -116,7 +123,7 @@ impl Pattern for Raindrop {
             self.track_beat(t_ms);
             let burst = BURST_MIN + (strength * BURST_EXTRA) as usize;
             for _ in 0..burst {
-                self.land(t_ms, 0.35 + 0.65 * strength);
+                self.land(t_ms, lerp(SOFTEST_DROP, 1.0, strength));
             }
         } else if hit < RELEASE {
             self.armed = true;

@@ -8,7 +8,7 @@ use triangel_shared::frame::BAND_COUNT;
 use triangel_shared::tuning::spectrum::*;
 
 // Color ramps from the core to the rim. Every stop has its brightest channel at 255, so
-// brightness is set only by `v`.
+// brightness is set only by `brightness`.
 const STOPS: usize = 5;
 #[rustfmt::skip]
 const PALETTES: [[[f32; 3]; STOPS]; 6] = [
@@ -66,52 +66,64 @@ impl Pattern for Spectrum {
     fn render(&mut self, t_ms: u32, audio: &Audio, out: &mut Frame) {
         let loud = QUIET_FLOOR + (1.0 - QUIET_FLOOR) * audio.level_norm;
         let swirl_turn = Phasor::new(cycle(t_ms, SWIRL_PERIOD_MS) * TAU);
-        let slot = (t_ms / PALETTE_MS) as usize % PALETTES.len();
-        let within = t_ms % PALETTE_MS;
-        let held = PALETTE_MS - PALETTE_FADE_MS;
-        let mix = if within > held {
-            (within - held) as f32 / PALETTE_FADE_MS as f32
-        } else {
-            0.0
-        };
         let flow = cycle(t_ms, FLOW_PERIOD_MS) * 2.0;
+        let (slot, front) = palette_change(t_ms);
         let (from, to) = (&PALETTES[slot], &PALETTES[(slot + 1) % PALETTES.len()]);
-        // How far the palette change has spread, in band positions; it starts and ends
-        // past the ends.
-        let front = mix * ((BAND_COUNT - 1) as f32 + 2.0 * FRONT_EDGE) - FRONT_EDGE;
         let inv_edge = 1.0 / FRONT_EDGE;
 
-        for (i, o) in out.iter_mut().enumerate() {
+        for (i, px) in out.iter_mut().enumerate() {
             let pos = self.band_pos[i];
-            let k = pos as usize;
-            let f = pos - k as f32;
-            let energy = lerp(audio.bands[k], audio.bands[k + 1], f);
-            let hit = lerp(audio.rise[k], audio.rise[k + 1], f);
+            let band = pos as usize;
+            let frac = pos - band as f32;
+            let energy = lerp(audio.bands[band], audio.bands[band + 1], frac);
+            let hit = lerp(audio.rise[band], audio.rise[band + 1], frac);
 
             let swirl = self.swirl_angle[i].sin_plus(swirl_turn);
             let lit = energy * loud * GAIN * (1.0 + SWIRL_DEPTH * swirl);
-            let v = (lit + hit * HIT_GAIN).clamp(0.0, 1.0);
+            let brightness = (lit + hit * HIT_GAIN).clamp(0.0, 1.0);
 
-            // Position along the ramp. Subtracting the flow moves colors outward; the 4.0
-            // keeps it positive.
-            let mut f = pos * BAND_TO_RAMP - flow + SWIRL_SHIFT * swirl + 4.0;
-            // Fold into 0..2 and reflect the upper half, so the ramp runs out and back.
-            f -= 2.0 * ((f * 0.5) as u32) as f32;
-            let t = if f > 1.0 { 2.0 - f } else { f } * (STOPS - 1) as f32;
-            let seg = (t as usize).min(STOPS - 2);
-            let u = t - seg as f32;
+            let (seg, stop_frac) = ramp_stop(pos, flow, swirl);
             let white = hit * HIT_WHITE;
             // 1 where the new palette has arrived, 0 where it has not.
-            let m = ((front - pos) * inv_edge).clamp(0.0, 1.0);
-            for (ch, o_ch) in o.iter_mut().enumerate() {
-                let a = lerp(from[seg][ch], from[seg + 1][ch], u);
-                let c = if m <= 0.0 {
-                    a
+            let arrived = ((front - pos) * inv_edge).clamp(0.0, 1.0);
+            for (channel, value) in px.iter_mut().enumerate() {
+                let old = lerp(from[seg][channel], from[seg + 1][channel], stop_frac);
+                let color = if arrived <= 0.0 {
+                    old
                 } else {
-                    lerp(a, lerp(to[seg][ch], to[seg + 1][ch], u), m)
+                    let new = lerp(to[seg][channel], to[seg + 1][channel], stop_frac);
+                    lerp(old, new, arrived)
                 };
-                *o_ch = (lerp(c, 255.0, white) * v) as u8;
+                *value = (lerp(color, 255.0, white) * brightness) as u8;
             }
         }
     }
+}
+
+/// Which palette is showing, and how far the change to the next one has spread.
+fn palette_change(t_ms: u32) -> (usize, f32) {
+    let slot = (t_ms / PALETTE_MS) as usize % PALETTES.len();
+    let within = t_ms % PALETTE_MS;
+    let held = PALETTE_MS - PALETTE_FADE_MS;
+    let mix = if within > held {
+        (within - held) as f32 / PALETTE_FADE_MS as f32
+    } else {
+        0.0
+    };
+    // How far the palette change has spread, in band positions; it starts and ends
+    // past the ends.
+    let front = mix * ((BAND_COUNT - 1) as f32 + 2.0 * FRONT_EDGE) - FRONT_EDGE;
+    (slot, front)
+}
+
+/// The ramp stop below an LED's color, and how far it is toward the next stop.
+fn ramp_stop(pos: f32, flow: f32, swirl: f32) -> (usize, f32) {
+    // Position along the ramp. Subtracting the flow moves colors outward; the 4.0
+    // keeps it positive.
+    let mut ramp_pos = pos * BAND_TO_RAMP - flow + SWIRL_SHIFT * swirl + 4.0;
+    // Fold into 0..2 and reflect the upper half, so the ramp runs out and back.
+    ramp_pos -= 2.0 * ((ramp_pos * 0.5) as u32) as f32;
+    let stop_pos = ramp_pos.min(2.0 - ramp_pos) * (STOPS - 1) as f32;
+    let seg = (stop_pos as usize).min(STOPS - 2);
+    (seg, stop_pos - seg as f32)
 }
