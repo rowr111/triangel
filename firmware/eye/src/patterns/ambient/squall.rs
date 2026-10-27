@@ -2,7 +2,7 @@ use crate::audio::Audio;
 use crate::led::geom::{LATTICE_ROW_H, LATTICE_SIDE, LATTICE_TOP_Y};
 use crate::led::grid::{self, CELL_MM};
 use crate::led::map::{LED_COUNT, LED_MAP, WORLD_BOT, WORLD_CX, WORLD_H, WORLD_TOP};
-use crate::led::world::{WORLD_HALF_W, WORLD_LEFT, WORLD_RIGHT};
+use crate::led::world::{half_width_at, WORLD_LEFT, WORLD_RIGHT};
 use crate::patterns::{
     cycle, hash01, knuth_hash, lerp, mix_rgb, phase_phasors, ramp, random_u32, Frame, Pattern,
     Phasor, Rng, PHASE_STEPS,
@@ -455,8 +455,8 @@ impl Squall {
             let age = cycle(t_ms, period);
             let h = knuth_hash((t_ms / period) ^ self.seed) ^ (slot as u32).wrapping_mul(SLOT_MIX);
             let y = WORLD_TOP + hash01(h, 1) * WORLD_H;
-            // Triangle half-width at y, plus 40 mm.
-            let half_w = (WORLD_BOT - y) / WORLD_H * WORLD_HALF_W + 40.0;
+            // Plus a 40 mm margin.
+            let half_w = half_width_at(y) + 40.0;
             let x = WORLD_CX + (hash01(h, 2) * 2.0 - 1.0) * half_w;
             let r = lerp(BLOOM_R0_MM, BLOOM_R1_MM, age);
             let reach = (r / CELL_MM).ceil() as usize;

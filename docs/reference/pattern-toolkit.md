@@ -33,7 +33,7 @@ WORLD_BOT = 436 mm    - apex (triangle tile 25, room corner)
 WORLD_H   = 430 mm    - total height
 ```
 
-These constants, plus `WORLD_CENTROID_X` / `WORLD_CENTROID_Y`, are in `crate::led::map`. The triangle's left and right edges are `WORLD_LEFT` / `WORLD_RIGHT` in `crate::led::world`.
+These constants, plus `WORLD_CENTROID_X` / `WORLD_CENTROID_Y`, are in `crate::led::map`. The triangle's left and right edges are `WORLD_LEFT` / `WORLD_RIGHT` in `crate::led::world`, and `half_width_at(y)` there gives half its width at a given `y`.
 
 Each entry of `LED_MAP` has the LED's position, `wx` and `wy` in mm, its triangle tile (`board_id`) and its number on that triangle tile (`local_idx`, 1-24). `LED_MAP` is in wiring order, so an LED's index is also its place on the chain.
 

@@ -30,7 +30,8 @@ const _: () = assert!(
 const STRIPE_HALF: f32 = 0.10; // half-width of the bright line on each band edge
 const STRIPE_SOFT: f32 = 0.05; // softness of that line's edge
 const STRIPE_WHITEN: f32 = 0.55; // how far the line goes toward white
-                                 // How far the glow reaches from its line. At 0.40 the glows meet at black in the middle of each band.
+
+// How far the glow reaches from its line. At 0.40 the glows meet at black in the middle of each band.
 const GLOW_W: f32 = 0.40;
 const GAP_LEVEL: f32 = 0.0; // brightness left in the gap
 
