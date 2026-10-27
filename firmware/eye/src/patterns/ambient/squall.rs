@@ -1,6 +1,6 @@
 use crate::audio::Audio;
 use crate::led::geom::{LATTICE_ROW_H, LATTICE_SIDE, LATTICE_TOP_Y};
-use crate::led::grid::{self, CELL_MM};
+use crate::led::grid;
 use crate::led::map::{LED_COUNT, LED_MAP, WORLD_BOT, WORLD_CX, WORLD_H, WORLD_TOP};
 use crate::led::world::{half_width_at, WORLD_LEFT, WORLD_RIGHT};
 use crate::patterns::{
@@ -196,7 +196,7 @@ struct Bloom {
     inv_r2: f32,
     amp: f32,
     ring: f32, // 0 a filled disc, 1 a ring
-    reach: usize,
+    radius: f32,
 }
 
 /// One soft disc of a cloud this frame.
@@ -204,7 +204,7 @@ struct Lobe {
     x: f32,
     y: f32,
     inv_r2: f32,
-    reach: usize,
+    radius: f32,
 }
 
 /// A night storm seen from above: dark water boiling with upwellings, pale clouds
@@ -458,14 +458,13 @@ impl Squall {
             let half_w = half_width_at(y) + 40.0;
             let x = WORLD_CX + (hash01(h, 2) * 2.0 - 1.0) * half_w;
             let r = lerp(BLOOM_R0_MM, BLOOM_R1_MM, age);
-            let reach = (r / CELL_MM).ceil() as usize;
             Bloom {
                 x,
                 y,
                 inv_r2: 1.0 / (r * r),
                 amp: BLOOM_PEAK * (age * PI).sin(),
                 ring: BLOOM_RIM * age,
-                reach,
+                radius: r,
             }
         })
     }
@@ -478,10 +477,10 @@ impl Squall {
             inv_r2,
             amp,
             ring,
-            reach,
+            radius,
         } in &self.blooms(t_ms)
         {
-            grid::for_each_near(x, y, reach, |i| {
+            grid::for_each_near(x, y, radius, |i| {
                 let led = &LED_MAP[i];
                 let q = ((led.wx - x).powi(2) + (led.wy - y).powi(2)) * inv_r2;
                 if q < 1.0 {
@@ -509,7 +508,7 @@ impl Squall {
                     x: c.x + orbit.cos() * off,
                     y: c.y + orbit.sin() * off,
                     inv_r2: 1.0 / (r * r),
-                    reach: (r / CELL_MM).ceil() as usize,
+                    radius: r,
                 }
             })
         })
@@ -522,10 +521,10 @@ impl Squall {
             x,
             y,
             inv_r2,
-            reach,
+            radius,
         } in self.lobes(t_ms).as_flattened()
         {
-            grid::for_each_near(x, y, reach, |i| {
+            grid::for_each_near(x, y, radius, |i| {
                 let led = &LED_MAP[i];
                 let q = ((led.wx - x).powi(2) + (led.wy - y).powi(2)) * inv_r2;
                 if q < 1.0 {
@@ -568,9 +567,8 @@ impl Squall {
     fn add_lightning(&mut self, t_ms: u32) {
         self.find_lit_sides(t_ms);
         self.bolt.fill(0.0);
-        let bolt_reach = (BOLT_REACH_MM / CELL_MM).ceil() as usize;
         for s in &self.lit_sides {
-            grid::for_each_near_seg(s.a, s.b, bolt_reach, |i| {
+            grid::for_each_near_seg(s.a, s.b, BOLT_REACH_MM, |i| {
                 let led = &LED_MAP[i];
                 let d2 = s.dist2(led.wx, led.wy);
                 if d2 < BOLT_REACH_MM * BOLT_REACH_MM {

@@ -1,7 +1,7 @@
 use core::f32::consts::TAU;
 
 use crate::audio::Audio;
-use crate::led::grid::{self, CELL_MM};
+use crate::led::grid;
 use crate::led::map::{LED_COUNT, LED_MAP};
 use crate::patterns::{free_or_oldest, hsv, Frame, Pattern, Rng};
 use triangel_shared::tuning::firework::*;
@@ -61,7 +61,7 @@ struct Live {
     amp: f32,
     hue: f32,
     sat: f32,
-    reach: usize,
+    radius: f32,
 }
 
 /// Fireworks. Each beat throws a burst of sparks from one point; they start white, take
@@ -174,7 +174,7 @@ impl Pattern for Firework {
             amp: 0.0,
             hue: 0.0,
             sat: 0.0,
-            reach: 0,
+            radius: 0.0,
         };
         let mut live = [blank; MAX_SPARKS];
         let mut n_live = 0;
@@ -198,7 +198,7 @@ impl Pattern for Firework {
                 amp: spark.strength * life * life * (1.0 + HIT_BOOST * young),
                 hue: spark.hue,
                 sat: spark.sat * (1.0 - young),
-                reach: (r / CELL_MM).ceil() as usize,
+                radius: r,
             };
             n_live += 1;
         }
@@ -212,7 +212,7 @@ impl Pattern for Firework {
 
         // An LED takes the color of its strongest spark, so overlapping bursts stay distinct.
         for (s, spark) in live[..n_live].iter().enumerate() {
-            grid::for_each_near(spark.px, spark.py, spark.reach, |i| {
+            grid::for_each_near(spark.px, spark.py, spark.radius, |i| {
                 let dx = LED_MAP[i].wx - spark.px;
                 let dy = LED_MAP[i].wy - spark.py;
                 let u = dx * dx + dy * dy;

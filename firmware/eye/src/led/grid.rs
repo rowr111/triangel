@@ -27,14 +27,15 @@ fn for_each_in_cells(gx0: usize, gx1: usize, gy0: usize, gy1: usize, f: &mut imp
     }
 }
 
-/// Calls `f` with each LED index within `reach` cells of (x, y).
-pub fn for_each_near(x: f32, y: f32, reach: usize, f: impl FnMut(usize)) {
-    for_each_near_seg((x, y), (x, y), reach, f);
+/// Calls `f` with each LED index in the cells within `radius_mm` of (x, y).
+pub fn for_each_near(x: f32, y: f32, radius_mm: f32, f: impl FnMut(usize)) {
+    for_each_near_seg((x, y), (x, y), radius_mm, f);
 }
 
 /// Calls `f` with each LED index in the box of cells around segment a-b, widened by
-/// `reach`. That is more than the LEDs near the segment, so callers still check distance.
-pub fn for_each_near_seg(a: (f32, f32), b: (f32, f32), reach: usize, mut f: impl FnMut(usize)) {
+/// `radius_mm`. That is more than the LEDs near the segment, so callers still check distance.
+pub fn for_each_near_seg(a: (f32, f32), b: (f32, f32), radius_mm: f32, mut f: impl FnMut(usize)) {
+    let reach = (radius_mm / CELL_MM).ceil() as usize;
     let (cx0, cx1) = (col(a.0.min(b.0)), col(a.0.max(b.0)));
     let (cy0, cy1) = (row(a.1.min(b.1)), row(a.1.max(b.1)));
     for_each_in_cells(

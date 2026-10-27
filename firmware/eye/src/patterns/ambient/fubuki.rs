@@ -1,5 +1,5 @@
 use crate::audio::Audio;
-use crate::led::grid::{self, CELL_MM};
+use crate::led::grid;
 use crate::led::map::{LED_COUNT, LED_MAP, WORLD_BOT, WORLD_CX, WORLD_H, WORLD_TOP};
 use crate::led::world::{WORLD_LEFT, WORLD_RIGHT};
 use crate::patterns::{
@@ -233,12 +233,11 @@ impl Pattern for Fubuki {
 impl Fubuki {
     /// Keeps the strongest flake per LED.
     fn mark_flakes(&mut self, flakes: &[Flake]) {
-        let reach = (FLAKE_R_MM / CELL_MM).ceil() as usize;
         for hit in &mut self.flake_hits {
             hit.strength = 0.0;
         }
         for flake in flakes {
-            grid::for_each_near(flake.x, flake.y, reach, |i| {
+            grid::for_each_near(flake.x, flake.y, FLAKE_R_MM, |i| {
                 let led = &LED_MAP[i];
                 let dx = led.wx - flake.x;
                 let dy = led.wy - flake.y;

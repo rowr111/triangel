@@ -370,6 +370,11 @@ impl Rng {
         min + self.f32() * (max - min)
     }
 
+    /// Uniform in [-x, x).
+    pub fn plus_minus(&mut self, x: f32) -> f32 {
+        (self.f32() - 0.5) * 2.0 * x
+    }
+
     /// Uniform whole number in [min, max), or `min` if the range is empty.
     pub fn range_u32(&mut self, min: u32, max: u32) -> u32 {
         if max <= min {

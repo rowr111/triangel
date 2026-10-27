@@ -43,7 +43,7 @@ Fixed values worked out from the map are in `crate::led::geom`:
 - per triangle tile, by its number: `BOARD_CENTER` and `BOARD_Y_RANGE`
 - `BOARD_COUNT`, `LEDS_PER_BOARD`, `DIST_C_MAX`
 
-`crate::led::grid` groups LEDs by position: `for_each_near(x, y, reach, f)` and `for_each_near_seg(a, b, reach, f)` call `f` with the index of each LED near a point or a segment.
+`crate::led::grid` groups LEDs by position: `for_each_near(x, y, radius_mm, f)` and `for_each_near_seg(a, b, radius_mm, f)` call `f` with the index of each LED near a point or a segment.
 
 ## Helpers
 
@@ -65,7 +65,7 @@ time_step_ms(&mut last_ms, t_ms, max_ms) // ms since the last frame, at most max
 slot_life(slot, salt, t_ms, min_ms, max_ms) // (generation, 0-1 age) of a slot that restarts with no stored state
 hash2(a, b), knuth_hash(x), tile_hash(led)
 hash01(a, b) -> f32         // 0-1 from a hash; each b gives a different value
-Rng::new(seed)              // .f32(), .next_u32(), .range_f32(min, max), .range_u32(min, max), .below(n), .pick(&items)
+Rng::new(seed)              // .f32(), .next_u32(), .range_f32(min, max), .plus_minus(x), .range_u32(min, max), .below(n), .pick(&items)
 free_or_oldest(slots, now_ms, is_free, start_ms)  // a free slot in a pool, else the oldest
 Shot                        // a flash that starts white, holds, then fades
 ShotPair                    // the two latest shots; .add(shot, t_ms), .brightest(t_ms)
