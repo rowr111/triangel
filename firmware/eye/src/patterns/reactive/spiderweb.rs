@@ -1,9 +1,10 @@
+use core::cmp::Reverse;
 use core::f32::consts::PI;
 
 use crate::audio::Audio;
 use crate::led::geom::{BOARD_COUNT, LEDS_PER_BOARD};
 use crate::led::map::{Led, LED_COUNT, LED_MAP};
-use crate::patterns::{hsv, Frame, Pattern, Rng, Shot};
+use crate::patterns::{hsv, Frame, Pattern, Rng, Shot, ShotPair};
 use triangel_shared::tuning::spiderweb::*;
 
 /// The tile outlines form straight lines across the fixture, nine in each of three
@@ -28,10 +29,11 @@ const PALETTE: [(f32, f32); 6] = [
 ];
 
 struct Line {
-    family: usize,
+    /// The line is where `across(normal, led)` equals `offset`.
+    normal: (f32, f32),
     offset: f32,
     /// The latest two shots; the brighter one shows.
-    shots: [Shot; 2],
+    shots: ShotPair,
 }
 
 /// A faint web that pulses on each beat. A beat lights whole lines, white at first, then
@@ -48,90 +50,11 @@ pub struct Spiderweb {
 
 impl Spiderweb {
     pub fn new() -> Self {
-        let leds = &LED_MAP;
-        let normal: [(f32, f32); 3] = core::array::from_fn(|f| {
-            let a = f as f32 * PI / 3.0;
-            (-a.sin(), a.cos())
-        });
-        let across = |f: usize, led: &Led| normal[f].0 * led.wx + normal[f].1 * led.wy;
-
-        // Which LED is at each position on each tile. Positions start at 1, and there is a
-        // spare empty slot past the last.
-        let mut at = [[u16::MAX; LEDS_PER_BOARD + 2]; BOARD_COUNT + 1];
-        for (i, led) in leds.iter().enumerate() {
-            at[led.board_id as usize][led.local_idx as usize] = i as u16;
-        }
-
-        // Each LED's direction from the LEDs either side of it on its tile.
-        let mut family = [u8::MAX; LED_COUNT];
-        for (i, led) in leds.iter().enumerate() {
-            let (b, l) = (led.board_id as usize, led.local_idx as usize);
-            if l == 0 || l + 1 >= LEDS_PER_BOARD + 2 {
-                continue;
-            }
-            let (p, n) = (at[b][l - 1], at[b][l + 1]);
-            if p == u16::MAX || n == u16::MAX {
-                continue;
-            }
-            let (p, n) = (&leds[p as usize], &leds[n as usize]);
-            let mut a = (n.wy - p.wy).atan2(n.wx - p.wx);
-            if a < 0.0 {
-                a += PI;
-            }
-            for f in 0..3 {
-                let d = (a - f as f32 * PI / 3.0).abs();
-                if d.min(PI - d) < DIR_TOLERANCE {
-                    family[i] = f as u8;
-                }
-            }
-        }
-
-        // Group each direction's LEDs into rows by offset. The nine largest rows are the
-        // lines; smaller ones are stray corner LEDs.
-        let mut lines = Vec::new();
-        for f in 0..3 {
-            let mut offs: Vec<f32> = leds
-                .iter()
-                .zip(family.iter())
-                .filter(|&(_, &fam)| fam as usize == f)
-                .map(|(led, _)| across(f, led))
-                .collect();
-            offs.sort_unstable_by(|a, b| a.total_cmp(b));
-            let mut rows: Vec<(usize, f32)> = Vec::new();
-            let mut run = (0usize, 0.0f32, f32::MIN);
-            for o in offs {
-                if o - run.2 > ROW_MERGE_MM && run.0 > 0 {
-                    rows.push((run.0, run.1 / run.0 as f32));
-                    run = (0, 0.0, o);
-                }
-                run = (run.0 + 1, run.1 + o, o);
-            }
-            if run.0 > 0 {
-                rows.push((run.0, run.1 / run.0 as f32));
-            }
-            rows.sort_unstable_by_key(|row| core::cmp::Reverse(row.0));
-            for &(_, offset) in rows.iter().take(LINES_PER_FAMILY) {
-                lines.push(Line {
-                    family: f,
-                    offset,
-                    shots: [Shot::NONE; 2],
-                });
-            }
-        }
-
-        // Every LED, corners included, joins the line nearest to it.
-        let mut led_line = [0u8; LED_COUNT];
-        for (i, led) in leds.iter().enumerate() {
-            let mut best = (0usize, f32::MAX);
-            for (li, line) in lines.iter().enumerate() {
-                let d = (across(line.family, led) - line.offset).abs();
-                if d < best.1 {
-                    best = (li, d);
-                }
-            }
-            led_line[i] = best.0 as u8;
-        }
-
+        let families = led_families();
+        let lines: Vec<Line> = (0..3)
+            .flat_map(|family| find_lines(family, &families))
+            .collect();
+        let led_line = core::array::from_fn(|i| nearest_line(&lines, &LED_MAP[i]));
         Spiderweb {
             rng: Rng::new(0x5157_3EB0),
             lines,
@@ -140,67 +63,20 @@ impl Spiderweb {
             pulse: 0.0,
         }
     }
-
-    /// Lights line `li`, replacing whichever of its two shots ends sooner, so a long drop
-    /// shot outlasts the beats after it.
-    fn fire(&mut self, li: usize, t_ms: u32, strength: f32, hold: f32, fade: f32) {
-        let (hue, sat) = self.rng.pick(&PALETTE);
-        let line = &mut self.lines[li];
-        let remaining = |s: &Shot| {
-            if s.strength <= 0.0 {
-                i32::MIN
-            } else {
-                s.end_ms().wrapping_sub(t_ms) as i32
-            }
-        };
-        let slot = if remaining(&line.shots[0]) <= remaining(&line.shots[1]) {
-            0
-        } else {
-            1
-        };
-        line.shots[slot] = Shot {
-            start_ms: t_ms,
-            strength,
-            hue,
-            sat,
-            hold_ms: hold,
-            fade_ms: fade,
-        };
-    }
 }
 
 impl Pattern for Spiderweb {
     fn on_enter(&mut self, _t_ms: u32) {
         for line in &mut self.lines {
-            line.shots = [Shot::NONE; 2];
+            line.shots = ShotPair::NONE;
         }
     }
 
     fn render(&mut self, t_ms: u32, audio: &Audio, out: &mut Frame) {
         if audio.drop {
-            for li in 0..self.lines.len() {
-                self.fire(li, t_ms, 1.0, DROP_HOLD_MS, DROP_FADE_MS);
-            }
+            self.on_drop(t_ms);
         } else if audio.beat {
-            let count = 1 + (audio.beat_strength * EXTRA_LINES) as usize;
-            let mut picked = [usize::MAX; MAX_BEAT_LINES];
-            for i in 0..count {
-                let mut li = self.rng.below(self.lines.len());
-                // Redraw a line this beat has already lit.
-                while picked[..i].contains(&li) {
-                    li = self.rng.below(self.lines.len());
-                }
-                picked[i] = li;
-                self.fire(li, t_ms, 0.5 + 0.5 * audio.beat_strength, 0.0, FADE_MS);
-            }
-        }
-        if audio.beat || audio.drop {
-            self.pulse_ms = t_ms;
-            self.pulse = if audio.drop {
-                1.0
-            } else {
-                0.5 + 0.5 * audio.beat_strength
-            };
+            self.on_beat(t_ms, audio.beat_strength);
         }
 
         // Background glow, brighter just after a beat.
@@ -211,26 +87,135 @@ impl Pattern for Spiderweb {
         // One color per line, shared by all its LEDs.
         let mut color = [[0u8; 3]; MAX_LINES];
         for (c, line) in color.iter_mut().zip(self.lines.iter_mut()) {
-            let mut best = (0.0f32, 0.0f32, 0.0f32); // brightness, hue, saturation
-            for shot in line.shots.iter_mut() {
-                // Forget a finished flash; its end time goes stale.
-                if shot.strength > 0.0 && t_ms.wrapping_sub(shot.end_ms()) as i32 >= 0 {
-                    shot.strength = 0.0;
-                }
-                let Some((v, sat)) = shot.lit(t_ms, WHITE_MS, HIT_BOOST) else {
-                    continue;
-                };
-                if v > best.0 {
-                    best = (v, shot.hue, sat);
-                }
-            }
+            let shot = line.shots.brightest(t_ms).unwrap_or_default();
             // Saturation follows the lift, so the background glow stays white.
-            let (lift, hue, sat) = best;
-            *c = hsv(hue, sat * lift, (base + (1.0 - base) * lift).min(1.0));
+            let lift = shot.brightness;
+            let brightness = (base + (1.0 - base) * lift).min(1.0);
+            *c = hsv(shot.hue, shot.sat * lift, brightness);
         }
 
-        for (o, &li) in out.iter_mut().zip(self.led_line.iter()) {
-            *o = color[li as usize];
+        for (o, &line) in out.iter_mut().zip(self.led_line.iter()) {
+            *o = color[line as usize];
         }
     }
+}
+
+impl Spiderweb {
+    /// Lights every line at full.
+    fn on_drop(&mut self, t_ms: u32) {
+        for line in 0..self.lines.len() {
+            self.fire(line, t_ms, 1.0, DROP_HOLD_MS, DROP_FADE_MS);
+        }
+        self.pulse_ms = t_ms;
+        self.pulse = 1.0;
+    }
+
+    /// Lights one line, and up to EXTRA_LINES more on a hard beat.
+    fn on_beat(&mut self, t_ms: u32, beat_strength: f32) {
+        let strength = 0.5 + 0.5 * beat_strength;
+        let count = 1 + (beat_strength * EXTRA_LINES) as usize;
+        let mut picked = [usize::MAX; MAX_BEAT_LINES];
+        for i in 0..count {
+            let mut line = self.rng.below(self.lines.len());
+            // Redraw a line this beat has already lit.
+            while picked[..i].contains(&line) {
+                line = self.rng.below(self.lines.len());
+            }
+            picked[i] = line;
+            self.fire(line, t_ms, strength, 0.0, FADE_MS);
+        }
+        self.pulse_ms = t_ms;
+        self.pulse = strength;
+    }
+
+    /// Lights `line`, replacing whichever of its two shots ends sooner, so a long drop
+    /// shot outlasts the beats after it.
+    fn fire(&mut self, line: usize, t_ms: u32, strength: f32, hold_ms: f32, fade_ms: f32) {
+        let (hue, sat) = self.rng.pick(&PALETTE);
+        let shot = Shot {
+            start_ms: t_ms,
+            strength,
+            hue,
+            sat,
+            hold_ms,
+            fade_ms,
+            white_ms: WHITE_MS,
+            boost: HIT_BOOST,
+        };
+        self.lines[line].shots.add(shot, t_ms);
+    }
+}
+
+/// The angle of the lines in direction `family`.
+fn direction(family: u8) -> f32 {
+    family as f32 * PI / 3.0
+}
+
+/// How far `led` is along `normal`.
+fn across(normal: (f32, f32), led: &Led) -> f32 {
+    normal.0 * led.wx + normal.1 * led.wy
+}
+
+/// Each LED's direction from the LEDs either side of it on its tile.
+fn led_families() -> [Option<u8>; LED_COUNT] {
+    // Which LED is at each position on each tile. Positions start at 1, and there is a
+    // spare empty slot past the last.
+    let mut led_at = [[u16::MAX; LEDS_PER_BOARD + 2]; BOARD_COUNT + 1];
+    for (i, led) in LED_MAP.iter().enumerate() {
+        led_at[led.board_id as usize][led.local_idx as usize] = i as u16;
+    }
+
+    core::array::from_fn(|i| {
+        let led = &LED_MAP[i];
+        let tile = &led_at[led.board_id as usize];
+        let pos = led.local_idx as usize;
+        if pos == 0 || pos + 1 >= tile.len() {
+            return None;
+        }
+        let (prev, next) = (tile[pos - 1], tile[pos + 1]);
+        if prev == u16::MAX || next == u16::MAX {
+            return None;
+        }
+        let (prev, next) = (&LED_MAP[prev as usize], &LED_MAP[next as usize]);
+        let mut angle = (next.wy - prev.wy).atan2(next.wx - prev.wx);
+        if angle < 0.0 {
+            angle += PI;
+        }
+        (0..3).find(|&family| {
+            let off = (angle - direction(family)).abs();
+            off.min(PI - off) < DIR_TOLERANCE
+        })
+    })
+}
+
+/// Groups the LEDs running in direction `family` into rows by offset. The nine largest
+/// rows are the lines; smaller ones are stray corner LEDs.
+fn find_lines(family: u8, families: &[Option<u8>; LED_COUNT]) -> Vec<Line> {
+    let angle = direction(family);
+    let normal = (-angle.sin(), angle.cos());
+    let mut offsets: Vec<f32> = LED_MAP
+        .iter()
+        .zip(families)
+        .filter(|&(_, &f)| f == Some(family))
+        .map(|(led, _)| across(normal, led))
+        .collect();
+    offsets.sort_unstable_by(|a, b| a.total_cmp(b));
+    let mut rows: Vec<&[f32]> = offsets.chunk_by(|a, b| b - a <= ROW_MERGE_MM).collect();
+    rows.sort_unstable_by_key(|row| Reverse(row.len()));
+    rows.iter()
+        .take(LINES_PER_FAMILY)
+        .map(|row| Line {
+            normal,
+            offset: row.iter().sum::<f32>() / row.len() as f32,
+            shots: ShotPair::NONE,
+        })
+        .collect()
+}
+
+/// Index of the line nearest to `led`. Every LED, corners included, joins one.
+fn nearest_line(lines: &[Line], led: &Led) -> u8 {
+    let distance = |line: &Line| (across(line.normal, led) - line.offset).abs();
+    (0..lines.len())
+        .min_by(|&a, &b| distance(&lines[a]).total_cmp(&distance(&lines[b])))
+        .unwrap_or(0) as u8
 }

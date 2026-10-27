@@ -189,6 +189,17 @@ pub struct Shot {
     pub sat: f32,
     pub hold_ms: f32,
     pub fade_ms: f32,
+    /// How long it stays white, and how much brighter it is then.
+    pub white_ms: f32,
+    pub boost: f32,
+}
+
+/// A shot's color at one moment.
+#[derive(Clone, Copy, Default)]
+pub struct ShotColor {
+    pub hue: f32,
+    pub sat: f32,
+    pub brightness: f32,
 }
 
 impl Shot {
@@ -199,10 +210,12 @@ impl Shot {
         sat: 0.0,
         hold_ms: 0.0,
         fade_ms: 0.0,
+        white_ms: 0.0,
+        boost: 0.0,
     };
 
-    /// Age in ms and brightness 0-1, or None if unlit, not started yet, or finished.
-    fn level(&self, t_ms: u32) -> Option<(f32, f32)> {
+    /// Its color at `t_ms`, or None if unlit, not started yet, or finished.
+    fn color_at(&self, t_ms: u32) -> Option<ShotColor> {
         if self.strength <= 0.0 {
             return None;
         }
@@ -215,20 +228,66 @@ impl Shot {
         } else {
             1.0 - (age - self.hold_ms) / self.fade_ms
         };
-        Some((age, fade))
+        let white = (1.0 - age / self.white_ms).clamp(0.0, 1.0);
+        Some(ShotColor {
+            hue: self.hue,
+            sat: self.sat * (1.0 - white),
+            brightness: (self.strength * fade * fade * (1.0 + self.boost * white)).min(1.0),
+        })
     }
 
-    /// Brightness and saturation at `t_ms`: white and boosted for the first `white_ms`.
-    pub fn lit(&self, t_ms: u32, white_ms: f32, boost: f32) -> Option<(f32, f32)> {
-        let (age, fade) = self.level(t_ms)?;
-        let white = (1.0 - age / white_ms).clamp(0.0, 1.0);
-        let v = (self.strength * fade * fade * (1.0 + boost * white)).min(1.0);
-        Some((v, self.sat * (1.0 - white)))
-    }
-
-    pub fn end_ms(&self) -> u32 {
+    fn end_ms(&self) -> u32 {
         self.start_ms
             .wrapping_add((self.hold_ms + self.fade_ms) as u32)
+    }
+}
+
+/// The two latest shots on one part of the Triangel; the brighter one shows.
+#[derive(Clone, Copy)]
+pub struct ShotPair([Shot; 2]);
+
+impl ShotPair {
+    pub const NONE: ShotPair = ShotPair([Shot::NONE; 2]);
+
+    /// Replaces the shot that ends sooner, but a waiting one before a showing one, so the
+    /// light does not go dark.
+    pub fn add(&mut self, new: Shot, t_ms: u32) {
+        let new_left = new.end_ms().wrapping_sub(t_ms) as i32;
+        // The lower one is replaced.
+        let rank = |s: &Shot| {
+            let left = s.end_ms().wrapping_sub(t_ms) as i32;
+            let waiting = s.start_ms.wrapping_sub(t_ms) as i32 > 0;
+            if s.strength <= 0.0 {
+                i32::MIN
+            } else if waiting && left <= new_left {
+                i32::MIN + 1
+            } else {
+                left
+            }
+        };
+        let slot = if rank(&self.0[0]) <= rank(&self.0[1]) {
+            0
+        } else {
+            1
+        };
+        self.0[slot] = new;
+    }
+
+    /// The color of the brighter shot at `t_ms`, if either is lit.
+    pub fn brightest(&mut self, t_ms: u32) -> Option<ShotColor> {
+        let mut best: Option<ShotColor> = None;
+        for shot in &mut self.0 {
+            // Forget a finished flash; its end time goes stale.
+            if shot.strength > 0.0 && t_ms.wrapping_sub(shot.end_ms()) as i32 >= 0 {
+                shot.strength = 0.0;
+            }
+            if let Some(color) = shot.color_at(t_ms) {
+                if color.brightness > best.map_or(0.0, |b| b.brightness) {
+                    best = Some(color);
+                }
+            }
+        }
+        best
     }
 }
 
