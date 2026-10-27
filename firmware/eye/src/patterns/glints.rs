@@ -67,7 +67,7 @@ impl Glints {
                 .iter()
                 .position(|gl| t_ms.wrapping_sub(gl.start_ms) >= gl.life_ms);
             if let Some(slot) = free {
-                let life_ms = s.min_ms + (self.rng.f32() * (s.max_ms - s.min_ms) as f32) as u32;
+                let life_ms = self.rng.range_u32(s.min_ms, s.max_ms);
                 self.glints[slot] = Glint {
                     led: led as u16,
                     start_ms: t_ms,

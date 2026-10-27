@@ -3,7 +3,7 @@ use crate::led::grid::{self, CELL_MM};
 use crate::led::map::{LED_COUNT, LED_MAP, WORLD_BOT, WORLD_CX, WORLD_H, WORLD_TOP};
 use crate::led::world::{WORLD_LEFT, WORLD_RIGHT};
 use crate::patterns::{
-    fold_ms, hash2, hsv, lerp, random_u32, slot_life, wrap360, Frame, Pattern, Phasor,
+    fold_ms, hash01, hash2, hsv, lerp, random_u32, slot_life, wrap360, Frame, Pattern, Phasor,
 };
 use crate::setlist::AMBIENT_CYCLE_MS;
 use core::f32::consts::TAU;
@@ -100,7 +100,6 @@ impl Fubuki {
         let led_hash: [u32; LED_COUNT] = core::array::from_fn(|i| {
             hash2(LED_MAP[i].board_id as u32, LED_MAP[i].local_idx as u32)
         });
-        let pulse_at = |hp: u32| (hp >> 17 & 0x1FF) as f32 / 512.0 * TAU;
         Fubuki {
             origin_ms: 0,
             seed: 0,
@@ -108,10 +107,9 @@ impl Fubuki {
             flake_h: [0.0; LED_COUNT],
             flake_s: [0.0; LED_COUNT],
             led_hash,
-            pile_tex: led_hash
-                .map(|hp| PILE_VAL * (1.0 - PILE_TEXTURE * ((hp >> 9 & 0xFF) as f32 / 255.0))),
-            pulse_offset: led_hash.map(|hp| Phasor::new(pulse_at(hp))),
-            jitter_mm: led_hash.map(|hp| ((hp >> 26) as f32 / 63.0 - 0.5) * 2.0 * FILL_JITTER_MM),
+            pile_tex: led_hash.map(|hp| PILE_VAL * (1.0 - PILE_TEXTURE * hash01(hp, 1))),
+            pulse_offset: led_hash.map(|hp| Phasor::new(hash01(hp, 2) * TAU)),
+            jitter_mm: led_hash.map(|hp| (hash01(hp, 3) * 2.0 - 1.0) * FILL_JITTER_MM),
         }
     }
 }
@@ -233,18 +231,14 @@ fn make_flake(
 
     let g = hash2(i as u32 + 1, gen ^ seed);
     // Across the fixture, a little in from each side.
-    let spawn_x = WORLD_LEFT + 10.0 + (g % (WORLD_RIGHT - WORLD_LEFT - 15.0) as u32) as f32;
-    let sway_ph = (g >> 8 & 0xFF) as f32 / 255.0 * TAU;
+    let spawn_x = lerp(WORLD_LEFT + 10.0, WORLD_RIGHT - 5.0, hash01(g, 1));
+    let sway_ph = hash01(g, 2) * TAU;
 
     let x =
         lerp(spawn_x, WORLD_CX, fp * CONVERGE) + SWAY_MM * (fp * SWAY_CYCLES * TAU + sway_ph).sin();
     let y = WORLD_TOP + fp * (fill_y - WORLD_TOP);
     // A fraction `nf` of the flakes use the new season's colors.
-    let src = if (((g >> 20) & 0x3FF) as f32 / 1024.0) < nf {
-        new
-    } else {
-        prev
-    };
+    let src = if hash01(g, 3) < nf { new } else { prev };
     let (hue, sat) = src.color(g);
 
     Flake { x, y, hue, sat }

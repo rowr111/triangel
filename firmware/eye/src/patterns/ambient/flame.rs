@@ -2,7 +2,7 @@ use crate::audio::Audio;
 use crate::led::geom::{BOARD_COUNT, BOARD_Y_RANGE, DIST_APEX};
 use crate::led::map::{LED_COUNT, LED_MAP, WORLD_BOT, WORLD_CX, WORLD_H};
 use crate::patterns::{
-    cycle, cycle_q16, hash2, knuth_hash, phase_phasors, ramp, random_u32, Frame, Pattern,
+    cycle, cycle_q16, hash01, hash2, knuth_hash, phase_phasors, ramp, random_u32, Frame, Pattern,
     PHASE_STEPS,
 };
 use core::f32::consts::{PI, TAU};
@@ -204,10 +204,10 @@ impl Pattern for ApexFlame {
             let period = EMBER_PERIOD_MS + k as u32 * EMBER_STAGGER_MS;
             let phase = cycle(t_ms, period);
             let h = hash2(t_ms / period, self.seed ^ k as u32);
-            let y0 = WORLD_BOT - 6.0 - ((h >> 8) % 130) as f32;
+            let y0 = WORLD_BOT - 6.0 - hash01(h, 1) * 130.0;
             let half_w = (WORLD_BOT - y0) / WORLD_H * 250.0; // triangle half-width at y0
-            let x0 = WORLD_CX + ((h % 201) as f32 - 100.0) / 100.0 * half_w;
-            let x = x0 + (phase * TAU * 1.5 + (h >> 16) as f32).sin() * EMBER_WOBBLE_MM;
+            let x0 = WORLD_CX + (hash01(h, 2) * 2.0 - 1.0) * half_w;
+            let x = x0 + ((phase * 1.5 + hash01(h, 3)) * TAU).sin() * EMBER_WOBBLE_MM;
             let y = y0 - phase * EMBER_RISE_MM;
             *ember = Ember {
                 x: (x * 16.0).round() as i32,

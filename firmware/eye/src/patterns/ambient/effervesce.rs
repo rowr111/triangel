@@ -1,7 +1,8 @@
 use crate::audio::Audio;
 use crate::led::map::{Led, LED_COUNT, LED_MAP};
 use crate::patterns::{
-    cycle, fold_ms, hash2, hsv, random_u32, slot_life, smoothstep, wrap360, Frame, Pattern, Phasor,
+    cycle, fold_ms, hash01, hash2, hsv, random_u32, slot_life, smoothstep, wrap360, Frame, Pattern,
+    Phasor,
 };
 use core::f32::consts::{PI, TAU};
 
@@ -70,10 +71,8 @@ pub struct Effervesce {
 
 impl Effervesce {
     pub fn new() -> Self {
-        let phase = |i: usize| {
-            let hh = hash2(LED_MAP[i].board_id as u32, LED_MAP[i].local_idx as u32);
-            (hh & 4095) as f32 / 4096.0 * TAU
-        };
+        let phase =
+            |i: usize| hash01(LED_MAP[i].board_id as u32, LED_MAP[i].local_idx as u32) * TAU;
         Effervesce {
             shimmer_offset: core::array::from_fn(|i| Phasor::new(phase(i))),
             seed: 0,
@@ -143,9 +142,9 @@ fn make_elem(s: usize, t_ms: u32, show_seed: u32) -> Elem {
 
     let seed = hash2(s as u32 + 1, gen ^ show_seed);
     let led = &LED_MAP[(seed as usize) % LED_COUNT];
-    let ang0 = ((seed >> 12) & 0xFFFF) as f32 / 65_536.0 * TAU;
-    let dir = if (seed >> 28) & 1 == 0 { 1.0 } else { -1.0 };
-    let hue = (seed & 0x1FF) as f32 / 512.0 * 360.0;
+    let ang0 = hash01(seed, 1) * TAU;
+    let dir = if hash01(seed, 2) < 0.5 { 1.0 } else { -1.0 };
+    let hue = hash01(seed, 3) * 360.0;
 
     let (sn, cs) = (ang0 + dir * age * SPIN * TAU).sin_cos();
     let (shue, chue) = hue.to_radians().sin_cos();

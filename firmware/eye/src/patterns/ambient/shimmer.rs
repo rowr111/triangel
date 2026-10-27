@@ -118,8 +118,7 @@ impl CenterShimmer {
             let m = self.rng.range_f32(SPEED_SCALE_MIN, SPEED_SCALE_MAX);
             self.speed_target_q8 = (WAVE_SPEED * m * 256.0) as i32;
             self.speed_pick_ms = t_ms;
-            self.speed_gap_ms = SPEED_CHANGE_MIN_MS
-                + (self.rng.f32() * (SPEED_CHANGE_MAX_MS - SPEED_CHANGE_MIN_MS) as f32) as u32;
+            self.speed_gap_ms = self.rng.range_u32(SPEED_CHANGE_MIN_MS, SPEED_CHANGE_MAX_MS);
         }
         self.speed_q8 += (self.speed_target_q8 - self.speed_q8) * dt_ms as i32 / SPEED_EASE_MS;
 

@@ -148,6 +148,11 @@ pub fn hash2(a: u32, b: u32) -> u32 {
     h
 }
 
+/// A value in [0, 1) from a hash of `a` and `b`, so each `b` gives a different value.
+pub fn hash01(a: u32, b: u32) -> f32 {
+    (hash2(a, b) >> 8) as f32 / 16_777_216.0
+}
+
 /// Knuth's multiplicative hash: spreads consecutive inputs far apart.
 pub fn knuth_hash(x: u32) -> u32 {
     x.wrapping_mul(2654435761)

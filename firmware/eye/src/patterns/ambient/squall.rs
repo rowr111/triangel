@@ -4,8 +4,8 @@ use crate::led::grid::{self, CELL_MM};
 use crate::led::map::{LED_COUNT, LED_MAP, WORLD_BOT, WORLD_CX, WORLD_H, WORLD_TOP};
 use crate::led::world::{WORLD_HALF_W, WORLD_LEFT, WORLD_RIGHT};
 use crate::patterns::{
-    cycle, knuth_hash, lerp, mix_rgb, phase_phasors, ramp, random_u32, Frame, Pattern, Phasor, Rng,
-    PHASE_STEPS,
+    cycle, hash01, knuth_hash, lerp, mix_rgb, phase_phasors, ramp, random_u32, Frame, Pattern,
+    Phasor, Rng, PHASE_STEPS,
 };
 use core::f32::consts::{PI, TAU};
 
@@ -257,17 +257,16 @@ impl Squall {
 
     /// Starts a bolt at a random cloud and picks its path and return-stroke times.
     fn ignite(&mut self, t_ms: u32) -> Strike {
-        let a = self.rng.next_u32() as usize % CLOUD_COUNT;
+        let a = self.rng.below(CLOUD_COUNT);
         let (cx, cy) = (self.clouds[a].x, self.clouds[a].y);
         let bolt = self.walk_bolt(cx, cy);
         let complete = (bolt.len as u32 - 1) * BOLT_STEP_MS;
-        let n = BOLT_PULSES_MIN
-            + self.rng.next_u32() as usize % (BOLT_PULSES_MAX - BOLT_PULSES_MIN + 1);
+        let n = BOLT_PULSES_MIN + self.rng.below(BOLT_PULSES_MAX - BOLT_PULSES_MIN + 1);
         let mut pulse_ms = [u32::MAX; BOLT_PULSES_MAX];
         let mut at = complete;
         for p in pulse_ms.iter_mut().take(n) {
             *p = at;
-            at += 60 + self.rng.next_u32() % 360;
+            at += self.rng.range_u32(60, 420);
         }
         Strike {
             start_ms: t_ms,
@@ -282,8 +281,7 @@ impl Squall {
         let r0 = (((cy - LATTICE_TOP_Y) / LATTICE_ROW_H).round() as i32).clamp(0, 5);
         let i0 = (((cx - WORLD_CX) / LATTICE_SIDE + (5 - r0) as f32 / 2.0).round() as i32)
             .clamp(0, 5 - r0);
-        let segs =
-            BOLT_SEGS_MIN + self.rng.next_u32() as usize % (BOLT_SEGS_MAX - BOLT_SEGS_MIN + 1);
+        let segs = BOLT_SEGS_MIN + self.rng.below(BOLT_SEGS_MAX - BOLT_SEGS_MIN + 1);
 
         let (mut r, mut i) = (r0, i0);
         let mut pts = [(0.0f32, 0.0f32); BOLT_SEGS_MAX + 1];
@@ -309,7 +307,7 @@ impl Squall {
             if n == 0 {
                 break;
             }
-            let (nr, ni) = cand[self.rng.next_u32() as usize % n];
+            let (nr, ni) = self.rng.pick(&cand[..n]);
             let (nx, ny) = lattice_pos(nr, ni);
             let (dx, dy) = (nx - pts[len - 1].0, ny - pts[len - 1].1);
             let d = (dx * dx + dy * dy).sqrt();
@@ -351,10 +349,10 @@ impl Pattern for Squall {
             let period = BLOOM_PERIOD_MS + k as u32 * BLOOM_STAGGER_MS;
             let p = cycle(t_ms, period);
             let h = knuth_hash((t_ms / period) ^ self.seed) ^ (k as u32).wrapping_mul(0x9E37_79B9);
-            let y = WORLD_TOP + ((h >> 10) % 1000) as f32 / 1000.0 * WORLD_H;
+            let y = WORLD_TOP + hash01(h, 1) * WORLD_H;
             // Triangle half-width at y, plus 40 mm.
             let hw = (WORLD_BOT - y) / WORLD_H * WORLD_HALF_W + 40.0;
-            let x = WORLD_CX + ((h % 1000) as f32 / 1000.0 * 2.0 - 1.0) * hw;
+            let x = WORLD_CX + (hash01(h, 2) * 2.0 - 1.0) * hw;
             let r = lerp(BLOOM_R0_MM, BLOOM_R1_MM, p);
             let reach = (r / CELL_MM).ceil() as usize;
             *b = Bloom {
@@ -374,9 +372,9 @@ impl Pattern for Squall {
                 let h = c.seed ^ (j as u32).wrapping_mul(0x9E37_79B9);
                 let orbit_p = 9_000 + h % 7_000;
                 let breathe_p = 3_500 + (h >> 8) % 3_000;
-                let orbit = cycle(t_ms, orbit_p) * TAU + (h >> 16) as f32;
-                let breathe = cycle(t_ms, breathe_p) * TAU + (h >> 12) as f32;
-                let off = CLOUD_LOBE_OFF_MM * (0.35 + 0.65 * ((h >> 4) % 100) as f32 / 100.0);
+                let orbit = (cycle(t_ms, orbit_p) + hash01(h, 1)) * TAU;
+                let breathe = (cycle(t_ms, breathe_p) + hash01(h, 2)) * TAU;
+                let off = CLOUD_LOBE_OFF_MM * (0.35 + 0.65 * hash01(h, 3));
                 let r = CLOUD_LOBE_R_MM * (1.0 + CLOUD_BREATHE * breathe.sin());
                 lobes[ci * CLOUD_LOBES + j] = Lobe {
                     x: c.x + orbit.cos() * off,
@@ -523,7 +521,7 @@ impl Pattern for Squall {
 /// Puts the cloud just off a random edge, heading for a random point near the middle.
 fn respawn(c: &mut Cloud, rng: &mut Rng, t_ms: u32) {
     let along = rng.f32();
-    let (x, y) = match rng.next_u32() % 4 {
+    let (x, y) = match rng.below(4) {
         0 => (
             lerp(WORLD_LEFT, WORLD_RIGHT, along),
             WORLD_TOP - CLOUD_MARGIN_MM + 1.0,

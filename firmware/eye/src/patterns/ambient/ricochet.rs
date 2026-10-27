@@ -10,7 +10,7 @@ use crate::patterns::{hsv, lerp, random_u32, wrap360, Frame, Pattern, Rng};
 const MAX_COMETS: usize = 4;
 const RESPAWN_MIN_MS: u32 = 500; // pause before a dead comet relaunches
 const RESPAWN_MAX_MS: u32 = 2500;
-const STAGGER_MS: f32 = 3000.0; // spread of the first launches on entry
+const STAGGER_MS: u32 = 3000; // spread of the first launches on entry
 
 const SPEED_MIN_MM_S: f32 = 50.0; // each comet picks a speed in this range
 const SPEED_MAX_MM_S: f32 = 200.0;
@@ -262,8 +262,7 @@ impl Ricochet {
 
         if c.energy < ENERGY_MIN {
             c.alive = false;
-            let delay =
-                RESPAWN_MIN_MS + (rng.f32() * (RESPAWN_MAX_MS - RESPAWN_MIN_MS) as f32) as u32;
+            let delay = rng.range_u32(RESPAWN_MIN_MS, RESPAWN_MAX_MS);
             c.respawn_at = t_ms.wrapping_add(delay);
         }
     }
@@ -351,7 +350,7 @@ impl Pattern for Ricochet {
         self.rng = Rng::new(random_u32());
         for c in self.comets.iter_mut() {
             c.alive = false;
-            let delay = (self.rng.f32() * STAGGER_MS) as u32;
+            let delay = self.rng.range_u32(0, STAGGER_MS);
             c.respawn_at = t_ms.wrapping_add(delay);
         }
         self.comets[0].respawn_at = t_ms; // one comet right away

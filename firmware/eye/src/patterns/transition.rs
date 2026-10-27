@@ -2,7 +2,7 @@ use std::sync::OnceLock;
 
 use core::f32::consts::TAU;
 
-use super::{knuth_hash, smoothstep, Frame};
+use super::{hash01, smoothstep, Frame};
 use crate::led::geom::{BOARD_CENTER, BOARD_COUNT, DIST_C, DIST_C_MAX};
 use crate::led::map::{LED_MAP, WORLD_CENTROID_X, WORLD_CENTROID_Y};
 
@@ -63,12 +63,12 @@ fn alpha_for(
             smoothstep((dist_c - front) / FEATHER_MM)
         }
         TransitionStyle::Sparkle => {
-            let threshold = hash01(i) * (1.0 - SPARKLE_EDGE);
+            let threshold = hash01(i as u32, 0) * (1.0 - SPARKLE_EDGE);
             smoothstep((progress - threshold) / SPARKLE_EDGE)
         }
         TransitionStyle::RadialSparkle => {
             let radial = dist_c / maxd;
-            let threshold = (0.5 * radial + 0.5 * hash01(i)) * (1.0 - SPARKLE_EDGE);
+            let threshold = (0.5 * radial + 0.5 * hash01(i as u32, 0)) * (1.0 - SPARKLE_EDGE);
             smoothstep((progress - threshold) / SPARKLE_EDGE)
         }
         TransitionStyle::SpiralOut => {
@@ -115,12 +115,6 @@ fn compute_spiral_ranks() -> [f32; BOARD_COUNT + 1] {
         ranks[b] = pos as f32 / last;
     }
     ranks
-}
-
-/// Per-LED value in [0, 1) from a hash of the LED's index, which is its place on the chain.
-fn hash01(i: usize) -> f32 {
-    let h = knuth_hash(i as u32) ^ 0x9E37_79B9;
-    (h % 1000) as f32 / 1000.0
 }
 
 fn lerp_rgb(a: [u8; 3], b: [u8; 3], t: f32) -> [u8; 3] {
