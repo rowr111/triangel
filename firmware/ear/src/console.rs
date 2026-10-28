@@ -543,7 +543,11 @@ fn frequencies(d: &Diag, tt: &ticktimer::Ticktimer, mic: &mut I2sAudio) {
 
     d.line("now MAKE NOISE - whistle, clap, talk - starting in a moment");
     tt.sleep_ms(READY_MS).ok();
-    if !settle(mic, METER_SETTLE_SAMPLES) || !record(d, mic, &mut buf) {
+    if !settle(mic, METER_SETTLE_SAMPLES) {
+        d.line(NO_SAMPLES);
+        return;
+    }
+    if !record(d, mic, &mut buf) {
         return;
     }
     let loud = octave_levels(&buf);
