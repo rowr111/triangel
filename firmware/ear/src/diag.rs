@@ -30,8 +30,8 @@ impl Stage {
 
 static STAGE: Mutex<Stage> = Mutex::new(Stage::UsbUp);
 static QUIET: AtomicBool = AtomicBool::new(false);
-/// Bytes ever received from the host, reported in the heartbeat so a dead input
-/// path is distinguishable from one that arrives but does not parse.
+/// Bytes received from the host, shown in the heartbeat to tell a dead input path from
+/// bytes that are not keys.
 static RX_BYTES: AtomicU32 = AtomicU32::new(0);
 
 /// Pause after each line. Sent back to back, bulk output arrives at the host with

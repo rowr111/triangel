@@ -10,13 +10,11 @@ use triangel_shared::frame::{BandFrame, EAR_UART_BAUD, FRAME_LEN};
 
 use crate::pins::{AUDIO_UART_TX_PIN, AUDIO_UART_TX_PORT};
 
-/// Owns the UART TX peripheral and sends framed `BandFrame`s to the eye.
 pub struct UartOut {
     uart: Uart,
 }
 
 impl UartOut {
-    /// Initialize the UART TX peripheral.
     pub fn new() -> Self {
         // Uart::new only maps the CSR and sets baud/format - it neither muxes the pin nor
         // gates the UDMA clock on, so do both here (the eye does the same on its RX side)

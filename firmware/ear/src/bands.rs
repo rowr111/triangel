@@ -97,7 +97,7 @@ impl<const N: usize> RangeTracker<N> {
         }
     }
 
-    /// Each value is offered to a small sorted group and displaces the one it beats.
+    /// Set the targets to the EXTREME_COUNT-th lowest and highest values in the history.
     fn recompute(&mut self) {
         if self.filled == 0 {
             return;
@@ -248,8 +248,8 @@ pub struct BandProcessor {
     bank: BandBank,
     /// Smoothed RMS behind the overall level.
     smoothed_rms: f32,
-    /// Shared reference, fed the loudest band's dB each frame. Holds the bands in
-    /// their true loudness order.
+    /// Shared reference, fed the loudest band's dB after the tilt each frame. Holds the
+    /// bands in their true loudness order.
     band_ref: RangeTracker<BAND_WINDOW_FRAMES>,
     /// Each band's own reference, so a quiet band still moves rather than sitting flat.
     band_own: [RangeTracker<BAND_OWN_WINDOW_FRAMES>; BAND_COUNT],
@@ -321,7 +321,7 @@ impl BandProcessor {
 
     /// The overall level, and the level against its reference, both encoded for the wire.
     fn overall_level(&mut self, samples: &[i16; FRAME_SAMPLES]) -> (u16, u16) {
-        // RMS of the raw samples, scaled to -1.0..1.0.
+        // RMS of the samples, where full scale is 1.0.
         let squares: u64 = samples
             .iter()
             .map(|&sample| (sample as i32 * sample as i32) as u64)
@@ -330,7 +330,6 @@ impl BandProcessor {
             (squares as f32 / (FRAME_SAMPLES as f32 * I16_FULL_SCALE * I16_FULL_SCALE)).sqrt();
         // Rise fast and fall slowly, so the level does not flicker between beats.
         self.smoothed_rms = follow(self.smoothed_rms, rms, LEVEL_ATTACK, LEVEL_DECAY);
-        // RMS is already normalized to full scale, so dBFS needs no calibration.
         let dbfs = if self.smoothed_rms > 0.0 {
             (20.0 * self.smoothed_rms.log10()).max(LEVEL_DB_FLOOR)
         } else {

@@ -13,7 +13,7 @@ use diag::{Diag, Stage};
 use uart_out::UartOut;
 
 /// Frames averaged per timing measurement, and how far it must drift to be worth
-/// reprinting. Steady state stays silent.
+/// reprinting.
 const BANDS_TIMING_FRAMES: u32 = 32;
 const BANDS_REPORT_DELTA_MS: f32 = 1.0;
 
@@ -54,7 +54,7 @@ fn main() -> ! {
     console::spawn();
     diag::stage(&d, Stage::PromptReady);
 
-    // Run the 24-band filterbank on each frame and send framed BandFrames to the eye.
+    // Turn each frame into a BandFrame and send it to the eye.
     let mut processor = bands::BandProcessor::new();
     let mut timer = BandsTimer::default();
     let mut starved_reported = 0u32;

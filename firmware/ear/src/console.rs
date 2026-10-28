@@ -51,7 +51,7 @@ const BAR_WIDTH: usize = 40;
 /// How often the console thread checks whether the audio loop has run its command.
 const COMMAND_POLL_MS: usize = 20;
 
-/// Messages more than one command prints.
+/// Messages shared by several commands.
 const NO_SAMPLES: &str = "no samples: the BIO core is not pushing anything";
 const STARVED: &str = "recording starved - the BIO stopped pushing partway";
 
@@ -110,7 +110,7 @@ struct Window {
     peak: i32,
 }
 
-/// The key waiting to be run, or 0. The audio thread runs it: the mic is not `Send`.
+/// The key waiting for the audio loop to run, or 0.
 static PENDING: AtomicU32 = AtomicU32::new(0);
 
 /// Latest filterbank cost in microseconds, published by the audio loop for `perf`.
@@ -158,7 +158,7 @@ pub fn spawn() {
         let tt = ticktimer::Ticktimer::new().unwrap();
         loop {
             let key = d.command();
-            // First keystroke silences the heartbeat so it cannot break up output.
+            // The first key stops the heartbeat.
             diag::quiet();
             match Command::from_key(key) {
                 // These need no mic, so answer here without interrupting audio.
@@ -225,7 +225,7 @@ pub fn help(d: &Diag) {
     d.line("  ?  help         this help");
 }
 
-/// Report the band range and the level reference.
+/// Report the band levels and range, the level reference and the level.
 fn norm(d: &Diag) {
     let band_db: [f32; BAND_COUNT] = std::array::from_fn(|band| BAND_DB[band].load());
     let band_low = band_db.iter().copied().fold(f32::MAX, f32::min);
@@ -444,7 +444,7 @@ fn tally(d: &Diag, tt: &ticktimer::Ticktimer, mic: &mut I2sAudio) {
 
     if rms16 < 1.0 {
         d.line("the i16 RMS rounds to zero: whatever is on the wire would be crushed by");
-        d.line("the >> 8 in read_frame even if the raw numbers look alive");
+        d.line("the >> 8 in read_decimated even if the raw numbers look alive");
     }
 }
 

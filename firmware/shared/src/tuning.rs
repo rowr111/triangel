@@ -1,5 +1,5 @@
-//! Sound-reactive tuning. Build and flash the eye after changing all of these
-//! except `BASS_BANDS` (both chips) and the last (ear) section.
+//! Sound-reactive tuning. After a change, build and flash the eye, or both boards for
+//! `BASS_BANDS`, or only the ear for the `ear` section.
 
 /// Bands that count as the bass: 0-2 is 40-100 Hz. The ear's bass level, the beat
 /// detector and Raindrop's trigger all use it.
@@ -177,7 +177,7 @@ pub mod ear {
     pub const BAND_VISIBLE_RANGE_DB: f32 = 26.0;
     /// How much each band is scaled to its own range: 0 keeps true loudness, 1 evens them out.
     pub const PER_BAND_MIX: f32 = 0.45;
-    /// Smallest range a band gets stretched over. Acts only above
+    /// Smallest range a band gets stretched over. Has no effect unless set above
     /// BAND_VISIBLE_RANGE_DB * (1 - PER_BAND_MIX), 14.3 dB today.
     pub const BAND_MIN_SPAN_DB: f32 = 8.0;
     /// Smallest range the level gets stretched over.
