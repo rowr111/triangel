@@ -34,7 +34,7 @@ const OCTAVE_RISE_DB: f32 = 6.0;
 const READY_MS: usize = 1500;
 /// Samples discarded before a measurement, so it starts on fresh, settled audio.
 const SETTLE_SAMPLES: usize = RAW_RATE_HZ as usize / 5; // 200 ms
-const METER_SETTLE_SAMPLES: usize = RAW_RATE_HZ as usize / 20; // 50 ms, between windows
+const SHORT_SETTLE_SAMPLES: usize = RAW_RATE_HZ as usize / 20; // 50 ms
 /// Samples read between clock checks; the clock is a syscall, too slow per sample.
 const SAMPLE_BLOCK: usize = 256;
 /// Full scale for a sign-extended 24-bit sample.
@@ -42,7 +42,7 @@ const FULL_SCALE_RAW: f64 = 8_388_608.0;
 /// Full scale for a sample at the pipeline's rate.
 const FULL_SCALE_I16: f64 = 32768.0;
 /// The 24 bits of a raw sample.
-const SAMPLE_BITS: u32 = 0x00ff_ffff;
+const SAMPLE_MASK: u32 = 0x00ff_ffff;
 /// The ICS43434 reads -26 dBFS at 94 dB SPL, so sound pressure is roughly dBFS + 120.
 const DBFS_TO_SPL: f32 = 120.0;
 /// Width of the meter's bar. Its left edge is LEVEL_DB_FLOOR.
@@ -157,7 +157,7 @@ pub fn spawn() {
         let d = Diag::new();
         let tt = ticktimer::Ticktimer::new().unwrap();
         loop {
-            let key = d.command();
+            let key = d.read_key();
             // The first key stops the heartbeat.
             diag::quiet();
             match Command::from_key(key) {
@@ -281,8 +281,8 @@ fn settle(mic: &mut I2sAudio, samples: usize) -> bool {
 }
 
 /// Reads samples for MEASURE_MS, checking the clock every SAMPLE_BLOCK, and hands each to
-/// `f`. False if a read timed out partway.
-fn measure(tt: &ticktimer::Ticktimer, mic: &mut I2sAudio, mut f: impl FnMut(i32)) -> bool {
+/// `on_sample`. False if a read timed out partway.
+fn measure(tt: &ticktimer::Ticktimer, mic: &mut I2sAudio, mut on_sample: impl FnMut(i32)) -> bool {
     let start = tt.elapsed_ms();
     loop {
         for _ in 0..SAMPLE_BLOCK {
@@ -290,7 +290,7 @@ fn measure(tt: &ticktimer::Ticktimer, mic: &mut I2sAudio, mut f: impl FnMut(i32)
             let Some(sample) = mic.try_read_sample() else {
                 return false;
             };
-            f(sample);
+            on_sample(sample);
         }
         if tt.elapsed_ms() - start >= MEASURE_MS {
             return true;
@@ -373,7 +373,7 @@ fn tally(d: &Diag, tt: &ticktimer::Ticktimer, mic: &mut I2sAudio) {
     // Bits that were ever set, and bits that were always set.
     let (mut any_set, mut all_set) = (0u32, u32::MAX);
     let starved = !measure(tt, mic, |sample| {
-        let bits = sample as u32 & SAMPLE_BITS;
+        let bits = sample as u32 & SAMPLE_MASK;
         any_set |= bits;
         all_set &= bits;
         min = min.min(sample);
@@ -433,7 +433,7 @@ fn tally(d: &Diag, tt: &ticktimer::Ticktimer, mic: &mut I2sAudio) {
             any_set.trailing_zeros()
         ));
     }
-    if all_set & SAMPLE_BITS == SAMPLE_BITS {
+    if all_set & SAMPLE_MASK == SAMPLE_MASK {
         d.line("every bit was high in every sample - nothing is driving the data line.");
         d.line("Check the wiring, and that the mic's channel select is tied to GND so it");
         d.line("transmits in the half of the frame we read.");
@@ -459,8 +459,8 @@ fn meter(d: &Diag, tt: &ticktimer::Ticktimer, mic: &mut I2sAudio) {
     let end = tt.elapsed_ms() + METER_MS;
 
     while tt.elapsed_ms() < end {
-        let window = if settle(mic, METER_SETTLE_SAMPLES) {
-            window_rms(mic, WINDOW_SAMPLES)
+        let window = if settle(mic, SHORT_SETTLE_SAMPLES) {
+            read_window(mic, WINDOW_SAMPLES)
         } else {
             None
         };
@@ -486,7 +486,7 @@ fn capture(d: &Diag, mic: &mut I2sAudio) {
 
     let mut recorded = [Window { rms: 0.0, peak: 0 }; CAPTURE_WINDOWS];
     for slot in recorded.iter_mut() {
-        match window_rms(mic, WINDOW_SAMPLES) {
+        match read_window(mic, WINDOW_SAMPLES) {
             Some(window) => *slot = window,
             None => {
                 d.line(STARVED);
@@ -554,7 +554,7 @@ fn frequencies(d: &Diag, tt: &ticktimer::Ticktimer, mic: &mut I2sAudio) {
 
     d.line("now MAKE NOISE - whistle, clap, talk - starting in a moment");
     tt.sleep_ms(READY_MS).ok();
-    if !settle(mic, METER_SETTLE_SAMPLES) {
+    if !settle(mic, SHORT_SETTLE_SAMPLES) {
         d.line(NO_SAMPLES);
         return;
     }
@@ -669,7 +669,7 @@ impl Bandpass {
 }
 
 /// RMS and absolute peak over one window of raw samples. None if the BIO stopped.
-fn window_rms(mic: &mut I2sAudio, samples: usize) -> Option<Window> {
+fn read_window(mic: &mut I2sAudio, samples: usize) -> Option<Window> {
     let (mut sum, mut sum_squares) = (0i64, 0i64);
     let mut peak = 0i32;
     for _ in 0..samples {

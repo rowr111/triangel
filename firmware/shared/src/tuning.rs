@@ -8,7 +8,7 @@ pub const BASS_BANDS: usize = 3;
 /// Beat detection shared by Firework, Tiles and Spiderweb.
 pub mod beat {
     /// How much bass there has to be for a hit to count. Keeps hi-hats out.
-    pub const LOW_MIN: f32 = 0.15;
+    pub const BASS_MIN: f32 = 0.15;
     /// A beat fires at this many times the recent average rise. Lower fires more often.
     pub const FLUX_TRIGGER: f32 = 1.9;
     /// It fires again only after dropping back under this.
@@ -43,12 +43,12 @@ pub mod drop_detect {
 }
 
 /// When Auto switches to the sound patterns.
-pub mod level {
+pub mod activity {
     /// Loudness that counts as music playing, in dBFS.
-    pub const ACTIVITY_LOUD_DBFS: f32 = -45.0;
+    pub const LOUD_DBFS: f32 = -45.0;
     /// Loud time before Auto switches to sound patterns, and quiet time before it switches back.
-    pub const ACTIVITY_ARM_MS: f32 = 30_000.0;
-    pub const ACTIVITY_RELEASE_MS: f32 = 30_000.0;
+    pub const ARM_MS: f32 = 30_000.0;
+    pub const RELEASE_MS: f32 = 30_000.0;
 }
 
 /// When the ear stops sending.

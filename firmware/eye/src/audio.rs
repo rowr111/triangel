@@ -11,7 +11,9 @@ use triangel_shared::frame::{
     level_from_wire, norm_from_wire, BandFrame, Fed, FrameAssembler, BAND_COUNT, EAR_UART_BAUD,
     LEVEL_DB_FLOOR,
 };
-use triangel_shared::tuning::{beat::*, drop_detect::*, level::*, link::*, onset::*, BASS_BANDS};
+use triangel_shared::tuning::{
+    activity::*, beat::*, drop_detect::*, link::*, onset::*, BASS_BANDS,
+};
 
 use crate::pins;
 
@@ -212,12 +214,12 @@ impl BeatDetector {
         }
     }
 
-    /// Called once per received frame, which is when flux moves. `low` is the bass level.
-    fn update(&mut self, flux: f32, low: f32, now_ms: u32) {
+    /// Called once per received frame, which is when flux moves.
+    fn update(&mut self, flux: f32, bass: f32, now_ms: u32) {
         self.flux_avg += (flux - self.flux_avg) * FLUX_AVG_RATE;
         self.unfilled *= 1.0 - FLUX_AVG_RATE;
         let avg = self.flux_avg / (1.0 - self.unfilled);
-        let ratio = if low >= LOW_MIN && avg > 1e-4 {
+        let ratio = if bass >= BASS_MIN && avg > 1e-4 {
             flux / avg
         } else {
             0.0
@@ -308,7 +310,7 @@ impl DropDetector {
 /// Decides when Auto mode shows the sound patterns, from how long it has been loud.
 struct ActivityGate {
     last_loud: bool, // the latest frame's verdict; kept until the next frame or quiet tick
-    loud_ms: f32,    // net loud time, 0..=ACTIVITY_ARM_MS
+    loud_ms: f32,    // net loud time, 0..=ARM_MS
     active: bool,
 }
 
@@ -323,7 +325,7 @@ impl ActivityGate {
 
     /// Take a frame's loudness.
     fn frame(&mut self, dbfs: f32) {
-        self.last_loud = dbfs > ACTIVITY_LOUD_DBFS;
+        self.last_loud = dbfs > LOUD_DBFS;
     }
 
     /// The ear has sent nothing for another STOPPED_AFTER_MS.
@@ -335,12 +337,12 @@ impl ActivityGate {
     /// quiet. `active` changes only when full or empty, so borderline sound holds the mode.
     fn tick(&mut self, dt_ms: f32) {
         if self.last_loud {
-            self.loud_ms = (self.loud_ms + dt_ms).min(ACTIVITY_ARM_MS);
-            if self.loud_ms >= ACTIVITY_ARM_MS {
+            self.loud_ms = (self.loud_ms + dt_ms).min(ARM_MS);
+            if self.loud_ms >= ARM_MS {
                 self.active = true;
             }
         } else {
-            let drain = dt_ms * (ACTIVITY_ARM_MS / ACTIVITY_RELEASE_MS);
+            let drain = dt_ms * (ARM_MS / RELEASE_MS);
             self.loud_ms = (self.loud_ms - drain).max(0.0);
             if self.loud_ms <= 0.0 {
                 self.active = false;

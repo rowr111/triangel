@@ -250,9 +250,9 @@ pub struct BandProcessor {
     smoothed_rms: f32,
     /// Shared reference, fed the loudest band's dB after the tilt each frame. Holds the
     /// bands in their true loudness order.
-    band_ref: RangeTracker<BAND_WINDOW_FRAMES>,
+    shared_ref: RangeTracker<BAND_WINDOW_FRAMES>,
     /// Each band's own reference, so a quiet band still moves rather than sitting flat.
-    band_own: [RangeTracker<BAND_OWN_WINDOW_FRAMES>; BAND_COUNT],
+    own_refs: [RangeTracker<BAND_OWN_WINDOW_FRAMES>; BAND_COUNT],
     /// Per-band dB lift that cancels music's natural rolloff with frequency.
     tilt: [f32; BAND_COUNT],
     /// Last frame's untilted band levels in dB, which flux is measured against.
@@ -272,12 +272,13 @@ impl BandProcessor {
         Self {
             bank: BandBank::new(),
             smoothed_rms: 0.0,
-            band_ref: RangeTracker::new(),
-            band_own: std::array::from_fn(|_| RangeTracker::new()),
+            shared_ref: RangeTracker::new(),
+            own_refs: std::array::from_fn(|_| RangeTracker::new()),
             tilt: {
-                let per_band = (BAND_HIGH_HZ / BAND_LOW_HZ).log2() / (BAND_COUNT + 1) as f32;
+                let octaves_per_band =
+                    (BAND_HIGH_HZ / BAND_LOW_HZ).log2() / (BAND_COUNT + 1) as f32;
                 std::array::from_fn(|band| {
-                    TILT_DB_PER_OCTAVE * (band as f32 - TILT_PIVOT_BAND) * per_band
+                    TILT_DB_PER_OCTAVE * (band as f32 - TILT_PIVOT_BAND) * octaves_per_band
                 })
             },
             last_db: [0.0; BAND_COUNT],
@@ -379,14 +380,14 @@ impl BandProcessor {
             .iter()
             .zip(self.tilt.iter())
             .fold(f32::MIN, |peak, (&db, &tilt)| peak.max(db + tilt));
-        self.band_ref.push(tilted_peak);
-        let shared_high = self.band_ref.high;
+        self.shared_ref.push(tilted_peak);
+        let shared_high = self.shared_ref.high;
         let shared_low = shared_high - BAND_VISIBLE_RANGE_DB;
 
         let mut bands = [0u16; BAND_COUNT];
         for (band, &raw_db) in band_db.iter().enumerate() {
             let db = raw_db + self.tilt[band];
-            let own = &mut self.band_own[band];
+            let own = &mut self.own_refs[band];
             own.push(db);
             let high = shared_high + (own.high - shared_high) * PER_BAND_MIX;
             let low = shared_low + (own.low - shared_low) * PER_BAND_MIX;

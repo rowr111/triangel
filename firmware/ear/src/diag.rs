@@ -65,7 +65,7 @@ impl Diag {
 
     /// Print the prompt and block until a printable key arrives. Commands need no Enter,
     /// since terminals disagree on what Enter sends.
-    pub fn command(&self) -> char {
+    pub fn read_key(&self) -> char {
         self.usb.serial_send(b"\r\nmic> ").ok();
         loop {
             let batch = self.usb.serial_wait_binary();

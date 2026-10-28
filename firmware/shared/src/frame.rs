@@ -36,10 +36,10 @@ pub fn norm_from_wire(wire: u16) -> f32 {
 }
 
 /// The u16 values after the bands: level, level_norm, flux, bass.
-const SCALARS: usize = 4;
+const SCALAR_COUNT: usize = 4;
 
 /// Wire frame length in bytes: a sync byte, the u16 values, a checksum byte.
-pub const FRAME_LEN: usize = 1 + (BAND_COUNT + SCALARS) * 2 + 1; // 58 bytes
+pub const FRAME_LEN: usize = 1 + (BAND_COUNT + SCALAR_COUNT) * 2 + 1; // 58 bytes
 
 /// One frame from the ear to the eye. On the wire, little-endian: the sync byte, then
 /// these fields in order as u16s, then an XOR checksum.
@@ -60,7 +60,7 @@ impl BandFrame {
     /// Write the frame into a wire buffer.
     pub fn encode(&self, buf: &mut [u8; FRAME_LEN]) {
         buf[0] = SYNC_BYTE;
-        let scalars: [u16; SCALARS] = [self.level, self.level_norm, self.flux, self.bass];
+        let scalars: [u16; SCALAR_COUNT] = [self.level, self.level_norm, self.flux, self.bass];
         let words = self.bands.iter().chain(&scalars);
         for (bytes, word) in buf[1..FRAME_LEN - 1].chunks_exact_mut(2).zip(words) {
             bytes.copy_from_slice(&word.to_le_bytes());
@@ -74,7 +74,7 @@ impl BandFrame {
             return None;
         }
         let word = |i: usize| u16::from_le_bytes([buf[1 + i * 2], buf[2 + i * 2]]);
-        let [level, level_norm, flux, bass]: [u16; SCALARS] =
+        let [level, level_norm, flux, bass]: [u16; SCALAR_COUNT] =
             std::array::from_fn(|i| word(BAND_COUNT + i));
         Some(BandFrame {
             bands: std::array::from_fn(word),
