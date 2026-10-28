@@ -255,9 +255,6 @@ pub struct BandProcessor {
     band_own: [RangeTracker<BAND_OWN_WINDOW_FRAMES>; BAND_COUNT],
     /// Per-band dB lift that cancels music's natural rolloff with frequency.
     tilt: [f32; BAND_COUNT],
-    /// Quietest and loudest band of the last frame, for the console readout.
-    band_low: f32,
-    band_high: f32,
     /// Last frame's untilted band levels in dB, which flux is measured against.
     last_db: [f32; BAND_COUNT],
     /// Reference for `level_norm`, fed the broadband dBFS each frame.
@@ -283,19 +280,12 @@ impl BandProcessor {
                     TILT_DB_PER_OCTAVE * (band as f32 - TILT_PIVOT_BAND) * per_band
                 })
             },
-            band_low: 0.0,
-            band_high: 0.0,
             last_db: [0.0; BAND_COUNT],
             level_ref: RangeTracker::new(),
             level_dbfs: LEVEL_DB_FLOOR,
             level_norm: 0.0,
             band_smooth: [0.0; BAND_COUNT],
         }
-    }
-
-    /// Quietest and loudest band of the last frame, in dB, for the console readout.
-    pub fn band_range(&self) -> (f32, f32) {
-        (self.band_low, self.band_high)
     }
 
     /// Last frame's band levels in dB, before the tilt, for the console readout.
@@ -386,8 +376,6 @@ impl BandProcessor {
     /// and its own, which keeps it moving. The references see tilted levels; the gate
     /// sees true ones.
     fn shape_bands(&mut self, band_db: &[f32; BAND_COUNT]) -> [u16; BAND_COUNT] {
-        self.band_low = band_db.iter().copied().fold(f32::MAX, f32::min);
-        self.band_high = band_db.iter().copied().fold(f32::MIN, f32::max);
         let tilted_peak = band_db
             .iter()
             .zip(self.tilt.iter())

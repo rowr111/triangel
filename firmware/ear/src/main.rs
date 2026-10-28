@@ -82,12 +82,7 @@ fn main() -> ! {
         uart_out.send(&processed);
         console::record_bands(processor.band_levels());
         let (dbfs, norm) = processor.level();
-        console::record_refs(
-            processor.band_range(),
-            processor.level_reference(),
-            dbfs,
-            norm,
-        );
+        console::record_level(processor.level_reference(), dbfs, norm);
         timer.add(&d, process_ms);
     }
 }

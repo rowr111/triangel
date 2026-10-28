@@ -112,9 +112,7 @@ static PENDING: AtomicU32 = AtomicU32::new(0);
 /// Latest filterbank cost in microseconds, published by the audio loop for `perf`.
 static BANDS_US: AtomicU32 = AtomicU32::new(0);
 
-/// The bands' range, the level reference and the level, for `norm`.
-static BAND_LOW: AtomicF32 = AtomicF32::new();
-static BAND_HIGH: AtomicF32 = AtomicF32::new();
+/// The level reference, the level and the band levels, for `norm`.
 static LEVEL_REF_LOW: AtomicF32 = AtomicF32::new();
 static LEVEL_REF_HIGH: AtomicF32 = AtomicF32::new();
 static LEVEL_DBFS: AtomicF32 = AtomicF32::new();
@@ -133,15 +131,8 @@ pub fn record_bands(db: &[f32; BAND_COUNT]) {
     }
 }
 
-/// Publish the band range, the level reference and the level for `norm`.
-pub fn record_refs(
-    band_range: (f32, f32),
-    level_ref: (f32, f32),
-    level_dbfs: f32,
-    level_norm: f32,
-) {
-    BAND_LOW.store(band_range.0);
-    BAND_HIGH.store(band_range.1);
+/// Publish the level reference and the level for `norm`.
+pub fn record_level(level_ref: (f32, f32), level_dbfs: f32, level_norm: f32) {
     LEVEL_REF_LOW.store(level_ref.0);
     LEVEL_REF_HIGH.store(level_ref.1);
     LEVEL_DBFS.store(level_dbfs);
@@ -224,7 +215,9 @@ pub fn help(d: &Diag) {
 
 /// Report the band range and the level reference.
 fn norm(d: &Diag) {
-    let (band_low, band_high) = (BAND_LOW.load(), BAND_HIGH.load());
+    let band_db: [f32; BAND_COUNT] = std::array::from_fn(|band| BAND_DB[band].load());
+    let band_low = band_db.iter().copied().fold(f32::MAX, f32::min);
+    let band_high = band_db.iter().copied().fold(f32::MIN, f32::max);
     let (level_low, level_high) = (LEVEL_REF_LOW.load(), LEVEL_REF_HIGH.load());
     d.line(&format!(
         "band range {:>7.1} .. {:>7.1} dB, span {:.1}",
@@ -244,12 +237,12 @@ fn norm(d: &Diag) {
         LEVEL_NORM.load()
     ));
     let mut line = String::from("band dB  ");
-    for (band, slot) in BAND_DB.iter().enumerate() {
+    for (band, db) in band_db.iter().enumerate() {
         if band == BAND_COUNT / 2 {
             d.line(&line);
             line = String::from("         ");
         }
-        line.push_str(&format!("{:5.0}", slot.load()));
+        line.push_str(&format!("{:5.0}", db));
     }
     d.line(&line);
 }
