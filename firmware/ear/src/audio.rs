@@ -187,9 +187,8 @@ impl I2sAudio {
         self.try_read_raw().map(|raw| (raw << 8) as i32 >> 8)
     }
 
-    /// One sample at the pipeline's rate: the average of DECIMATE raw samples, 48 kHz down
-    /// to 24 kHz. The average also acts as a simple low-pass against aliasing. None if the
-    /// mic stops partway.
+    /// One sample at the pipeline's rate: the average of DECIMATE raw samples. The average
+    /// also acts as a simple low-pass against aliasing. None if the mic stops partway.
     pub fn read_decimated(&mut self) -> Option<i16> {
         let mut sum: i32 = 0;
         for _ in 0..DECIMATE {

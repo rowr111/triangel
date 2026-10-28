@@ -188,7 +188,7 @@ impl Biquad {
     }
 }
 
-/// The 24 bandpass filters and one energy sum per band.
+/// One bandpass filter and one energy sum per band.
 struct BandBank {
     filters: [Biquad; BAND_COUNT],
     /// Sum of squared filter output per band since the last `take_energies`.

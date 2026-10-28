@@ -27,12 +27,12 @@ pub fn level_from_wire(wire: u16) -> f32 {
 
 /// Encode a 0.0-1.0 level for the wire.
 pub fn norm_to_wire(norm: f32) -> u16 {
-    (norm.clamp(0.0, 1.0) * 65535.0) as u16
+    (norm.clamp(0.0, 1.0) * u16::MAX as f32) as u16
 }
 
 /// Decode a wire level back to 0.0-1.0.
 pub fn norm_from_wire(wire: u16) -> f32 {
-    wire as f32 / 65535.0
+    wire as f32 / u16::MAX as f32
 }
 
 /// The u16 values after the bands: level, level_norm, flux, bass.

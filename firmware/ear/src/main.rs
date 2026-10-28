@@ -8,7 +8,7 @@ mod i2s_bio;
 mod pins;
 mod uart_out;
 
-use audio::{I2sAudio, FRAME_PERIOD_MS};
+use audio::I2sAudio;
 use diag::{Diag, Stage};
 use uart_out::UartOut;
 
@@ -110,10 +110,7 @@ impl BandsTimer {
             .reported
             .is_none_or(|last| (per_frame - last).abs() > BANDS_REPORT_DELTA_MS)
         {
-            d.line(&format!(
-                "bands: {:.2} ms to process each {} ms frame",
-                per_frame, FRAME_PERIOD_MS
-            ));
+            d.line(&console::bands_time(per_frame));
             self.reported = Some(per_frame);
         }
         self.total_ms = 0;

@@ -39,6 +39,8 @@ const METER_SETTLE_SAMPLES: usize = RAW_RATE_HZ as usize / 20; // 50 ms, between
 const SAMPLE_BLOCK: usize = 256;
 /// Full scale for a sign-extended 24-bit sample.
 const FULL_SCALE_RAW: f64 = 8_388_608.0;
+/// Full scale for a sample at the pipeline's rate.
+const FULL_SCALE_I16: f64 = 32768.0;
 /// The 24 bits of a raw sample.
 const SAMPLE_BITS: u32 = 0x00ff_ffff;
 /// The ICS43434 reads -26 dBFS at 94 dB SPL, so sound pressure is roughly dBFS + 120.
@@ -124,6 +126,14 @@ static BAND_DB: [AtomicF32; BAND_COUNT] = [const { AtomicF32::new() }; BAND_COUN
 /// Publish the filterbank's cost per frame for `perf`.
 pub fn record_bands_time(us: u32) {
     BANDS_US.store(us, Ordering::Relaxed);
+}
+
+/// The line reporting the filterbank's cost per frame.
+pub fn bands_time(ms: f32) -> String {
+    format!(
+        "bands: {:.2} ms to process each {} ms frame",
+        ms, FRAME_PERIOD_MS
+    )
 }
 
 /// Publish the band levels for `norm`.
@@ -258,9 +268,8 @@ fn perf(d: &Diag) {
     }
     let ms = us as f32 / 1000.0;
     d.line(&format!(
-        "bands: {:.2} ms to process each {} ms frame ({:.0}%)",
-        ms,
-        FRAME_PERIOD_MS,
+        "{} ({:.0}%)",
+        bands_time(ms),
         ms / FRAME_PERIOD_MS as f32 * 100.0
     ));
 }
@@ -293,7 +302,7 @@ fn measure(tt: &ticktimer::Ticktimer, mic: &mut I2sAudio, mut f: impl FnMut(i32)
 fn raw(d: &Diag, mic: &mut I2sAudio) {
     d.line(&format!("FIFO0 level before read: {}", mic.fifo_level()));
     if !settle(mic, SETTLE_SAMPLES) {
-        d.line("nothing arriving while settling");
+        d.line(NO_SAMPLES);
         return;
     }
 
@@ -568,14 +577,15 @@ fn frequencies(d: &Diag, tt: &ticktimer::Ticktimer, mic: &mut I2sAudio) {
         let quiet_db = dbfs(quiet[i], 1.0);
         let loud_db = dbfs(loud[i], 1.0);
         let diff = loud_db - quiet_db;
-        heard |= diff >= OCTAVE_RISE_DB;
+        let rose = diff >= OCTAVE_RISE_DB;
+        heard |= rose;
         d.line(&format!(
             "{:6.0} {:9.1} {:9.1} {:9.1} dB{}",
             hz,
             quiet_db,
             loud_db,
             diff,
-            if diff >= OCTAVE_RISE_DB { "  <-" } else { "" }
+            if rose { "  <-" } else { "" }
         ));
     }
 
@@ -606,7 +616,7 @@ fn octave_levels(buf: &[i16]) -> [f64; OCTAVE_COUNT] {
     let mean = buf.iter().map(|&sample| sample as f64).sum::<f64>() / buf.len() as f64;
     let mut filters = OCTAVE_HZ.map(Bandpass::new);
     for &sample in buf {
-        let x = ((sample as f64 - mean) / 32768.0) as f32;
+        let x = ((sample as f64 - mean) / FULL_SCALE_I16) as f32;
         for filter in filters.iter_mut() {
             filter.feed(x);
         }
@@ -695,12 +705,10 @@ fn dbfs(rms: f64, full_scale: f64) -> f32 {
 /// A dBFS bar with the number after it.
 fn bar(db: f32) -> String {
     let filled = (level_to_norm(db).clamp(0.0, 1.0) * BAR_WIDTH as f32) as usize;
-
-    let mut s = String::with_capacity(BAR_WIDTH + 24);
-    s.push('[');
-    for i in 0..BAR_WIDTH {
-        s.push(if i < filled { '#' } else { ' ' });
-    }
-    s.push_str(&format!("] {:6.1} dB", db));
-    s
+    format!(
+        "[{}{}] {:6.1} dB",
+        "#".repeat(filled),
+        " ".repeat(BAR_WIDTH - filled),
+        db
+    )
 }
