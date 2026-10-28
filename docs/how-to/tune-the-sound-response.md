@@ -8,7 +8,7 @@ Play music through real speakers. A phone speaker cannot play the low notes, so 
 
 It's suggested to try a variety of music within the range of what you expect to play around Triangel - super drum-heavy songs may look different than really melodic ones, songs with a lot of vocals, etc..  you can tune the response to your own personal music taste!
 
-You can watch in the [previewer](run-the-previewer.md) or on a real Triangel. To see numbers as well, build the eye with `bringup` and watch its `audio:` and `drop:` lines; see [Diagnostic output](../reference/diagnostic-output.md#every-5-seconds). `bringup` does not work together with `previewer`, so for numbers, watch on a real Triangel. On the ear's side, its console key `n` shows the bands' range and the level it compares against; see [Mic test keys](../reference/diagnostic-output.md#mic-test-keys).
+You can watch in the [previewer](run-the-previewer.md) or on a real Triangel. To see numbers as well, build the eye with `bringup` and watch its `audio:` and `drop:` lines; see [Diagnostic output](../reference/diagnostic-output.md#every-5-seconds). `bringup` does not work together with `previewer`, so for numbers, watch on a real Triangel. On the ear's side, its console key `n` (norm) shows the bands' range and the level it compares against; see [Mic test keys](../reference/diagnostic-output.md#mic-test-keys).
 
 ## 2. Find the setting
 

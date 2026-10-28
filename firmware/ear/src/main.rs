@@ -10,7 +10,6 @@ mod uart_out;
 
 use audio::{I2sAudio, FRAME_PERIOD_MS};
 use diag::{Diag, Stage};
-use triangel_shared::frame::{level_from_wire, norm_from_wire};
 use uart_out::UartOut;
 
 /// Frames averaged per timing measurement, and how far it must drift to be worth
@@ -57,9 +56,7 @@ fn main() -> ! {
 
     // Run the 24-band filterbank on each frame and send framed BandFrames to the eye.
     let mut processor = bands::BandProcessor::new();
-    // Filterbank cost, averaged over a batch - the ticktimer only resolves ms.
-    let (mut bands_ms, mut bands_frames) = (0u64, 0u32);
-    let mut bands_reported: Option<f32> = None;
+    let mut timer = BandsTimer::default();
     let mut starved_reported = 0u32;
 
     loop {
@@ -81,29 +78,50 @@ fn main() -> ! {
 
         let started = tt.elapsed_ms();
         let processed = processor.process(&frame);
-        bands_ms += tt.elapsed_ms() - started;
+        let process_ms = tt.elapsed_ms() - started;
         uart_out.send(&processed);
         console::record_bands(processor.band_levels());
+        let (dbfs, norm) = processor.level();
         console::record_refs(
             processor.band_range(),
             processor.level_reference(),
-            level_from_wire(processed.level),
-            norm_from_wire(processed.level_norm),
+            dbfs,
+            norm,
         );
+        timer.add(&d, process_ms);
+    }
+}
 
-        bands_frames += 1;
-        if bands_frames == BANDS_TIMING_FRAMES {
-            let per_frame = bands_ms as f32 / BANDS_TIMING_FRAMES as f32;
-            console::record_bands_time((per_frame * 1000.0) as u32);
-            if bands_reported.is_none_or(|last| (per_frame - last).abs() > BANDS_REPORT_DELTA_MS) {
-                d.line(&format!(
-                    "bands: {:.2} ms to process each {} ms frame",
-                    per_frame, FRAME_PERIOD_MS
-                ));
-                bands_reported = Some(per_frame);
-            }
-            bands_ms = 0;
-            bands_frames = 0;
+/// Filterbank cost, averaged over a batch - the ticktimer only resolves ms.
+#[derive(Default)]
+struct BandsTimer {
+    total_ms: u64,
+    frames: u32,
+    reported: Option<f32>,
+}
+
+impl BandsTimer {
+    /// Adds one frame's time. After each batch, publishes the average for the console and
+    /// prints it if it has moved.
+    fn add(&mut self, d: &Diag, ms: u64) {
+        self.total_ms += ms;
+        self.frames += 1;
+        if self.frames < BANDS_TIMING_FRAMES {
+            return;
         }
+        let per_frame = self.total_ms as f32 / BANDS_TIMING_FRAMES as f32;
+        console::record_bands_time((per_frame * 1000.0) as u32);
+        if self
+            .reported
+            .is_none_or(|last| (per_frame - last).abs() > BANDS_REPORT_DELTA_MS)
+        {
+            d.line(&format!(
+                "bands: {:.2} ms to process each {} ms frame",
+                per_frame, FRAME_PERIOD_MS
+            ));
+            self.reported = Some(per_frame);
+        }
+        self.total_ms = 0;
+        self.frames = 0;
     }
 }

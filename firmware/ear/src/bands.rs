@@ -262,6 +262,10 @@ pub struct BandProcessor {
     last_db: [f32; BAND_COUNT],
     /// Reference for `level_norm`, fed the broadband dBFS each frame.
     level_ref: RangeTracker<LEVEL_WINDOW_FRAMES>,
+    /// Last frame's level in dBFS and against its reference, before wire rounding, for the
+    /// console readout.
+    level_dbfs: f32,
+    level_norm: f32,
     /// Per-band smoothed output, 0.0-1.0.
     band_smooth: [f32; BAND_COUNT],
 }
@@ -283,6 +287,8 @@ impl BandProcessor {
             band_high: 0.0,
             last_db: [0.0; BAND_COUNT],
             level_ref: RangeTracker::new(),
+            level_dbfs: LEVEL_DB_FLOOR,
+            level_norm: 0.0,
             band_smooth: [0.0; BAND_COUNT],
         }
     }
@@ -300,6 +306,11 @@ impl BandProcessor {
     /// Live level reference (low, high) in dBFS, for the console readout.
     pub fn level_reference(&self) -> (f32, f32) {
         (self.level_ref.low, self.level_ref.high)
+    }
+
+    /// Last frame's level in dBFS and 0.0-1.0, before wire rounding, for the console readout.
+    pub fn level(&self) -> (f32, f32) {
+        (self.level_dbfs, self.level_norm)
     }
 
     /// Turn one frame of samples into a `BandFrame`.
@@ -335,10 +346,10 @@ impl BandProcessor {
         } else {
             LEVEL_DB_FLOOR
         };
-        let level = level_to_wire(dbfs);
         self.level_ref.push(dbfs);
-        let level_norm = norm_to_wire(self.level_ref.normalize(dbfs, LEVEL_MIN_SPAN_DB));
-        (level, level_norm)
+        self.level_dbfs = dbfs;
+        self.level_norm = self.level_ref.normalize(dbfs, LEVEL_MIN_SPAN_DB);
+        (level_to_wire(dbfs), norm_to_wire(self.level_norm))
     }
 
     /// Runs the frame through the filterbank and returns each band's level in dB.
