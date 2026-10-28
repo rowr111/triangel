@@ -1,8 +1,15 @@
+//! I2S from the ICS43434 microphone, driven by a BIO program (i2s_bio.rs). The BIO core
+//! drives BCLK and WS and pushes one right-aligned 24-bit left-channel sample per frame to
+//! FIFO0. It drops samples while the FIFO is full, so the clock never stops.
+
 use bao1x_api::bio::*;
 use bao1x_api::bio_resources::*;
+use bao1x_api::iox::IoxHal;
 use bao1x_api::{IoSetup, IoxDir, IoxFunction, IoxPort};
 use bao1x_hal::bio::{Bio, CoreCsr};
 use utralib::utra::bio_bdma;
+
+use crate::pins::{MIC_BCLK_BIO_PIN, MIC_SD_BIO_PIN, MIC_WS_BIO_PIN};
 
 /// Samples per audio frame.
 pub const FRAME_SAMPLES: usize = 768;
@@ -11,7 +18,7 @@ pub const FRAME_SAMPLES: usize = 768;
 
 /// BIO quantum clock. The BIO toggles BCLK on it, so BCLK is half of this.
 const BIO_QUANTUM_HZ: u32 = 6_144_000;
-/// SCK cycles per WS frame. The ICS43434 requires exactly 64 (datasheet, I2S Data Interface).
+/// BCLK cycles per WS frame. The ICS43434 requires exactly 64 (datasheet, I2S Data Interface).
 const BCLK_PER_FRAME: u32 = 64;
 /// Decimation factor from the mic's rate down to the pipeline's.
 const DECIMATE: usize = 2;
@@ -30,17 +37,9 @@ pub const FRAME_PERIOD_MS: u32 = FRAME_SAMPLES as u32 * 1000 / SAMPLE_RATE_HZ;
 const _: () = assert!(BIO_QUANTUM_HZ.is_multiple_of(2 * BCLK_PER_FRAME));
 const _: () = assert!(RAW_RATE_HZ.is_multiple_of(DECIMATE as u32));
 // The pins are compiled into the BIO program (i2s_bio.rs). Regenerate it to move one.
-const _: () = assert!(
-    crate::pins::MIC_BCLK_BIO_PIN == 1
-        && crate::pins::MIC_SD_BIO_PIN == 2
-        && crate::pins::MIC_WS_BIO_PIN == 3
-);
+const _: () = assert!(MIC_BCLK_BIO_PIN == 1 && MIC_SD_BIO_PIN == 2 && MIC_WS_BIO_PIN == 3);
 // The ICS43434's high-performance mode runs from 23 kHz to 51.6 kHz.
 const _: () = assert!(RAW_RATE_HZ >= 23_000 && RAW_RATE_HZ <= 51_600);
-
-// I2S from the ICS43434 microphone, driven by a BIO program (i2s_bio.rs). The BIO core
-// drives BCLK and WS and pushes one right-aligned 24-bit left-channel sample per frame to
-// FIFO0. It drops samples while the FIFO is full, so the clock never stops.
 
 /// Raw samples discarded at startup while the mic settles: 100 ms. The datasheet says
 /// it is within 1 dB of settled by 20 ms.
@@ -50,9 +49,9 @@ const SAMPLE_SPIN_LIMIT: u32 = 2_000_000;
 
 pub struct I2sAudio {
     bio_ss: Bio,
-    // CoreCsr view of FIFO0, where the BIO program pushes mic samples.
+    /// CoreCsr view of FIFO0, where the BIO program pushes mic samples.
     rx: CoreCsr,
-    // The handle must outlive `rx` or the underlying CSR mapping is dropped.
+    /// The handle must outlive `rx` or the underlying CSR mapping is dropped.
     _rx_handle: CoreHandle,
     resource_grant: ResourceGrant,
     /// Frames abandoned because nothing was arriving.
@@ -65,11 +64,7 @@ impl Resources for I2sAudio {
             claimer: "i2s-mic".to_string(),
             cores: vec![CoreRequirement::Any],
             fifos: vec![Fifo::Fifo0],
-            static_pins: vec![
-                crate::pins::MIC_BCLK_BIO_PIN,
-                crate::pins::MIC_SD_BIO_PIN,
-                crate::pins::MIC_WS_BIO_PIN,
-            ],
+            static_pins: vec![MIC_BCLK_BIO_PIN, MIC_SD_BIO_PIN, MIC_WS_BIO_PIN],
             dynamic_pin_count: 0,
         }
     }
@@ -89,11 +84,11 @@ impl Drop for I2sAudio {
 impl I2sAudio {
     pub fn new() -> Self {
         // BIO bit N is PB N on this board, so the port is PB and the pin is the bit number.
-        let iox = bao1x_api::iox::IoxHal::new();
+        let iox = IoxHal::new();
         for (pin, dir) in [
-            (crate::pins::MIC_BCLK_BIO_PIN, IoxDir::Output),
-            (crate::pins::MIC_WS_BIO_PIN, IoxDir::Output),
-            (crate::pins::MIC_SD_BIO_PIN, IoxDir::Input),
+            (MIC_BCLK_BIO_PIN, IoxDir::Output),
+            (MIC_WS_BIO_PIN, IoxDir::Output),
+            (MIC_SD_BIO_PIN, IoxDir::Input),
         ] {
             iox.setup_pin(
                 IoxPort::PB,
@@ -126,9 +121,9 @@ impl I2sAudio {
 
         // Route the three pins to the BIO before the core starts driving them.
         let io_config = IoConfig {
-            mapped: (1u32 << crate::pins::MIC_BCLK_BIO_PIN)
-                | (1u32 << crate::pins::MIC_SD_BIO_PIN)
-                | (1u32 << crate::pins::MIC_WS_BIO_PIN),
+            mapped: (1u32 << MIC_BCLK_BIO_PIN)
+                | (1u32 << MIC_SD_BIO_PIN)
+                | (1u32 << MIC_WS_BIO_PIN),
             mode: IoConfigMode::Overwrite,
             ..Default::default()
         };
@@ -150,6 +145,7 @@ impl I2sAudio {
 
         bio_ss.set_core_run_state(&resource_grant, true);
 
+        // SAFETY: the handle is kept in the struct beside `rx`, so it outlives the CoreCsr view.
         let rx_handle = unsafe { bio_ss.get_core_handle(Fifo::Fifo0) }
             .expect("FIFO0 handle error")
             .expect("no FIFO0 handle");
@@ -195,12 +191,12 @@ impl I2sAudio {
     /// to 24 kHz. The average also acts as a simple low-pass against aliasing. None if the
     /// mic stops partway.
     pub fn read_decimated(&mut self) -> Option<i16> {
-        let mut acc: i32 = 0;
+        let mut sum: i32 = 0;
         for _ in 0..DECIMATE {
             // 24-bit -> 16-bit: keep the 16 most-significant bits.
-            acc += self.try_read_sample()? >> 8;
+            sum += self.try_read_sample()? >> 8;
         }
-        Some((acc / DECIMATE as i32) as i16)
+        Some((sum / DECIMATE as i32) as i16)
     }
 
     /// Frames abandoned so far because nothing was arriving.
