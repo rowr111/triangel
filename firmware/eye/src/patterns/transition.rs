@@ -99,7 +99,7 @@ fn compute_spiral_ranks() -> [f32; BOARD_COUNT + 1] {
             (board, angle + (radius - r_min) / span * SPIRAL_TURNS * TAU)
         })
         .collect();
-    keyed.sort_by(|x, y| x.1.total_cmp(&y.1));
+    keyed.sort_by(|a, b| a.1.total_cmp(&b.1));
 
     let mut ranks = [0.0f32; BOARD_COUNT + 1];
     let last = (keyed.len().max(2) - 1) as f32;

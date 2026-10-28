@@ -4,7 +4,7 @@ use core::f32::consts::PI;
 use crate::audio::Audio;
 use crate::led::geom::{BOARD_COUNT, LEDS_PER_BOARD};
 use crate::led::map::{Led, LED_COUNT, LED_MAP};
-use crate::patterns::{hsv, Frame, Pattern, Rng, Shot, ShotPair};
+use crate::patterns::{hsv, lerp, Frame, Pattern, Rng, Shot, ShotPair};
 use triangel_shared::tuning::spiderweb::*;
 
 /// The tile outlines form straight lines across the fixture, nine in each of three
@@ -17,6 +17,8 @@ const DIR_TOLERANCE: f32 = 12.0 * PI / 180.0;
 const ROW_MERGE_MM: f32 = 1.0;
 /// Most lines one beat lights.
 const MAX_BEAT_LINES: usize = 1 + EXTRA_LINES as usize;
+/// A line's strength on the softest beat; the hardest beat gives 1.
+const SOFTEST_BEAT: f32 = 0.5;
 
 /// (hue, sat): half white, plus pale blue, lavender and violet.
 const PALETTE: [(f32, f32); 6] = [
@@ -85,17 +87,17 @@ impl Pattern for Spiderweb {
         let base = BASE_LEVEL * (1.0 + PULSE_DEPTH * swell);
 
         // One color per line, shared by all its LEDs.
-        let mut color = [[0u8; 3]; MAX_LINES];
-        for (c, line) in color.iter_mut().zip(self.lines.iter_mut()) {
+        let mut colors = [[0u8; 3]; MAX_LINES];
+        for (color, line) in colors.iter_mut().zip(self.lines.iter_mut()) {
             let shot = line.shots.brightest(t_ms).unwrap_or_default();
             // Saturation follows the lift, so the background glow stays white.
             let lift = shot.brightness;
             let brightness = (base + (1.0 - base) * lift).min(1.0);
-            *c = hsv(shot.hue, shot.sat * lift, brightness);
+            *color = hsv(shot.hue, shot.sat * lift, brightness);
         }
 
-        for (o, &line) in out.iter_mut().zip(self.led_line.iter()) {
-            *o = color[line as usize];
+        for (px, &line) in out.iter_mut().zip(self.led_line.iter()) {
+            *px = colors[line as usize];
         }
     }
 }
@@ -112,7 +114,7 @@ impl Spiderweb {
 
     /// Lights one line, and up to EXTRA_LINES more on a hard beat.
     fn on_beat(&mut self, t_ms: u32, beat_strength: f32) {
-        let strength = 0.5 + 0.5 * beat_strength;
+        let strength = lerp(SOFTEST_BEAT, 1.0, beat_strength);
         let count = 1 + (beat_strength * EXTRA_LINES) as usize;
         let mut picked = [usize::MAX; MAX_BEAT_LINES];
         for i in 0..count {

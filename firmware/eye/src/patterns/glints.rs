@@ -2,6 +2,7 @@ use crate::led::map::LED_COUNT;
 use crate::patterns::{lerp, time_step_ms, Frame, Rng};
 
 const MAX_GLINTS: usize = 24;
+const MAX_STEP_MS: u32 = 100; // longest time step
 
 /// How a pattern's glints look.
 #[derive(Clone, Copy)]
@@ -51,7 +52,7 @@ impl Glints {
     pub fn update(&mut self, t_ms: u32, out: &mut Frame) {
         let style = self.style;
         // Capped so a long gap cannot start a burst of tries.
-        let dt_ms = time_step_ms(&mut self.last_ms, t_ms, 100);
+        let dt_ms = time_step_ms(&mut self.last_ms, t_ms, MAX_STEP_MS);
         self.tries += dt_ms as f32 * style.tries_per_sec / 1000.0;
         while self.tries >= 1.0 {
             self.tries -= 1.0;

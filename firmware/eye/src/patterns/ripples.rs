@@ -54,20 +54,22 @@ impl Droplet {
         let radius =
             style.start_radius_mm + t_ms.wrapping_sub(self.start_ms) as f32 * style.ripple_speed;
         let young = (1.0 - (radius - style.start_radius_mm) / style.white_mm).clamp(0.0, 1.0);
-        let amp = self.strength
+        let brightness = self.strength
             * (style.gain_base + style.gain_hit * self.strength)
             * (1.0 + style.hit_boost * young);
-        (radius, young, amp)
+        (radius, young, brightness)
     }
 
     /// Roughly how bright the brightest point of the rings is at `t_ms`.
     fn glow(&self, t_ms: u32, style: &RippleStyle) -> f32 {
-        let (radius, _, amp) = self.front(t_ms, style);
+        let (radius, _, brightness) = self.front(t_ms, style);
         let inner = (radius - self.train).max(0.0);
-        let at = ((style.ripple_max_mm + radius - self.train) * 0.5)
+        let peak_dist = ((style.ripple_max_mm + radius - self.train) * 0.5)
             .max(inner)
             .min(radius.min(style.ripple_max_mm));
-        amp * (1.0 - (radius - at) / self.train) * (1.0 - at / style.ripple_max_mm)
+        brightness
+            * (1.0 - (radius - peak_dist) / self.train)
+            * (1.0 - peak_dist / style.ripple_max_mm)
     }
 }
 
@@ -79,7 +81,7 @@ struct Ring {
     inner_d2: f32,
     outer_d2: f32,
     /// Includes the drop's gain and the boost while it is young.
-    amp: f32,
+    brightness: f32,
     hue: f32,
     /// Saturation: 0 while the ripple is still white, rising to DROP_SAT.
     sat: f32,
@@ -165,7 +167,7 @@ impl Ripples {
             if !drop.alive {
                 continue;
             }
-            let (radius, young, amp) = drop.front(t_ms, &style);
+            let (radius, young, brightness) = drop.front(t_ms, &style);
             if radius - drop.train > style.ripple_max_mm {
                 drop.alive = false;
                 continue;
@@ -177,7 +179,7 @@ impl Ripples {
                 radius,
                 inner_d2: inner * inner,
                 outer_d2: radius * radius,
-                amp,
+                brightness,
                 hue: drop.hue,
                 sat: DROP_SAT * (1.0 - young),
                 inv_spacing: 1.0 / drop.spacing,
@@ -189,8 +191,8 @@ impl Ripples {
     /// The color the rings give one LED.
     fn color_at(&self, led: &Led, inv_reach: f32) -> [u8; 3] {
         let mut ripple = 0.0f32;
-        let mut hue_acc = 0.0f32;
-        let mut sat_acc = 0.0f32;
+        let mut hue_sum = 0.0f32;
+        let mut sat_sum = 0.0f32;
         for ring in &self.rings {
             let dx = led.wx - ring.x;
             let dy = led.wy - ring.y;
@@ -207,21 +209,21 @@ impl Ripples {
             let frac = cell - (cell as u32) as f32;
             // Triangle wave, squared for a sharper crest.
             let crest = 1.0 - (2.0 * frac - 1.0).abs();
-            let brightness = ring.amp
+            let brightness = ring.brightness
                 * crest
                 * crest
                 * (1.0 - behind * ring.inv_train)
                 * (1.0 - dist * inv_reach).max(0.0);
             ripple += brightness;
-            hue_acc += ring.hue * brightness;
-            sat_acc += ring.sat * brightness;
+            hue_sum += ring.hue * brightness;
+            sat_sum += ring.sat * brightness;
         }
 
         if ripple > MIN_RIPPLE {
             let inv = 1.0 / ripple;
             hsv(
-                hue_acc * inv,
-                (sat_acc * inv).clamp(0.0, 1.0),
+                hue_sum * inv,
+                (sat_sum * inv).clamp(0.0, 1.0),
                 ripple.min(1.0),
             )
         } else {

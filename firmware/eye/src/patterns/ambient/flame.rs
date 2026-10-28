@@ -3,8 +3,8 @@ use crate::led::geom::{BOARD_COUNT, BOARD_Y_RANGE, DIST_APEX};
 use crate::led::map::{LED_COUNT, LED_MAP, WORLD_BOT, WORLD_CX, WORLD_H};
 use crate::led::world::half_width_at;
 use crate::patterns::{
-    cycle, cycle_q16, hash01, hash2, knuth_hash, phase_phasors, ramp, random_u32, Frame, Pattern,
-    Phasor, PHASE_STEPS,
+    cycle, cycle_angle, cycle_q16, hash01, hash2, hash_plus_minus, hashed_phasor, knuth_hash, ramp,
+    random_u32, Frame, Pattern, Phasor,
 };
 use core::f32::consts::{PI, TAU};
 
@@ -168,16 +168,13 @@ pub struct Flame {
 
 impl Flame {
     pub fn new() -> Self {
-        let flicker = phase_phasors();
         // Two hashed flicker phases per LED, so neighboring LEDs flicker out of step.
         let hash = |i: usize| knuth_hash(i as u32);
-        let flicker1_step = |i: usize| (hash(i) % PHASE_STEPS as u32) as usize;
-        let flicker2_step = |i: usize| ((hash(i) >> 16) % PHASE_STEPS as u32) as usize;
         Flame {
             wave1: core::array::from_fn(|i| PhasorQ12::new(DIST_APEX[i] * WAVE_ANGLE_PER_MM)),
             wave2: core::array::from_fn(|i| PhasorQ12::new(DIST_APEX[i] * SECOND_ANGLE_PER_MM)),
-            flicker1: core::array::from_fn(|i| flicker[flicker1_step(i)].into()),
-            flicker2: core::array::from_fn(|i| flicker[flicker2_step(i)].into()),
+            flicker1: core::array::from_fn(|i| hashed_phasor(hash(i)).into()),
+            flicker2: core::array::from_fn(|i| hashed_phasor(hash(i) >> 16).into()),
             wiggle: core::array::from_fn(|i| PhasorQ12::new(LED_MAP[i].wx / SMOKE_WIGGLE_MM * TAU)),
             smoke_y: core::array::from_fn(|i| {
                 (LED_MAP[i].wy / SMOKE_BAND_MM * 65536.0) as u32 as u16
@@ -214,16 +211,16 @@ impl Pattern for Flame {
         // Each time term wraps at its own period first, so the f32 stays precise.
         let wave1_s = (t_ms % WAVE_PERIOD_MS) as f32 / 1000.0;
         let wave2_s = (t_ms % SECOND_PERIOD_MS) as f32 / 1000.0;
-        let breathe_phase = cycle(t_ms, BREATHE_PERIOD_MS) * TAU;
+        let breathe_phase = cycle_angle(t_ms, BREATHE_PERIOD_MS);
         let breathe = q12(1.0 - BREATHE_DEPTH * (0.5 + 0.5 * breathe_phase.sin()));
         let smoke_rise = cycle_q16(t_ms, SMOKE_RISE_PERIOD_MS) as u16; // turns x65536
 
         // sin and cos of this frame's angle for the waves, the flicker and the smoke wiggle.
         let wave1_now = PhasorQ12::new(-wave1_s * WAVE_SPEED * WAVE_ANGLE_PER_MM);
         let wave2_now = PhasorQ12::new(-wave2_s * SECOND_SPEED * SECOND_ANGLE_PER_MM);
-        let flicker1_now = PhasorQ12::new(cycle(t_ms, FLICKER_PERIOD_MS) * TAU);
-        let flicker2_now = PhasorQ12::new(cycle(t_ms, FLICKER2_PERIOD_MS) * TAU);
-        let wiggle_now = PhasorQ12::new(cycle(t_ms, SMOKE_WIGGLE_PERIOD_MS) * TAU);
+        let flicker1_now = PhasorQ12::new(cycle_angle(t_ms, FLICKER_PERIOD_MS));
+        let flicker2_now = PhasorQ12::new(cycle_angle(t_ms, FLICKER2_PERIOD_MS));
+        let wiggle_now = PhasorQ12::new(cycle_angle(t_ms, SMOKE_WIGGLE_PERIOD_MS));
 
         let embers = self.embers(t_ms);
         let flare_heat = self.update_flare(t_ms);
@@ -262,7 +259,7 @@ impl Flame {
             let hash = hash2(t_ms / period, self.seed ^ slot as u32);
             let y0 = WORLD_BOT - EMBER_START_MM - hash01(hash, 1) * EMBER_START_RANGE_MM;
             let half_width = half_width_at(y0);
-            let x0 = WORLD_CX + (hash01(hash, 2) * 2.0 - 1.0) * half_width;
+            let x0 = WORLD_CX + hash_plus_minus(hash, 2, half_width);
             let x = x0 + ((phase * EMBER_WOBBLES + hash01(hash, 3)) * TAU).sin() * EMBER_WOBBLE_MM;
             let y = y0 - phase * EMBER_RISE_MM;
             Ember {

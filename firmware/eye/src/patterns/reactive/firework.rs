@@ -45,12 +45,12 @@ struct Spark {
 }
 
 /// One live spark's position, size and color for this frame.
-struct Live {
+struct LiveSpark {
     x: f32,
     y: f32,
     r2: f32,
     inv_r2: f32,
-    amp: f32,
+    brightness: f32,
     hue: f32,
     sat: f32,
     radius: f32,
@@ -77,7 +77,7 @@ impl LedSum {
 pub struct Firework {
     rng: Rng,
     sparks: [Spark; MAX_SPARKS],
-    live: Vec<Live>,
+    live: Vec<LiveSpark>,
     /// Per LED: total brightness, the strongest spark's brightness, and its index.
     sums: [LedSum; LED_COUNT],
 }
@@ -142,13 +142,13 @@ impl Firework {
     /// A drop: many full bursts at once, kept DROP_SPACING_MM apart where possible.
     fn drop_bursts(&mut self, t_ms: u32) {
         let count = BURST_MIN + BURST_EXTRA as usize;
-        let min2 = DROP_SPACING_MM * DROP_SPACING_MM;
+        let min_d2 = DROP_SPACING_MM * DROP_SPACING_MM;
         let mut placed = [(0.0f32, 0.0f32); DROP_BURSTS];
         for k in 0..DROP_BURSTS {
             let mut best = self.random_point();
             let mut best_d2 = nearest_d2(best, &placed[..k]);
             for _ in 0..DROP_TRIES {
-                if best_d2 >= min2 {
+                if best_d2 >= min_d2 {
                     break;
                 }
                 let spot = self.random_point();
@@ -202,13 +202,13 @@ impl Firework {
             }
             let life = 1.0 - age / SPARK_LIFE_MS;
             let young = (1.0 - age / (SPARK_LIFE_MS * WHITE_FRAC)).clamp(0.0, 1.0);
-            let radius = SPARK_END_MM + (SPARK_START_MM - SPARK_END_MM) * life;
-            self.live.push(Live {
+            let radius = lerp(SPARK_END_MM, SPARK_START_MM, life);
+            self.live.push(LiveSpark {
                 x: spark.x + spark.vx * age,
                 y: spark.y + spark.vy * age + GRAVITY * age * age,
                 r2: radius * radius,
                 inv_r2: 1.0 / (radius * radius),
-                amp: spark.strength * life * life * (1.0 + HIT_BOOST * young),
+                brightness: spark.strength * life * life * (1.0 + HIT_BOOST * young),
                 hue: spark.hue,
                 sat: spark.sat * (1.0 - young),
                 radius,
@@ -229,7 +229,7 @@ impl Firework {
                     return;
                 }
                 let fall = 1.0 - d2 * spark.inv_r2;
-                let brightness = spark.amp * fall * fall;
+                let brightness = spark.brightness * fall * fall;
                 let sum = &mut self.sums[i];
                 sum.total += brightness;
                 if brightness > sum.best {

@@ -16,7 +16,7 @@ use crate::patterns::{Frame, Pattern, Rng};
 pub(crate) const AMBIENT_CYCLE_MS: u32 = 3 * 60 * 1_000;
 const REACTIVE_CYCLE_MS: u32 = 5 * 60 * 1_000;
 // The least a pattern shows after a setlist switch.
-const MIN_AFTER_FLIP_MS: u32 = 30_000;
+const MIN_AFTER_SWITCH_MS: u32 = 30_000;
 
 // Crossfade time for a pattern step, and for a switch between the ambient and sound setlists.
 const STEP_TRANSITION_MS: u32 = 3_000;
@@ -259,14 +259,14 @@ impl SetlistManager {
         if let Some(active) = self.transition {
             if t_ms.wrapping_sub(active.start_ms) >= active.duration_ms {
                 self.transition = None;
-                self.pump_queue(SetlistKind::from_sound(sound_active), t_ms);
+                self.start_queued_step(SetlistKind::from_sound(sound_active), t_ms);
             }
         }
 
         // Draw the current pattern into `out`.
         let to_kind = SetlistKind::from_sound(sound_active);
         let to_index = self.list(to_kind).index;
-        self.setlists[to_kind as usize].draw(to_index, t_ms, audio, out);
+        self.list(to_kind).draw(to_index, t_ms, audio, out);
 
         // Composite the outgoing pattern over it while a transition is running.
         if let Some(active) = self.transition {
@@ -290,7 +290,7 @@ impl SetlistManager {
         let shown = &mut self.shown_ms[kind as usize];
         // After a setlist switch the pattern gets at least the minimum.
         if sound_active != self.last_sound_active {
-            *shown = (*shown).min(kind.cycle_ms() - MIN_AFTER_FLIP_MS);
+            *shown = (*shown).min(kind.cycle_ms() - MIN_AFTER_SWITCH_MS);
         }
         *shown += dt_ms;
         if *shown >= kind.cycle_ms() {
@@ -315,11 +315,11 @@ impl SetlistManager {
         if self.pending.len() < len {
             self.pending.push_back(dir);
         }
-        self.pump_queue(kind, now_ms);
+        self.start_queued_step(kind, now_ms);
     }
 
     /// If idle and a step is queued, start the next transition from the current pattern.
-    fn pump_queue(&mut self, kind: SetlistKind, now_ms: u32) {
+    fn start_queued_step(&mut self, kind: SetlistKind, now_ms: u32) {
         if self.transition.is_none() {
             if let Some(dir) = self.pending.pop_front() {
                 self.begin_step(kind, dir, now_ms);

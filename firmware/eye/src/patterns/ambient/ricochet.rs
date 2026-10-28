@@ -45,7 +45,7 @@ const SPARK_R_MM: f32 = 15.0; // must exceed the LED spacing (about 10 mm)
 const SPARK_BRIGHT: f32 = 2.5; // above 1 holds sparks at full brightness before fading
 const SPARK_GRAVITY: f32 = 0.000_15; // downward pull (mm/ms^2)
 
-const MAX_DT_MS: u32 = 60; // longest time step
+const MAX_STEP_MS: u32 = 60; // longest time step
 
 // The three walls' inward unit normals. The left and right walls are measured from their
 // top corners.
@@ -168,7 +168,7 @@ impl Pattern for Ricochet {
     }
 
     fn render(&mut self, t_ms: u32, _audio: &Audio, out: &mut Frame) {
-        let dt_ms = time_step_ms(&mut self.last_ms, t_ms, MAX_DT_MS) as f32;
+        let dt_ms = time_step_ms(&mut self.last_ms, t_ms, MAX_STEP_MS) as f32;
 
         for i in 0..MAX_COMETS {
             if self.comets[i].alive {

@@ -1,7 +1,7 @@
 use crate::audio::Audio;
 use crate::led::geom::{DIST_C, DIST_C_MAX, THETA_C};
 use crate::led::map::LED_COUNT;
-use crate::patterns::{cycle, hsv, mix_rgb, smoothstep, Frame, Pattern, Phasor};
+use crate::patterns::{cycle, cycle_angle, hsv, mix_rgb, smoothstep, Frame, Pattern, Phasor};
 use core::f32::consts::TAU;
 
 // Shape and motion
@@ -98,8 +98,8 @@ impl Uzumaki {
 impl Pattern for Uzumaki {
     fn render(&mut self, t_ms: u32, _audio: &Audio, out: &mut Frame) {
         let rot = ARMS as f32 * cycle(t_ms, ROT_MS);
-        let wind = WIND_MID + WIND_SWING * (TAU * cycle(t_ms, BREATH_MS)).sin();
-        let wobble_now = Phasor::new(TAU * cycle(t_ms, WOBBLE_MS));
+        let wind = WIND_MID + WIND_SWING * cycle_angle(t_ms, BREATH_MS).sin();
+        let wobble_now = Phasor::new(cycle_angle(t_ms, WOBBLE_MS));
 
         // Each line sits between two arms, so the lines and core use the arms' average bright stop.
         let stops = self.arm_stops(t_ms);

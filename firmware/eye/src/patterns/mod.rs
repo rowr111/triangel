@@ -24,18 +24,18 @@ pub trait Pattern: Send {
 /// HSV to RGB. h is 0-360, s and v are 0-1.
 pub fn hsv(h: f32, s: f32, v: f32) -> [u8; 3] {
     let h60 = h / 60.0;
-    let f = |n: f32| -> f32 {
-        // n + h60 is in [1, 11), so one subtraction wraps it.
-        let mut k = n + h60;
-        if k >= 6.0 {
-            k -= 6.0;
+    let channel = |offset: f32| -> f32 {
+        // offset + h60 is in [1, 11), so one subtraction wraps it.
+        let mut pos = offset + h60;
+        if pos >= 6.0 {
+            pos -= 6.0;
         }
-        v - v * s * k.min(4.0 - k).clamp(0.0, 1.0_f32)
+        v - v * s * pos.min(4.0 - pos).clamp(0.0, 1.0_f32)
     };
     [
-        (f(5.0) * 255.0) as u8,
-        (f(3.0) * 255.0) as u8,
-        (f(1.0) * 255.0) as u8,
+        (channel(5.0) * 255.0) as u8,
+        (channel(3.0) * 255.0) as u8,
+        (channel(1.0) * 255.0) as u8,
     ]
 }
 
@@ -100,13 +100,18 @@ impl HueMix {
 }
 
 /// Number of phase offsets in `phase_phasors`, 0.01 rad apart, covering 0..TAU.
-pub const PHASE_STEPS: usize = 628;
+const PHASE_STEPS: usize = 628;
 
 /// Each phase offset as a `Phasor`. With the frame's angle, `sin_plus` gives
 /// sin(offset + angle) without a sin call per LED.
-pub fn phase_phasors() -> &'static [Phasor; PHASE_STEPS] {
+fn phase_phasors() -> &'static [Phasor; PHASE_STEPS] {
     static PHASORS: std::sync::OnceLock<[Phasor; PHASE_STEPS]> = std::sync::OnceLock::new();
     PHASORS.get_or_init(|| core::array::from_fn(|k| Phasor::new(k as f32 / 100.0)))
+}
+
+/// A `Phasor` for an angle taken from `hash`, read from a table, so it needs no sin call.
+pub fn hashed_phasor(hash: u32) -> Phasor {
+    phase_phasors()[(hash % PHASE_STEPS as u32) as usize]
 }
 
 /// Wraps a hue into [0, 360). The input must be within one turn of that range.
@@ -157,6 +162,11 @@ pub fn cycle_q16(t_ms: u32, period_ms: u32) -> u32 {
     ((t_ms % period_ms) as u64 * 65536 / period_ms as u64) as u32
 }
 
+/// Where `t_ms` sits in a repeating period, as an angle from 0 to TAU.
+pub fn cycle_angle(t_ms: u32, period_ms: u32) -> f32 {
+    cycle(t_ms, period_ms) * TAU
+}
+
 /// Which lifetime a repeating slot is in and how far through, 0-1. Its length is hashed.
 pub fn slot_life(slot: u32, salt: u32, t_ms: u32, min_ms: u32, max_ms: u32) -> (u32, f32) {
     let slot_seed = hash2(slot, salt);
@@ -165,10 +175,10 @@ pub fn slot_life(slot: u32, salt: u32, t_ms: u32, min_ms: u32, max_ms: u32) -> (
     (local / life, cycle(local, life))
 }
 
-/// `t_ms` wrapped to one period of a `rate` in rad/ms, for `sin(t * rate + ...)`.
-pub fn fold_ms(t_ms: u32, rate: f32) -> f32 {
+/// The angle `t_ms * rate` for a `rate` in rad/ms, with `t_ms` wrapped to one period first.
+pub fn rate_angle(t_ms: u32, rate: f32) -> f32 {
     let period = (TAU / rate) as u32;
-    (t_ms % period.max(1)) as f32
+    (t_ms % period.max(1)) as f32 * rate
 }
 
 /// Milliseconds since `last_ms`, at most `max_ms`; also sets `last_ms` to `t_ms`.
@@ -190,6 +200,11 @@ pub fn hash2(a: u32, b: u32) -> u32 {
 /// A value in [0, 1) from a hash of `a` and `b`, so each `b` gives a different value.
 pub fn hash01(a: u32, b: u32) -> f32 {
     (hash2(a, b) >> 8) as f32 / 16_777_216.0
+}
+
+/// Like `hash01`, but in [-x, x).
+pub fn hash_plus_minus(a: u32, b: u32, x: f32) -> f32 {
+    (hash01(a, b) * 2.0 - 1.0) * x
 }
 
 /// Knuth's multiplicative hash: spreads consecutive inputs far apart.

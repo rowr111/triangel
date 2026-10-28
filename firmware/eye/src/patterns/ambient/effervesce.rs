@@ -1,8 +1,8 @@
 use crate::audio::Audio;
 use crate::led::map::{Led, LED_COUNT, LED_MAP};
 use crate::patterns::{
-    cycle, fold_ms, hash01, hash2, hsv, random_u32, slot_life, smoothstep, wrap360, Frame, HueMix,
-    Pattern, Phasor,
+    cycle, hash01, hash2, hsv, random_u32, rate_angle, slot_life, smoothstep, wrap360, Frame,
+    HueMix, Pattern, Phasor,
 };
 use core::f32::consts::{PI, TAU};
 
@@ -94,8 +94,7 @@ impl Pattern for Effervesce {
         let base_hue = cycle(t_ms, HUE_DRIFT_MS) * 360.0;
         let base = Phasor::new(base_hue.to_radians());
         let swell_t = cycle(t_ms, SWELL_MS);
-        let glitter_t = fold_ms(t_ms, GLITTER_RATE);
-        let glitter_phase = Phasor::new(glitter_t * GLITTER_RATE);
+        let glitter_phase = Phasor::new(rate_angle(t_ms, GLITTER_RATE));
 
         for (i, led) in LED_MAP.iter().enumerate() {
             // Base field with the swell, a smoothed triangle wave.

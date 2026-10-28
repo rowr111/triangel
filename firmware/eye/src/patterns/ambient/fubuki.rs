@@ -3,7 +3,8 @@ use crate::led::grid;
 use crate::led::map::{LED_COUNT, LED_MAP, WORLD_BOT, WORLD_CX, WORLD_H, WORLD_TOP};
 use crate::led::world::{WORLD_LEFT, WORLD_RIGHT};
 use crate::patterns::{
-    fold_ms, hash01, hash2, hsv, lerp, random_u32, slot_life, wrap360, Frame, Pattern, Phasor,
+    hash01, hash2, hash_plus_minus, hsv, lerp, random_u32, rate_angle, slot_life, wrap360, Frame,
+    Pattern, Phasor,
 };
 use crate::setlist::AMBIENT_CYCLE_MS;
 use core::f32::consts::TAU;
@@ -140,7 +141,7 @@ impl Fubuki {
             led_hash,
             pile_brightness: led_hash.map(|hash| PILE_VAL * (1.0 - PILE_TEXTURE * hash01(hash, 1))),
             pulse_offset: led_hash.map(|hash| Phasor::new(hash01(hash, 2) * TAU)),
-            jitter_mm: led_hash.map(|hash| (hash01(hash, 3) * 2.0 - 1.0) * FILL_JITTER_MM),
+            jitter_mm: led_hash.map(|hash| hash_plus_minus(hash, 3, FILL_JITTER_MM)),
         }
     }
 }
@@ -174,7 +175,7 @@ impl Pattern for Fubuki {
         let new_pile = Pile::new(fill_new);
         let old_pile = Pile::new(fill_old);
 
-        let pulse_phase = Phasor::new(fold_ms(elapsed_ms, PILE_PULSE_RATE) * PILE_PULSE_RATE);
+        let pulse_phase = Phasor::new(rate_angle(elapsed_ms, PILE_PULSE_RATE));
 
         // new_colors is how far the sky and the flakes have turned to the new season's colors.
         let new_colors = if first {

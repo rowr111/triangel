@@ -4,8 +4,8 @@ use crate::led::grid;
 use crate::led::map::{LED_COUNT, LED_MAP, WORLD_BOT, WORLD_CX, WORLD_H, WORLD_TOP};
 use crate::led::world::{half_width_at, WORLD_LEFT, WORLD_RIGHT};
 use crate::patterns::{
-    cycle, hash01, knuth_hash, lerp, mix_rgb, phase_phasors, ramp, random_u32, time_step_ms, Frame,
-    Pattern, Phasor, Rng, PHASE_STEPS,
+    cycle, cycle_angle, hash01, hash_plus_minus, hashed_phasor, knuth_hash, lerp, mix_rgb, ramp,
+    random_u32, time_step_ms, Frame, Pattern, Phasor, Rng,
 };
 use core::f32::consts::{PI, TAU};
 
@@ -29,6 +29,7 @@ const BLOOM_START_R_MM: f32 = 45.0; // radius at birth
 const BLOOM_END_R_MM: f32 = 175.0; // radius at full spread
 const BLOOM_PEAK: f32 = 0.6; // energy a young bloom adds at its center
 const BLOOM_RIM: f32 = 0.55; // 0 fades in place, 1 dies as an expanding ring
+const BLOOM_MARGIN_MM: f32 = 40.0; // how far past the side edges a bloom can be centered
 
 // Foam: twinkling white where the energy passes the threshold.
 const FOAM_THRESHOLD: f32 = 0.8;
@@ -53,6 +54,7 @@ const CLOUD_BREATHE_MIN_MS: u32 = 3_500; // time for a lobe to swell and shrink
 const CLOUD_BREATHE_MAX_MS: u32 = 6_500;
 const CLOUD_OPACITY: f32 = 0.7; // opacity at full density
 const CLOUD_MARGIN_MM: f32 = 170.0; // how far past an edge before re-entering
+const RESPAWN_INSET_MM: f32 = 1.0; // a cloud re-enters this far inside the margin
 
 // Lightning: a white bolt builds along the tile edges one side at a time, flickers
 // through a few pulses, then dies.
@@ -63,6 +65,7 @@ const BOLT_SIDES_MIN: usize = 3; // bolt length, in tile sides
 const BOLT_SIDES_MAX: usize = 8;
 const BOLT_STEP_MS: u32 = 150; // time per tile side while building
 const PULSE_FADE_MS: f32 = 180.0; // decay of each pulse
+const BOLT_MIN_LEVEL: f32 = 0.01; // a bolt dimmer than this is not drawn
 const BOLT_PULSES_MIN: usize = 2; // pulses per strike
 const BOLT_PULSES_MAX: usize = 5;
 const PULSE_GAP_MIN_MS: u32 = 60; // between pulses
@@ -78,6 +81,7 @@ const LATTICE_NEIGHBORS: [(i32, i32); 6] = [(0, -1), (0, 1), (-1, 0), (-1, 1), (
 const LATTICE_LAST_ROW: i32 = 5; // row r's last index is LATTICE_LAST_ROW - r
 
 const SLOT_MIX: u32 = 0x9E37_79B9; // spreads slot and lobe numbers apart in a hash
+const MAX_STEP_MS: u32 = 100; // longest time step
 
 /// Water color by energy.
 const WATER_RAMP: [(f32, [f32; 3]); 6] = [
@@ -111,23 +115,23 @@ impl Cloud {
         let (x, y) = match rng.below(4) {
             0 => (
                 lerp(WORLD_LEFT, WORLD_RIGHT, along),
-                WORLD_TOP - CLOUD_MARGIN_MM + 1.0,
+                WORLD_TOP - CLOUD_MARGIN_MM + RESPAWN_INSET_MM,
             ),
             1 => (
                 lerp(WORLD_LEFT, WORLD_RIGHT, along),
-                WORLD_BOT + CLOUD_MARGIN_MM - 1.0,
+                WORLD_BOT + CLOUD_MARGIN_MM - RESPAWN_INSET_MM,
             ),
             2 => (
-                WORLD_LEFT - CLOUD_MARGIN_MM + 1.0,
+                WORLD_LEFT - CLOUD_MARGIN_MM + RESPAWN_INSET_MM,
                 lerp(WORLD_TOP, WORLD_BOT, along),
             ),
             _ => (
-                WORLD_RIGHT + CLOUD_MARGIN_MM - 1.0,
+                WORLD_RIGHT + CLOUD_MARGIN_MM - RESPAWN_INSET_MM,
                 lerp(WORLD_TOP, WORLD_BOT, along),
             ),
         };
-        let aim_x = lerp(WORLD_LEFT, WORLD_RIGHT, 0.25 + 0.5 * rng.f32());
-        let aim_y = lerp(WORLD_TOP, WORLD_BOT, 0.25 + 0.5 * rng.f32());
+        let aim_x = lerp(WORLD_LEFT, WORLD_RIGHT, rng.range_f32(0.25, 0.75));
+        let aim_y = lerp(WORLD_TOP, WORLD_BOT, rng.range_f32(0.25, 0.75));
         let (dx, dy) = (aim_x - x, aim_y - y);
         let len = (dx * dx + dy * dy).sqrt().max(1.0);
         let speed = rng.range_f32(CLOUD_SPEED_MIN, CLOUD_SPEED_MAX);
@@ -197,7 +201,7 @@ struct Bloom {
     x: f32,
     y: f32,
     inv_r2: f32,
-    amp: f32,
+    energy: f32,
     ring: f32, // 0 a filled disc, 1 a ring
     radius: f32,
 }
@@ -286,7 +290,7 @@ impl Pattern for Squall {
     }
 
     fn render(&mut self, t_ms: u32, _audio: &Audio, out: &mut Frame) {
-        let dt_s = time_step_ms(&mut self.last_ms, t_ms, 100) as f32 / 1000.0;
+        let dt_s = time_step_ms(&mut self.last_ms, t_ms, MAX_STEP_MS) as f32 / 1000.0;
         self.update_clouds(t_ms, dt_s);
         self.update_strikes(t_ms);
 
@@ -295,8 +299,7 @@ impl Pattern for Squall {
         self.add_clouds(t_ms);
         self.add_lightning(t_ms);
 
-        let foam_phase = Phasor::new(cycle(t_ms, FOAM_PERIOD_MS) * TAU);
-        let phasors = phase_phasors();
+        let foam_phase = Phasor::new(cycle_angle(t_ms, FOAM_PERIOD_MS));
         for (i, px) in out.iter_mut().enumerate() {
             let energy = self.energy[i];
 
@@ -304,8 +307,7 @@ impl Pattern for Squall {
             let mut color = ramp(&WATER_RAMP, energy);
             let excess = ((energy - FOAM_THRESHOLD) * FOAM_GAIN).clamp(0.0, 1.0);
             if excess > 0.0 {
-                let step = (knuth_hash(i as u32) % PHASE_STEPS as u32) as usize;
-                let twinkle = phasors[step].sin_plus(foam_phase) * 0.5 + 0.5;
+                let twinkle = hashed_phasor(knuth_hash(i as u32)).sin_plus(foam_phase) * 0.5 + 0.5;
                 color = mix_rgb(color, FOAM_COLOR, excess * twinkle * twinkle);
             }
 
@@ -437,8 +439,8 @@ impl Squall {
 
     /// Boiling floor. Only the inner sines can come from the per-LED tables.
     fn boil(&mut self, t_ms: u32) {
-        let boil1 = cycle(t_ms, BOIL_PERIOD_MS) * TAU;
-        let boil2 = cycle(t_ms, BOIL2_PERIOD_MS) * TAU;
+        let boil1 = cycle_angle(t_ms, BOIL_PERIOD_MS);
+        let boil2 = cycle_angle(t_ms, BOIL2_PERIOD_MS);
         let boil1_phasor = Phasor::new(boil1);
         let boil2_phasor = Phasor::new(boil2);
         for (i, led) in LED_MAP.iter().enumerate() {
@@ -460,15 +462,14 @@ impl Squall {
             let hash =
                 knuth_hash((t_ms / period) ^ self.seed) ^ (slot as u32).wrapping_mul(SLOT_MIX);
             let y = WORLD_TOP + hash01(hash, 1) * WORLD_H;
-            // Plus a 40 mm margin.
-            let half_width = half_width_at(y) + 40.0;
-            let x = WORLD_CX + (hash01(hash, 2) * 2.0 - 1.0) * half_width;
+            let half_width = half_width_at(y) + BLOOM_MARGIN_MM;
+            let x = WORLD_CX + hash_plus_minus(hash, 2, half_width);
             let radius = lerp(BLOOM_START_R_MM, BLOOM_END_R_MM, age);
             Bloom {
                 x,
                 y,
                 inv_r2: 1.0 / (radius * radius),
-                amp: BLOOM_PEAK * (age * PI).sin(),
+                energy: BLOOM_PEAK * (age * PI).sin(),
                 ring: BLOOM_RIM * age,
                 radius,
             }
@@ -481,7 +482,7 @@ impl Squall {
             x,
             y,
             inv_r2,
-            amp,
+            energy,
             ring,
             radius,
         } in &self.blooms(t_ms)
@@ -492,7 +493,7 @@ impl Squall {
                 if d2_ratio < 1.0 {
                     let filled = (1.0 - d2_ratio) * (1.0 - d2_ratio);
                     let ringed = 4.0 * d2_ratio * (1.0 - d2_ratio);
-                    self.energy[i] += amp * lerp(filled, ringed, ring);
+                    self.energy[i] += energy * lerp(filled, ringed, ring);
                 }
             });
         }
@@ -562,7 +563,7 @@ impl Squall {
                         brightness = brightness.max((-since / PULSE_FADE_MS).exp());
                     }
                 }
-                if brightness > 0.01 {
+                if brightness > BOLT_MIN_LEVEL {
                     for pair in strike.path.windows(2) {
                         self.lit_sides
                             .push(LitSide::new(pair[0], pair[1], brightness));

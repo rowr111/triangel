@@ -4,7 +4,7 @@ use crate::patterns::{lerp, Frame, Pattern};
 use triangel_shared::tuning::raindrop::*;
 use triangel_shared::tuning::BASS_BANDS;
 
-const STYLE: RippleStyle = RippleStyle {
+pub const STYLE: RippleStyle = RippleStyle {
     ripple_speed: RIPPLE_SPEED,
     ripple_max_mm: RIPPLE_MAX_MM,
     gain_base: GAIN_BASE,
@@ -17,8 +17,8 @@ const STYLE: RippleStyle = RippleStyle {
 /// A drop's strength on the softest beat; the hardest beat gives 1.
 const SOFTEST_DROP: f32 = 0.35;
 /// Ring spacing range once a tempo has been found.
-const SPACING_LOCKED_MIN_MM: f32 = 16.0;
-const SPACING_LOCKED_MAX_MM: f32 = 150.0;
+const SPACING_TEMPO_MIN_MM: f32 = 16.0;
+const SPACING_TEMPO_MAX_MM: f32 = 150.0;
 
 /// Fractions of a beat a drop can space its rings by.
 const DIVISIONS: [f32; 3] = [0.25, 0.5, 1.0];
@@ -101,7 +101,7 @@ impl Raindrop {
         let rng = self.ripples.rng();
         let spacing = if self.beat_ms > 0.0 {
             let div = rng.pick(&DIVISIONS);
-            (RIPPLE_SPEED * self.beat_ms * div).clamp(SPACING_LOCKED_MIN_MM, SPACING_LOCKED_MAX_MM)
+            (RIPPLE_SPEED * self.beat_ms * div).clamp(SPACING_TEMPO_MIN_MM, SPACING_TEMPO_MAX_MM)
         } else {
             rng.range_f32(SPACING_MIN_MM, SPACING_MAX_MM)
         };

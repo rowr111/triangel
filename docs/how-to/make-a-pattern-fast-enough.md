@@ -14,7 +14,7 @@ For a shape that covers a small area, such as a ripple or a spark, use `led::gri
 
 ## Avoid a sin per LED
 
-`sin(per_led + per_frame)` needs no `sin` per LED. A `Phasor` holds the `sin` and `cos` of an angle. Store one for the per-LED part in `new()`, make one for the frame's angle once per frame, and combine them with `sin_plus`. `phase_phasors()` gives phasors for offsets taken from a hash.
+`sin(per_led + per_frame)` needs no `sin` per LED. A `Phasor` holds the `sin` and `cos` of an angle. Store one for the per-LED part in `new()`, make one for the frame's angle once per frame, and combine them with `sin_plus`. `hashed_phasor(hash)` gives a phasor for an offset taken from a hash.
 
 ## Use whole numbers per LED
 

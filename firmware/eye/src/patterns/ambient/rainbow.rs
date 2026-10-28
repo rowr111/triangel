@@ -3,7 +3,8 @@ use crate::led::geom::{DIST_C, THETA_C};
 use crate::led::map::{LED_COUNT, LED_MAP};
 use crate::patterns::glints::{GlintStyle, Glints};
 use crate::patterns::{
-    cycle, fold_ms, hsv, tile_hash, wrap360, Frame, Pattern, Phasor, TILE_HASH_STEPS,
+    cycle, cycle_angle, hsv, rate_angle, tile_hash, wrap360, Frame, Pattern, Phasor,
+    TILE_HASH_STEPS,
 };
 use core::f32::consts::TAU;
 
@@ -54,10 +55,10 @@ impl Rainbow {
 
 impl Pattern for Rainbow {
     fn render(&mut self, t_ms: u32, _audio: &Audio, out: &mut Frame) {
-        let breathe = BREATHE * BREATHE_DEPTH * (cycle(t_ms, BREATHE_PERIOD_MS) * TAU).sin();
+        let breathe = BREATHE * BREATHE_DEPTH * cycle_angle(t_ms, BREATHE_PERIOD_MS).sin();
         let spin = cycle(t_ms, SPIN_PERIOD_MS) + breathe;
-        let twinkle_phase = fold_ms(t_ms, TWINKLE_RATE) * TWINKLE_RATE;
-        let ripple_phase = Phasor::new(cycle(t_ms, RIPPLE_PERIOD_MS) * TAU);
+        let twinkle_phase = rate_angle(t_ms, TWINKLE_RATE);
+        let ripple_phase = Phasor::new(cycle_angle(t_ms, RIPPLE_PERIOD_MS));
         // The twinkle wave for each value a tile hash can take.
         let twinkle: [f32; TILE_HASH_STEPS as usize] =
             core::array::from_fn(|hash| (twinkle_phase + hash as f32).sin());

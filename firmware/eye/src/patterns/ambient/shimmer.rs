@@ -3,7 +3,7 @@ use crate::led::geom::{DIST_C, THETA_C};
 use crate::led::map::{LED_COUNT, LED_MAP};
 use crate::patterns::glints::{GlintStyle, Glints};
 use crate::patterns::{
-    cycle, cycle_q16, hsv_int, tile_hash, time_step_ms, Frame, Pattern, Rng, TILE_HASH_STEPS,
+    cycle_angle, cycle_q16, hsv_int, tile_hash, time_step_ms, Frame, Pattern, Rng, TILE_HASH_STEPS,
 };
 use core::f32::consts::TAU;
 
@@ -22,6 +22,7 @@ const SPEED_SCALE_MAX: f32 = 1.6;
 const SPEED_CHANGE_MIN_MS: u32 = 6_000; // wait before the next target
 const SPEED_CHANGE_MAX_MS: u32 = 14_000;
 const SPEED_EASE_MS: i32 = 2_000; // roughly how long the change takes
+const MAX_STEP_MS: u32 = 100; // longest time step
 
 const GLINTS: GlintStyle = GlintStyle {
     tries_per_sec: 14.0, // about half succeed, since brighter LEDs are likelier to take one
@@ -113,14 +114,13 @@ impl Shimmer {
 
 impl Pattern for Shimmer {
     fn render(&mut self, t_ms: u32, _audio: &Audio, out: &mut Frame) {
-        let dt_ms = time_step_ms(&mut self.last_ms, t_ms, 100);
+        let dt_ms = time_step_ms(&mut self.last_ms, t_ms, MAX_STEP_MS);
         self.advance_wave(t_ms, dt_ms);
 
         // Moves every LED's hue position back, which drifts the gradient and turns the spiral.
         let hue_shift = cycle_q16(t_ms, HUE_PERIOD_MS).wrapping_neg();
         // The spiral's current twist, in cycles per mm x2^20.
-        let twist =
-            (SPIRAL_TWIST * (cycle(t_ms, TWIST_PERIOD_MS) * TAU).sin() * 1_048_576.0) as i32;
+        let twist = (SPIRAL_TWIST * cycle_angle(t_ms, TWIST_PERIOD_MS).sin() * 1_048_576.0) as i32;
 
         for (i, px) in out.iter_mut().enumerate() {
             let brightness = self.brightness(i);

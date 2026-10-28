@@ -3,13 +3,15 @@ use std::collections::VecDeque;
 use crate::audio::Audio;
 use crate::led::geom::{BOARD_CENTER, BOARD_COUNT, TILE_SPACING_MM};
 use crate::led::map::{LED_MAP, WORLD_CENTROID_X, WORLD_CENTROID_Y};
-use crate::patterns::{hsv, Frame, Pattern, Rng, Shot, ShotPair};
+use crate::patterns::{hsv, lerp, Frame, Pattern, Rng, Shot, ShotPair};
 use triangel_shared::tuning::tiles::*;
 
 /// Tiles are numbered by board id, from 1. Index 0 is unused.
 const TILES: usize = BOARD_COUNT + 1;
 /// Tiles sharing an edge are TILE_SPACING_MM apart; sharing only a corner, 1.7 times that.
 const NEIGHBOR_MM: f32 = TILE_SPACING_MM * 1.25;
+/// A flash's strength on the softest beat; the hardest beat gives 1.
+const SOFTEST_BEAT: f32 = 0.5;
 
 /// (hue, sat). Cooler hues are less saturated, or they look dim.
 const PALETTE: [(f32, f32); 5] = [
@@ -77,34 +79,42 @@ impl Pattern for Tiles {
                 DROP_FADE_MS,
             );
         } else if audio.beat {
-            let seed = 1 + self.rng.below(BOARD_COUNT);
+            let start_tile = 1 + self.rng.below(BOARD_COUNT);
             let count = 1 + (audio.beat_strength * GROW_EXTRA) as usize;
-            let strength = 0.5 + 0.5 * audio.beat_strength;
-            self.light(seed, t_ms, count, strength, 0.0, FADE_MS);
+            let strength = lerp(SOFTEST_BEAT, 1.0, audio.beat_strength);
+            self.light(start_tile, t_ms, count, strength, 0.0, FADE_MS);
         }
 
         // One color per tile, shared by all its LEDs.
-        let mut color = [[0u8; 3]; TILES];
-        for (tile, c) in color.iter_mut().enumerate().skip(1) {
+        let mut colors = [[0u8; 3]; TILES];
+        for (tile, color) in colors.iter_mut().enumerate().skip(1) {
             if let Some(shot) = self.shots[tile].brightest(t_ms) {
-                *c = hsv(shot.hue, shot.sat, shot.brightness);
+                *color = hsv(shot.hue, shot.sat, shot.brightness);
             }
         }
 
-        for (o, led) in out.iter_mut().zip(LED_MAP.iter()) {
-            *o = color[led.board_id as usize];
+        for (px, led) in out.iter_mut().zip(LED_MAP.iter()) {
+            *px = colors[led.board_id as usize];
         }
     }
 }
 
 impl Tiles {
-    /// Lights `count` tiles outward from `seed`, each ring RING_STEP_MS after the last.
-    fn light(&mut self, seed: usize, t_ms: u32, count: usize, strength: f32, hold: f32, fade: f32) {
+    /// Lights `count` tiles outward from `start_tile`, each ring RING_STEP_MS after the last.
+    fn light(
+        &mut self,
+        start_tile: usize,
+        t_ms: u32,
+        count: usize,
+        strength: f32,
+        hold_ms: f32,
+        fade_ms: f32,
+    ) {
         let (hue, sat) = self.rng.pick(&PALETTE);
         let mut queued = [false; TILES];
-        queued[seed] = true;
-        // Tiles waiting to light, with how many rings out from `seed` each one is.
-        let mut queue = VecDeque::from([(seed, 0)]);
+        queued[start_tile] = true;
+        // Tiles waiting to light, with how many rings out from `start_tile` each one is.
+        let mut queue = VecDeque::from([(start_tile, 0)]);
         for _ in 0..count {
             let Some((tile, ring)) = queue.pop_front() else {
                 break;
@@ -114,9 +124,9 @@ impl Tiles {
                 strength,
                 hue,
                 sat,
-                hold_ms: hold,
-                fade_ms: fade,
-                white_ms: (hold + fade) * WHITE_FRAC,
+                hold_ms,
+                fade_ms,
+                white_ms: (hold_ms + fade_ms) * WHITE_FRAC,
                 boost: HIT_BOOST,
             };
             self.shots[tile].add(shot, t_ms);

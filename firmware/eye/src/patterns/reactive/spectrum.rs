@@ -1,9 +1,7 @@
-use core::f32::consts::TAU;
-
 use crate::audio::Audio;
 use crate::led::geom::{DIST_C, THETA_C};
 use crate::led::map::LED_COUNT;
-use crate::patterns::{cycle, lerp, Frame, Pattern, Phasor};
+use crate::patterns::{cycle, cycle_angle, lerp, Frame, Pattern, Phasor};
 use triangel_shared::frame::BAND_COUNT;
 use triangel_shared::tuning::spectrum::*;
 
@@ -65,10 +63,13 @@ impl Spectrum {
 impl Pattern for Spectrum {
     fn render(&mut self, t_ms: u32, audio: &Audio, out: &mut Frame) {
         let loud = QUIET_FLOOR + (1.0 - QUIET_FLOOR) * audio.level_norm;
-        let swirl_turn = Phasor::new(cycle(t_ms, SWIRL_PERIOD_MS) * TAU);
+        let swirl_turn = Phasor::new(cycle_angle(t_ms, SWIRL_PERIOD_MS));
         let flow = cycle(t_ms, FLOW_PERIOD_MS) * 2.0;
-        let (slot, front) = palette_change(t_ms);
-        let (from, to) = (&PALETTES[slot], &PALETTES[(slot + 1) % PALETTES.len()]);
+        let (palette, front) = palette_change(t_ms);
+        let (from, to) = (
+            &PALETTES[palette],
+            &PALETTES[(palette + 1) % PALETTES.len()],
+        );
         let inv_edge = 1.0 / FRONT_EDGE;
 
         for (i, px) in out.iter_mut().enumerate() {
@@ -82,16 +83,16 @@ impl Pattern for Spectrum {
             let lit = energy * loud * GAIN * (1.0 + SWIRL_DEPTH * swirl);
             let brightness = (lit + hit * HIT_GAIN).clamp(0.0, 1.0);
 
-            let (seg, stop_frac) = ramp_stop(pos, flow, swirl);
+            let (stop, stop_frac) = ramp_stop(pos, flow, swirl);
             let white = hit * HIT_WHITE;
             // 1 where the new palette has arrived, 0 where it has not.
             let arrived = ((front - pos) * inv_edge).clamp(0.0, 1.0);
             for (channel, value) in px.iter_mut().enumerate() {
-                let old = lerp(from[seg][channel], from[seg + 1][channel], stop_frac);
+                let old = lerp(from[stop][channel], from[stop + 1][channel], stop_frac);
                 let color = if arrived <= 0.0 {
                     old
                 } else {
-                    let new = lerp(to[seg][channel], to[seg + 1][channel], stop_frac);
+                    let new = lerp(to[stop][channel], to[stop + 1][channel], stop_frac);
                     lerp(old, new, arrived)
                 };
                 *value = (lerp(color, 255.0, white) * brightness) as u8;
@@ -102,7 +103,7 @@ impl Pattern for Spectrum {
 
 /// Which palette is showing, and how far the change to the next one has spread.
 fn palette_change(t_ms: u32) -> (usize, f32) {
-    let slot = (t_ms / PALETTE_MS) as usize % PALETTES.len();
+    let palette = (t_ms / PALETTE_MS) as usize % PALETTES.len();
     let within = t_ms % PALETTE_MS;
     let held = PALETTE_MS - PALETTE_FADE_MS;
     let mix = if within > held {
@@ -112,7 +113,7 @@ fn palette_change(t_ms: u32) -> (usize, f32) {
     };
     // How far the change has spread, in band positions; it starts below 0 and ends past the last.
     let front = mix * ((BAND_COUNT - 1) as f32 + 2.0 * FRONT_EDGE) - FRONT_EDGE;
-    (slot, front)
+    (palette, front)
 }
 
 /// The ramp stop below an LED's color, and how far it is toward the next stop.
@@ -122,6 +123,6 @@ fn ramp_stop(pos: f32, flow: f32, swirl: f32) -> (usize, f32) {
     // Fold into 0..2 and reflect the upper half, so the ramp runs out and back.
     ramp_pos -= 2.0 * ((ramp_pos * 0.5) as u32) as f32;
     let stop_pos = ramp_pos.min(2.0 - ramp_pos) * (STOPS - 1) as f32;
-    let seg = (stop_pos as usize).min(STOPS - 2);
-    (seg, stop_pos - seg as f32)
+    let stop = (stop_pos as usize).min(STOPS - 2);
+    (stop, stop_pos - stop as f32)
 }
