@@ -15,11 +15,13 @@ const RAW_DUMP_PER_LINE: usize = 8;
 const MEASURE_MS: u64 = 1000;
 /// How long `meter` runs.
 const METER_MS: u64 = 15_000;
-/// How many windows `capture` records.
-const CAPTURE_WINDOWS: usize = 30;
+/// How long `capture` records.
+const CAPTURE_MS: usize = 3000;
 /// One window of `meter` or `capture`.
 const WINDOW_MS: usize = 100;
 const WINDOW_SAMPLES: usize = RAW_RATE_HZ as usize * WINDOW_MS / 1000;
+/// How many windows `capture` records.
+const CAPTURE_WINDOWS: usize = CAPTURE_MS / WINDOW_MS;
 /// Octave band centers for `frequencies`. A Q of 1.41 makes each filter about an octave wide.
 const OCTAVE_COUNT: usize = 6;
 const OCTAVE_HZ: [f32; OCTAVE_COUNT] = [125.0, 250.0, 500.0, 1000.0, 2000.0, 4000.0];
@@ -187,7 +189,7 @@ pub fn service(d: &Diag, tt: &ticktimer::Ticktimer, mic: &mut I2sAudio) {
 pub fn help(d: &Diag) {
     d.line(&format!(
         "  c  capture      record {} s silently, then print the level per {} ms - the",
-        CAPTURE_WINDOWS * WINDOW_MS / 1000,
+        CAPTURE_MS / 1000,
         WINDOW_MS
     ));
     d.line("                  test that answers whether the mic hears you");
@@ -465,7 +467,7 @@ fn meter(d: &Diag, tt: &ticktimer::Ticktimer, mic: &mut I2sAudio) {
 fn capture(d: &Diag, mic: &mut I2sAudio) {
     d.line(&format!(
         "recording {} s silently - make noise NOW (clap, talk, music)",
-        CAPTURE_WINDOWS * WINDOW_SAMPLES / RAW_RATE_HZ as usize
+        CAPTURE_MS / 1000
     ));
 
     if !settle(mic, SETTLE_SAMPLES) {
