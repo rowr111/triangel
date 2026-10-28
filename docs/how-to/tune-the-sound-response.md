@@ -19,7 +19,7 @@ Each group in `tuning.rs` is a `mod`. Find what you would like in this table:
 | Beats to follow only the bass, not hi-hats and other light hits | `beat` | Raise `LOW_MIN`, so a beat needs more bass |
 | Fewer beats | `beat` | Raise `FLUX_TRIGGER` |
 | More beats | `beat` | Lower `FLUX_TRIGGER` or `LOW_MIN` |
-| More space between beats | `beat` | Raise `BEAT_REFRACTORY_MS`, or lower `FLUX_RELEASE` |
+| More space between beats | `beat` | Raise `REFRACTORY_MS`, or lower `FLUX_RELEASE` |
 | More or fewer raindrops in Raindrop | `raindrop` | `TRIGGER`, `RELEASE` and `REFRACTORY_MS` work like the `beat` ones; Raindrop has its own trigger |
 | Drops caught more readily | `drop_detect` | Lower `BREAKDOWN_DB` or `BREAKDOWN_MS`, or raise `DROP_DB` |
 | Drops caught only when they are big | `drop_detect` | Raise `BREAKDOWN_DB` or `BREAKDOWN_MS` |

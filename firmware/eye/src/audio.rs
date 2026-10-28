@@ -223,9 +223,7 @@ impl BeatDetector {
             0.0
         };
 
-        if self.armed
-            && ratio >= FLUX_TRIGGER
-            && now_ms.wrapping_sub(self.last_ms) >= BEAT_REFRACTORY_MS
+        if self.armed && ratio >= FLUX_TRIGGER && now_ms.wrapping_sub(self.last_ms) >= REFRACTORY_MS
         {
             self.armed = false;
             self.strength = ((ratio - FLUX_TRIGGER) / FLUX_TRIGGER).clamp(0.0, 1.0);

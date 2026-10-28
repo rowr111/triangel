@@ -16,7 +16,7 @@ pub mod beat {
     /// How quickly that recent average follows. Lower is steadier.
     pub const FLUX_AVG_RATE: f32 = 0.02;
     /// Shortest gap between beats.
-    pub const BEAT_REFRACTORY_MS: u32 = 100;
+    pub const REFRACTORY_MS: u32 = 100;
 }
 
 /// Per-band onsets, used by Raindrop's trigger and Spectrum's hits.

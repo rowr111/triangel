@@ -21,8 +21,8 @@ pub fn level_to_wire(dbfs: f32) -> u16 {
 }
 
 /// Decode a wire level back to absolute dBFS.
-pub fn level_from_wire(level: u16) -> f32 {
-    LEVEL_DB_FLOOR + norm_from_wire(level) * -LEVEL_DB_FLOOR
+pub fn level_from_wire(wire: u16) -> f32 {
+    LEVEL_DB_FLOOR + norm_from_wire(wire) * -LEVEL_DB_FLOOR
 }
 
 /// Encode a 0.0-1.0 level for the wire.
@@ -31,8 +31,8 @@ pub fn norm_to_wire(norm: f32) -> u16 {
 }
 
 /// Decode a wire level back to 0.0-1.0.
-pub fn norm_from_wire(norm: u16) -> f32 {
-    norm as f32 / 65535.0
+pub fn norm_from_wire(wire: u16) -> f32 {
+    wire as f32 / 65535.0
 }
 
 /// The u16 values after the bands: level, level_norm, flux, bass.
