@@ -110,16 +110,14 @@ fn palette_change(t_ms: u32) -> (usize, f32) {
     } else {
         0.0
     };
-    // How far the palette change has spread, in band positions; it starts and ends
-    // past the ends.
+    // How far the change has spread, in band positions; it starts below 0 and ends past the last.
     let front = mix * ((BAND_COUNT - 1) as f32 + 2.0 * FRONT_EDGE) - FRONT_EDGE;
     (slot, front)
 }
 
 /// The ramp stop below an LED's color, and how far it is toward the next stop.
 fn ramp_stop(pos: f32, flow: f32, swirl: f32) -> (usize, f32) {
-    // Position along the ramp. Subtracting the flow moves colors outward; the 4.0
-    // keeps it positive.
+    // Subtracting the flow moves colors outward; the 4.0 keeps the position positive.
     let mut ramp_pos = pos * BAND_TO_RAMP - flow + SWIRL_SHIFT * swirl + 4.0;
     // Fold into 0..2 and reflect the upper half, so the ramp runs out and back.
     ramp_pos -= 2.0 * ((ramp_pos * 0.5) as u32) as f32;

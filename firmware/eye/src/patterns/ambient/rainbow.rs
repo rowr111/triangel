@@ -10,7 +10,7 @@ use core::f32::consts::TAU;
 // Effect strengths, 0.0 (off) to 1.0 (full).
 const TWINKLE: f32 = 0.7; // a fade that circles each tile
 const BREATHE: f32 = 0.5; // the rotation speeds up and slows down
-const IRIDESCENCE: f32 = 0.2; // a hue ripple moving outward
+const RIPPLE: f32 = 0.2; // a hue ripple moving outward
 
 const SPIN_PERIOD_MS: u32 = 20_000; // one full rotation
 
@@ -25,9 +25,9 @@ const RIPPLE_PERIOD_MS: u32 = 9_000;
 
 const GLINTS: GlintStyle = GlintStyle {
     tries_per_sec: 10.0,
-    min_ms: 250, // fade time
-    max_ms: 450,
-    white: 0.75, // how far toward white a glint starts
+    min_life_ms: 250,
+    max_life_ms: 450,
+    white: 0.75,
 };
 
 /// Rainbow: hue follows the angle around the center, and the wheel rotates.
@@ -37,7 +37,7 @@ pub struct Rainbow {
     // tile hash.
     ripple_angle: [Phasor; LED_COUNT],
     hue_turn: [f32; LED_COUNT],
-    tile: [u8; LED_COUNT],
+    led_hash: [u8; LED_COUNT],
 }
 
 impl Rainbow {
@@ -47,7 +47,7 @@ impl Rainbow {
             glints: Glints::new(0x3C6E_F372, GLINTS),
             ripple_angle: core::array::from_fn(|i| Phasor::new(ripple_at(i))),
             hue_turn: core::array::from_fn(|i| THETA_C[i] / TAU),
-            tile: core::array::from_fn(|i| tile_hash(&LED_MAP[i]) as u8),
+            led_hash: core::array::from_fn(|i| tile_hash(&LED_MAP[i]) as u8),
         }
     }
 }
@@ -64,9 +64,9 @@ impl Pattern for Rainbow {
 
         for (i, px) in out.iter_mut().enumerate() {
             let ripple = self.ripple_angle[i].sin_minus(ripple_phase);
-            let hue = (self.hue_turn[i] + spin) * 360.0 + IRIDESCENCE * RIPPLE_DEG * ripple;
+            let hue = (self.hue_turn[i] + spin) * 360.0 + RIPPLE * RIPPLE_DEG * ripple;
 
-            let dip = 0.5 - 0.5 * twinkle[self.tile[i] as usize];
+            let dip = 0.5 - 0.5 * twinkle[self.led_hash[i] as usize];
 
             *px = hsv(wrap360(hue), 1.0, 1.0 - TWINKLE * dip);
         }

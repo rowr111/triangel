@@ -293,8 +293,7 @@ pub struct ShotPair([Shot; 2]);
 impl ShotPair {
     pub const NONE: ShotPair = ShotPair([Shot::NONE; 2]);
 
-    /// Replaces the shot that ends sooner, but a waiting one before a showing one, so the
-    /// light does not go dark.
+    /// Replaces an empty shot, else a waiting one ending before `new`, else the one ending sooner.
     pub fn add(&mut self, new: Shot, t_ms: u32) {
         let new_left = new.end_ms().wrapping_sub(t_ms) as i32;
         // The lower one is replaced.
@@ -321,7 +320,7 @@ impl ShotPair {
     pub fn brightest(&mut self, t_ms: u32) -> Option<ShotColor> {
         let mut best: Option<ShotColor> = None;
         for shot in &mut self.0 {
-            // Forget a finished flash; its end time goes stale.
+            // Forget a finished flash, or it would light again when the clock wraps around.
             if shot.strength > 0.0 && t_ms.wrapping_sub(shot.end_ms()) as i32 >= 0 {
                 shot.strength = 0.0;
             }

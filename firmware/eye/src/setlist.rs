@@ -238,11 +238,9 @@ impl SetlistManager {
         });
     }
 
-    /// Draws the current pattern, blended with the outgoing one during a transition. A switch
-    /// between the ambient and sound setlists starts a quick crossfade.
+    /// Draws the current pattern, blended with the outgoing one during a transition.
     pub fn render(&mut self, t_ms: u32, audio: &Audio, sound_active: bool, out: &mut Frame) {
-        // A switch between setlists drops the queued steps, which belong to the old setlist,
-        // and crossfades at once.
+        // A setlist switch drops the queued steps and crossfades at once.
         if sound_active != self.last_sound_active {
             let from_kind = SetlistKind::from_sound(self.last_sound_active);
             let from_index = self.list(from_kind).index;

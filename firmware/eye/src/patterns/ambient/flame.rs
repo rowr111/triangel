@@ -30,12 +30,12 @@ const FLICKER2_PERIOD_MS: u32 = 401;
 // Smoke: dark wisps that rise through the flame and wander sideways.
 const SMOKE_DARKEN: f32 = 0.7; // how dark a wisp's core gets
 const SMOKE_BAND_MM: f32 = 250.0; // vertical spacing between wisps
-const SMOKE_MEANDER: f32 = 2.0; // sideways wiggle depth, in radians
-const SMOKE_MEANDER_MM: f32 = 300.0; // horizontal wavelength of the wiggle
-const SMOKE_EDGE0: f32 = 0.72; // field value where a wisp starts
-const SMOKE_EDGE1: f32 = 0.88; // field value where it is fully dark
+const SMOKE_WIGGLE: f32 = 2.0; // sideways wiggle depth, in radians
+const SMOKE_WIGGLE_MM: f32 = 300.0; // horizontal wavelength of the wiggle
+const SMOKE_START: f32 = 0.72; // field value where a wisp starts
+const SMOKE_FULL: f32 = 0.88; // field value where it is fully dark
 const SMOKE_RISE_PERIOD_MS: u32 = 5_100; // time to climb one band spacing
-const SMOKE_MEANDER_PERIOD_MS: u32 = 8_900;
+const SMOKE_WIGGLE_PERIOD_MS: u32 = 8_900;
 
 // Embers: sparks that start low in the triangle, rise and fade.
 const EMBER_COUNT: usize = 5; // embers in flight at once
@@ -76,11 +76,11 @@ const WAVE_FLOOR_Q: i32 = (WAVE_FLOOR * 4096.0) as i32;
 const HEAT_BIAS_Q: i32 = (HEAT_BIAS * 4096.0) as i32;
 const FLICKER_HALF_Q: i32 = (FLICKER_DEPTH * 0.5 * 4096.0) as i32;
 const SMOKE_DARKEN_Q: i32 = (SMOKE_DARKEN * 4096.0) as i32;
-const SMOKE_EDGE0_Q: i32 = (SMOKE_EDGE0 * 4096.0) as i32;
-/// Maps SMOKE_EDGE0..SMOKE_EDGE1 onto 0..1, Q12.
-const SMOKE_EDGE_SCALE_Q: i32 = (4096.0 / (SMOKE_EDGE1 - SMOKE_EDGE0)) as i32;
-/// SMOKE_MEANDER in turns x65536.
-const SMOKE_MEANDER_TURNS: i32 = (SMOKE_MEANDER / TAU * 65536.0) as i32;
+const SMOKE_START_Q: i32 = (SMOKE_START * 4096.0) as i32;
+/// Maps SMOKE_START..SMOKE_FULL onto 0..1, Q12.
+const SMOKE_SCALE_Q: i32 = (4096.0 / (SMOKE_FULL - SMOKE_START)) as i32;
+/// SMOKE_WIGGLE in turns x65536.
+const SMOKE_WIGGLE_TURNS: i32 = (SMOKE_WIGGLE / TAU * 65536.0) as i32;
 const FLARE_HEAT_Q: f32 = FLARE_HEAT * 4096.0;
 const EMBER_HEAT_Q: f32 = EMBER_HEAT * 4096.0;
 /// Ember radius in 1/16 mm, its square, and 1/radius^2 scaled to give Q12.
@@ -156,8 +156,8 @@ pub struct Flame {
     // Position in 1/16 mm.
     x_q4: [i16; LED_COUNT],
     y_q4: [i16; LED_COUNT],
-    sin_lut: [i16; SIN_STEPS],
-    ramp_lut: [[u8; 3]; RAMP_STEPS],
+    sin_table: [i16; SIN_STEPS],
+    ramp_table: [[u8; 3]; RAMP_STEPS],
     // The tile that flares, when its flare started, and how long until the next starts.
     flare_board: u32,
     flare_start_ms: u32,
@@ -169,8 +169,7 @@ pub struct Flame {
 impl Flame {
     pub fn new() -> Self {
         let flicker = phase_phasors();
-        // Two hashed flicker phases per LED; phases stepping along the chain would look
-        // like a sweep.
+        // Two hashed flicker phases per LED, so neighboring LEDs flicker out of step.
         let hash = |i: usize| knuth_hash(i as u32);
         let flicker1_step = |i: usize| (hash(i) % PHASE_STEPS as u32) as usize;
         let flicker2_step = |i: usize| ((hash(i) >> 16) % PHASE_STEPS as u32) as usize;
@@ -179,9 +178,7 @@ impl Flame {
             wave2: core::array::from_fn(|i| PhasorQ12::new(DIST_APEX[i] * SECOND_ANGLE_PER_MM)),
             flicker1: core::array::from_fn(|i| flicker[flicker1_step(i)].into()),
             flicker2: core::array::from_fn(|i| flicker[flicker2_step(i)].into()),
-            wiggle: core::array::from_fn(|i| {
-                PhasorQ12::new(LED_MAP[i].wx / SMOKE_MEANDER_MM * TAU)
-            }),
+            wiggle: core::array::from_fn(|i| PhasorQ12::new(LED_MAP[i].wx / SMOKE_WIGGLE_MM * TAU)),
             smoke_y: core::array::from_fn(|i| {
                 (LED_MAP[i].wy / SMOKE_BAND_MM * 65536.0) as u32 as u16
             }),
@@ -194,10 +191,12 @@ impl Flame {
             }),
             x_q4: core::array::from_fn(|i| (LED_MAP[i].wx * 16.0).round() as i16),
             y_q4: core::array::from_fn(|i| (LED_MAP[i].wy * 16.0).round() as i16),
-            sin_lut: core::array::from_fn(|step| {
+            sin_table: core::array::from_fn(|step| {
                 q12((step as f32 / SIN_STEPS as f32 * TAU).sin()) as i16
             }),
-            ramp_lut: core::array::from_fn(|step| fire_ramp(step as f32 / (1 << RAMP_BITS) as f32)),
+            ramp_table: core::array::from_fn(|step| {
+                fire_ramp(step as f32 / (1 << RAMP_BITS) as f32)
+            }),
             flare_board: 1,
             flare_start_ms: 0,
             flare_gap_ms: 0,
@@ -224,7 +223,7 @@ impl Pattern for Flame {
         let wave2_now = PhasorQ12::new(-wave2_s * SECOND_SPEED * SECOND_ANGLE_PER_MM);
         let flicker1_now = PhasorQ12::new(cycle(t_ms, FLICKER_PERIOD_MS) * TAU);
         let flicker2_now = PhasorQ12::new(cycle(t_ms, FLICKER2_PERIOD_MS) * TAU);
-        let wiggle_now = PhasorQ12::new(cycle(t_ms, SMOKE_MEANDER_PERIOD_MS) * TAU);
+        let wiggle_now = PhasorQ12::new(cycle(t_ms, SMOKE_WIGGLE_PERIOD_MS) * TAU);
 
         let embers = self.embers(t_ms);
         let flare_heat = self.update_flare(t_ms);
@@ -249,7 +248,7 @@ impl Pattern for Flame {
 
             let lit = (((wave * flicker) >> 12) * breathe) >> 12;
             let heat = ((lit + HEAT_BIAS_Q - self.cooling[i] as i32 + event_heat) * smoke) >> 12;
-            out[i] = self.ramp_lut[(heat.clamp(0, ONE) >> (12 - RAMP_BITS)) as usize];
+            out[i] = self.ramp_table[(heat.clamp(0, ONE) >> (12 - RAMP_BITS)) as usize];
         }
     }
 }
@@ -260,11 +259,11 @@ impl Flame {
         core::array::from_fn(|slot| {
             let period = EMBER_PERIOD_MS + slot as u32 * EMBER_STAGGER_MS;
             let phase = cycle(t_ms, period);
-            let h = hash2(t_ms / period, self.seed ^ slot as u32);
-            let y0 = WORLD_BOT - EMBER_START_MM - hash01(h, 1) * EMBER_START_RANGE_MM;
-            let half_w = half_width_at(y0);
-            let x0 = WORLD_CX + (hash01(h, 2) * 2.0 - 1.0) * half_w;
-            let x = x0 + ((phase * EMBER_WOBBLES + hash01(h, 3)) * TAU).sin() * EMBER_WOBBLE_MM;
+            let hash = hash2(t_ms / period, self.seed ^ slot as u32);
+            let y0 = WORLD_BOT - EMBER_START_MM - hash01(hash, 1) * EMBER_START_RANGE_MM;
+            let half_width = half_width_at(y0);
+            let x0 = WORLD_CX + (hash01(hash, 2) * 2.0 - 1.0) * half_width;
+            let x = x0 + ((phase * EMBER_WOBBLES + hash01(hash, 3)) * TAU).sin() * EMBER_WOBBLE_MM;
             let y = y0 - phase * EMBER_RISE_MM;
             Ember {
                 x: (x * 16.0).round() as i32,
@@ -284,13 +283,13 @@ impl Flame {
             self.flare_board = 1 + random_u32() % BOARD_COUNT as u32;
             flare_age = 0;
         }
-        let flare_env = if flare_age < FLARE_LEN_MS {
+        let flare_level = if flare_age < FLARE_LEN_MS {
             let progress = flare_age as f32 / FLARE_LEN_MS as f32;
             (progress * FLARE_RISE).min(1.0) * (1.0 - progress)
         } else {
             0.0
         };
-        (FLARE_HEAT_Q * flare_env) as i32
+        (FLARE_HEAT_Q * flare_level) as i32
     }
 
     /// Smoke: rising bands that wiggle sideways, dark where the field is near its peak.
@@ -298,9 +297,9 @@ impl Flame {
         let wiggle = self.wiggle[i].sin_plus(wiggle_now);
         let turn = self.smoke_y[i]
             .wrapping_add(smoke_rise)
-            .wrapping_add(((wiggle * SMOKE_MEANDER_TURNS) >> 12) as u16);
+            .wrapping_add(((wiggle * SMOKE_WIGGLE_TURNS) >> 12) as u16);
         let field = (self.sine(turn) + ONE) >> 1;
-        let wisp = (((field - SMOKE_EDGE0_Q) * SMOKE_EDGE_SCALE_Q) >> 12).clamp(0, ONE);
+        let wisp = (((field - SMOKE_START_Q) * SMOKE_SCALE_Q) >> 12).clamp(0, ONE);
         let wisp = (((wisp * wisp) >> 12) * (3 * ONE - 2 * wisp)) >> 12; // smoothstep
         ONE - ((SMOKE_DARKEN_Q * wisp) >> 12)
     }
@@ -308,8 +307,8 @@ impl Flame {
     /// Sine table lookup, interpolated between entries.
     fn sine(&self, turn: u16) -> i32 {
         let step = (turn >> (16 - SIN_BITS)) as usize;
-        let below = self.sin_lut[step] as i32;
-        let above = self.sin_lut[(step + 1) & (SIN_STEPS - 1)] as i32;
+        let below = self.sin_table[step] as i32;
+        let above = self.sin_table[(step + 1) & (SIN_STEPS - 1)] as i32;
         let part = (turn & ((1 << (16 - SIN_BITS)) - 1)) as i32;
         below + (((above - below) * part) >> (16 - SIN_BITS))
     }
@@ -317,16 +316,16 @@ impl Flame {
     /// Heat from the embers near LED `i`, Q12.
     fn ember_heat(&self, i: usize, embers: &[Ember]) -> i32 {
         let mut total = 0;
-        for &Ember { x: ex, y: ey, heat } in embers {
-            let dx = self.x_q4[i] as i32 - ex;
-            let dy = self.y_q4[i] as i32 - ey;
+        for ember in embers {
+            let dx = self.x_q4[i] as i32 - ember.x;
+            let dy = self.y_q4[i] as i32 - ember.y;
             if dx.abs() >= EMBER_R_Q4 || dy.abs() >= EMBER_R_Q4 {
                 continue;
             }
             let d2 = dx * dx + dy * dy;
             if d2 < EMBER_R2_Q8 {
                 let fall = ((EMBER_R2_Q8 - d2) * EMBER_INV_R2) >> 16;
-                total += (heat * fall) >> 12;
+                total += (ember.heat * fall) >> 12;
             }
         }
         total

@@ -8,11 +8,11 @@ use crate::patterns::{
 use crate::setlist::AMBIENT_CYCLE_MS;
 use core::f32::consts::TAU;
 
-// Season cycle, as fractions of FILL_MS
-const FILL_MS: u32 = AMBIENT_CYCLE_MS / SEASONS.len() as u32; // one season
-const FILL_FRAC: f32 = 0.97; // when the new pile is full
-const FILL_DELAY: f32 = 0.2; // when the new pile starts rising
-const RECEDE_FRAC: f32 = 0.25; // how long the old pile takes to melt
+// Season cycle, as fractions of SEASON_MS
+const SEASON_MS: u32 = AMBIENT_CYCLE_MS / SEASONS.len() as u32; // one season
+const FILL_START: f32 = 0.2; // when the new pile starts rising
+const FILL_END: f32 = 0.97; // when the new pile is full
+const MELT_SPAN: f32 = 0.25; // how long the old pile takes to melt
 const COLOR_START: f32 = 0.15; // when flakes start turning to the new colors
 const COLOR_SPAN: f32 = 0.12; // how long that takes, flake by flake
 
@@ -89,7 +89,7 @@ struct FlakeHit {
 
 /// One season's pile.
 struct Pile {
-    line: f32, // world y of the top edge
+    top_y: f32, // world y of the top edge
     jitter_scale: f32,
 }
 
@@ -97,14 +97,14 @@ impl Pile {
     /// A pile `fill` full, from 0 empty to 1 full.
     fn new(fill: f32) -> Self {
         Pile {
-            line: fill_line(fill),
+            top_y: pile_top_y(fill),
             jitter_scale: 4.0 * fill * (1.0 - fill),
         }
     }
 
     /// How far inside the pile an LED at `led_y` is, 0-1.
     fn depth(&self, led_y: f32, jitter: f32) -> f32 {
-        ((led_y - self.line - jitter * self.jitter_scale) / FILL_FEATHER_MM).clamp(0.0, 1.0)
+        ((led_y - self.top_y - jitter * self.jitter_scale) / FILL_FEATHER_MM).clamp(0.0, 1.0)
     }
 }
 
@@ -119,7 +119,7 @@ pub struct Fubuki {
     // Fixed per LED, from a hash of its board and position: the hash, the pile brightness
     // with its texture, its offset in the pulse, and the ragged-edge offset (mm).
     led_hash: [u32; LED_COUNT],
-    pile_tex: [f32; LED_COUNT],
+    pile_brightness: [f32; LED_COUNT],
     pulse_offset: [Phasor; LED_COUNT],
     jitter_mm: [f32; LED_COUNT],
 }
@@ -138,7 +138,7 @@ impl Fubuki {
                 sat: 0.0,
             }; LED_COUNT],
             led_hash,
-            pile_tex: led_hash.map(|hash| PILE_VAL * (1.0 - PILE_TEXTURE * hash01(hash, 1))),
+            pile_brightness: led_hash.map(|hash| PILE_VAL * (1.0 - PILE_TEXTURE * hash01(hash, 1))),
             pulse_offset: led_hash.map(|hash| Phasor::new(hash01(hash, 2) * TAU)),
             jitter_mm: led_hash.map(|hash| (hash01(hash, 3) * 2.0 - 1.0) * FILL_JITTER_MM),
         }
@@ -153,44 +153,43 @@ impl Pattern for Fubuki {
     }
 
     fn render(&mut self, t_ms: u32, _audio: &Audio, out: &mut Frame) {
-        let local = t_ms.wrapping_sub(self.origin_ms);
+        let elapsed_ms = t_ms.wrapping_sub(self.origin_ms);
 
-        let season_num = local / FILL_MS;
-        let into_season = local % FILL_MS; // ms into the current season
+        let season_num = elapsed_ms / SEASON_MS;
+        let into_season = elapsed_ms % SEASON_MS; // ms into the current season
         let new_season = &SEASONS[(season_num % SEASONS.len() as u32) as usize];
         let old_season =
             &SEASONS[((season_num + SEASONS.len() as u32 - 1) % SEASONS.len() as u32) as usize];
 
-        // fill_new and fill_old are how full the current and previous seasons' piles are. The
-        // first season after entry has no previous pile to melt and starts filling at once.
+        // The first season after entry has no old pile to melt, so it starts filling at once.
         let first = season_num == 0;
-        let delay = if first { 0.0 } else { FILL_DELAY };
-        let fill_new =
-            (((into_season as f32 / FILL_MS as f32) - delay) / (FILL_FRAC - delay)).clamp(0.0, 1.0);
+        let delay = if first { 0.0 } else { FILL_START };
+        let fill_new = (((into_season as f32 / SEASON_MS as f32) - delay) / (FILL_END - delay))
+            .clamp(0.0, 1.0);
         let fill_old = if first {
             0.0
         } else {
-            1.0 - (into_season as f32 / (FILL_MS as f32 * RECEDE_FRAC)).min(1.0)
+            1.0 - (into_season as f32 / (SEASON_MS as f32 * MELT_SPAN)).min(1.0)
         };
         let new_pile = Pile::new(fill_new);
         let old_pile = Pile::new(fill_old);
 
-        let pulse_phase = Phasor::new(fold_ms(local, PILE_PULSE_RATE) * PILE_PULSE_RATE);
+        let pulse_phase = Phasor::new(fold_ms(elapsed_ms, PILE_PULSE_RATE) * PILE_PULSE_RATE);
 
         // new_colors is how far the sky and the flakes have turned to the new season's colors.
         let new_colors = if first {
             1.0
         } else {
-            ((into_season as f32 / FILL_MS as f32 - COLOR_START) / COLOR_SPAN).clamp(0.0, 1.0)
+            ((into_season as f32 / SEASON_MS as f32 - COLOR_START) / COLOR_SPAN).clamp(0.0, 1.0)
         };
         let sky_hue = blend_hue(old_season.sky_hue, new_season.sky_hue, new_colors);
         let sky_sat = lerp(old_season.sky_sat, new_season.sky_sat, new_colors);
 
         // Flakes land on whichever pile is higher.
-        let surface = new_pile.line.min(old_pile.line);
+        let surface_y = new_pile.top_y.min(old_pile.top_y);
         let flakes: [Flake; FLAKES] = core::array::from_fn(|slot| {
             make_flake(
-                slot, local, self.seed, surface, old_season, new_season, new_colors,
+                slot, elapsed_ms, self.seed, surface_y, old_season, new_season, new_colors,
             )
         });
         self.mark_flakes(&flakes);
@@ -200,7 +199,7 @@ impl Pattern for Fubuki {
             let hash = self.led_hash[i];
             let wave = pulse_phase.sin_plus(self.pulse_offset[i]);
             let pulse = 1.0 - PILE_PULSE * (0.5 - 0.5 * wave);
-            let pile_v = self.pile_tex[i] * pulse;
+            let pile_val = self.pile_brightness[i] * pulse;
 
             // How far inside each pile this LED is; the jitter shrinks to 0 at empty and full.
             let jitter = self.jitter_mm[i];
@@ -214,9 +213,9 @@ impl Pattern for Fubuki {
             let mut sat = sky_sat;
             let mut val = SKY_VAL;
             (hue, sat) = blend_color(hue, sat, old_hue, old_sat, inside_old);
-            val = lerp(val, pile_v, inside_old);
+            val = lerp(val, pile_val, inside_old);
             (hue, sat) = blend_color(hue, sat, new_hue, new_sat, inside_new);
-            val = lerp(val, pile_v, inside_new);
+            val = lerp(val, pile_val, inside_new);
 
             let flake = self.flake_hits[i];
             if flake.strength > 0.0 {
@@ -258,7 +257,7 @@ fn make_flake(
     slot: usize,
     t_ms: u32,
     seed: u32,
-    fill_y: f32,
+    surface_y: f32,
     old: &Season,
     new: &Season,
     new_colors: f32,
@@ -278,20 +277,20 @@ fn make_flake(
 
     let x = lerp(spawn_x, WORLD_CX, fall * CONVERGE)
         + SWAY_MM * (fall * SWAY_CYCLES * TAU + sway_phase).sin();
-    let y = WORLD_TOP + fall * (fill_y - WORLD_TOP);
+    let y = WORLD_TOP + fall * (surface_y - WORLD_TOP);
     // A fraction `new_colors` of the flakes use the new season's colors.
-    let src = if hash01(hash, 3) < new_colors {
+    let season = if hash01(hash, 3) < new_colors {
         new
     } else {
         old
     };
-    let (hue, sat) = src.color(hash);
+    let (hue, sat) = season.color(hash);
 
     Flake { x, y, hue, sat }
 }
 
 /// World y of the pile's top edge for a fill fraction (0 empty, 1 full).
-fn fill_line(fill: f32) -> f32 {
+fn pile_top_y(fill: f32) -> f32 {
     let margin = FILL_FEATHER_MM;
     (WORLD_BOT + margin) - (WORLD_H + 2.0 * margin) * fill.powf(FILL_EXP)
 }

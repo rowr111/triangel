@@ -33,7 +33,7 @@ const GLOW_W: f32 = 0.40;
 const GAP_LEVEL: f32 = 0.0; // brightness left in the gap
 
 // Core
-const EYE_FRAC: f32 = 0.35; // depth the core fades out over
+const CORE_FADE_DEPTH: f32 = 0.35; // depth the core fades out over
 const CORE_WHITEN: f32 = 0.5; // how far the core goes toward white
 
 // Color: each family is a (hue, sat, val) pair, the deep stop next to the line and the
@@ -69,7 +69,7 @@ pub struct Uzumaki {
     // sin and cos of the LED's angle, for the wobble.
     wobble: [Phasor; LED_COUNT],
     // How much of the core covers this LED: 1 at the center, 0 outside it.
-    eye: [f32; LED_COUNT],
+    core_cover: [f32; LED_COUNT],
     // The palette as RGB.
     deep: [[f32; 3]; FAMILIES],
     bright: [[f32; 3]; FAMILIES],
@@ -82,13 +82,12 @@ impl Uzumaki {
             core::array::from_fn(|i| (1.0 + DIST_C[i] / CORE_R_MM).ln() * inv_span);
 
         Uzumaki {
-            // The added 2 * ARMS keeps the phase positive in render. It and the wrap in
-            // THETA_C both shift the phase by a multiple of ARMS, so the colors stay put.
+            // The added 2 * ARMS keeps the phase positive without moving the colors.
             base_phase: core::array::from_fn(|i| {
                 ARMS as f32 * THETA_C[i] / TAU + 2.0 * ARMS as f32
             }),
             wobble: core::array::from_fn(|i| Phasor::new(THETA_C[i])),
-            eye: core::array::from_fn(|i| 1.0 - smoothstep(depth[i] / EYE_FRAC)),
+            core_cover: core::array::from_fn(|i| 1.0 - smoothstep(depth[i] / CORE_FADE_DEPTH)),
             deep: core::array::from_fn(|k| stop(PALETTE[k][0])),
             bright: core::array::from_fn(|k| stop(PALETTE[k][1])),
             depth,
@@ -102,15 +101,14 @@ impl Pattern for Uzumaki {
         let wind = WIND_MID + WIND_SWING * (TAU * cycle(t_ms, BREATH_MS)).sin();
         let wobble_now = Phasor::new(TAU * cycle(t_ms, WOBBLE_MS));
 
-        // The lines and the core are the average of the arms' bright stops, toward white.
-        // The lines need one shared color because each sits between two arms.
+        // Each line sits between two arms, so the lines and core use the arms' average bright stop.
         let stops = self.arm_stops(t_ms);
         let avg: [f32; 3] =
             core::array::from_fn(|j| stops.iter().map(|s| s.1[j]).sum::<f32>() / ARMS as f32);
         let stripe_rgb = mix_rgb(avg, WHITE, STRIPE_WHITEN);
         let core_rgb = mix_rgb(avg, WHITE, CORE_WHITEN);
 
-        for (i, slot) in out.iter_mut().enumerate() {
+        for (i, px) in out.iter_mut().enumerate() {
             let phase = self.base_phase[i] + wind * self.depth[i] - rot
                 + WOBBLE * self.wobble[i].sin_minus(wobble_now);
             let band = phase as u32;
@@ -125,12 +123,12 @@ impl Pattern for Uzumaki {
             let mut color = mix_rgb(body.map(|v| v * level), stripe_rgb, stripe);
 
             // Near the center the bands are finer than the LED spacing, so fade to the core.
-            let eye = self.eye[i];
-            if eye > 0.0 {
-                color = mix_rgb(color, core_rgb, eye);
+            let core_cover = self.core_cover[i];
+            if core_cover > 0.0 {
+                color = mix_rgb(color, core_rgb, core_cover);
             }
 
-            *slot = color.map(|v| v as u8);
+            *px = color.map(|v| v as u8);
         }
     }
 }

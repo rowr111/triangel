@@ -25,15 +25,15 @@ const SPEED_EASE_MS: i32 = 2_000; // roughly how long the change takes
 
 const GLINTS: GlintStyle = GlintStyle {
     tries_per_sec: 14.0, // about half succeed, since brighter LEDs are likelier to take one
-    min_ms: 250,         // fade time
-    max_ms: 450,
-    white: 0.75, // how far toward white a glint starts
+    min_life_ms: 250,
+    max_life_ms: 450,
+    white: 0.75,
 };
 
 // Hue by distance from the center, drifting over time.
 const HUE_PERIOD_MS: u32 = 24_000; // time for the colors to move through one full cycle
 const RADIAL_SPAN_MM: f32 = 350.0; // distance over which the hue covers the arc once
-const HASH_JITTER: f32 = 0.06; // per-LED hue scatter
+const HUE_SCATTER: f32 = 0.06; // per-LED hue scatter
 
 // Spiral: sectors of hue twisted by radius and rotating. The twist swings one way and back.
 const SPIRAL_ARMS: f32 = 3.0;
@@ -64,7 +64,7 @@ pub struct Shimmer {
     hue_base: [u32; LED_COUNT], // the fixed part of each LED's hue position
     dist_q4: [i32; LED_COUNT],  // distance in mm x16
     // One wave cycle, crest to trough and back, x4096.
-    wave_lut: [u16; WAVE_STEPS],
+    wave_table: [u16; WAVE_STEPS],
     // How far the wave has traveled. Its whole part numbers the rings.
     wave_phase: u32,
     phase_rem: u32, // remainder carried to the next advance
@@ -88,12 +88,12 @@ impl Shimmer {
                 let scatter = tile_hash(&LED_MAP[i]) as f32 / TILE_HASH_STEPS as f32;
                 // Radial gradient, per-LED scatter, and the spiral's sectors.
                 let position = DIST_C[i] / RADIAL_SPAN_MM
-                    + (scatter - 0.5) * HASH_JITTER
+                    + (scatter - 0.5) * HUE_SCATTER
                     + SPIRAL_ARMS * THETA_C[i] / TAU;
                 (position * 65536.0) as i32 as u32
             }),
             dist_q4: core::array::from_fn(|i| (DIST_C[i] * 16.0) as i32),
-            wave_lut: core::array::from_fn(|i| {
+            wave_table: core::array::from_fn(|i| {
                 let cos = (i as f32 / WAVE_STEPS as f32 * TAU).cos();
                 (((cos + 1.0) * 0.5).max(0.0).powf(WAVE_FALLOFF) * 4096.0 + 0.5) as u16
             }),
@@ -159,10 +159,10 @@ impl Shimmer {
 
     /// The wave's brightness at LED `i`, 0-255.
     fn brightness(&self, i: usize) -> i32 {
-        // The ring number changes at the crest, where every ring is at full brightness,
-        // so the change never shows.
+        // The ring number changes at the crest, where every ring is fully lit, so it never shows.
         let phase = self.wave_phase.wrapping_sub(self.ring_pos[i]);
-        let wave = self.wave_lut[((phase >> (16 - WAVE_BITS)) as usize) & (WAVE_STEPS - 1)] as i32;
+        let wave =
+            self.wave_table[((phase >> (16 - WAVE_BITS)) as usize) & (WAVE_STEPS - 1)] as i32;
         let dark = self.ring_dark[((phase >> 16) as usize) & (RING_SLOTS - 1)] as i32;
         dark + (((255 - dark) * wave) >> 12)
     }

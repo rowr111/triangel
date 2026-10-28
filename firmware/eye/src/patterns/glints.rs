@@ -9,8 +9,8 @@ pub struct GlintStyle {
     /// Tries per second. A try on a brighter LED is likelier to succeed.
     pub tries_per_sec: f32,
     /// Fade time range.
-    pub min_ms: u32,
-    pub max_ms: u32,
+    pub min_life_ms: u32,
+    pub max_life_ms: u32,
     /// How far toward white a glint starts.
     pub white: f32,
 }
@@ -66,7 +66,7 @@ impl Glints {
                 .iter()
                 .position(|glint| t_ms.wrapping_sub(glint.start_ms) >= glint.life_ms);
             if let Some(slot) = free {
-                let life_ms = self.rng.range_u32(style.min_ms, style.max_ms);
+                let life_ms = self.rng.range_u32(style.min_life_ms, style.max_life_ms);
                 self.glints[slot] = Glint {
                     led: led as u16,
                     start_ms: t_ms,

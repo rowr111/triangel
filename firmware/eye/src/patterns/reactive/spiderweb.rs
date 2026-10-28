@@ -117,7 +117,7 @@ impl Spiderweb {
         let mut picked = [usize::MAX; MAX_BEAT_LINES];
         for i in 0..count {
             let mut line = self.rng.below(self.lines.len());
-            // Redraw a line this beat has already lit.
+            // Pick again if this beat has already lit that line.
             while picked[..i].contains(&line) {
                 line = self.rng.below(self.lines.len());
             }
@@ -128,8 +128,7 @@ impl Spiderweb {
         self.pulse = strength;
     }
 
-    /// Lights `line`, replacing whichever of its two shots ends sooner, so a long drop
-    /// shot outlasts the beats after it.
+    /// Lights `line`, replacing the shot that ends sooner, so a drop outlasts the beats after it.
     fn fire(&mut self, line: usize, t_ms: u32, strength: f32, hold_ms: f32, fade_ms: f32) {
         let (hue, sat) = self.rng.pick(&PALETTE);
         let shot = Shot {
