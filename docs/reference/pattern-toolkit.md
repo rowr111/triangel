@@ -27,13 +27,13 @@ origin: top-left of the Triangel
 x: increases rightward, 0-517 mm
 y: increases downward,  0-436 mm
 
-WORLD_CX  = 258.7 mm  - horizontal centre
+WORLD_CX  = 258.7 mm  - horizontal center
 WORLD_TOP =   6 mm    - topmost LED
 WORLD_BOT = 436 mm    - apex (triangle tile 25, room corner)
 WORLD_H   = 430 mm    - total height
 ```
 
-These constants, plus `WORLD_CENTROID_X` / `WORLD_CENTROID_Y`, are in `crate::led::map`. The triangle's left and right edges are `WORLD_LEFT` / `WORLD_RIGHT` in `crate::led::world`.
+These constants, plus `WORLD_CENTROID_X` / `WORLD_CENTROID_Y`, are in `crate::led::map`. The triangle's left and right edges are `WORLD_LEFT` / `WORLD_RIGHT` in `crate::led::world`, and `half_width_at(y)` there gives half its width at a given `y`.
 
 Each entry of `LED_MAP` has the LED's position, `wx` and `wy` in mm, its triangle tile (`board_id`) and its number on that triangle tile (`local_idx`, 1-24). `LED_MAP` is in wiring order, so an LED's index is also its place on the chain.
 
@@ -43,7 +43,7 @@ Fixed values worked out from the map are in `crate::led::geom`:
 - per triangle tile, by its number: `BOARD_CENTER` and `BOARD_Y_RANGE`
 - `BOARD_COUNT`, `LEDS_PER_BOARD`, `DIST_C_MAX`
 
-`crate::led::grid` groups LEDs by position: `for_each_near(x, y, reach, f)` and `for_each_near_seg(a, b, reach, f)` call `f` with the index of each LED near a point or a segment.
+`crate::led::grid` groups LEDs by position: `for_each_near(x, y, radius_mm, f)` and `for_each_near_seg(a, b, radius_mm, f)` call `f` with the index of each LED near a point or a segment.
 
 ## Helpers
 
@@ -51,21 +51,28 @@ In `src/patterns/mod.rs`:
 
 ```rust
 hsv(h, s, v) -> [u8; 3]     // h: 0-360, s/v: 0-1
+hsv_int(h6, s, v) -> [u8; 3] // whole numbers; h6: sixths of a turn x4096, s: x4096, v: 0-255
 lerp(a, b, t) -> f32
-sin_sum(a_sin, a_cos, b_sin, b_cos)  // sin(a + b); see How to make a pattern fast enough
+Phasor::new(angle)          // .sin, .cos, .sin_plus(b), .sin_minus(b); see How to make a pattern fast enough
+HueMix::default()           // average of hues with no jump at 0/360; .add(weight, hue_phasor), .degrees()
 mix_rgb(a, b, t)            // lerp per channel, f32 RGB
 ramp(&stops, t)             // color along (position, color) stops
 smoothstep(t) -> f32        // clamped to 0-1
 wrap360(h) -> f32           // hue into 0-360, for inputs within one turn of range
 cycle(t_ms, period_ms)      // 0-1 position in a repeating period
 cycle_q16(t_ms, period_ms)  // the same as a whole number, x65536
-fold_ms(t_ms, rate)         // t_ms folded to one period of a rad/ms rate
+cycle_angle(t_ms, period_ms) // the same as an angle, 0 to TAU
+rate_angle(t_ms, rate)      // t_ms * rate for a rad/ms rate, with t_ms wrapped to one period first
+time_step_ms(&mut last_ms, t_ms, max_ms) // ms since the last frame, at most max_ms; updates last_ms
 slot_life(slot, salt, t_ms, min_ms, max_ms) // (generation, 0-1 age) of a slot that restarts with no stored state
 hash2(a, b), knuth_hash(x), tile_hash(led)
-Rng::new(seed)              // .f32(), .next_u32(), .range_f32(min, max), .range_u32(min, max), .below(n), .pick(&items)
+hash01(a, b) -> f32         // 0-1 from a hash; each b gives a different value
+hash_plus_minus(a, b, x) -> f32 // the same, from -x to x
+Rng::new(seed)              // .f32(), .next_u32(), .range_f32(min, max), .plus_minus(x), .range_u32(min, max), .below(n), .pick(&items)
 free_or_oldest(slots, now_ms, is_free, start_ms)  // a free slot in a pool, else the oldest
-Shot                        // a flash held then faded; .lit(t_ms, white_ms, boost), .end_ms()
-phase_phasors()             // see How to make a pattern fast enough
+Shot                        // a flash that starts white, holds, then fades
+ShotPair                    // the two latest shots; .add(shot, t_ms), .brightest(t_ms)
+hashed_phasor(hash)         // a Phasor for an angle taken from a hash; see How to make a pattern fast enough
 ```
 
 Shared building blocks:

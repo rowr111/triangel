@@ -15,33 +15,40 @@ fn row(y: f32) -> usize {
     (y / CELL_MM).clamp(0.0, (ROWS - 1) as f32) as usize
 }
 
-fn for_each_in_cells(gx0: usize, gx1: usize, gy0: usize, gy1: usize, f: &mut impl FnMut(usize)) {
-    for gy in gy0..=gy1 {
-        for gx in gx0..=gx1 {
-            let cell = gy * COLS + gx;
+fn for_each_in_cells(
+    left_col: usize,
+    right_col: usize,
+    top_row: usize,
+    bottom_row: usize,
+    f: &mut impl FnMut(usize),
+) {
+    for row in top_row..=bottom_row {
+        for col in left_col..=right_col {
+            let cell = row * COLS + col;
             let run = CELL_START[cell] as usize..CELL_START[cell + 1] as usize;
-            for &li in &CELL_LEDS[run] {
-                f(li as usize);
+            for &led in &CELL_LEDS[run] {
+                f(led as usize);
             }
         }
     }
 }
 
-/// Calls `f` with each LED index within `reach` cells of (x, y).
-pub fn for_each_near(x: f32, y: f32, reach: usize, f: impl FnMut(usize)) {
-    for_each_near_seg((x, y), (x, y), reach, f);
+/// Calls `f` with each LED index in the cells within `radius_mm` of (x, y).
+pub fn for_each_near(x: f32, y: f32, radius_mm: f32, f: impl FnMut(usize)) {
+    for_each_near_seg((x, y), (x, y), radius_mm, f);
 }
 
 /// Calls `f` with each LED index in the box of cells around segment a-b, widened by
-/// `reach`. That is more than the LEDs near the segment, so callers still check distance.
-pub fn for_each_near_seg(a: (f32, f32), b: (f32, f32), reach: usize, mut f: impl FnMut(usize)) {
-    let (cx0, cx1) = (col(a.0.min(b.0)), col(a.0.max(b.0)));
-    let (cy0, cy1) = (row(a.1.min(b.1)), row(a.1.max(b.1)));
+/// `radius_mm`. That is more than the LEDs near the segment, so callers still check distance.
+pub fn for_each_near_seg(a: (f32, f32), b: (f32, f32), radius_mm: f32, mut f: impl FnMut(usize)) {
+    let reach = (radius_mm / CELL_MM).ceil() as usize;
+    let (left_col, right_col) = (col(a.0.min(b.0)), col(a.0.max(b.0)));
+    let (top_row, bottom_row) = (row(a.1.min(b.1)), row(a.1.max(b.1)));
     for_each_in_cells(
-        cx0.saturating_sub(reach),
-        (cx1 + reach).min(COLS - 1),
-        cy0.saturating_sub(reach),
-        (cy1 + reach).min(ROWS - 1),
+        left_col.saturating_sub(reach),
+        (right_col + reach).min(COLS - 1),
+        top_row.saturating_sub(reach),
+        (bottom_row + reach).min(ROWS - 1),
         &mut f,
     );
 }

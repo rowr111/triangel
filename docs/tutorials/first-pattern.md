@@ -41,7 +41,10 @@ pub mod my_pattern;
 In `firmware/eye/src/setlist.rs`, add `my_pattern::MyPattern` to the list of ambient patterns it uses:
 
 ```rust
-use crate::patterns::ambient::{drizzle::Drizzle, effervesce::Effervesce, flame::ApexFlame, fubuki::Fubuki, my_pattern::MyPattern, rainbow::Rainbow, ricochet::Ricochet, shimmer::CenterShimmer, squall::Squall, uzumaki::Uzumaki};
+use crate::patterns::ambient::{
+    drizzle::Drizzle, effervesce::Effervesce, flame::Flame, fubuki::Fubuki, my_pattern::MyPattern,
+    rainbow::Rainbow, ricochet::Ricochet, shimmer::Shimmer, squall::Squall, uzumaki::Uzumaki,
+};
 ```
 
 Then, in the same file, put it first in `ambient_patterns()`, so it is the pattern you see when the eye starts:

@@ -12,37 +12,37 @@ const NEC_ADDR_HI: u8 = 0xFE;
 
 // Command bytes from the 7-button remote, as pictured in ir_remote_mapping.jpg (the
 // address printed there is not this remote's). The TV button (0x45) is unassigned.
-const IR_CMD_BRIGHTNESS_UP:   u8 = 0x43; // Up button
+const IR_CMD_BRIGHTNESS_UP: u8 = 0x43; // Up button
 const IR_CMD_BRIGHTNESS_DOWN: u8 = 0x44; // Down button
-const IR_CMD_PATTERN_NEXT:    u8 = 0x41; // Right button
-const IR_CMD_PATTERN_PREV:    u8 = 0x42; // Left button
-const IR_CMD_HOLD:            u8 = 0x40; // Center button
-const IR_CMD_GEAR:            u8 = 0x46; // Gear button -> cycle sound mode
+const IR_CMD_PATTERN_NEXT: u8 = 0x41; // Right button
+const IR_CMD_PATTERN_PREV: u8 = 0x42; // Left button
+const IR_CMD_HOLD: u8 = 0x40; // Center button
+const IR_CMD_GEAR: u8 = 0x46; // Gear button -> cycle sound mode
 
 // A held button sends a repeat code about every 108 ms (NEC). One that comes later than
 // this after the last accepted code is not from a held button.
 const REPEAT_WINDOW_MS: u64 = 250;
 
 // Diagnostic state reported by the heartbeat line.
-static CLOCK_HZ:        AtomicU32 = AtomicU32::new(0);
-static DECODED_FRAMES:  AtomicU32 = AtomicU32::new(0);
+static CLOCK_HZ: AtomicU32 = AtomicU32::new(0);
+static DECODED_FRAMES: AtomicU32 = AtomicU32::new(0);
 static REJECTED_FRAMES: AtomicU32 = AtomicU32::new(0);
-static LAST_FRAME:      AtomicU32 = AtomicU32::new(0);
+static LAST_FRAME: AtomicU32 = AtomicU32::new(0);
 
 /// IR receiver state for the heartbeat.
 #[derive(Clone, Copy, PartialEq)]
 pub struct IrStats {
-    pub clock_hz:   u32,
-    pub decoded:    u32,
-    pub rejected:   u32,
+    pub clock_hz: u32,
+    pub decoded: u32,
+    pub rejected: u32,
     pub last_frame: u32,
 }
 
 pub fn stats() -> IrStats {
     IrStats {
-        clock_hz:   CLOCK_HZ.load(Ordering::Relaxed),
-        decoded:    DECODED_FRAMES.load(Ordering::Relaxed),
-        rejected:   REJECTED_FRAMES.load(Ordering::Relaxed),
+        clock_hz: CLOCK_HZ.load(Ordering::Relaxed),
+        decoded: DECODED_FRAMES.load(Ordering::Relaxed),
+        rejected: REJECTED_FRAMES.load(Ordering::Relaxed),
         last_frame: LAST_FRAME.load(Ordering::Relaxed),
     }
 }
@@ -96,7 +96,10 @@ fn receive_loop(capture: NecCapture, events: EventSender, diag: Diag) -> ! {
                 continue;
             }
             DECODED_FRAMES.fetch_add(1, Ordering::Relaxed);
-            diag.line(&format!("IR frame ok: cmd {:02x} (frame {:08x})", cmd, frame));
+            diag.line(&format!(
+                "IR frame ok: cmd {:02x} (frame {:08x})",
+                cmd, frame
+            ));
             last_cmd = Some(cmd);
             accepted_ms = now_ms;
             map_ir_cmd(cmd, &events);
@@ -109,13 +112,13 @@ fn receive_loop(capture: NecCapture, events: EventSender, diag: Diag) -> ! {
 /// Map a command byte to an InputEvent and send it.
 fn map_ir_cmd(cmd: u8, events: &EventSender) {
     let event = match cmd {
-        IR_CMD_BRIGHTNESS_UP   => Some(InputEvent::BrightnessUp),
+        IR_CMD_BRIGHTNESS_UP => Some(InputEvent::BrightnessUp),
         IR_CMD_BRIGHTNESS_DOWN => Some(InputEvent::BrightnessDown),
-        IR_CMD_PATTERN_NEXT    => Some(InputEvent::PatternNext),
-        IR_CMD_PATTERN_PREV    => Some(InputEvent::PatternPrev),
-        IR_CMD_HOLD            => Some(InputEvent::ToggleHold),
-        IR_CMD_GEAR            => Some(InputEvent::CycleSoundMode),
-        _                      => None,
+        IR_CMD_PATTERN_NEXT => Some(InputEvent::PatternNext),
+        IR_CMD_PATTERN_PREV => Some(InputEvent::PatternPrev),
+        IR_CMD_HOLD => Some(InputEvent::ToggleHold),
+        IR_CMD_GEAR => Some(InputEvent::CycleSoundMode),
+        _ => None,
     };
     if let Some(ev) = event {
         events.send(ev).ok();

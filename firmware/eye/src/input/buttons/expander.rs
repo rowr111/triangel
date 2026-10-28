@@ -14,12 +14,12 @@ use crate::pins;
 // the I2C bus while nobody is touching the panel - the common case by a wide margin.
 
 // MCP23008 register map.
-const IODIR:   u8 = 0x00; // 1 = pin is an input
+const IODIR: u8 = 0x00; // 1 = pin is an input
 const GPINTEN: u8 = 0x02; // 1 = pin raises INT when it changes
-const INTCON:  u8 = 0x04; // 0 = compare against the previous value rather than a fixed one
-const IOCON:   u8 = 0x05;
-const GPPU:    u8 = 0x06; // 1 = internal pull-up on
-const GPIO:    u8 = 0x09; // reading this also clears a pending interrupt
+const INTCON: u8 = 0x04; // 0 = compare against the previous value rather than a fixed one
+const IOCON: u8 = 0x05;
+const GPPU: u8 = 0x06; // 1 = internal pull-up on
+const GPIO: u8 = 0x09; // reading this also clears a pending interrupt
 
 const IOCON_ODR: u8 = 0x04; // INT open-drain, so the pull-up at the eye sets the idle level
 
@@ -38,12 +38,12 @@ const BACKOFF_MAX_TICKS: u32 = (2_000 / super::POLL_MS) as u32;
 
 /// Panel inputs read over I2C from a separate input board.
 pub struct Source {
-    iox:        IoxHal,
-    i2c:        I2c,
+    iox: IoxHal,
+    i2c: I2c,
     configured: bool,
-    ticks:      u32,
-    backoff:    u32, // ticks left to skip before the next attempt
-    penalty:    u32, // current backoff length, doubling per consecutive failure
+    ticks: u32,
+    backoff: u32, // ticks left to skip before the next attempt
+    penalty: u32, // current backoff length, doubling per consecutive failure
 }
 
 impl Source {
@@ -57,8 +57,14 @@ impl Source {
             IoxFunction::Gpio,
             IoxEnable::Enable,
         );
-        let mut source =
-            Source { iox, i2c: I2c::new(), configured: false, ticks: 0, backoff: 0, penalty: 0 };
+        let mut source = Source {
+            iox,
+            i2c: I2c::new(),
+            configured: false,
+            ticks: 0,
+            backoff: 0,
+            penalty: 0,
+        };
         source.configured = source.configure();
         if !source.configured {
             crate::diag::Diag::new()
@@ -110,7 +116,9 @@ impl Source {
     }
 
     fn int_asserted(&self) -> bool {
-        self.iox.get_gpio_pin_value(pins::EXPANDER_INT_PORT, pins::EXPANDER_INT_PIN) == IoxValue::Low
+        self.iox
+            .get_gpio_pin_value(pins::EXPANDER_INT_PORT, pins::EXPANDER_INT_PIN)
+            == IoxValue::Low
     }
 
     /// Put the expander into the state this driver expects. Returns false if the input board
@@ -124,13 +132,19 @@ impl Source {
     }
 
     fn write_reg(&mut self, reg: u8, value: u8) -> bool {
-        matches!(self.i2c.i2c_write(pins::EXPANDER_ADDR, reg, &[value]), Ok(I2cResult::Ack(_)))
+        matches!(
+            self.i2c.i2c_write(pins::EXPANDER_ADDR, reg, &[value]),
+            Ok(I2cResult::Ack(_))
+        )
     }
 
     /// The port byte, or None if the read failed or the pull-ups are off (the expander reset).
     fn read_port(&mut self) -> Option<u8> {
         let mut buf = [0u8; (GPIO - GPPU + 1) as usize];
-        match self.i2c.i2c_read(pins::EXPANDER_ADDR, GPPU, &mut buf, false) {
+        match self
+            .i2c
+            .i2c_read(pins::EXPANDER_ADDR, GPPU, &mut buf, false)
+        {
             Ok(I2cResult::Ack(_)) if buf[0] == 0xFF => Some(buf[buf.len() - 1]),
             _ => None,
         }
@@ -141,12 +155,12 @@ impl Source {
 fn decode(bits: u8) -> Inputs {
     let selected = |bit: u8| bits & (1 << bit) == 0;
     Inputs {
-        up:     selected(pins::EXP_BIT_UP),
-        down:   selected(pins::EXP_BIT_DOWN),
-        left:   selected(pins::EXP_BIT_LEFT),
-        right:  selected(pins::EXP_BIT_RIGHT),
+        up: selected(pins::EXP_BIT_UP),
+        down: selected(pins::EXP_BIT_DOWN),
+        left: selected(pins::EXP_BIT_LEFT),
+        right: selected(pins::EXP_BIT_RIGHT),
         center: selected(pins::EXP_BIT_CENTER),
-        sw_on:  selected(pins::EXP_BIT_SW_ON),
+        sw_on: selected(pins::EXP_BIT_SW_ON),
         sw_off: selected(pins::EXP_BIT_SW_OFF),
     }
 }

@@ -24,42 +24,94 @@ pub trait Pattern: Send {
 /// HSV to RGB. h is 0-360, s and v are 0-1.
 pub fn hsv(h: f32, s: f32, v: f32) -> [u8; 3] {
     let h60 = h / 60.0;
-    let f = |n: f32| -> f32 {
-        // n + h60 is in [1, 11), so one subtraction wraps it.
-        let mut k = n + h60;
-        if k >= 6.0 {
-            k -= 6.0;
+    let channel = |offset: f32| -> f32 {
+        // offset + h60 is in [1, 11), so one subtraction wraps it.
+        let mut pos = offset + h60;
+        if pos >= 6.0 {
+            pos -= 6.0;
         }
-        v - v * s * k.min(4.0 - k).clamp(0.0, 1.0_f32)
+        v - v * s * pos.min(4.0 - pos).clamp(0.0, 1.0_f32)
     };
-    [(f(5.0) * 255.0) as u8, (f(3.0) * 255.0) as u8, (f(1.0) * 255.0) as u8]
+    [
+        (channel(5.0) * 255.0) as u8,
+        (channel(3.0) * 255.0) as u8,
+        (channel(1.0) * 255.0) as u8,
+    ]
 }
 
-pub fn lerp(a: f32, b: f32, t: f32) -> f32 { a + (b - a) * t }
+/// HSV to RGB in whole numbers. `h6` is sixths of a turn x4096, `s` is x4096, `v` is 0-255.
+pub fn hsv_int(h6: i32, s: i32, v: i32) -> [u8; 3] {
+    let channel = |offset: i32| -> u8 {
+        let mut pos = offset * 4096 + h6;
+        if pos >= 6 * 4096 {
+            pos -= 6 * 4096;
+        }
+        let cut = pos.min(4 * 4096 - pos).clamp(0, 4096);
+        ((v * (4096 - ((s * cut) >> 12))) >> 12) as u8
+    };
+    [channel(5), channel(3), channel(1)]
+}
 
-/// sin(a + b), from the sin and cos of each.
-pub fn sin_sum(a_sin: f32, a_cos: f32, b_sin: f32, b_cos: f32) -> f32 {
-    a_sin * b_cos + a_cos * b_sin
+pub fn lerp(a: f32, b: f32, t: f32) -> f32 {
+    a + (b - a) * t
+}
+
+/// The sin and cos of one angle, so the sine of a sum of angles needs no `sin` call.
+#[derive(Clone, Copy)]
+pub struct Phasor {
+    pub sin: f32,
+    pub cos: f32,
+}
+
+impl Phasor {
+    pub fn new(angle: f32) -> Phasor {
+        let (sin, cos) = angle.sin_cos();
+        Phasor { sin, cos }
+    }
+
+    /// sin(self + other).
+    pub fn sin_plus(self, other: Phasor) -> f32 {
+        self.sin * other.cos + self.cos * other.sin
+    }
+
+    /// sin(self - other).
+    pub fn sin_minus(self, other: Phasor) -> f32 {
+        self.sin * other.cos - self.cos * other.sin
+    }
+}
+
+/// A weighted average of hues, as vectors on the color wheel, so it never jumps at 0/360.
+#[derive(Clone, Copy, Default)]
+pub struct HueMix {
+    x: f32,
+    y: f32,
+}
+
+impl HueMix {
+    pub fn add(&mut self, weight: f32, hue: Phasor) {
+        self.x += weight * hue.cos;
+        self.y += weight * hue.sin;
+    }
+
+    /// The average hue in degrees, from -180 to 180.
+    pub fn degrees(self) -> f32 {
+        self.y.atan2(self.x).to_degrees()
+    }
 }
 
 /// Number of phase offsets in `phase_phasors`, 0.01 rad apart, covering 0..TAU.
-pub const PHASE_STEPS: usize = 628;
+const PHASE_STEPS: usize = 628;
 
-/// sin and cos of each phase offset. With sin and cos of the frame's angle, they give
+/// Each phase offset as a `Phasor`. With the frame's angle, `sin_plus` gives
 /// sin(offset + angle) without a sin call per LED.
-pub fn phase_phasors() -> &'static ([f32; PHASE_STEPS], [f32; PHASE_STEPS]) {
-    static T: std::sync::OnceLock<([f32; PHASE_STEPS], [f32; PHASE_STEPS])> =
-        std::sync::OnceLock::new();
-    T.get_or_init(|| {
-        let mut sn = [0.0; PHASE_STEPS];
-        let mut cs = [0.0; PHASE_STEPS];
-        for k in 0..PHASE_STEPS {
-            let (s, c) = (k as f32 / 100.0).sin_cos();
-            sn[k] = s;
-            cs[k] = c;
-        }
-        (sn, cs)
-    })
+fn phase_phasors() -> &'static [Phasor; PHASE_STEPS] {
+    static PHASORS: std::sync::OnceLock<[Phasor; PHASE_STEPS]> = std::sync::OnceLock::new();
+    PHASORS.get_or_init(|| core::array::from_fn(|k| Phasor::new(k as f32 / 100.0)))
+}
+
+/// A `Phasor` for an angle taken from `hash`, read from a table, so it needs no sin call.
+pub fn hashed_phasor(hash: u32) -> Phasor {
+    phase_phasors()[(hash % PHASE_STEPS as u32) as usize]
 }
 
 /// Wraps a hue into [0, 360). The input must be within one turn of that range.
@@ -80,7 +132,11 @@ pub fn smoothstep(t: f32) -> f32 {
 }
 
 pub fn mix_rgb(a: [f32; 3], b: [f32; 3], t: f32) -> [f32; 3] {
-    [lerp(a[0], b[0], t), lerp(a[1], b[1], t), lerp(a[2], b[2], t)]
+    [
+        lerp(a[0], b[0], t),
+        lerp(a[1], b[1], t),
+        lerp(a[2], b[2], t),
+    ]
 }
 
 /// Color at `t` along a ramp of (position, color) stops, positions rising from 0 to 1.
@@ -106,6 +162,11 @@ pub fn cycle_q16(t_ms: u32, period_ms: u32) -> u32 {
     ((t_ms % period_ms) as u64 * 65536 / period_ms as u64) as u32
 }
 
+/// Where `t_ms` sits in a repeating period, as an angle from 0 to TAU.
+pub fn cycle_angle(t_ms: u32, period_ms: u32) -> f32 {
+    cycle(t_ms, period_ms) * TAU
+}
+
 /// Which lifetime a repeating slot is in and how far through, 0-1. Its length is hashed.
 pub fn slot_life(slot: u32, salt: u32, t_ms: u32, min_ms: u32, max_ms: u32) -> (u32, f32) {
     let slot_seed = hash2(slot, salt);
@@ -114,10 +175,17 @@ pub fn slot_life(slot: u32, salt: u32, t_ms: u32, min_ms: u32, max_ms: u32) -> (
     (local / life, cycle(local, life))
 }
 
-/// `t_ms` wrapped to one period of a `rate` in rad/ms, for `sin(t * rate + ...)`.
-pub fn fold_ms(t_ms: u32, rate: f32) -> f32 {
+/// The angle `t_ms * rate` for a `rate` in rad/ms, with `t_ms` wrapped to one period first.
+pub fn rate_angle(t_ms: u32, rate: f32) -> f32 {
     let period = (TAU / rate) as u32;
-    (t_ms % period.max(1)) as f32
+    (t_ms % period.max(1)) as f32 * rate
+}
+
+/// Milliseconds since `last_ms`, at most `max_ms`; also sets `last_ms` to `t_ms`.
+pub fn time_step_ms(last_ms: &mut u32, t_ms: u32, max_ms: u32) -> u32 {
+    let step = t_ms.wrapping_sub(*last_ms).min(max_ms);
+    *last_ms = t_ms;
+    step
 }
 
 /// Hash of two u32s.
@@ -127,6 +195,16 @@ pub fn hash2(a: u32, b: u32) -> u32 {
     h = h.wrapping_mul(0x27D4_EB2F);
     h ^= h >> 13;
     h
+}
+
+/// A value in [0, 1) from a hash of `a` and `b`, so each `b` gives a different value.
+pub fn hash01(a: u32, b: u32) -> f32 {
+    (hash2(a, b) >> 8) as f32 / 16_777_216.0
+}
+
+/// Like `hash01`, but in [-x, x).
+pub fn hash_plus_minus(a: u32, b: u32, x: f32) -> f32 {
+    (hash01(a, b) * 2.0 - 1.0) * x
 }
 
 /// Knuth's multiplicative hash: spreads consecutive inputs far apart.
@@ -166,18 +244,37 @@ pub fn free_or_oldest<T>(
 pub struct Shot {
     pub start_ms: u32,
     pub strength: f32,
-    pub hue:      f32,
-    pub sat:      f32,
-    pub hold_ms:  f32,
-    pub fade_ms:  f32,
+    pub hue: f32,
+    pub sat: f32,
+    pub hold_ms: f32,
+    pub fade_ms: f32,
+    /// How long it stays white, and how much brighter it is then.
+    pub white_ms: f32,
+    pub boost: f32,
+}
+
+/// A shot's color at one moment.
+#[derive(Clone, Copy, Default)]
+pub struct ShotColor {
+    pub hue: f32,
+    pub sat: f32,
+    pub brightness: f32,
 }
 
 impl Shot {
-    pub const NONE: Shot =
-        Shot { start_ms: 0, strength: 0.0, hue: 0.0, sat: 0.0, hold_ms: 0.0, fade_ms: 0.0 };
+    pub const NONE: Shot = Shot {
+        start_ms: 0,
+        strength: 0.0,
+        hue: 0.0,
+        sat: 0.0,
+        hold_ms: 0.0,
+        fade_ms: 0.0,
+        white_ms: 0.0,
+        boost: 0.0,
+    };
 
-    /// Age in ms and brightness 0-1, or None if unlit, not started yet, or finished.
-    fn level(&self, t_ms: u32) -> Option<(f32, f32)> {
+    /// Its color at `t_ms`, or None if unlit, not started yet, or finished.
+    fn color_at(&self, t_ms: u32) -> Option<ShotColor> {
         if self.strength <= 0.0 {
             return None;
         }
@@ -185,20 +282,70 @@ impl Shot {
         if age < 0.0 || age >= self.hold_ms + self.fade_ms {
             return None;
         }
-        let fade = if age < self.hold_ms { 1.0 } else { 1.0 - (age - self.hold_ms) / self.fade_ms };
-        Some((age, fade))
+        let fade = if age < self.hold_ms {
+            1.0
+        } else {
+            1.0 - (age - self.hold_ms) / self.fade_ms
+        };
+        let white = (1.0 - age / self.white_ms).clamp(0.0, 1.0);
+        Some(ShotColor {
+            hue: self.hue,
+            sat: self.sat * (1.0 - white),
+            brightness: (self.strength * fade * fade * (1.0 + self.boost * white)).min(1.0),
+        })
     }
 
-    /// Brightness and saturation at `t_ms`: white and boosted for the first `white_ms`.
-    pub fn lit(&self, t_ms: u32, white_ms: f32, boost: f32) -> Option<(f32, f32)> {
-        let (age, fade) = self.level(t_ms)?;
-        let white = (1.0 - age / white_ms).clamp(0.0, 1.0);
-        let v = (self.strength * fade * fade * (1.0 + boost * white)).min(1.0);
-        Some((v, self.sat * (1.0 - white)))
+    fn end_ms(&self) -> u32 {
+        self.start_ms
+            .wrapping_add((self.hold_ms + self.fade_ms) as u32)
+    }
+}
+
+/// The two latest shots on one part of the Triangel; the brighter one shows.
+#[derive(Clone, Copy)]
+pub struct ShotPair([Shot; 2]);
+
+impl ShotPair {
+    pub const NONE: ShotPair = ShotPair([Shot::NONE; 2]);
+
+    /// Replaces an empty shot, else a waiting one ending before `new`, else the one ending sooner.
+    pub fn add(&mut self, new: Shot, t_ms: u32) {
+        let new_left = new.end_ms().wrapping_sub(t_ms) as i32;
+        // The lower one is replaced.
+        let rank = |s: &Shot| {
+            let left = s.end_ms().wrapping_sub(t_ms) as i32;
+            let waiting = s.start_ms.wrapping_sub(t_ms) as i32 > 0;
+            if s.strength <= 0.0 {
+                i32::MIN
+            } else if waiting && left <= new_left {
+                i32::MIN + 1
+            } else {
+                left
+            }
+        };
+        let slot = if rank(&self.0[0]) <= rank(&self.0[1]) {
+            0
+        } else {
+            1
+        };
+        self.0[slot] = new;
     }
 
-    pub fn end_ms(&self) -> u32 {
-        self.start_ms.wrapping_add((self.hold_ms + self.fade_ms) as u32)
+    /// The color of the brighter shot at `t_ms`, if either is lit.
+    pub fn brightest(&mut self, t_ms: u32) -> Option<ShotColor> {
+        let mut best: Option<ShotColor> = None;
+        for shot in &mut self.0 {
+            // Forget a finished flash, or it would light again when the clock wraps around.
+            if shot.strength > 0.0 && t_ms.wrapping_sub(shot.end_ms()) as i32 >= 0 {
+                shot.strength = 0.0;
+            }
+            if let Some(color) = shot.color_at(t_ms) {
+                if color.brightness > best.map_or(0.0, |b| b.brightness) {
+                    best = Some(color);
+                }
+            }
+        }
+        best
     }
 }
 
@@ -254,6 +401,11 @@ impl Rng {
     /// Uniform in [min, max).
     pub fn range_f32(&mut self, min: f32, max: f32) -> f32 {
         min + self.f32() * (max - min)
+    }
+
+    /// Uniform in [-x, x).
+    pub fn plus_minus(&mut self, x: f32) -> f32 {
+        (self.f32() - 0.5) * 2.0 * x
     }
 
     /// Uniform whole number in [min, max), or `min` if the range is empty.

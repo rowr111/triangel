@@ -42,3 +42,24 @@ repos:
         entry: cargo clippy --manifest-path firmware/shared/Cargo.toml -- -D warnings
         files: ^firmware/
         pass_filenames: false
+
+      - id: fmt-eye
+        name: cargo fmt (eye)
+        language: system
+        entry: cargo fmt --manifest-path firmware/eye/Cargo.toml --check
+        files: ^firmware/
+        pass_filenames: false
+
+      - id: fmt-ear
+        name: cargo fmt (ear)
+        language: system
+        entry: cargo fmt --manifest-path firmware/ear/Cargo.toml --check
+        files: ^firmware/
+        pass_filenames: false
+
+      - id: fmt-shared
+        name: cargo fmt (shared)
+        language: system
+        entry: cargo fmt --manifest-path firmware/shared/Cargo.toml --check
+        files: ^firmware/
+        pass_filenames: false

@@ -83,7 +83,12 @@ pub fn spawn_heartbeat() {
             // Audio link: counters first, so bytes-but-no-frames is distinguishable
             // from nothing arriving at all.
             let link = crate::audio::stats();
-            let seen = (link.status, link.first_byte, link.frames_ok, link.frames_bad);
+            let seen = (
+                link.status,
+                link.first_byte,
+                link.frames_ok,
+                link.frames_bad,
+            );
             if last_audio != Some(seen) {
                 last_audio = Some(seen);
                 diag.line(&format!(
@@ -93,8 +98,14 @@ pub fn spawn_heartbeat() {
                 let bass = crate::audio::drop_stats();
                 diag.line(&format!(
                     "drop: {}, drops {}, bass {:.1} dB against {:.1} dB",
-                    if bass.in_breakdown { "in breakdown" } else { "normal" },
-                    bass.drops, bass.bass_db, bass.ref_db,
+                    if bass.in_breakdown {
+                        "in breakdown"
+                    } else {
+                        "normal"
+                    },
+                    bass.drops,
+                    bass.bass_db,
+                    bass.ref_db,
                 ));
             }
 

@@ -61,7 +61,7 @@ The eye learns the bass's normal level while the bass is present. The bass stayi
 
 ### Auto switching
 
-In `ActivityGate`, with settings in `level`.
+In `ActivityGate`, with settings in `activity`.
 
 Each frame is either loud enough to count as music or not. A timer fills while it is loud and empties while it is quiet. Auto switches to the sound patterns only when the timer is full, after 30 seconds of music by default, and back only when it is empty, so music that is only sometimes loud enough does not make it flip back and forth.
 

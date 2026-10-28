@@ -1,5 +1,5 @@
-//! Sound-reactive tuning. Build and flash the eye after changing all of these
-//! except `BASS_BANDS` (both chips) and the last (ear) section.
+//! Sound-reactive tuning. After a change, build and flash the eye, or both boards for
+//! `BASS_BANDS`, or only the ear for the `ear` section.
 
 /// Bands that count as the bass: 0-2 is 40-100 Hz. The ear's bass level, the beat
 /// detector and Raindrop's trigger all use it.
@@ -8,7 +8,7 @@ pub const BASS_BANDS: usize = 3;
 /// Beat detection shared by Firework, Tiles and Spiderweb.
 pub mod beat {
     /// How much bass there has to be for a hit to count. Keeps hi-hats out.
-    pub const LOW_MIN: f32 = 0.15;
+    pub const BASS_MIN: f32 = 0.15;
     /// A beat fires at this many times the recent average rise. Lower fires more often.
     pub const FLUX_TRIGGER: f32 = 1.9;
     /// It fires again only after dropping back under this.
@@ -16,7 +16,7 @@ pub mod beat {
     /// How quickly that recent average follows. Lower is steadier.
     pub const FLUX_AVG_RATE: f32 = 0.02;
     /// Shortest gap between beats.
-    pub const BEAT_REFRACTORY_MS: u32 = 100;
+    pub const REFRACTORY_MS: u32 = 100;
 }
 
 /// Per-band onsets, used by Raindrop's trigger and Spectrum's hits.
@@ -43,12 +43,12 @@ pub mod drop_detect {
 }
 
 /// When Auto switches to the sound patterns.
-pub mod level {
+pub mod activity {
     /// Loudness that counts as music playing, in dBFS.
-    pub const ACTIVITY_LOUD_DBFS: f32 = -45.0;
+    pub const LOUD_DBFS: f32 = -45.0;
     /// Loud time before Auto switches to sound patterns, and quiet time before it switches back.
-    pub const ACTIVITY_ARM_MS: f32 = 30_000.0;
-    pub const ACTIVITY_RELEASE_MS: f32 = 30_000.0;
+    pub const ARM_MS: f32 = 30_000.0;
+    pub const RELEASE_MS: f32 = 30_000.0;
 }
 
 /// When the ear stops sending.
@@ -177,7 +177,7 @@ pub mod ear {
     pub const BAND_VISIBLE_RANGE_DB: f32 = 26.0;
     /// How much each band is scaled to its own range: 0 keeps true loudness, 1 evens them out.
     pub const PER_BAND_MIX: f32 = 0.45;
-    /// Smallest range a band gets stretched over. Acts only above
+    /// Smallest range a band gets stretched over. Has no effect unless set above
     /// BAND_VISIBLE_RANGE_DB * (1 - PER_BAND_MIX), 14.3 dB today.
     pub const BAND_MIN_SPAN_DB: f32 = 8.0;
     /// Smallest range the level gets stretched over.

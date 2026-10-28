@@ -8,7 +8,7 @@ Play music through real speakers. A phone speaker cannot play the low notes, so 
 
 It's suggested to try a variety of music within the range of what you expect to play around Triangel - super drum-heavy songs may look different than really melodic ones, songs with a lot of vocals, etc..  you can tune the response to your own personal music taste!
 
-You can watch in the [previewer](run-the-previewer.md) or on a real Triangel. To see numbers as well, build the eye with `bringup` and watch its `audio:` and `drop:` lines; see [Diagnostic output](../reference/diagnostic-output.md#every-5-seconds). `bringup` does not work together with `previewer`, so for numbers, watch on a real Triangel. On the ear's side, its console key `n` shows the bands' range and the level it compares against; see [Mic test keys](../reference/diagnostic-output.md#mic-test-keys).
+You can watch in the [previewer](run-the-previewer.md) or on a real Triangel. To see numbers as well, build the eye with `bringup` and watch its `audio:` and `drop:` lines; see [Diagnostic output](../reference/diagnostic-output.md#every-5-seconds). `bringup` does not work together with `previewer`, so for numbers, watch on a real Triangel. On the ear's side, its console key `n` (norm) shows the bands' range and the level it compares against; see [Mic test keys](../reference/diagnostic-output.md#mic-test-keys).
 
 ## 2. Find the setting
 
@@ -16,15 +16,15 @@ Each group in `tuning.rs` is a `mod`. Find what you would like in this table:
 
 | If you would like | Where | What to try |
 |---|---|---|
-| Beats to follow only the bass, not hi-hats and other light hits | `beat` | Raise `LOW_MIN`, so a beat needs more bass |
+| Beats to follow only the bass, not hi-hats and other light hits | `beat` | Raise `BASS_MIN`, so a beat needs more bass |
 | Fewer beats | `beat` | Raise `FLUX_TRIGGER` |
-| More beats | `beat` | Lower `FLUX_TRIGGER` or `LOW_MIN` |
-| More space between beats | `beat` | Raise `BEAT_REFRACTORY_MS`, or lower `FLUX_RELEASE` |
+| More beats | `beat` | Lower `FLUX_TRIGGER` or `BASS_MIN` |
+| More space between beats | `beat` | Raise `REFRACTORY_MS`, or lower `FLUX_RELEASE` |
 | More or fewer raindrops in Raindrop | `raindrop` | `TRIGGER`, `RELEASE` and `REFRACTORY_MS` work like the `beat` ones; Raindrop has its own trigger |
 | Drops caught more readily | `drop_detect` | Lower `BREAKDOWN_DB` or `BREAKDOWN_MS`, or raise `DROP_DB` |
 | Drops caught only when they are big | `drop_detect` | Raise `BREAKDOWN_DB` or `BREAKDOWN_MS` |
-| Auto to switch to the sound patterns at a different loudness | `level` | Move `ACTIVITY_LOUD_DBFS` toward the `dBFS` the eye reports with music playing |
-| Auto to switch sooner or later | `level` | `ACTIVITY_ARM_MS` and `ACTIVITY_RELEASE_MS` |
+| Auto to switch to the sound patterns at a different loudness | `activity` | Move `LOUD_DBFS` toward the `dBFS` the eye reports with music playing |
+| Auto to switch sooner or later | `activity` | `ARM_MS` and `RELEASE_MS` |
 | More or less contrast between loud and quiet bands | `ear` | `BAND_VISIBLE_RANGE_DB` sets how far below the loudest band counts as dark; `POWER_LAW` sets the contrast |
 | The high notes to stand out more | `ear` | Raise `TILT_DB_PER_OCTAVE` |
 | The bands evened out, so quieter ones show more | `ear` | Raise `PER_BAND_MIX`, which scales each band to its own range |

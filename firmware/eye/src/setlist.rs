@@ -1,36 +1,40 @@
 use std::collections::VecDeque;
 
-use crate::led::map::LED_COUNT;
-use crate::patterns::transition::{self, TransitionStyle};
 use crate::audio::Audio;
-use crate::patterns::{Frame, Pattern, Rng};
-use crate::patterns::ambient::{drizzle::Drizzle, effervesce::Effervesce, flame::ApexFlame, fubuki::Fubuki, rainbow::Rainbow, ricochet::Ricochet, shimmer::CenterShimmer, squall::Squall, uzumaki::Uzumaki};
+use crate::led::map::LED_COUNT;
+use crate::patterns::ambient::{
+    drizzle::Drizzle, effervesce::Effervesce, flame::Flame, fubuki::Fubuki, rainbow::Rainbow,
+    ricochet::Ricochet, shimmer::Shimmer, squall::Squall, uzumaki::Uzumaki,
+};
 use crate::patterns::reactive::{
     firework::Firework, raindrop::Raindrop, spectrum::Spectrum, spiderweb::Spiderweb, tiles::Tiles,
 };
+use crate::patterns::transition::{self, TransitionStyle};
+use crate::patterns::{Frame, Pattern, Rng};
 
 // How long each pattern shows.
 pub(crate) const AMBIENT_CYCLE_MS: u32 = 3 * 60 * 1_000;
 const REACTIVE_CYCLE_MS: u32 = 5 * 60 * 1_000;
 // The least a pattern shows after a setlist switch.
-const MIN_AFTER_FLIP_MS: u32 = 30_000;
+const MIN_AFTER_SWITCH_MS: u32 = 30_000;
 
 // Crossfade time for a pattern step, and for a switch between the ambient and sound setlists.
-const STEP_TRANSITION_MS:  u32 = 3000;
+const STEP_TRANSITION_MS: u32 = 3_000;
 const SOUND_TRANSITION_MS: u32 = 200;
 
 // A pattern not drawn for longer than this has left the screen, so it gets `on_enter`
 // when it is next drawn.
 const REENTRY_GAP_MS: u32 = 500;
 
-// Global brightness ladder: geometric steps (~1.7x each, 1.2x the last) so a d-pad press
-// feels like an even perceived change instead of lurching at the low end. Applied as a flat
-// multiply over the finished frame; the top level is 1.0 (full brightness, a no-op).
+// Global brightness levels, multiplied over the finished frame. Each is about 1.7 times the
+// one below, so every d-pad press looks like the same size of change.
 const BRIGHTNESS_LEVELS: [f32; 7] = [0.06, 0.10, 0.17, 0.29, 0.49, 0.83, 1.0];
+// The middle level.
 #[cfg(not(feature = "previewer"))]
-const DEFAULT_BRIGHTNESS_INDEX: usize = 3; // middle -> perceptual medium, room to go both ways
+const DEFAULT_BRIGHTNESS_INDEX: usize = 3;
+// Full brightness, since the web view is dim otherwise.
 #[cfg(feature = "previewer")]
-const DEFAULT_BRIGHTNESS_INDEX: usize = BRIGHTNESS_LEVELS.len() - 1; // full - the web view is dim otherwise
+const DEFAULT_BRIGHTNESS_INDEX: usize = BRIGHTNESS_LEVELS.len() - 1;
 
 // The styles a pattern step picks from at random.
 const STYLES: [TransitionStyle; 7] = [
@@ -47,8 +51,8 @@ fn ambient_patterns() -> Vec<Box<dyn Pattern>> {
     vec![
         Box::new(Fubuki::new()),
         Box::new(Squall::new()),
-        Box::new(CenterShimmer::new()),
-        Box::new(ApexFlame::new()),
+        Box::new(Shimmer::new()),
+        Box::new(Flame::new()),
         Box::new(Uzumaki::new()),
         Box::new(Effervesce::new()),
         Box::new(Rainbow::new()),
@@ -67,19 +71,22 @@ fn reactive_patterns() -> Vec<Box<dyn Pattern>> {
     ]
 }
 
-// --- A single ordered list of patterns with its own cursor ---
-
+/// A single ordered list of patterns with its own cursor.
 struct Setlist {
     patterns: Vec<Box<dyn Pattern>>,
     /// When each pattern was last drawn, if ever.
     drawn_ms: Vec<Option<u32>>,
-    idx:      usize,
+    index: usize,
 }
 
 impl Setlist {
     fn new(patterns: Vec<Box<dyn Pattern>>) -> Self {
         let drawn_ms = vec![None; patterns.len()];
-        Setlist { patterns, drawn_ms, idx: 0 }
+        Setlist {
+            patterns,
+            drawn_ms,
+            index: 0,
+        }
     }
 
     fn len(&self) -> usize {
@@ -97,14 +104,12 @@ impl Setlist {
 
     fn step(&mut self, dir: Step) {
         let len = self.patterns.len();
-        self.idx = match dir {
-            Step::Next => (self.idx + 1) % len,
-            Step::Prev => (self.idx + len - 1) % len,
+        self.index = match dir {
+            Step::Next => (self.index + 1) % len,
+            Step::Prev => (self.index + len - 1) % len,
         };
     }
 }
-
-// --- Transitions ---
 
 /// Which setlist; also its index in `SetlistManager::setlists`.
 #[derive(Clone, Copy, PartialEq)]
@@ -115,7 +120,11 @@ enum SetlistKind {
 
 impl SetlistKind {
     fn from_sound(sound_active: bool) -> Self {
-        if sound_active { SetlistKind::Reactive } else { SetlistKind::Ambient }
+        if sound_active {
+            SetlistKind::Reactive
+        } else {
+            SetlistKind::Ambient
+        }
     }
 
     fn cycle_ms(self) -> u32 {
@@ -126,15 +135,15 @@ impl SetlistKind {
     }
 }
 
-/// A transition in flight. Stores only what we're fading *from*; the current pattern is
-/// always the live target, so it never needs recording.
+/// A transition in progress. It holds only the outgoing pattern; the incoming one is always
+/// the current pattern.
 #[derive(Clone, Copy)]
 struct Transition {
-    from_kind:   SetlistKind,
-    from_idx:    usize,
-    start_ms:    u32,
+    from_kind: SetlistKind,
+    from_index: usize,
+    start_ms: u32,
     duration_ms: u32,
-    style:       TransitionStyle,
+    style: TransitionStyle,
 }
 
 #[derive(Clone, Copy)]
@@ -142,8 +151,6 @@ pub enum Step {
     Next,
     Prev,
 }
-
-// --- Sound mode ---
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum SoundMode {
@@ -156,29 +163,28 @@ impl SoundMode {
     /// Cycle Off -> Auto -> On -> Off (the gear button).
     pub fn next(self) -> Self {
         match self {
-            SoundMode::Off  => SoundMode::Auto,
+            SoundMode::Off => SoundMode::Auto,
             SoundMode::Auto => SoundMode::On,
-            SoundMode::On   => SoundMode::Off,
+            SoundMode::On => SoundMode::Off,
         }
     }
 }
 
-// --- Setlist manager ---
-
+/// Both setlists, the transitions between their patterns, and global brightness.
 pub struct SetlistManager {
-    setlists:          [Setlist; 2],
+    setlists: [Setlist; 2],
     /// Time each setlist's current pattern has shown, counted only while on screen.
-    shown_ms:          [u32; 2],
-    last_tick_ms:      u32,
-    held:           bool,
-    transition:        Option<Transition>,
-    pending:           VecDeque<Step>,
+    shown_ms: [u32; 2],
+    last_tick_ms: u32,
+    held: bool,
+    transition: Option<Transition>,
+    pending: VecDeque<Step>,
     last_sound_active: bool,
-    style_rng:         Rng,
-    last_style:        usize, // index into STYLES
-    from_buf:          Frame,
-    brightness_index:  usize,
-    pub sound_mode:    SoundMode,
+    style_rng: Rng,
+    last_style: usize, // index into STYLES
+    from_frame: Frame,
+    brightness_index: usize,
+    pub sound_mode: SoundMode,
 }
 
 impl SetlistManager {
@@ -186,21 +192,21 @@ impl SetlistManager {
         let mut style_rng = Rng::new(now_ms);
         let last_style = style_rng.below(STYLES.len());
         SetlistManager {
-            setlists:          [
+            setlists: [
                 Setlist::new(ambient_patterns()),
                 Setlist::new(reactive_patterns()),
             ],
-            shown_ms:          [0; 2],
-            last_tick_ms:      now_ms,
-            held:              false,
-            transition:        None,
-            pending:           VecDeque::new(),
+            shown_ms: [0; 2],
+            last_tick_ms: now_ms,
+            held: false,
+            transition: None,
+            pending: VecDeque::new(),
             last_sound_active: false,
             style_rng,
             last_style,
-            from_buf:          [[0u8; 3]; LED_COUNT],
-            brightness_index:  DEFAULT_BRIGHTNESS_INDEX,
-            sound_mode:        SoundMode::Off,
+            from_frame: [[0u8; 3]; LED_COUNT],
+            brightness_index: DEFAULT_BRIGHTNESS_INDEX,
+            sound_mode: SoundMode::Off,
         }
     }
 
@@ -215,43 +221,61 @@ impl SetlistManager {
         STYLES[self.last_style]
     }
 
-    fn begin_transition(&mut self, from_kind: SetlistKind, from_idx: usize, now_ms: u32, duration_ms: u32, style: TransitionStyle) {
-        self.transition = Some(Transition { from_kind, from_idx, start_ms: now_ms, duration_ms, style });
+    fn begin_transition(
+        &mut self,
+        from_kind: SetlistKind,
+        from_index: usize,
+        now_ms: u32,
+        duration_ms: u32,
+        style: TransitionStyle,
+    ) {
+        self.transition = Some(Transition {
+            from_kind,
+            from_index,
+            start_ms: now_ms,
+            duration_ms,
+            style,
+        });
     }
 
-    /// Render the current frame, compositing an in-flight transition over it. Detects the
-    /// ambient<->reactive flip and starts a fast crossfade for it.
+    /// Draws the current pattern, blended with the outgoing one during a transition.
     pub fn render(&mut self, t_ms: u32, audio: &Audio, sound_active: bool, out: &mut Frame) {
-        // Sound flip is a hard setlist change: it jumps the queue (drops pending steps that
-        // belong to the old setlist) and crossfades immediately.
+        // A setlist switch drops the queued steps and crossfades at once.
         if sound_active != self.last_sound_active {
             let from_kind = SetlistKind::from_sound(self.last_sound_active);
-            let from_idx  = self.list(from_kind).idx;
+            let from_index = self.list(from_kind).index;
             self.pending.clear();
-            self.begin_transition(from_kind, from_idx, t_ms, SOUND_TRANSITION_MS, TransitionStyle::Crossfade);
+            self.begin_transition(
+                from_kind,
+                from_index,
+                t_ms,
+                SOUND_TRANSITION_MS,
+                TransitionStyle::Crossfade,
+            );
             self.last_sound_active = sound_active;
         }
 
-        // Retire a finished transition and start the next queued step from the pattern that
-        // just finished fading in - seamless (the new fade begins at progress 0 == that pattern).
-        if let Some(tr) = self.transition {
-            if t_ms.wrapping_sub(tr.start_ms) >= tr.duration_ms {
+        // When a transition ends, start the next queued step from the pattern that just faded in.
+        if let Some(active) = self.transition {
+            if t_ms.wrapping_sub(active.start_ms) >= active.duration_ms {
                 self.transition = None;
-                self.pump_queue(SetlistKind::from_sound(sound_active), t_ms);
+                self.start_queued_step(SetlistKind::from_sound(sound_active), t_ms);
             }
         }
 
-        // Live current pattern -> out.
+        // Draw the current pattern into `out`.
         let to_kind = SetlistKind::from_sound(sound_active);
-        let to_idx  = self.list(to_kind).idx;
-        self.setlists[to_kind as usize].draw(to_idx, t_ms, audio, out);
+        let to_index = self.list(to_kind).index;
+        self.list(to_kind).draw(to_index, t_ms, audio, out);
 
         // Composite the outgoing pattern over it while a transition is running.
-        if let Some(tr) = self.transition {
+        if let Some(active) = self.transition {
             // max(1) guards against a zero-duration transition dividing by zero.
-            let progress = t_ms.wrapping_sub(tr.start_ms) as f32 / tr.duration_ms.max(1) as f32;
-            self.setlists[tr.from_kind as usize].draw(tr.from_idx, t_ms, audio, &mut self.from_buf);
-            transition::blend(tr.style, progress, &self.from_buf, out);
+            let progress =
+                t_ms.wrapping_sub(active.start_ms) as f32 / active.duration_ms.max(1) as f32;
+            let from = &mut self.setlists[active.from_kind as usize];
+            from.draw(active.from_index, t_ms, audio, &mut self.from_frame);
+            transition::blend(active.style, progress, &self.from_frame, out);
         }
     }
 
@@ -266,7 +290,7 @@ impl SetlistManager {
         let shown = &mut self.shown_ms[kind as usize];
         // After a setlist switch the pattern gets at least the minimum.
         if sound_active != self.last_sound_active {
-            *shown = (*shown).min(kind.cycle_ms() - MIN_AFTER_FLIP_MS);
+            *shown = (*shown).min(kind.cycle_ms() - MIN_AFTER_SWITCH_MS);
         }
         *shown += dt_ms;
         if *shown >= kind.cycle_ms() {
@@ -279,12 +303,11 @@ impl SetlistManager {
         self.enqueue_step(SetlistKind::from_sound(sound_active), dir, now_ms);
     }
 
-    /// Queue a step, or start it immediately if idle. Transitions play one at a time so an
-    /// interrupted fade never pops; the queue is capped at the setlist length so mashing a
-    /// button can't back up more than one full loop.
+    /// Queues a step, or starts it now if no transition is running. Transitions play one at a
+    /// time, so a fade is never cut short. The queue holds at most one loop of the setlist.
     fn enqueue_step(&mut self, kind: SetlistKind, dir: Step, now_ms: u32) {
         self.shown_ms[kind as usize] = 0;
-        // A single-pattern setlist has nowhere to step; skip the pointless self-transition.
+        // A setlist with one pattern has nowhere to step.
         let len = self.list(kind).len();
         if len < 2 {
             return;
@@ -292,11 +315,11 @@ impl SetlistManager {
         if self.pending.len() < len {
             self.pending.push_back(dir);
         }
-        self.pump_queue(kind, now_ms);
+        self.start_queued_step(kind, now_ms);
     }
 
     /// If idle and a step is queued, start the next transition from the current pattern.
-    fn pump_queue(&mut self, kind: SetlistKind, now_ms: u32) {
+    fn start_queued_step(&mut self, kind: SetlistKind, now_ms: u32) {
         if self.transition.is_none() {
             if let Some(dir) = self.pending.pop_front() {
                 self.begin_step(kind, dir, now_ms);
@@ -304,13 +327,13 @@ impl SetlistManager {
         }
     }
 
-    /// Advance/retreat the active setlist and start a transition from the old pattern.
+    /// Steps the setlist forward or back and starts a transition from the old pattern.
     fn begin_step(&mut self, kind: SetlistKind, dir: Step, now_ms: u32) {
         let list = self.list(kind);
-        let from_idx = list.idx;
+        let from_index = list.index;
         list.step(dir);
         let style = self.pick_style();
-        self.begin_transition(kind, from_idx, now_ms, STEP_TRANSITION_MS, style);
+        self.begin_transition(kind, from_index, now_ms, STEP_TRANSITION_MS, style);
     }
 
     pub fn toggle_hold(&mut self) {
@@ -321,8 +344,8 @@ impl SetlistManager {
         }
     }
 
-    /// Step global brightness one notch along BRIGHTNESS_LEVELS. `delta` is +1 (brighter)
-    /// or -1 (dimmer); the index saturates at the ends (no wraparound).
+    /// Moves one step along BRIGHTNESS_LEVELS: `delta` is +1 for brighter, -1 for dimmer. It
+    /// stops at the ends.
     pub fn adjust_brightness(&mut self, delta: i32) {
         let last = (BRIGHTNESS_LEVELS.len() - 1) as i32;
         self.brightness_index = (self.brightness_index as i32 + delta).clamp(0, last) as usize;
@@ -333,13 +356,12 @@ impl SetlistManager {
         BRIGHTNESS_LEVELS[self.brightness_index]
     }
 
-    /// Returns whether sound-reactive setlist should be active.
-    /// `activity` comes from AudioReceiver's slow arm/release accumulator over the ear's
-    /// level bytes, so Auto mode shifts deliberately, not per-beat. On/Off ignore it.
+    /// Whether the sound setlist should show. In Auto it follows `activity`, which changes
+    /// slowly, not with each beat.
     pub fn sound_active(&self, activity: bool) -> bool {
         match self.sound_mode {
-            SoundMode::Off  => false,
-            SoundMode::On   => true,
+            SoundMode::Off => false,
+            SoundMode::On => true,
             SoundMode::Auto => activity,
         }
     }

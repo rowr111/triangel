@@ -8,24 +8,21 @@ use bao1x_hal::udma::{Uart, UartChannel};
 use bao1x_hal_service::UdmaGlobal;
 use triangel_shared::frame::{BandFrame, EAR_UART_BAUD, FRAME_LEN};
 
-/// Owns the UART TX peripheral and sends framed `BandFrame`s to the eye.
+use crate::pins::{AUDIO_UART_TX_PIN, AUDIO_UART_TX_PORT};
+
 pub struct UartOut {
     uart: Uart,
 }
 
 impl UartOut {
-    /// Initialize the UART TX peripheral.
-    ///
-    /// UART2 TX is physical pin 15 (PB14) on the dabao header - the only UART
-    /// broken out. Wire to eye board physical pin 16 (PB13, UART2 RX) + GND.
     pub fn new() -> Self {
         // Uart::new only maps the CSR and sets baud/format - it neither muxes the pin nor
         // gates the UDMA clock on, so do both here (the eye does the same on its RX side)
         // or nothing leaves PB14. Values match the dabao UART2 pins: output, AF1, 4mA.
         let iox = IoxHal::new();
         iox.setup_pin(
-            crate::pins::AUDIO_UART_TX_PORT,
-            crate::pins::AUDIO_UART_TX_PIN,
+            AUDIO_UART_TX_PORT,
+            AUDIO_UART_TX_PIN,
             Some(IoxDir::Output),
             Some(IoxFunction::AF1),
             None,

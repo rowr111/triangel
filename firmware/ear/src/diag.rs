@@ -1,5 +1,5 @@
-//! USB-serial console for mic bringup. UART2 carries the audio link to the eye,
-//! so this is the only visibility into the firmware.
+//! Output over USB serial: lines, startup stages and the heartbeat. UART2 carries the
+//! audio link to the eye, so this is the only visibility into the firmware.
 
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::sync::Mutex;
@@ -30,13 +30,15 @@ impl Stage {
 
 static STAGE: Mutex<Stage> = Mutex::new(Stage::UsbUp);
 static QUIET: AtomicBool = AtomicBool::new(false);
-/// Bytes ever received from the host, reported in the heartbeat so a dead input
-/// path is distinguishable from one that arrives but does not parse.
+/// Bytes received from the host, shown in the heartbeat to tell a dead input path from
+/// bytes that are not keys.
 static RX_BYTES: AtomicU32 = AtomicU32::new(0);
 
 /// Pause after each line. Sent back to back, bulk output arrives at the host with
 /// lines duplicated and others missing entirely, so it has to be paced.
 const LINE_PACE_MS: usize = 5;
+
+const HEARTBEAT_MS: usize = 2_000;
 
 pub struct Diag {
     usb: UsbHid,
@@ -45,7 +47,10 @@ pub struct Diag {
 
 impl Diag {
     pub fn new() -> Self {
-        Self { usb: UsbHid::new(), tt: ticktimer::Ticktimer::new().unwrap() }
+        Self {
+            usb: UsbHid::new(),
+            tt: ticktimer::Ticktimer::new().unwrap(),
+        }
     }
 
     /// Send one line. Text and line ending go in a single send so lines from
@@ -58,11 +63,9 @@ impl Diag {
         self.tt.sleep_ms(LINE_PACE_MS).ok();
     }
 
-    /// Print the prompt and block until a command character arrives. Commands are
-    /// a single character and act on the keystroke: terminals disagree on whether
-    /// Enter sends CR, LF, or both, so requiring a terminator only invites the
-    /// prompt to hang. CR and LF are skipped rather than treated as commands.
-    pub fn command(&self) -> char {
+    /// Print the prompt and block until a printable key arrives. Commands need no Enter,
+    /// since terminals disagree on what Enter sends.
+    pub fn read_key(&self) -> char {
         self.usb.serial_send(b"\r\nmic> ").ok();
         loop {
             let batch = self.usb.serial_wait_binary();
@@ -88,15 +91,14 @@ pub fn quiet() {
     QUIET.store(true, Ordering::Relaxed);
 }
 
-/// Print a liveness line every 2 s until the first command arrives. Spawned before
-/// anything that can block, so a stalled startup still names the stage it stopped
-/// at - and so a monitor attached after boot sees something without having to type.
+/// Print a liveness line naming the current stage every HEARTBEAT_MS until the first
+/// command arrives, so a monitor attached after boot sees something without having to type.
 pub fn spawn_heartbeat() {
     std::thread::spawn(|| {
         let tt = ticktimer::Ticktimer::new().unwrap();
         let d = Diag::new();
         loop {
-            tt.sleep_ms(2000).ok();
+            tt.sleep_ms(HEARTBEAT_MS).ok();
             if QUIET.load(Ordering::Relaxed) {
                 return;
             }

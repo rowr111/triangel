@@ -1,4 +1,4 @@
-use arbitrary_int::{Number, u5};
+use arbitrary_int::{u5, Number};
 use bao1x_api::bio::*;
 use bao1x_api::bio_resources::*;
 use bao1x_api::{IoxEnable, IoxFunction};
@@ -18,11 +18,11 @@ pub const REPEAT_FRAME: u32 = 0xFFFF_FFFF;
 // Rising-edge to rising-edge intervals in microseconds: a gap plus the 560us
 // burst that ends it. Nominal bit 0 = 1120, bit 1 = 2250, repeat = 2810,
 // leader = 5060.
-const BOUND_MIN_US:    u32 =  700; // below this: noise
-const BOUND_BIT0_US:   u32 = 1685; // bit 0 | bit 1
-const BOUND_BIT1_US:   u32 = 2530; // bit 1 | repeat
+const BOUND_MIN_US: u32 = 700; // below this: noise
+const BOUND_BIT0_US: u32 = 1685; // bit 0 | bit 1
+const BOUND_BIT1_US: u32 = 2530; // bit 1 | repeat
 const BOUND_REPEAT_US: u32 = 3935; // repeat | leader
-const BOUND_MAX_US:    u32 = 6500; // above this: idle between frames
+const BOUND_MAX_US: u32 = 6500; // above this: idle between frames
 
 pub struct NecCapture {
     bio_ss: Bio,
@@ -51,8 +51,12 @@ impl Drop for NecCapture {
         for &core in self.resource_grant.cores.iter() {
             self.bio_ss.de_init_core(core).unwrap();
         }
-        self.bio_ss.release_dynamic_pin(self.pin.as_u8(), &Self::resource_spec().claimer).unwrap();
-        self.bio_ss.release_resources(self.resource_grant.grant_id).unwrap();
+        self.bio_ss
+            .release_dynamic_pin(self.pin.as_u8(), &Self::resource_spec().claimer)
+            .unwrap();
+        self.bio_ss
+            .release_resources(self.resource_grant.grant_id)
+            .unwrap();
     }
 }
 
@@ -65,8 +69,9 @@ impl NecCapture {
 
         let mut bio_ss = Bio::new();
         let resource_grant = bio_ss.claim_resources(&Self::resource_spec())?;
-        let config =
-            CoreConfig { clock_mode: bao1x_api::bio::ClockMode::ExternalPin(BioPin::new(pin.as_u8())) };
+        let config = CoreConfig {
+            clock_mode: bao1x_api::bio::ClockMode::ExternalPin(BioPin::new(pin.as_u8())),
+        };
         bio_ss.init_core(resource_grant.cores[0], nec_rx_bio_code(), config)?;
 
         bio_ss.claim_dynamic_pin(pin.as_u8(), &Self::resource_spec().claimer)?;
@@ -85,7 +90,8 @@ impl NecCapture {
 
         // Startup words: pin mask, then the five boundaries in ticks. Sending
         // them instead of baking them in keeps decode correct at any BIO clock.
-        let fifo_handle = unsafe { bio_ss.get_core_handle(Fifo::Fifo0) }?.ok_or(BioError::ResourceInUse)?;
+        let fifo_handle =
+            unsafe { bio_ss.get_core_handle(Fifo::Fifo0) }?.ok_or(BioError::ResourceInUse)?;
         let mut fifo = CoreCsr::from_handle(&fifo_handle);
         fifo.csr.wo(bio_bdma::SFR_TXF0, 1 << pin.as_u32());
         fifo.csr.wo(bio_bdma::SFR_TXF0, ticks(BOUND_MIN_US));
@@ -94,11 +100,20 @@ impl NecCapture {
         fifo.csr.wo(bio_bdma::SFR_TXF0, ticks(BOUND_REPEAT_US));
         fifo.csr.wo(bio_bdma::SFR_TXF0, ticks(BOUND_MAX_US));
 
-        Ok(Self { bio_ss, _fifo_handle: fifo_handle, fifo, resource_grant, pin, clock_hz })
+        Ok(Self {
+            bio_ss,
+            _fifo_handle: fifo_handle,
+            fifo,
+            resource_grant,
+            pin,
+            clock_hz,
+        })
     }
 
     /// BIO clock frequency the BIO program's intervals are measured in.
-    pub fn clock_hz(&self) -> u32 { self.clock_hz }
+    pub fn clock_hz(&self) -> u32 {
+        self.clock_hz
+    }
 
     /// Next frame, or None if none is waiting. Little-endian bytes are
     /// [addr lo, addr hi, cmd, ~cmd]; REPEAT_FRAME means the button is held.
