@@ -5103,6 +5103,28 @@
 		)
 		(uuid "fe4614ee-b72b-4f42-9987-26e0586f2a89")
 	)
+	(label "EAR_USB_D+"
+		(at 69.85 85.09 0)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "eb7d35b9-71c0-4bf8-833c-9862122916c8")
+	)
+	(label "EAR_USB_D-"
+		(at 69.85 87.63 0)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "74fbdb1c-a17c-4f5e-a695-a2fa6faa0d65")
+	)
 	(global_label "MIC DATA OUTPUT"
 		(shape input)
 		(at 222.25 115.57 180)
