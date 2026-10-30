@@ -1653,6 +1653,36 @@
 		)
 		(uuid "198bd93d-7166-47af-8087-a4b0050ee61f")
 	)
+	(text "IR SENSOR"
+		(exclude_from_sim yes)
+		(at 55.245 162.56 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+		)
+		(uuid "1b7a5d79-470b-4126-a0d8-866a79639fba")
+	)
+	(text "BUTTONS"
+		(exclude_from_sim yes)
+		(at 170.815 61.595 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+		)
+		(uuid "634a7639-c915-4847-a89c-ad4daec2df0e")
+	)
+	(text "3-WAY SWITCH"
+		(exclude_from_sim yes)
+		(at 192.405 152.4 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+		)
+		(uuid "b050f5c9-d83c-49a0-99e7-e1c45ebdab75")
+	)
 	(junction
 		(at 241.3 39.37)
 		(diameter 0)
