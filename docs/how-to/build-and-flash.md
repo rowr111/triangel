@@ -9,7 +9,7 @@ The eye and the ear are built and flashed the same way. Both use the kernel file
 The eye can be built with these options:
 
 - `previewer`: show the LEDs in the browser previewer
-- `combined-board`: for the all-in-one controller boards (v1 or v3). Its pins follow v3, so for v1, first swap the Up and Down pins and the two LED pins back in `firmware/eye/src/pins.rs`; see [Pins](../reference/pins.md)
+- `combined-board`: for the all-in-one controller boards (v1 or v3). Its pins follow v3, so for v1, first set the pins in `firmware/eye/src/pins.rs` to the ones in the [`boards-v1` tag](https://github.com/rowr111/triangel/tree/boards-v1)
 - `bringup`: print boot progress and diagnostics over USB serial; see [Diagnostic output](../reference/diagnostic-output.md). It prints nothing when combined with `previewer`
 
 The ear has no options.

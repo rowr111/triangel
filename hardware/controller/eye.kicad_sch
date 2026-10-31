@@ -3634,7 +3634,7 @@
 		(uuid "824ab225-8e15-43fe-85a2-0b9bdea4ea2b")
 	)
 	(junction
-		(at 128.27 62.23)
+		(at 134.62 62.23)
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "82a12598-b69a-490d-ba6d-24b66fabd186")
@@ -3790,7 +3790,7 @@
 		(uuid "1564bb51-d1dd-4322-9520-2ac29ac928e2")
 	)
 	(no_connect
-		(at 147.32 59.69)
+		(at 222.25 116.84)
 		(uuid "17ee0f2c-4d2c-4c29-81fe-20928dddfe51")
 	)
 	(no_connect
@@ -3854,7 +3854,7 @@
 		(uuid "9e6167f6-cec2-4153-b4af-a920f2d86f8d")
 	)
 	(no_connect
-		(at 147.32 54.61)
+		(at 222.25 121.92)
 		(uuid "a618f7cb-74c7-4797-acde-968361f1ffa1")
 	)
 	(no_connect
@@ -3874,7 +3874,7 @@
 		(uuid "ba46c2b4-4f5f-4e35-97f0-8ee851cf5f37")
 	)
 	(no_connect
-		(at 147.32 57.15)
+		(at 222.25 114.3)
 		(uuid "bc96e95f-e93d-4739-b6eb-8c8699378223")
 	)
 	(no_connect
@@ -3886,7 +3886,7 @@
 		(uuid "d1ea52ee-eb70-4c40-9686-c7b02842d273")
 	)
 	(no_connect
-		(at 147.32 52.07)
+		(at 222.25 119.38)
 		(uuid "d8eed3f4-6247-4430-8428-6fdfef68f0e2")
 	)
 	(no_connect
@@ -4367,13 +4367,23 @@
 	)
 	(wire
 		(pts
-			(xy 128.27 62.23) (xy 147.32 62.23)
+			(xy 128.27 62.23) (xy 134.62 62.23)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
 		(uuid "6001be3d-aa83-4135-ab80-e874a4f9758d")
+	)
+	(wire
+		(pts
+			(xy 134.62 62.23) (xy 147.32 62.23)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "a513ce10-2822-4762-a1ac-6c107f879a81")
 	)
 	(wire
 		(pts
@@ -5121,7 +5131,7 @@
 	)
 	(global_label "LED_DATA_2"
 		(shape output)
-		(at 222.25 119.38 180)
+		(at 147.32 52.07 180)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -5131,7 +5141,7 @@
 		)
 		(uuid "0c8b5e9d-81a2-4e12-a1e1-e877a412db19")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 208.2582 119.38 0)
+			(at 133.33 52.07 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -5145,7 +5155,7 @@
 	)
 	(global_label "SOUND REACTIVE ON"
 		(shape input)
-		(at 222.25 116.84 180)
+		(at 147.32 59.69 180)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -5155,7 +5165,7 @@
 		)
 		(uuid "27af4eb4-bfad-48f1-9a33-c05a22356a63")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 199.61 116.84 0)
+			(at 124.68 59.69 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -5265,7 +5275,7 @@
 	)
 	(global_label "LED_DATA_1"
 		(shape output)
-		(at 222.25 121.92 180)
+		(at 147.32 54.61 180)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -5275,7 +5285,7 @@
 		)
 		(uuid "772b9d2e-4318-4cfe-9bca-7e72d9247d8f")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 208.2582 121.92 0)
+			(at 133.33 54.61 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -5409,7 +5419,7 @@
 	)
 	(global_label "SOUND REACTIVE OFF"
 		(shape input)
-		(at 222.25 114.3 180)
+		(at 147.32 57.15 180)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -5419,7 +5429,7 @@
 		)
 		(uuid "fae69f22-67a0-46a6-a7ce-637097f3854c")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 198.7633 114.3 0)
+			(at 123.83 57.15 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -10749,7 +10759,7 @@
 	)
 	(symbol
 		(lib_id "Connector:TestPoint")
-		(at 128.27 62.23 0)
+		(at 134.62 62.23 180)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -10760,29 +10770,27 @@
 		(fields_autoplaced yes)
 		(uuid "f77ac943-70aa-4e11-ae99-50de7b000039")
 		(property "Reference" "TP1"
-			(at 130.175 57.6579 0)
+			(at 134.62 67.6 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
-				(justify left)
 			)
 		)
 		(property "Value" "TestPoint"
-			(at 130.175 60.1979 0)
+			(at 134.62 70.1 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
-				(justify left)
 			)
 		)
 		(property "Footprint" "TestPoint:TestPoint_Pad_D1.0mm"
-			(at 133.35 62.23 0)
+			(at 139.7 62.23 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -10793,7 +10801,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 133.35 62.23 0)
+			(at 139.7 62.23 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -10804,7 +10812,7 @@
 			)
 		)
 		(property "Description" "test point"
-			(at 128.27 62.23 0)
+			(at 134.62 62.23 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
