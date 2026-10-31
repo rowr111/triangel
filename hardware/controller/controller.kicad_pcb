@@ -5879,7 +5879,7 @@
 		(descr "Resistor SMD 0402 (1005 Metric), square (rectangular) end terminal, IPC-7351 nominal, (Body size source: IPC-SM-782 page 72, https://www.pcb-3d.com/wordpress/wp-content/uploads/ipc-sm-782a_amendment_1_and_2.pdf)")
 		(tags "resistor")
 		(property "Reference" "R21"
-			(at 0 -0.8 0)
+			(at 0 0.85 0)
 			(layer "B.SilkS")
 			(uuid "544342ab-87c8-4ac6-9709-3cb5a372c010")
 			(effects
@@ -24535,25 +24535,79 @@
 		(uuid "074ab3e4-145f-4823-b925-6317b86749a5")
 	)
 	(gr_text "OUT TO 1-12"
-		(at 128.3 83.6 0)
+		(at 128.3 85.5 0)
 		(layer "B.SilkS")
 		(uuid "f9540c72-1ca5-430c-8518-8364a41cb956")
 		(effects
 			(font
 				(size 0.8 0.8)
-				(thickness 0.12)
+				(thickness 0.16)
+				(bold yes)
 			)
 			(justify mirror)
 		)
 	)
 	(gr_text "OUT TO 13-25"
-		(at 141.7 83.6 0)
+		(at 141.7 85.5 0)
 		(layer "B.SilkS")
 		(uuid "d772c653-1c28-4769-8fee-65ba74c9066d")
 		(effects
 			(font
 				(size 0.8 0.8)
-				(thickness 0.12)
+				(thickness 0.16)
+				(bold yes)
+			)
+			(justify mirror)
+		)
+	)
+	(gr_text "TRIANGLE TILES ONLY"
+		(at 135 83.9 0)
+		(layer "B.SilkS")
+		(uuid "5e049967-f76f-4a9a-9ed7-a40e2cfc0812")
+		(effects
+			(font
+				(size 1.1 1.1)
+				(thickness 0.22)
+				(bold yes)
+			)
+			(justify mirror)
+		)
+	)
+	(gr_text "ACHTUNG!!! 12V"
+		(at 135 82 0)
+		(layer "B.SilkS")
+		(uuid "38d1c088-17fc-49e2-827a-03a1cb7d3a28")
+		(effects
+			(font
+				(size 1.6 1.6)
+				(thickness 0.32)
+				(bold yes)
+			)
+			(justify mirror)
+		)
+	)
+	(gr_text "EYE"
+		(at 105.4 122.4 0)
+		(layer "B.SilkS")
+		(uuid "79c8d89f-e674-4b3c-b00c-dbf2c92e7427")
+		(effects
+			(font
+				(size 2.5 2.5)
+				(thickness 0.5)
+				(bold yes)
+			)
+			(justify mirror)
+		)
+	)
+	(gr_text "EAR"
+		(at 164.6 122.4 0)
+		(layer "B.SilkS")
+		(uuid "b6b5280c-9a79-4b02-a6e1-4753809881da")
+		(effects
+			(font
+				(size 2.5 2.5)
+				(thickness 0.5)
+				(bold yes)
 			)
 			(justify mirror)
 		)
