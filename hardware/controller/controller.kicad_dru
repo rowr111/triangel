@@ -1,0 +1,32 @@
+(version 1)
+
+# The Baochip areas are copied from dabao, which routes at 0.1mm. Everything else keeps the
+# board's wider spacing; anything touching a chip area may come as close as dabao does.
+(rule "chip_area_spacing"
+    (constraint clearance (min 0.1mm))
+    (condition "A.memberOfGroup('Eye chip area') || A.memberOfGroup('Ear chip area') || B.memberOfGroup('Eye chip area') || B.memberOfGroup('Ear chip area')"))
+
+# The USB-C and slide switch footprints are tighter than the board's spacing inside
+# themselves, and their locating pegs are drawn as plated holes with no copper ring. These
+# footprints were built fine on the v2 input board.
+(rule "footprint_pins_spacing"
+    (constraint clearance (min 0.1mm))
+    (condition "(A.memberOfFootprint('USBC*') && B.memberOfFootprint('USBC*')) || (A.memberOfFootprint('SW2') && B.memberOfFootprint('SW2'))"))
+
+(rule "locating_peg_hole_spacing"
+    (constraint hole_clearance (min 0mm))
+    (condition "(A.memberOfFootprint('USBC*') && B.memberOfFootprint('USBC*')) || (A.memberOfFootprint('SW2') && B.memberOfFootprint('SW2'))"))
+
+(rule "locating_peg_ring"
+    (constraint annular_width (min 0mm))
+    (condition "A.Type == 'Pad' && A.Pad_Number == ''"))
+
+# JLC wants more room around plated pad holes than around vias.
+(rule "plated_pad_hole_spacing"
+    (constraint hole_clearance (min 0.3mm))
+    (condition "A.Pad_Type == 'Through-hole' && B.Type != 'Pad'"))
+
+# From dabao: keep pours on the same layer well back from the USB pairs.
+(rule "usb_to_pours"
+    (constraint clearance (min 0.5mm))
+    (condition "A.NetClass == 'USB' && B.Type == 'Zone'"))
