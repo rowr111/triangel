@@ -34,7 +34,7 @@ In the switch's Auto position, neither switch bit is low.
 
 ### The all-in-one controller boards (v1 and v3)
 
-With the `combined-board` build option, the buttons and switch are wired to the eye directly instead. The firmware's pins follow v3, shown here. On v1, Up and Down are the other way round (PC0 is Up, PC7 is Down), the LED data pins are PB4 for chain 1 and PB5 for chain 2, and the sound switch is on PB3 (On) and PB2 (Off), so a v1 build needs those changed back in `firmware/eye/src/pins.rs`.
+With the `combined-board` build option, the buttons and switch are wired to the eye directly instead. The firmware's pins follow v3, shown here. On v1, Up and Down are the other way round (PC0 is Up, PC7 is Down), Left is on PC3 and the IR receiver on PC8, the LED data pins are PB4 for chain 1 and PB5 for chain 2, and the sound switch is on PB3 (On) and PB2 (Off), so a v1 build needs those changed back in `firmware/eye/src/pins.rs`.
 
 | Pin | Use |
 |---|---|
@@ -42,11 +42,12 @@ With the `combined-board` build option, the buttons and switch are wired to the 
 | PC9 | LED data, chain 2 (triangle tiles 13-25, 312 LEDs) |
 | PC7 | Up |
 | PC0 | Down |
-| PC3 | Left |
+| PC8 | Left |
 | PC1 | Right |
 | PC2 | Center |
 | PC12 | Sound switch, On |
 | PC11 | Sound switch, Off |
+| PC3 | The IR receiver for the remote (BIO 19) |
 
 ## The ear
 

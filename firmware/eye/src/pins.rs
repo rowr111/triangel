@@ -20,7 +20,7 @@ pub const AUDIO_UART_RX_PIN: u8 = 13;
 
 // D-pad and 3-position sound switch. They sit behind an I2C expander on the separate input
 // board; with the `combined-board` feature they are wired to eye GPIOs. The IR sensor is
-// on PC8 either way.
+// on PC8, or PC3 on the v3 all-in-one controller.
 
 #[cfg(feature = "combined-board")]
 pub use combined_board::*;
@@ -35,7 +35,7 @@ mod combined_board {
     pub const BTN_DOWN_PORT: IoxPort = IoxPort::PC;
     pub const BTN_DOWN_PIN: u8 = 0;
     pub const BTN_LEFT_PORT: IoxPort = IoxPort::PC;
-    pub const BTN_LEFT_PIN: u8 = 3;
+    pub const BTN_LEFT_PIN: u8 = 8;
     pub const BTN_RIGHT_PORT: IoxPort = IoxPort::PC;
     pub const BTN_RIGHT_PIN: u8 = 1;
     pub const BTN_CENTER_PORT: IoxPort = IoxPort::PC;
@@ -77,8 +77,12 @@ mod input_board {
 }
 
 // IR receiver (Everlight IRM-H638T/TR2): idle HIGH, burst LOW. It is on PC8 (socket U1.7),
-// which is BIO bit 24: PB0-15 are BIO 0-15 and PC0-15 are BIO 16-31.
+// which is BIO bit 24: PB0-15 are BIO 0-15 and PC0-15 are BIO 16-31. The v3 all-in-one
+// controller has it on PC3, BIO bit 19.
+#[cfg(not(feature = "combined-board"))]
 pub const IR_BIO_PIN: u8 = 24;
+#[cfg(feature = "combined-board")]
+pub const IR_BIO_PIN: u8 = 19;
 
 /// Configure a pin as a schmitt-trigger input for `function`. Turn `pull_up` off on lines
 /// with external pull-downs, so the two do not form a voltage divider.

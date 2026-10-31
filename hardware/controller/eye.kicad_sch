@@ -5249,7 +5249,7 @@
 			)
 		)
 	)
-	(global_label "BTN LEFT"
+	(global_label "IR SENSOR DATA"
 		(shape input)
 		(at 147.32 36.83 180)
 		(fields_autoplaced yes)
@@ -5393,7 +5393,7 @@
 			)
 		)
 	)
-	(global_label "IR SENSOR DATA"
+	(global_label "BTN LEFT"
 		(shape input)
 		(at 147.32 49.53 180)
 		(fields_autoplaced yes)
