@@ -58,7 +58,7 @@ The eye turns that into what the sound patterns use: band levels, which bands ju
 
 ## Buttons, switch and remote
 
-The five buttons and the sound switch are on the input board, which connects to the eye over I2C, a two-wire connection for small chips. The IR receiver for the remote is there too. On the older all-in-one controller board, v1, the buttons connect to the eye directly instead, which is what the `combined-board` build option is for.
+The five buttons and the sound switch are on the input board, which connects to the eye over I2C, a two-wire connection for small chips. The IR receiver for the remote is there too. On the all-in-one controller boards, v1 and v3, the buttons connect to the eye directly instead, which is what the `combined-board` build option is for.
 
 ## Xous and the kernel
 

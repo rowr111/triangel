@@ -4,10 +4,15 @@ use bao1x_api::{IoSetup, IoxDir, IoxEnable, IoxFunction, IoxPort};
 // LED output
 // BIO pin 4 = PB4 -> chain 1 (288 LEDs, enters at board 1)   [schematic: LED DATA_1, U2.7]
 // BIO pin 5 = PB5 -> chain 2 (312 LEDs, enters at board 13)  [schematic: LED DATA_2, U2.6]
-#[cfg(not(feature = "previewer"))]
+// The v3 all-in-one controller has them the other way round: PB5 is chain 1 and PB4 is chain 2.
+#[cfg(all(not(feature = "previewer"), not(feature = "combined-board")))]
 pub const LED_BIO_PIN: u8 = 4;
-#[cfg(not(feature = "previewer"))]
+#[cfg(all(not(feature = "previewer"), not(feature = "combined-board")))]
 pub const LED_BIO_PIN_2: u8 = 5;
+#[cfg(all(not(feature = "previewer"), feature = "combined-board"))]
+pub const LED_BIO_PIN: u8 = 5;
+#[cfg(all(not(feature = "previewer"), feature = "combined-board"))]
+pub const LED_BIO_PIN_2: u8 = 4;
 
 // Audio UART from the ear: UART2 RX. Its TX (PB14) is wired but unused.
 pub const AUDIO_UART_RX_PORT: IoxPort = IoxPort::PB;
@@ -26,9 +31,9 @@ mod combined_board {
 
     // D-pad buttons, active-low with external pull-ups (eye dabao, socket U1 left edge).
     pub const BTN_UP_PORT: IoxPort = IoxPort::PC;
-    pub const BTN_UP_PIN: u8 = 0;
+    pub const BTN_UP_PIN: u8 = 7;
     pub const BTN_DOWN_PORT: IoxPort = IoxPort::PC;
-    pub const BTN_DOWN_PIN: u8 = 7;
+    pub const BTN_DOWN_PIN: u8 = 0;
     pub const BTN_LEFT_PORT: IoxPort = IoxPort::PC;
     pub const BTN_LEFT_PIN: u8 = 3;
     pub const BTN_RIGHT_PORT: IoxPort = IoxPort::PC;

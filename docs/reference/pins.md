@@ -32,14 +32,16 @@ The buttons and the sound switch are read through an MCP23008 chip on the input 
 
 In the switch's Auto position, neither switch bit is low.
 
-### The older all-in-one controller board (v1)
+### The all-in-one controller boards (v1 and v3)
 
-With the `combined-board` build option, the buttons and switch are wired to the eye directly instead:
+With the `combined-board` build option, the buttons and switch are wired to the eye directly instead. The firmware's pins follow v3, shown here. On v1, Up and Down are the other way round (PC0 is Up, PC7 is Down), and so are the LED data pins (PB4 is chain 1, PB5 is chain 2), so a v1 build needs those swapped back in `firmware/eye/src/pins.rs`.
 
 | Pin | Use |
 |---|---|
-| PC0 | Up |
-| PC7 | Down |
+| PB5 | LED data, chain 1 (triangle tiles 1-12, 288 LEDs) |
+| PB4 | LED data, chain 2 (triangle tiles 13-25, 312 LEDs) |
+| PC7 | Up |
+| PC0 | Down |
 | PC3 | Left |
 | PC1 | Right |
 | PC2 | Center |
