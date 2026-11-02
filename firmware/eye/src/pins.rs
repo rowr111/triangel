@@ -14,7 +14,7 @@ pub const LED_BIO_PIN: u8 = 26;
 #[cfg(all(not(feature = "previewer"), feature = "combined-board"))]
 pub const LED_BIO_PIN_2: u8 = 25;
 
-// Audio UART from the ear: UART2 RX. Its TX (PB14) is wired but unused.
+// Audio UART from the ear: UART2 RX. The eye's own TX (PB14) is not used.
 pub const AUDIO_UART_RX_PORT: IoxPort = IoxPort::PB;
 pub const AUDIO_UART_RX_PIN: u8 = 13;
 
@@ -29,7 +29,7 @@ pub use combined_board::*;
 mod combined_board {
     use super::IoxPort;
 
-    // D-pad buttons, active-low with external pull-ups (eye dabao, socket U1 left edge).
+    // D-pad buttons, active-low with external pull-ups.
     pub const BTN_UP_PORT: IoxPort = IoxPort::PC;
     pub const BTN_UP_PIN: u8 = 7;
     pub const BTN_DOWN_PORT: IoxPort = IoxPort::PC;
@@ -41,9 +41,9 @@ mod combined_board {
     pub const BTN_CENTER_PORT: IoxPort = IoxPort::PC;
     pub const BTN_CENTER_PIN: u8 = 2;
 
-    // 3-position sound switch (eye dabao, socket U2 right edge). Its common is tied to +3.3V
-    // and each throw has a 10k pull-down, so the selected line reads HIGH and the center
-    // position reads both LOW. On the schematic ON is SW_A and OFF is SW_B.
+    // 3-position sound switch. Its common is tied to +3.3V and each throw has a 10k pull-down,
+    // so the selected line reads HIGH and the center position reads both LOW. On the v3
+    // schematic they are SOUND REACTIVE ON and SOUND REACTIVE OFF.
     pub const SW_ON_PORT: IoxPort = IoxPort::PC;
     pub const SW_ON_PIN: u8 = 12;
     pub const SW_OFF_PORT: IoxPort = IoxPort::PC;

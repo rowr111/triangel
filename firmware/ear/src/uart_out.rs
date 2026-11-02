@@ -1,5 +1,5 @@
-//! Sends each `BandFrame` to the eye over UART2: ear pin 15 (PB14, TX) to eye pin 16
-//! (PB13, RX), plus GND.
+//! Sends each `BandFrame` to the eye over UART2: ear PB14 (TX) to eye PB13 (RX), plus GND
+//! (dabao pins 15 and 16 on the v2 controller).
 
 use bao1x_api::iox::IoxHal;
 use bao1x_api::{IoSetup, IoxDir, IoxDriveStrength, IoxEnable, IoxFunction, PeriphId};
