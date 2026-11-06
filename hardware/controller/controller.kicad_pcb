@@ -3335,7 +3335,7 @@
 				(justify mirror)
 			)
 		)
-		(property "Value" "ESD8351XV2T1G"
+		(property "Value" "H5VUD5U"
 			(at 0 -4 270)
 			(layer "B.Fab")
 			(uuid "5af68680-21c9-43cd-8f5b-81b1a12bd9c5")
@@ -3347,7 +3347,7 @@
 				(justify mirror)
 			)
 		)
-		(property "Datasheet" "https://www.lcsc.com/datasheet/C19829478.pdf"
+		(property "Datasheet" "https://www.lcsc.com/datasheet/C20617921.pdf"
 			(at 0 0 270)
 			(layer "B.Fab")
 			(hide yes)
@@ -3371,7 +3371,7 @@
 				(justify mirror)
 			)
 		)
-		(property "LCSC Part" "C19829478"
+		(property "LCSC Part" "C20617921"
 			(at 0 0 270)
 			(layer "B.Fab")
 			(hide yes)
@@ -3384,7 +3384,7 @@
 				(justify mirror)
 			)
 		)
-		(property "Manufacturer" "TECH PUBLIC(台舟)"
+		(property "Manufacturer" "R+O(宏嘉诚)"
 			(at 0 0 270)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -3398,7 +3398,7 @@
 				(justify mirror)
 			)
 		)
-		(property "MPN" "ESD8351XV2T1G"
+		(property "MPN" "H5VUD5U"
 			(at 0 0 270)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -6414,7 +6414,7 @@
 				(justify mirror)
 			)
 		)
-		(property "Value" "ESD8351XV2T1G"
+		(property "Value" "H5VUD5U"
 			(at 0 -4 180)
 			(layer "B.Fab")
 			(uuid "5dd073f9-2f39-4ca2-921c-bbb9986b634c")
@@ -6426,7 +6426,7 @@
 				(justify mirror)
 			)
 		)
-		(property "Datasheet" "https://www.lcsc.com/datasheet/C19829478.pdf"
+		(property "Datasheet" "https://www.lcsc.com/datasheet/C20617921.pdf"
 			(at 0 0 180)
 			(layer "B.Fab")
 			(hide yes)
@@ -6450,7 +6450,7 @@
 				(justify mirror)
 			)
 		)
-		(property "LCSC Part" "C19829478"
+		(property "LCSC Part" "C20617921"
 			(at 0 0 180)
 			(layer "B.Fab")
 			(hide yes)
@@ -6463,7 +6463,7 @@
 				(justify mirror)
 			)
 		)
-		(property "Manufacturer" "TECH PUBLIC(台舟)"
+		(property "Manufacturer" "R+O(宏嘉诚)"
 			(at 0 0 180)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -6477,7 +6477,7 @@
 				(justify mirror)
 			)
 		)
-		(property "MPN" "ESD8351XV2T1G"
+		(property "MPN" "H5VUD5U"
 			(at 0 0 180)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -7069,7 +7069,7 @@
 				(justify mirror)
 			)
 		)
-		(property "Value" "ESD8351XV2T1G"
+		(property "Value" "H5VUD5U"
 			(at 0 -4 0)
 			(layer "B.Fab")
 			(uuid "d049c6c2-3b57-4647-8525-ce7462f32c16")
@@ -7081,7 +7081,7 @@
 				(justify mirror)
 			)
 		)
-		(property "Datasheet" "https://www.lcsc.com/datasheet/C19829478.pdf"
+		(property "Datasheet" "https://www.lcsc.com/datasheet/C20617921.pdf"
 			(at 0 0 0)
 			(layer "B.Fab")
 			(hide yes)
@@ -7105,7 +7105,7 @@
 				(justify mirror)
 			)
 		)
-		(property "LCSC Part" "C19829478"
+		(property "LCSC Part" "C20617921"
 			(at 0 0 0)
 			(layer "B.Fab")
 			(hide yes)
@@ -7118,7 +7118,7 @@
 				(justify mirror)
 			)
 		)
-		(property "Manufacturer" "TECH PUBLIC(台舟)"
+		(property "Manufacturer" "R+O(宏嘉诚)"
 			(at 0 0 0)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -7132,7 +7132,7 @@
 				(justify mirror)
 			)
 		)
-		(property "MPN" "ESD8351XV2T1G"
+		(property "MPN" "H5VUD5U"
 			(at 0 0 0)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -16054,7 +16054,7 @@
 				(justify mirror)
 			)
 		)
-		(property "Value" "ESD8351XV2T1G"
+		(property "Value" "H5VUD5U"
 			(at 0 -4 90)
 			(layer "B.Fab")
 			(uuid "d669ca0a-8675-4c4f-9d6e-be6607f703fd")
@@ -16066,7 +16066,7 @@
 				(justify mirror)
 			)
 		)
-		(property "Datasheet" "https://www.lcsc.com/datasheet/C19829478.pdf"
+		(property "Datasheet" "https://www.lcsc.com/datasheet/C20617921.pdf"
 			(at 0 0 90)
 			(layer "B.Fab")
 			(hide yes)
@@ -16090,7 +16090,7 @@
 				(justify mirror)
 			)
 		)
-		(property "LCSC Part" "C19829478"
+		(property "LCSC Part" "C20617921"
 			(at 0 0 90)
 			(layer "B.Fab")
 			(hide yes)
@@ -16103,7 +16103,7 @@
 				(justify mirror)
 			)
 		)
-		(property "Manufacturer" "TECH PUBLIC(台舟)"
+		(property "Manufacturer" "R+O(宏嘉诚)"
 			(at 0 0 90)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -16117,7 +16117,7 @@
 				(justify mirror)
 			)
 		)
-		(property "MPN" "ESD8351XV2T1G"
+		(property "MPN" "H5VUD5U"
 			(at 0 0 90)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -19261,7 +19261,7 @@
 				(justify mirror)
 			)
 		)
-		(property "Value" "ESD8351XV2T1G"
+		(property "Value" "H5VUD5U"
 			(at 0 -4 90)
 			(layer "B.Fab")
 			(uuid "e64487d1-5964-46de-a4e6-5868025be1a7")
@@ -19273,7 +19273,7 @@
 				(justify mirror)
 			)
 		)
-		(property "Datasheet" "https://www.lcsc.com/datasheet/C19829478.pdf"
+		(property "Datasheet" "https://www.lcsc.com/datasheet/C20617921.pdf"
 			(at 0 0 90)
 			(layer "B.Fab")
 			(hide yes)
@@ -19297,7 +19297,7 @@
 				(justify mirror)
 			)
 		)
-		(property "LCSC Part" "C19829478"
+		(property "LCSC Part" "C20617921"
 			(at 0 0 90)
 			(layer "B.Fab")
 			(hide yes)
@@ -19310,7 +19310,7 @@
 				(justify mirror)
 			)
 		)
-		(property "Manufacturer" "TECH PUBLIC(台舟)"
+		(property "Manufacturer" "R+O(宏嘉诚)"
 			(at 0 0 90)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -19324,7 +19324,7 @@
 				(justify mirror)
 			)
 		)
-		(property "MPN" "ESD8351XV2T1G"
+		(property "MPN" "H5VUD5U"
 			(at 0 0 90)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -24183,7 +24183,7 @@
 				(justify mirror)
 			)
 		)
-		(property "Value" "ESD8351XV2T1G"
+		(property "Value" "H5VUD5U"
 			(at 0 -4 270)
 			(layer "B.Fab")
 			(uuid "6b0d7e24-ff49-4a49-b11b-48bc0d1ef241")
@@ -24195,7 +24195,7 @@
 				(justify mirror)
 			)
 		)
-		(property "Datasheet" "https://www.lcsc.com/datasheet/C19829478.pdf"
+		(property "Datasheet" "https://www.lcsc.com/datasheet/C20617921.pdf"
 			(at 0 0 270)
 			(layer "B.Fab")
 			(hide yes)
@@ -24219,7 +24219,7 @@
 				(justify mirror)
 			)
 		)
-		(property "LCSC Part" "C19829478"
+		(property "LCSC Part" "C20617921"
 			(at 0 0 270)
 			(layer "B.Fab")
 			(hide yes)
@@ -24232,7 +24232,7 @@
 				(justify mirror)
 			)
 		)
-		(property "Manufacturer" "TECH PUBLIC(台舟)"
+		(property "Manufacturer" "R+O(宏嘉诚)"
 			(at 0 0 270)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -24246,7 +24246,7 @@
 				(justify mirror)
 			)
 		)
-		(property "MPN" "ESD8351XV2T1G"
+		(property "MPN" "H5VUD5U"
 			(at 0 0 270)
 			(unlocked yes)
 			(layer "B.Fab")

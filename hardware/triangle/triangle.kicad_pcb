@@ -10622,7 +10622,7 @@
 				(justify mirror)
 			)
 		)
-		(property "Value" "ESD8351XV2T1G_C19829478"
+		(property "Value" "H5VUD5U_C20617921"
 			(at 0.000001 -3.999999 30)
 			(layer "B.Fab")
 			(uuid "c9f1178c-160e-4f2b-937b-f48bc6d4dc06")
@@ -10634,7 +10634,7 @@
 				(justify mirror)
 			)
 		)
-		(property "Datasheet" "https://www.lcsc.com/datasheet/C19829478.pdf"
+		(property "Datasheet" "https://www.lcsc.com/datasheet/C20617921.pdf"
 			(at 0 0 30)
 			(layer "B.Fab")
 			(hide yes)
@@ -10658,7 +10658,7 @@
 				(justify mirror)
 			)
 		)
-		(property "LCSC Part" "C19829478"
+		(property "LCSC Part" "C20617921"
 			(at 0 0 30)
 			(layer "B.Fab")
 			(hide yes)
@@ -10671,7 +10671,7 @@
 				(justify mirror)
 			)
 		)
-		(property "Manufacturer" "TECH PUBLIC(台舟)"
+		(property "Manufacturer" "R+O(宏嘉诚)"
 			(at 0 0 210)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -10685,7 +10685,7 @@
 				(justify mirror)
 			)
 		)
-		(property "MPN" "ESD8351XV2T1G"
+		(property "MPN" "H5VUD5U"
 			(at 0 0 210)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -12598,7 +12598,7 @@
 				(justify mirror)
 			)
 		)
-		(property "Value" "ESD8351XV2T1G_C19829478"
+		(property "Value" "H5VUD5U_C20617921"
 			(at 0 -4 90)
 			(layer "B.Fab")
 			(uuid "1bc8f868-1559-4bcf-959f-f13c26a105a5")
@@ -12610,7 +12610,7 @@
 				(justify mirror)
 			)
 		)
-		(property "Datasheet" "https://www.lcsc.com/datasheet/C19829478.pdf"
+		(property "Datasheet" "https://www.lcsc.com/datasheet/C20617921.pdf"
 			(at 0 0 90)
 			(layer "B.Fab")
 			(hide yes)
@@ -12634,7 +12634,7 @@
 				(justify mirror)
 			)
 		)
-		(property "LCSC Part" "C19829478"
+		(property "LCSC Part" "C20617921"
 			(at 0 0 90)
 			(layer "B.Fab")
 			(hide yes)
@@ -12647,7 +12647,7 @@
 				(justify mirror)
 			)
 		)
-		(property "Manufacturer" "TECH PUBLIC(台舟)"
+		(property "Manufacturer" "R+O(宏嘉诚)"
 			(at 0 0 270)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -12661,7 +12661,7 @@
 				(justify mirror)
 			)
 		)
-		(property "MPN" "ESD8351XV2T1G"
+		(property "MPN" "H5VUD5U"
 			(at 0 0 270)
 			(unlocked yes)
 			(layer "B.Fab")

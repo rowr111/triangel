@@ -764,7 +764,7 @@
 			)
 			(embedded_fonts no)
 		)
-		(symbol "easyeda2kicad:ESD8351XV2T1G_C19829478"
+		(symbol "easyeda2kicad:H5VUD5U_C20617921"
 			(exclude_from_sim no)
 			(in_bom yes)
 			(on_board yes)
@@ -780,7 +780,7 @@
 					)
 				)
 			)
-			(property "Value" "ESD8351XV2T1G_C19829478"
+			(property "Value" "H5VUD5U_C20617921"
 				(at 0 -5.08 0)
 				(show_name no)
 				(do_not_autoplace no)
@@ -801,7 +801,7 @@
 					)
 				)
 			)
-			(property "Datasheet" "https://www.lcsc.com/datasheet/C19829478.pdf"
+			(property "Datasheet" "https://www.lcsc.com/datasheet/C20617921.pdf"
 				(at 0 -10.16 0)
 				(show_name no)
 				(do_not_autoplace no)
@@ -823,7 +823,7 @@
 					)
 				)
 			)
-			(property "Manufacturer" "TECH PUBLIC(台舟)"
+			(property "Manufacturer" "R+O(宏嘉诚)"
 				(at 0 -12.7 0)
 				(show_name no)
 				(do_not_autoplace no)
@@ -834,7 +834,7 @@
 					)
 				)
 			)
-			(property "MPN" "ESD8351XV2T1G"
+			(property "MPN" "H5VUD5U"
 				(at 0 -15.24 0)
 				(show_name no)
 				(do_not_autoplace no)
@@ -845,7 +845,7 @@
 					)
 				)
 			)
-			(property "LCSC Part" "C19829478"
+			(property "LCSC Part" "C20617921"
 				(at 0 -17.78 0)
 				(show_name no)
 				(do_not_autoplace no)
@@ -856,7 +856,7 @@
 					)
 				)
 			)
-			(symbol "ESD8351XV2T1G_C19829478_0_1"
+			(symbol "H5VUD5U_C20617921_0_1"
 				(polyline
 					(pts
 						(xy -2.29 2.29) (xy -1.27 1.27) (xy -1.27 -1.27) (xy -0.25 -2.29)
@@ -6833,7 +6833,7 @@
 		)
 	)
 	(symbol
-		(lib_id "easyeda2kicad:ESD8351XV2T1G_C19829478")
+		(lib_id "easyeda2kicad:H5VUD5U_C20617921")
 		(at 151.13 90.17 270)
 		(unit 1)
 		(body_style 1)
@@ -6854,7 +6854,7 @@
 				(justify right)
 			)
 		)
-		(property "Value" "ESD8351XV2T1G"
+		(property "Value" "H5VUD5U"
 			(at 147.32 92.71 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -6876,7 +6876,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "https://www.lcsc.com/datasheet/C19829478.pdf"
+		(property "Datasheet" "https://www.lcsc.com/datasheet/C20617921.pdf"
 			(at 140.97 90.17 0)
 			(hide yes)
 			(show_name no)
@@ -6898,7 +6898,7 @@
 				)
 			)
 		)
-		(property "Manufacturer" "TECH PUBLIC(台舟)"
+		(property "Manufacturer" "R+O(宏嘉诚)"
 			(at 138.43 90.17 0)
 			(hide yes)
 			(show_name no)
@@ -6909,7 +6909,7 @@
 				)
 			)
 		)
-		(property "MPN" "ESD8351XV2T1G"
+		(property "MPN" "H5VUD5U"
 			(at 135.89 90.17 0)
 			(hide yes)
 			(show_name no)
@@ -6920,7 +6920,7 @@
 				)
 			)
 		)
-		(property "LCSC Part" "C19829478"
+		(property "LCSC Part" "C20617921"
 			(at 133.35 90.17 0)
 			(hide yes)
 			(show_name no)
@@ -8221,7 +8221,7 @@
 		)
 	)
 	(symbol
-		(lib_id "easyeda2kicad:ESD8351XV2T1G_C19829478")
+		(lib_id "easyeda2kicad:H5VUD5U_C20617921")
 		(at 227.33 88.9 270)
 		(unit 1)
 		(body_style 1)
@@ -8242,7 +8242,7 @@
 				(justify right)
 			)
 		)
-		(property "Value" "ESD8351XV2T1G"
+		(property "Value" "H5VUD5U"
 			(at 223.52 91.44 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -8264,7 +8264,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "https://www.lcsc.com/datasheet/C19829478.pdf"
+		(property "Datasheet" "https://www.lcsc.com/datasheet/C20617921.pdf"
 			(at 217.17 88.9 0)
 			(hide yes)
 			(show_name no)
@@ -8286,7 +8286,7 @@
 				)
 			)
 		)
-		(property "Manufacturer" "TECH PUBLIC(台舟)"
+		(property "Manufacturer" "R+O(宏嘉诚)"
 			(at 214.63 88.9 0)
 			(hide yes)
 			(show_name no)
@@ -8297,7 +8297,7 @@
 				)
 			)
 		)
-		(property "MPN" "ESD8351XV2T1G"
+		(property "MPN" "H5VUD5U"
 			(at 212.09 88.9 0)
 			(hide yes)
 			(show_name no)
@@ -8308,7 +8308,7 @@
 				)
 			)
 		)
-		(property "LCSC Part" "C19829478"
+		(property "LCSC Part" "C20617921"
 			(at 209.55 88.9 0)
 			(hide yes)
 			(show_name no)
