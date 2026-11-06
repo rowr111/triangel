@@ -8021,7 +8021,7 @@
 				(justify mirror)
 			)
 		)
-		(property "Value" "4.7µF"
+		(property "Value" "10µF"
 			(at 0 -1.16 180)
 			(layer "B.Fab")
 			(uuid "d01bbe4f-4197-445d-a678-4c452c4d8f61")
@@ -8033,7 +8033,7 @@
 				(justify mirror)
 			)
 		)
-		(property "Datasheet" "https://www.lcsc.com/datasheet/C23733.pdf"
+		(property "Datasheet" "https://www.lcsc.com/datasheet/C15525.pdf"
 			(at 0 0 180)
 			(layer "B.Fab")
 			(hide yes)
@@ -8070,7 +8070,7 @@
 				(justify mirror)
 			)
 		)
-		(property "LCSC Part" "C23733"
+		(property "LCSC Part" "C15525"
 			(at 0 0 180)
 			(unlocked yes)
 			(layer "B.Fab")

@@ -4567,7 +4567,7 @@
 				(justify right)
 			)
 		)
-		(property "Value" "4.7µF"
+		(property "Value" "10µF"
 			(at 92.075 144.7799 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -4589,7 +4589,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "https://www.lcsc.com/datasheet/C23733.pdf"
+		(property "Datasheet" "https://www.lcsc.com/datasheet/C15525.pdf"
 			(at 88.9 143.51 0)
 			(hide yes)
 			(show_name no)
@@ -4611,7 +4611,7 @@
 				)
 			)
 		)
-		(property "LCSC Part" "C23733"
+		(property "LCSC Part" "C15525"
 			(at 88.9 143.51 0)
 			(hide yes)
 			(show_name no)
