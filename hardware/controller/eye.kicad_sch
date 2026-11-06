@@ -2545,162 +2545,6 @@
 			)
 			(embedded_fonts no)
 		)
-		(symbol "easyeda2kicad:H5VUD5U_C20617921"
-			(exclude_from_sim no)
-			(in_bom yes)
-			(on_board yes)
-			(in_pos_files yes)
-			(duplicate_pin_numbers_are_jumpers no)
-			(property "Reference" "D"
-				(at 0 5.08 0)
-				(show_name no)
-				(do_not_autoplace no)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-				)
-			)
-			(property "Value" "H5VUD5U_C20617921"
-				(at 0 -5.08 0)
-				(show_name no)
-				(do_not_autoplace no)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-				)
-			)
-			(property "Footprint" "easyeda2kicad:SOD-523_L1.2-W0.8-LS1.6-RD"
-				(at 0 -7.62 0)
-				(show_name no)
-				(do_not_autoplace no)
-				(hide yes)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-				)
-			)
-			(property "Datasheet" "https://www.lcsc.com/datasheet/C20617921.pdf"
-				(at 0 -10.16 0)
-				(show_name no)
-				(do_not_autoplace no)
-				(hide yes)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-				)
-			)
-			(property "Description" ""
-				(at 0 0 0)
-				(show_name no)
-				(do_not_autoplace no)
-				(hide yes)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-				)
-			)
-			(property "Manufacturer" "R+O(宏嘉诚)"
-				(at 0 -12.7 0)
-				(show_name no)
-				(do_not_autoplace no)
-				(hide yes)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-				)
-			)
-			(property "MPN" "H5VUD5U"
-				(at 0 -15.24 0)
-				(show_name no)
-				(do_not_autoplace no)
-				(hide yes)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-				)
-			)
-			(property "LCSC Part" "C20617921"
-				(at 0 -17.78 0)
-				(show_name no)
-				(do_not_autoplace no)
-				(hide yes)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-				)
-			)
-			(symbol "H5VUD5U_C20617921_0_1"
-				(polyline
-					(pts
-						(xy -2.29 2.29) (xy -1.27 1.27) (xy -1.27 -1.27) (xy -0.25 -2.29)
-					)
-					(stroke
-						(width 0)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy 1.27 -1.52) (xy -1.27 0) (xy 1.27 1.78) (xy 1.27 -1.52)
-					)
-					(stroke
-						(width 0)
-						(type default)
-					)
-					(fill
-						(type background)
-					)
-				)
-				(pin unspecified line
-					(at -5.08 0 0)
-					(length 3.81)
-					(name "C"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "1"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin unspecified line
-					(at 5.08 0 180)
-					(length 3.81)
-					(name "A"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "2"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-			)
-			(embedded_fonts no)
-		)
 		(symbol "easyeda2kicad:TYPE-C-31-M-12"
 			(exclude_from_sim no)
 			(in_bom yes)
@@ -3369,12 +3213,6 @@
 		(uuid "0040ab22-ab95-4a6b-b112-3a5d96b28777")
 	)
 	(junction
-		(at 39.37 40.64)
-		(diameter 0)
-		(color 0 0 0 0)
-		(uuid "045452a2-8dc2-42c2-a3cd-46567d18e439")
-	)
-	(junction
 		(at 97.79 137.16)
 		(diameter 0)
 		(color 0 0 0 0)
@@ -3441,6 +3279,12 @@
 		(uuid "4957abe9-375a-4937-a0c6-a8262357f963")
 	)
 	(junction
+		(at 69.85 176.53)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "4b0d2f6e-8c1a-4e3b-9f57-2a6c1d8e7b90")
+	)
+	(junction
 		(at 102.87 153.67)
 		(diameter 0)
 		(color 0 0 0 0)
@@ -3499,12 +3343,6 @@
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "6d81a018-8da6-44c1-b175-7a8080fcf55d")
-	)
-	(junction
-		(at 52.07 33.02)
-		(diameter 0)
-		(color 0 0 0 0)
-		(uuid "72f73ad9-0bb0-4f69-8ba5-a4e2af435bac")
 	)
 	(junction
 		(at 59.69 45.72)
@@ -3615,12 +3453,6 @@
 		(uuid "d1c16522-9857-4ff9-9a46-919cd3fdf3ac")
 	)
 	(junction
-		(at 69.85 176.53)
-		(diameter 0)
-		(color 0 0 0 0)
-		(uuid "4b0d2f6e-8c1a-4e3b-9f57-2a6c1d8e7b90")
-	)
-	(junction
 		(at 127 127)
 		(diameter 0)
 		(color 0 0 0 0)
@@ -3651,22 +3483,10 @@
 		(uuid "f5c3a9ec-9aad-4492-b481-80a6eeebfd61")
 	)
 	(junction
-		(at 52.07 55.88)
-		(diameter 0)
-		(color 0 0 0 0)
-		(uuid "f5da81c1-1f09-42c4-b6f4-fc91045e1fec")
-	)
-	(junction
 		(at 45.72 83.82)
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "fa0f8b32-1bab-4a95-9e67-5f0f4407a2d6")
-	)
-	(junction
-		(at 59.69 55.88)
-		(diameter 0)
-		(color 0 0 0 0)
-		(uuid "fdb9e241-e4b4-45d4-b778-dd7e500d9a15")
 	)
 	(no_connect
 		(at 223.52 44.45)
@@ -3808,7 +3628,7 @@
 	)
 	(wire
 		(pts
-			(xy 38.1 33.02) (xy 52.07 33.02)
+			(xy 38.1 33.02) (xy 73.66 33.02)
 		)
 		(stroke
 			(width 0)
@@ -4038,16 +3858,6 @@
 	)
 	(wire
 		(pts
-			(xy 52.07 43.18) (xy 52.07 55.88)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "339b9f80-33a3-461d-8fc1-fbc4b4d4fb0e")
-	)
-	(wire
-		(pts
 			(xy 125.73 175.26) (xy 125.73 177.8)
 		)
 		(stroke
@@ -4248,16 +4058,6 @@
 	)
 	(wire
 		(pts
-			(xy 52.07 55.88) (xy 59.69 55.88)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "5c890285-a72e-4fbf-b78a-53a22f4554b8")
-	)
-	(wire
-		(pts
 			(xy 133.35 83.82) (xy 63.5 83.82)
 		)
 		(stroke
@@ -4335,16 +4135,6 @@
 			(type default)
 		)
 		(uuid "6f59adf0-08bf-4de5-81c8-7df04c5119d6")
-	)
-	(wire
-		(pts
-			(xy 52.07 33.02) (xy 73.66 33.02)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "71288cb6-56f4-4746-bd57-27d569f65f31")
 	)
 	(wire
 		(pts
@@ -4458,16 +4248,6 @@
 	)
 	(wire
 		(pts
-			(xy 39.37 50.8) (xy 39.37 55.88)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "90774469-7555-43fd-8e3d-8c72a2d409c0")
-	)
-	(wire
-		(pts
 			(xy 45.72 81.28) (xy 45.72 83.82)
 		)
 		(stroke
@@ -4525,16 +4305,6 @@
 			(type default)
 		)
 		(uuid "9d952021-033a-44be-8037-ee85a8c2e1cf")
-	)
-	(wire
-		(pts
-			(xy 39.37 55.88) (xy 52.07 55.88)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "9dcadb83-9000-4129-a658-5295b4cc6001")
 	)
 	(wire
 		(pts
@@ -4628,16 +4398,6 @@
 	)
 	(wire
 		(pts
-			(xy 38.1 40.64) (xy 39.37 40.64)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "ad9446ca-5b65-4f5e-92ba-d071a9e8bb1a")
-	)
-	(wire
-		(pts
 			(xy 59.69 22.86) (xy 59.69 30.48)
 		)
 		(stroke
@@ -4728,7 +4488,7 @@
 	)
 	(wire
 		(pts
-			(xy 39.37 40.64) (xy 76.2 40.64)
+			(xy 38.1 40.64) (xy 76.2 40.64)
 		)
 		(stroke
 			(width 0)
@@ -7023,120 +6783,6 @@
 			(project "controller"
 				(path "/dab966ac-748d-4912-886d-b156bece3c93/c7a6d357-1533-4229-96a0-07c7e8bc6e04"
 					(reference "#PWR036")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "easyeda2kicad:H5VUD5U_C20617921")
-		(at 52.07 38.1 270)
-		(unit 1)
-		(body_style 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(in_pos_files yes)
-		(dnp no)
-		(uuid "4755713e-4393-40ca-aaf1-9f680815156f")
-		(property "Reference" "D7"
-			(at 48.26 40.005 90)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify right)
-			)
-		)
-		(property "Value" "H5VUD5U"
-			(at 48.26 37.465 90)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify right)
-			)
-		)
-		(property "Footprint" "easyeda2kicad:SOD-523_L1.2-W0.8-LS1.6-RD"
-			(at 44.45 38.1 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Datasheet" "https://www.lcsc.com/datasheet/C20617921.pdf"
-			(at 41.91 38.1 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description" ""
-			(at 52.07 38.1 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Manufacturer" "R+O(宏嘉诚)"
-			(at 39.37 38.1 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "MPN" "H5VUD5U"
-			(at 36.83 38.1 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "LCSC Part" "C20617921"
-			(at 34.29 38.1 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "1"
-			(uuid "45884e28-5c0d-4da0-b309-c0a22a478656")
-		)
-		(pin "2"
-			(uuid "5bd6dc08-2b3c-40ac-b70f-49134c30eb10")
-		)
-		(instances
-			(project "controller"
-				(path "/dab966ac-748d-4912-886d-b156bece3c93/c7a6d357-1533-4229-96a0-07c7e8bc6e04"
-					(reference "D7")
 					(unit 1)
 				)
 			)
@@ -9645,120 +9291,6 @@
 			(project "controller"
 				(path "/dab966ac-748d-4912-886d-b156bece3c93/c7a6d357-1533-4229-96a0-07c7e8bc6e04"
 					(reference "C16")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "easyeda2kicad:H5VUD5U_C20617921")
-		(at 39.37 45.72 270)
-		(unit 1)
-		(body_style 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(in_pos_files yes)
-		(dnp no)
-		(uuid "ac4d8015-cee1-4718-8521-63265b12b486")
-		(property "Reference" "D6"
-			(at 35.56 47.625 90)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify right)
-			)
-		)
-		(property "Value" "H5VUD5U"
-			(at 35.56 45.085 90)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify right)
-			)
-		)
-		(property "Footprint" "easyeda2kicad:SOD-523_L1.2-W0.8-LS1.6-RD"
-			(at 31.75 45.72 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Datasheet" "https://www.lcsc.com/datasheet/C20617921.pdf"
-			(at 29.21 45.72 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description" ""
-			(at 39.37 45.72 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Manufacturer" "R+O(宏嘉诚)"
-			(at 26.67 45.72 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "MPN" "H5VUD5U"
-			(at 24.13 45.72 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "LCSC Part" "C20617921"
-			(at 21.59 45.72 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "1"
-			(uuid "0ea7c854-b693-4c8c-8945-27f5c3cb0e47")
-		)
-		(pin "2"
-			(uuid "31e1e8b3-0c47-4529-9b47-13549e2d37da")
-		)
-		(instances
-			(project "controller"
-				(path "/dab966ac-748d-4912-886d-b156bece3c93/c7a6d357-1533-4229-96a0-07c7e8bc6e04"
-					(reference "D6")
 					(unit 1)
 				)
 			)

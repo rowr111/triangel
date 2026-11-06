@@ -224,6 +224,7 @@
         0.2,
         0.25,
         0.5,
+        1.0,
         1.5
       ],
       "tuning_pattern_settings": {
@@ -644,7 +645,7 @@
       "netlist": "",
       "plot": "",
       "specctra_dsn": "",
-      "step": "",
+      "step": "controller.step",
       "vrml": ""
     },
     "page_layout_descr_file": ""
