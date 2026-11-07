@@ -7413,7 +7413,7 @@
 		(property "Reference" "Y1"
 			(at -2.911371 1.171472 90)
 			(layer "B.SilkS")
-			(uuid "e47491ef-b22d-4875-9392-edd0b09ffc6f")
+			(uuid "26a659ab-a068-4867-842d-ae03a193a79d")
 			(effects
 				(font
 					(size 0.6 0.6)
@@ -7425,7 +7425,7 @@
 		(property "Value" "48 MHz"
 			(at 0 -2.45 0)
 			(layer "B.Fab")
-			(uuid "ba4f2503-07c5-4cc7-8df6-8ecb4de34fa7")
+			(uuid "73a7630b-7186-4320-8187-95026f938d21")
 			(effects
 				(font
 					(size 1 1)
@@ -7438,7 +7438,7 @@
 			(at 0 0 0)
 			(layer "B.Fab")
 			(hide yes)
-			(uuid "2faa1b22-0f9c-41f5-90f6-5a7e5cded6cc")
+			(uuid "243a267e-6c32-4d75-b062-b2b780448af8")
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -7450,7 +7450,7 @@
 			(at 0 0 0)
 			(layer "B.Fab")
 			(hide yes)
-			(uuid "a0da7c43-e117-4d22-8792-5b4160080ead")
+			(uuid "4be30ec2-b4e5-4f71-b314-64dec6f907c7")
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -11545,13 +11545,13 @@
 	(footprint "Resistor_SMD:R_0402_1005Metric"
 		(layer "B.Cu")
 		(uuid "44e23714-1dd1-4e3e-adf7-9f9a4f24fc13")
-		(at 121.573303 106.948503)
+		(at 121.570981 106.835979)
 		(descr "Resistor SMD 0402 (1005 Metric), square (rectangular) end terminal, IPC-7351 nominal, (Body size source: IPC-SM-782 page 72, https://www.pcb-3d.com/wordpress/wp-content/uploads/ipc-sm-782a_amendment_1_and_2.pdf)")
 		(tags "resistor")
 		(property "Reference" "R9"
 			(at -0.111498 -1.253503 0)
 			(layer "B.SilkS")
-			(uuid "40f138bc-bc26-4014-8046-a3b6ef4f04a1")
+			(uuid "591fe41c-18da-42d3-b1b5-faeeede1665b")
 			(effects
 				(font
 					(size 0.6 0.6)
@@ -11563,7 +11563,7 @@
 		(property "Value" "4.7MΩ"
 			(at 0 -1.17 0)
 			(layer "B.Fab")
-			(uuid "38d9b2f3-3a34-4d7f-839c-8a2d941a8d18")
+			(uuid "61639a4c-fe0e-4f29-9d90-529fe59244cd")
 			(effects
 				(font
 					(size 1 1)
@@ -11576,7 +11576,7 @@
 			(at 0 0 0)
 			(layer "B.Fab")
 			(hide yes)
-			(uuid "6e1e05ec-73b9-4994-8924-876439fd04d9")
+			(uuid "e7b526c3-2004-4ed6-aeea-02878104bef8")
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -11588,7 +11588,7 @@
 			(at 0 0 0)
 			(layer "B.Fab")
 			(hide yes)
-			(uuid "d7b5a976-a53b-4cd0-adc6-96d6baa5c2b2")
+			(uuid "bf0fa6c6-31bb-4d79-9782-830fe84d3cd2")
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -20808,7 +20808,7 @@
 	(footprint "Resistor_SMD:R_0402_1005Metric"
 		(layer "B.Cu")
 		(uuid "d8a94d23-e862-4d3d-9b05-9a8fde322305")
-		(at 148.425 105.55 180)
+		(at 148.426741 105.65919 180)
 		(descr "Resistor SMD 0402 (1005 Metric), square (rectangular) end terminal, IPC-7351 nominal, (Body size source: IPC-SM-782 page 72, https://www.pcb-3d.com/wordpress/wp-content/uploads/ipc-sm-782a_amendment_1_and_2.pdf)")
 		(tags "resistor")
 		(property "Reference" "R14"
@@ -30545,6 +30545,14 @@
 		(uuid "07882c8e-62e6-4711-9010-9a9da901f208")
 	)
 	(segment
+		(start 106.85 111)
+		(end 106.8 111.05)
+		(width 0.25)
+		(layer "B.Cu")
+		(net "EYE_DATA_D+")
+		(uuid "0d8104c6-c7e6-4824-89a4-9a8e4fab65fe")
+	)
+	(segment
 		(start 108.585001 110.95)
 		(end 108.955242 110.95)
 		(width 0.25)
@@ -30553,12 +30561,12 @@
 		(uuid "1f08dbd3-2fab-4466-9842-a2db42d1d40b")
 	)
 	(segment
-		(start 107.56 111)
-		(end 107.51 111.05)
+		(start 106.8 111.05)
+		(end 105.916403 111.05)
 		(width 0.25)
 		(layer "B.Cu")
 		(net "EYE_DATA_D+")
-		(uuid "2011fa8c-01b1-4c37-ace6-81bc5d9d01d9")
+		(uuid "69383ea3-f79c-4889-beec-0dfa75b2af8b")
 	)
 	(segment
 		(start 107.56 111)
@@ -30585,6 +30593,14 @@
 		(uuid "9e6f477b-7168-4757-95c5-60c01aebf001")
 	)
 	(segment
+		(start 107.56 111)
+		(end 106.85 111)
+		(width 0.25)
+		(layer "B.Cu")
+		(net "EYE_DATA_D+")
+		(uuid "a7b1ed65-080f-4c51-b534-29e6f9560b20")
+	)
+	(segment
 		(start 108.955242 110.95)
 		(end 112.063874 114.058632)
 		(width 0.25)
@@ -30593,16 +30609,8 @@
 		(uuid "c3adc212-86af-41fe-beb2-8ed51d74998f")
 	)
 	(segment
-		(start 107.51 111.05)
-		(end 105.916403 111.05)
-		(width 0.25)
-		(layer "B.Cu")
-		(net "EYE_DATA_D+")
-		(uuid "ce63ad04-34cc-466a-9b91-61867324097a")
-	)
-	(segment
 		(start 112.063874 114.058632)
-		(end 113.037138 114.058632)
+		(end 112.987138 114.058632)
 		(width 0.25)
 		(layer "B.Cu")
 		(net "EYE_DATA_D+")
@@ -30617,20 +30625,44 @@
 		(uuid "dc5bb6e7-9c09-4544-8213-b9eec28cde5f")
 	)
 	(segment
-		(start 106.387297 110.525)
-		(end 106.397744 110.535447)
+		(start 106.825029 110.525)
+		(end 107.075029 110.775)
 		(width 0.25)
 		(layer "F.Cu")
 		(net "EYE_DATA_D-")
-		(uuid "8198b108-92d3-42d6-8578-b1ed54a3a651")
+		(uuid "1d19226a-cd06-4d7e-b0df-daaf6b9867dd")
 	)
 	(segment
-		(start 106.397744 110.535447)
+		(start 106.825029 111.575)
 		(end 106.397744 111.575)
 		(width 0.25)
 		(layer "F.Cu")
 		(net "EYE_DATA_D-")
-		(uuid "ce4a3735-c759-4e9a-a468-da5f414d9db7")
+		(uuid "2ce50c19-dee7-4b88-b65b-f4a4f3c1d89a")
+	)
+	(segment
+		(start 107.075029 111.325)
+		(end 106.825029 111.575)
+		(width 0.25)
+		(layer "F.Cu")
+		(net "EYE_DATA_D-")
+		(uuid "2fbd0a00-fd51-4d9f-a73e-3c0348d304ac")
+	)
+	(segment
+		(start 107.075029 110.775)
+		(end 107.075029 111.325)
+		(width 0.25)
+		(layer "F.Cu")
+		(net "EYE_DATA_D-")
+		(uuid "3e1d9a51-54d6-4d7c-b4a0-eb025d61be4d")
+	)
+	(segment
+		(start 106.387297 110.525)
+		(end 106.825029 110.525)
+		(width 0.25)
+		(layer "F.Cu")
+		(net "EYE_DATA_D-")
+		(uuid "57c956e4-7f5f-44e3-ab38-404abd231f13")
 	)
 	(via
 		(at 106.397744 111.575)
@@ -30794,7 +30826,7 @@
 	)
 	(segment
 		(start 159.563331 98.453029)
-		(end 156.878998 98.453029)
+		(end 156.928998 98.453029)
 		(width 0.25)
 		(layer "B.Cu")
 		(net "EAR_DATA_D+")
@@ -30833,20 +30865,44 @@
 		(uuid "f588b327-9674-4581-b00e-d98d3bb95520")
 	)
 	(segment
-		(start 163.676746 99.005609)
-		(end 163.676746 99.984166)
-		(width 0.25)
-		(layer "F.Cu")
-		(net "EAR_DATA_D-")
-		(uuid "eac62543-ca92-4526-beca-bec7ba716ed8")
-	)
-	(segment
-		(start 163.676746 99.984166)
+		(start 163.21424 99.987649)
 		(end 163.673263 99.987649)
 		(width 0.25)
 		(layer "F.Cu")
 		(net "EAR_DATA_D-")
-		(uuid "f6863068-9304-4765-a756-e1f4bc3805cd")
+		(uuid "0b778698-f8a2-4e82-828d-79d3e3c4e9e2")
+	)
+	(segment
+		(start 162.96424 99.737649)
+		(end 163.21424 99.987649)
+		(width 0.25)
+		(layer "F.Cu")
+		(net "EAR_DATA_D-")
+		(uuid "6a8db2ac-e1a5-467d-aa80-5d5008085cec")
+	)
+	(segment
+		(start 163.21424 99.005609)
+		(end 162.96424 99.255609)
+		(width 0.25)
+		(layer "F.Cu")
+		(net "EAR_DATA_D-")
+		(uuid "9bd899ca-6b26-40e0-8786-ff7844063097")
+	)
+	(segment
+		(start 162.96424 99.255609)
+		(end 162.96424 99.737649)
+		(width 0.25)
+		(layer "F.Cu")
+		(net "EAR_DATA_D-")
+		(uuid "c39f49a1-a90c-4e4b-8db6-d21427a48656")
+	)
+	(segment
+		(start 163.676746 99.005609)
+		(end 163.21424 99.005609)
+		(width 0.25)
+		(layer "F.Cu")
+		(net "EAR_DATA_D-")
+		(uuid "e31bd3af-ba60-4848-816f-1b8b80976c6d")
 	)
 	(via
 		(at 163.673263 99.987649)
@@ -35461,14 +35517,13 @@
 			"e137a953-ebe2-4e67-9973-7b289dad06a1" "e346e5d5-3c8c-4038-8b15-ec6e3c3d4569"
 			"e38bf464-ded7-4ede-82ab-02b66bbd9b53" "e5d8069a-e414-491e-92ca-bc155d15eaf9"
 			"e89e28be-67bf-4835-98b6-a4bc26c81ae2" "ea55e56f-3252-47cc-9d27-260d3726c8a6"
-			"ea7de14f-3c04-44e8-a722-c86fd17e1293" "eac62543-ca92-4526-beca-bec7ba716ed8"
-			"ebb83ba9-d2e9-480f-ab08-f25418f5a3a2" "ebf47a45-bece-4e73-9edf-1d25db1605d3"
-			"ed8b0c06-83ea-43a7-af4c-df424e804273" "eda5d407-1746-4905-874e-7d035e7a35c5"
-			"ee640cc6-0ac8-464d-8940-17493b44f9f2" "f11300c4-4ac6-4a85-af50-8f2913c2fc59"
-			"f123b553-ce56-444c-befa-6a80e3c328c8" "f2557a79-63a2-4342-a568-e0df615ffb96"
-			"f2a90eea-c1e1-4ee7-902b-34816e1a1a82" "f36970a0-b87f-4d21-8f25-97f306284f7c"
-			"f588b327-9674-4581-b00e-d98d3bb95520" "f6402552-bc72-434b-b5f6-d5525a6d02fa"
-			"f6863068-9304-4765-a756-e1f4bc3805cd" "f7481f9d-8b77-4e73-9780-10aa7994c23c"
+			"ea7de14f-3c04-44e8-a722-c86fd17e1293" "ebb83ba9-d2e9-480f-ab08-f25418f5a3a2"
+			"ebf47a45-bece-4e73-9edf-1d25db1605d3" "ed8b0c06-83ea-43a7-af4c-df424e804273"
+			"eda5d407-1746-4905-874e-7d035e7a35c5" "ee640cc6-0ac8-464d-8940-17493b44f9f2"
+			"f11300c4-4ac6-4a85-af50-8f2913c2fc59" "f123b553-ce56-444c-befa-6a80e3c328c8"
+			"f2557a79-63a2-4342-a568-e0df615ffb96" "f2a90eea-c1e1-4ee7-902b-34816e1a1a82"
+			"f36970a0-b87f-4d21-8f25-97f306284f7c" "f588b327-9674-4581-b00e-d98d3bb95520"
+			"f6402552-bc72-434b-b5f6-d5525a6d02fa" "f7481f9d-8b77-4e73-9780-10aa7994c23c"
 			"f791e3f1-44cc-4fe7-9f37-4bd6de4d7832" "f8b2dea9-e2d3-41d0-9c56-6c644505448a"
 			"f9632f78-df8e-4e9d-84dc-61a1f6690142" "faa05586-f4dd-44cd-9221-753db4f983c4"
 			"fb3038e2-3731-4c80-b8ea-e94638d8bb79" "fb81d6af-4ac5-434d-a30d-920b9ae12279"
