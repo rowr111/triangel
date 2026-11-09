@@ -19,6 +19,10 @@ In Auto, Triangel changes to the sound patterns after about 30 seconds of music,
 
 Nothing is remembered when the power goes off. Triangel starts at middle brightness with hold off, and takes its sound setting from the switch, whatever the gear button last chose.
 
+## Power
+
+Only use a 12 V power supply. Any other voltage can damage the controller board and the triangle tiles.
+
 ## Updating the firmware
 
 > [!CAUTION]
