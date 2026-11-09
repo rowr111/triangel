@@ -35,13 +35,13 @@ BTN_TOP   = [(2.9, -1.25), (2.9, 1.25), (1.5, 3.06), (-1.5, 3.06),     # button 
 SW_BODY   = (12.0, 3.5)          # slide switch body
 IR_BODY   = (4.0, 5.0)           # IR sensor body
 IR_BODY_H = 2.7                  # its height
-IR_DOME   = (0.0, -0.81)         # its lens dome's centre, offset from the sensor's centre
+IR_DOME   = (0.0, -0.81)         # its lens dome's center, offset from the sensor's center
 BTN_TOP_Z, SW_TOP_Z, IR_TOP_Z = 5.0, 5.5, 4.2   # height of each part above the board
 
 # Back connectors with cables through the walls.
 TILE_USB_X = [17.0, 53.0]  # USBC1 (tiles 1-12) and USBC2 (tiles 13-25), top edge
-USB_AXIS   = 1.63          # centre of their openings, below the board's back
-JACK_X     = 48.0          # 12V jack U3, bottom edge: centre of its body
+USB_AXIS   = 1.63          # center of their openings, below the board's back
+JACK_X     = 48.0          # 12V jack U3, bottom edge: center of its body
 JACK_W     = 9.0           # its body width
 JACK_H     = 11.0          # how far it hangs below the board's back
 
@@ -85,7 +85,7 @@ SCREW_CLR  = 3.4    # screw hole through the plate
 SCREW_HEAD = 6.5    # countersink diameter
 CSK_DEPTH  = 1.8    # countersink depth
 
-KEYHOLES   = [(13.0, 24.0), (57.0, 24.0)]   # keyhole centres
+KEYHOLES   = [(13.0, 24.0), (57.0, 24.0)]   # keyhole centers
 KEY_BIG_D  = 8.5    # round end, fits over the screw head
 KEY_SLOT_D = 4.5    # slot width, fits the screw shank
 KEY_RISE   = 8.0    # slot length, toward the top
@@ -95,15 +95,17 @@ LOCK_REC_D = 12.0   # head recess on the inside of the floor, diameter
 LOCK_REC_H = 0.8    # and depth
 
 ENGRAVE_D   = 0.5            # engraving depth
-TOP_LABELS  = [('1-12', 17.0), ('13-25', 53.0)]   # text and centre X on the tray's top face
-TOP_LABEL_H = 3.5            # their letter height
-TOP_LABEL_LINE = 0.6         # and line width
+TOP_LABELS  = [('1-12', 17.0), ('13-25', 53.0)]   # text and center X on the tray's top face
+BOTTOM_LABEL = (['12 V', 'ONLY'], 34.0)   # lines of text and center X on the tray's bottom face
+BOTTOM_LABEL_PITCH = 5.0     # distance between its lines' centers
+TRAY_LABEL_H = 3.5           # letter height of the labels on the tray
+TRAY_LABEL_LINE = 0.6        # and line width
 FRONT_LABEL_H = 1.8          # letter height on the front
 FRONT_LABEL_LINE = 0.5       # and line width; 0.5 is the finest that engraves cleanly
-HOLD_AT     = (35.0, 16.5)   # centre of "HOLD", above the centre button
-AUTO_AT     = (12.35, 9.9)   # centre of "AUTO", above the switch
+HOLD_AT     = (35.0, 16.5)   # center of "HOLD", above the center button
+AUTO_AT     = (12.35, 9.9)   # center of "AUTO", above the switch
 ARROWS      = [((35.0, 3.0), 'up'), ((35.0, 43.0), 'down'),
-               ((15.2, 23.0), 'left'), ((54.8, 23.0), 'right')]   # triangle centres
+               ((15.2, 23.0), 'left'), ((54.8, 23.0), 'right')]   # triangle centers
 ARROW_W, ARROW_H = 3.2, 2.8  # triangle base and height
 NOTE_AT     = (2.3, 15.0)    # music note, left of the switch (sound on)
 NOTE_OFF_AT = (22.8, 15.0)   # note in a slashed ring, right of the switch (sound off)
@@ -168,7 +170,7 @@ def offset_poly(pts, d):
 
 
 def note_shapes(scale):
-    """Music note around (0, 0), Y up: ('circle', centre, radius) and ('poly', points)."""
+    """Music note around (0, 0), Y up: ('circle', center, radius) and ('poly', points)."""
     s = scale * NOTE_H / 3.6
     head = (-0.45 * s, -1.05 * s)
     r = 0.75 * s
@@ -205,7 +207,7 @@ def arc(cx, cy, rx, ry, a0, a1, step=10.0):
              cy + ry * math.sin(math.radians(a0 + (a1 - a0) * k / (n - 1)))) for k in range(n)]
 
 
-# Lettering: centre-line strokes of each character, 1 tall, Y up: (width, [stroke, ...]).
+# Lettering: centerline strokes of each character, 1 tall, Y up: (width, [stroke, ...]).
 GLYPHS = {
     '1': (0.0, [[(0.0, 0.0), (0.0, 1.0)]]),
     '-': (0.36, [[(0.0, 0.5), (0.36, 0.5)]]),
@@ -220,6 +222,10 @@ GLYPHS = {
     'A': (0.64, [[(0.0, 0.0), (0.32, 1.0), (0.64, 0.0)], [(0.12, 0.36), (0.52, 0.36)]]),
     'U': (0.6, [[(0.0, 1.0), (0.0, 0.3)] + arc(0.3, 0.3, 0.3, 0.3, 180, 360) + [(0.6, 1.0)]]),
     'T': (0.64, [[(0.0, 1.0), (0.64, 1.0)], [(0.32, 1.0), (0.32, 0.0)]]),
+    'V': (0.64, [[(0.0, 1.0), (0.32, 0.0), (0.64, 1.0)]]),
+    'N': (0.6, [[(0.0, 0.0), (0.0, 1.0), (0.6, 0.0), (0.6, 1.0)]]),
+    'Y': (0.64, [[(0.0, 1.0), (0.32, 0.5), (0.64, 1.0)], [(0.32, 0.5), (0.32, 0.0)]]),
+    ' ': (0.1, []),
 }
 
 
@@ -273,7 +279,7 @@ def stroke_loops(pts, half):
 
 
 def text_strokes(text, height, line, gap=0.22):
-    """Outline loops of each stroke of `text`, letters `height` tall, centred on (0, 0), Y up.
+    """Outline loops of each stroke of `text`, letters `height` tall, centered on (0, 0), Y up.
     Returns (strokes, width)."""
     s = height - line
     x, placed = 0.0, []
@@ -327,7 +333,7 @@ def run(context):
             return sk
 
         def rounded_rect_sketch(z, cx, cy, w, h, r):
-            """Rounded rectangle centred on (cx, cy), model coordinates."""
+            """Rounded rectangle centered on (cx, cy), model coordinates."""
             sk = root.sketches.add(plane_at(z))
             lines, arcs = sk.sketchCurves.sketchLines, sk.sketchCurves.sketchArcs
             hw, hh = w / 2.0, h / 2.0
@@ -429,7 +435,7 @@ def run(context):
                     skipped.append(what)
 
         def front_text(text, bx, by, body):
-            """Engrave `text` on the plate's face, centred on board point (bx, by)."""
+            """Engrave `text` on the plate's face, centered on board point (bx, by)."""
             strokes, _ = text_strokes(text, FRONT_LABEL_H, FRONT_LABEL_LINE)
             my = fy(by)
             engrave_strokes(strokes, plane_at(Z_PLATE_OUT), lambda x, y: P(bx + x, my + y), body, text)
@@ -445,9 +451,10 @@ def run(context):
                     sk = poly_sketch(Z_PLATE_OUT, [(bx + x, my + y) for x, y in geo[0]])
                 engrave(sk.profiles.item(0), ENGRAVE_D, body, what)
 
-        def top_text(text, x, z_mid, face_y, body):
-            """Engrave `text` on the tray's top face (model Y `face_y`), centred at X `x` and
-            height `z_mid`, reading from in front with the letters' tops toward the back."""
+        def wall_text(text, x, z_mid, face_y, up, body):
+            """Engrave `text` on the tray's top or bottom face (model Y `face_y`), centered at X
+            `x` and height `z_mid`, reading from in front. `up` is the Z direction of the
+            letters' tops: -1 (toward the back) on the top face, 1 on the bottom face."""
             try:
                 target = (face_y + OY) * MM
                 pl = None
@@ -462,11 +469,11 @@ def run(context):
                         break
                     pl.deleteMe()
                 probe = root.sketches.add(pl)
-                strokes, _ = text_strokes(text, TOP_LABEL_H, TOP_LABEL_LINE)
+                strokes, _ = text_strokes(text, TRAY_LABEL_H, TRAY_LABEL_LINE)
 
                 def to_sketch(gx, gy):
                     p = probe.modelToSketchSpace(adsk.core.Point3D.create(
-                        (x + gx + OX) * MM, target, (z_mid - gy) * MM))
+                        (x + gx + OX) * MM, target, (z_mid + up * gy) * MM))
                     return adsk.core.Point3D.create(p.x, p.y, 0)
 
                 engrave_strokes(strokes, pl, to_sketch, body, text, symmetric=True)
@@ -731,7 +738,14 @@ def run(context):
         # Labels on the top face, below each tile slot.
         z_mid = ((Z_TILE_SLOT - NOTCH_R) + (Z_FLOOR_OUT + EDGE_R_TRAY)) / 2.0
         for text, x in TOP_LABELS:
-            top_text(text, x, z_mid, top_wall[1], tray)
+            wall_text(text, x, z_mid, top_wall[1], -1.0, tray)
+
+        # Label on the bottom face, beside the jack's slot.
+        z_label = ((Z_FLOOR_OUT + EDGE_R_TRAY) + Z_PCB) / 2.0
+        label_lines, x = BOTTOM_LABEL
+        for i, text in enumerate(label_lines):
+            wall_text(text, x, z_label + ((len(label_lines) - 1) / 2.0 - i) * BOTTOM_LABEL_PITCH,
+                      bottom_wall[0], 1.0, tray)
 
         # =====================================================================
         # FRONT PLATE
