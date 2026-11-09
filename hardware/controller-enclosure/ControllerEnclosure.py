@@ -50,7 +50,7 @@ JACK_PADS    = (42.5, 33.8, 49.8, 41.6)    # the jack's three pads
 JACK_PIN_OUT = 2.4                         # how far its pins stand out of them
 
 # ---- Settings (mm) --------------------------------------------------------------------
-FIT        = 0.5    # clearance round the board inside the tray
+FIT        = 0.5    # clearance around the board inside the tray
 WALL       = 2.0    # tray wall and floor thickness
 FRONT_T    = 4.2    # front plate thickness; sets how far the parts' tops stand above it
 
@@ -58,24 +58,24 @@ SKIN       = 1.5    # plate thickness over the hollow underside; at least SKIN_M
 CAVITY_INSET = 0.5  # hollow's edge, in from the board's edge
 CORNER_BLOCK = 9.5  # solid square under each screw hole, from the board's corner
 CORNER_CHAMFER = 2.0  # cut off the inner corner of each solid square
-MIC_BOSS_D = 4.0    # solid column round the mic hole, sealing it against the board
+MIC_BOSS_D = 4.0    # solid column around the mic hole, sealing it against the board
 
-BODY_CLR   = 0.4    # clearance round each front part's body in its hole
+BODY_CLR   = 0.4    # clearance around each front part's body in its hole
 TOP_CLR    = 0.3    # clearance over the IR sensor's body
 HOLE_R     = 0.6    # corner radius of the holes
 RIM_SLOPE  = 0.5    # 45-degree rim where a hole meets the face
 IR_WINDOW_D = 3.6   # IR lens window where it meets the pocket; it widens at 45 degrees to the face
 MIC_HOLE_D = 1.5    # mic hole, at least the board's 0.5
 
-PIN_CLR    = 0.4    # pocket clearance round the jack's pins
+PIN_CLR    = 0.4    # pocket clearance around the jack's pins
 SKIN_MIN   = 1.2    # thinnest plastic left over any pocket
 POCKET_R   = 1.0    # corner radius of the jack's pin pocket
 
 GRIP_W      = 12.35  # largest USB-C plug grip, width
 GRIP_T      = 6.5    # and thickness
 GRIP_CLR    = 0.5    # room under the grip in the tile slots
-JACK_CLR    = 0.3    # clearance round the jack's body in its slot
-TAB_CLR     = 0.15   # clearance round the plate's tab above the jack
+JACK_CLR    = 0.3    # clearance around the jack's body in its slot
+TAB_CLR     = 0.15   # clearance around the plate's tab above the jack
 
 BOSS_D     = 9.6    # boss size; 9.6 max, parts on the board's back sit close to the bosses
 INSERT_D   = 3.6    # insert pocket diameter (M3x4x3)
@@ -775,7 +775,7 @@ def run(context):
             opening(bx, by, BTN_TOP, RIM_SLOPE)
         opening(SWITCH[0], SWITCH[1], SW_BODY, RIM_SLOPE)
 
-        # Hollow underside, leaving solid corners under the screws and a column round the mic.
+        # Hollow underside, leaving solid corners under the screws and a column around the mic.
         ci, cb, ch, W, H = CAVITY_INSET, CORNER_BLOCK, CORNER_CHAMFER, BOARD_W, BOARD_H
         hollow = poly_sketch(Z_PLATE_IN, [(x, fy(y)) for x, y in [
             (cb, ci), (W - cb, ci), (W - cb, cb - ch), (W - cb + ch, cb), (W - ci, cb),
