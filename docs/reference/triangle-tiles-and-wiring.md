@@ -40,8 +40,10 @@ The data runs through the triangle tiles in number order, so each cable only has
 
 | Chain | Controller board port | Eye pin | Triangle tiles | LEDs |
 |---|---|---|---|---|
-| 1 | OUT TO 1-12 | PB4 | 1 to 12 | 288 |
-| 2 | OUT TO 13-25 | PB5 | 13 to 25 | 312 |
+| 1 | OUT TO 1-12 | PC10 | 1 to 12 | 288 |
+| 2 | OUT TO 13-25 | PC9 | 13 to 25 | 312 |
+
+These are the v3 controller's pins. The v1 controller uses different ones, so check the [`boards-v1` tag](https://github.com/rowr111/triangel/tree/boards-v1); for v2, see [Pins](pins.md#the-eye).
 
 ## LED order in the firmware
 

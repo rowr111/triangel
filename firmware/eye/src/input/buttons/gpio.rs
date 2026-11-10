@@ -33,8 +33,7 @@ impl Source {
 }
 
 fn setup_pins(iox: &IoxHal) {
-    // D-pad buttons: active-low with external pull-ups on the button board; the internal
-    // pull-up adds robustness.
+    // D-pad buttons: active-low with external pull-ups; the internal pull-up adds robustness.
     let btn_pins = [
         (pins::BTN_UP_PORT, pins::BTN_UP_PIN),
         (pins::BTN_DOWN_PORT, pins::BTN_DOWN_PIN),

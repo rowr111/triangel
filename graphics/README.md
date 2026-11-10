@@ -23,3 +23,7 @@ same image - use the JPG if the machine will not take PNG.
 Windows PowerShell only - they draw with `System.Drawing` - and they write the PNG and JPG
 next to themselves. `make_input_overlay.ps1` parses
 `../hardware/input-enclosure/InputEnclosure.py`, so the overlay tracks the enclosure.
+That enclosure belongs to the old separate input board and is no longer in this branch; it is
+kept at commit
+[`3e4a276`](https://github.com/rowr111/triangel/tree/3e4a276bbf3b59f5f1fc0d85f2707e79c243e074/hardware/input-enclosure),
+so run `make_input_overlay.ps1` from a checkout of that commit.
