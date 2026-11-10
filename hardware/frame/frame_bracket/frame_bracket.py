@@ -7,8 +7,11 @@
 # slot in a frame piece. An M3x8 button- or pan-head screw goes in from the back, through
 # the tab, into the insert in the slot's ceiling.
 #
-# The back is pocketed to save material: solid rim, solid ring around each insert, solid
-# block behind the tab, and a thin floor under the tile face, which stays flat.
+# The back is pocketed to save material: solid rim, solid ring around each insert, and a
+# floor under the tile face, which stays flat.
+#
+# Shaped to injection mold as well as print: every side wall tapers by DRAFT_DEG, wider
+# toward the back, where the mold splits.
 #
 # Bracket settings must match TriangelBrackets.py; tab settings must match frame.py.
 #
@@ -42,9 +45,10 @@ SCREW_Y    = 9.0       # screw hole, out from the flat edge: 1mm + the frame's i
 TAB_ROOT_R = 1.0       # fillet in the inside corners where the tab meets the plate
 
 RIM        = 2.5       # solid edge left around the back pocket
-FLOOR_T    = 2.0       # plate left under the tile face, over the pocket
+FLOOR_T    = 2.5       # plate left under the tile face, over the pocket
 BOSS_WALL  = 3.0       # solid around each insert hole (JLC's minimum insert wall)
-TAB_BLOCK  = 6.0       # solid behind the tab, in from the flat edge
+POCKET_R   = 1.0       # round in the pocket's inside corners
+DRAFT_DEG  = 1.0       # side-wall taper, wider toward the back
 
 # Placement, so the bracket sits in a straight piece's slot when both scripts run in one design
 PITCH      = 103.46    # edge bracket spacing; the bracket is PITCH / 2 along the piece
@@ -103,17 +107,40 @@ def run(context):
             for i in range(len(pp)):
                 lines.addByTwoPoints(pp[i], pp[(i + 1) % len(pp)])
 
+        def tapered(sketch, height, shrink):
+            """New bodies extruded `height` up, sides tilted DRAFT_DEG inward (shrink) or outward."""
+            for sign in (-1.0, 1.0):
+                inp = exts.createInput(profiles(sketch), FO.NewBodyFeatureOperation)
+                inp.setOneSideExtent(adsk.fusion.DistanceExtentDefinition.create(val(height)),
+                                     adsk.fusion.ExtentDirections.PositiveExtentDirection,
+                                     adsk.core.ValueInput.createByReal(math.radians(sign * DRAFT_DEG)))
+                f = exts.add(inp)
+                start = sum(face.area for face in f.startFaces)
+                end = sum(face.area for face in f.endFaces)
+                if DRAFT_DEG == 0 or (end < start) == shrink:
+                    return [f.bodies.item(i) for i in range(f.bodies.count)]   # copy first: each cut removes its body from `f.bodies`
+                f.deleteMe()   # undo a taper that went the wrong way
+            raise RuntimeError('taper came out the wrong way with both signs')
+
+        def combine(target, tool, operation):
+            tools = adsk.core.ObjectCollection.create()
+            tools.add(tool)
+            cin = root.features.combineFeatures.createInput(target, tools)
+            cin.operation = operation
+            root.features.combineFeatures.add(cin)
+
         # --- plate: half disc, flat edge on y = 0 ---
         sk = sketches.add(XY)
         sk.sketchCurves.sketchArcs.addByThreePoints(PT(PLATE_R, 0), PT(0, PLATE_R), PT(-PLATE_R, 0))
         sk.sketchCurves.sketchLines.addByTwoPoints(PT(-PLATE_R, 0), PT(PLATE_R, 0))
-        bracket = extrude(sk, PLATE_T, FO.NewBodyFeatureOperation).bodies.item(0)
+        bracket = tapered(sk, PLATE_T, True)[0]
         bracket.name = 'Bracket_3way_tab'
 
         # --- tab: out the flat edge (-Y), flush with the back; starts 1mm inside the plate to join ---
         skt = sketches.add(XY)
         poly(skt, [(-TAB_W / 2.0, 1.0), (TAB_W / 2.0, 1.0), (TAB_W / 2.0, -TAB_REACH), (-TAB_W / 2.0, -TAB_REACH)])
-        extrude(skt, TAB_T, FO.JoinFeatureOperation, bracket)
+        for b in tapered(skt, TAB_T, True):
+            combine(bracket, b, FO.JoinFeatureOperation)
 
         pin = root.constructionPlanes.createInput()
         pin.setByOffset(XY, val(PLATE_T))
@@ -132,64 +159,73 @@ def run(context):
         inp.participantBodies = [bracket]
         exts.add(inp)
 
-        # --- guide ridges: two constant-width rails, cut off flush with the flat edge (y = 0) ---
+        # --- guide ridges: two constant-width rails, cut off flush with the flat edge ---
         hw = RIDGE_W / 2.0
-        skr = sketches.add(top_plane)
+        edge_y = PLATE_T * math.tan(math.radians(DRAFT_DEG))   # the tapered flat edge, at the tile face
         for a in RIDGE_ANGLES:
             r = math.radians(a)
             u = (math.cos(r), math.sin(r))
             n = (-math.sin(r), math.cos(r))
+            skr = sketches.add(top_plane)
             poly(skr, [(RIDGE_R1 * u[0] + hw * n[0], RIDGE_R1 * u[1] + hw * n[1]),
                        (RIDGE_R1 * u[0] - hw * n[0], RIDGE_R1 * u[1] - hw * n[1]),
-                       (-hw * n[0] + hw * n[1] / u[1] * u[0], 0.0),
-                       (hw * n[0] - hw * n[1] / u[1] * u[0], 0.0)])
-        extrude(skr, RIDGE_H, FO.JoinFeatureOperation, bracket)
+                       (-hw * n[0] + (edge_y + hw * n[1]) / u[1] * u[0], edge_y),
+                       (hw * n[0] + (edge_y - hw * n[1]) / u[1] * u[0], edge_y)])
+            for b in tapered(skr, RIDGE_H, True):
+                combine(bracket, b, FO.JoinFeatureOperation)
 
         # --- back pocket: built as a cutting body (the plate shrunk by RIM, minus a ring
-        #     around each insert and a block behind the tab), then cut from the back ---
+        #     around each insert), then cut from the back ---
         pin = root.constructionPlanes.createInput()
         pin.setByOffset(XY, val(-1.0))
         below = root.constructionPlanes.add(pin)
         pocket_h = PLATE_T - FLOOR_T + 1.0       # from 1mm below the back up to the floor
-
-        def combine(target, tool, operation):
-            tools = adsk.core.ObjectCollection.create()
-            tools.add(tool)
-            cin = root.features.combineFeatures.createInput(target, tools)
-            cin.operation = operation
-            root.features.combineFeatures.add(cin)
 
         ri = PLATE_R - RIM
         xr = math.sqrt(ri * ri - RIM * RIM)
         skk = sketches.add(below)
         skk.sketchCurves.sketchArcs.addByThreePoints(PT(xr, RIM), PT(0, ri), PT(-xr, RIM))
         skk.sketchCurves.sketchLines.addByTwoPoints(PT(-xr, RIM), PT(xr, RIM))
-        pocket = extrude(skk, pocket_h, FO.NewBodyFeatureOperation).bodies.item(0)
+        pocket = tapered(skk, pocket_h, True)[0]          # narrows toward the floor
 
         skb = sketches.add(below)
         hole_circles(skb, INSERT_HOLE_D + 2.0 * BOSS_WALL)
-        bosses = exts.createInput(profiles(skb), FO.NewBodyFeatureOperation)
-        bosses.setDistanceExtent(False, val(pocket_h + 1.0))
-        made = exts.add(bosses).bodies
-        for b in [made.item(i) for i in range(made.count)]:   # copy first: each cut removes its body from `made`
+        for b in tapered(skb, pocket_h + 1.0, False):     # rings widen toward the floor
             combine(pocket, b, FO.CutFeatureOperation)
-
-        skn = sketches.add(below)
-        bw = TAB_W / 2.0 + RIM
-        poly(skn, [(-bw, -1.0), (bw, -1.0), (bw, TAB_BLOCK), (-bw, TAB_BLOCK)])
-        combine(pocket, extrude(skn, pocket_h + 1.0, FO.NewBodyFeatureOperation).bodies.item(0),
-                FO.CutFeatureOperation)
 
         solid_vol = bracket.physicalProperties.volume
         combine(bracket, pocket, FO.CutFeatureOperation)
         pocketed_vol = bracket.physicalProperties.volume
 
+        # --- round the pocket's inside corners (the edges between the back face and the floor) ---
+        floor_z = (PLATE_T - FLOOR_T) * MM
+        tol = 0.001                                # 0.01mm, in Fusion's cm
+
+        corner_fillet = None
+        for rr in (POCKET_R, POCKET_R * 0.75, POCKET_R * 0.5):
+            corners = adsk.core.ObjectCollection.create()
+            for i in range(bracket.edges.count):
+                e = bracket.edges.item(i)
+                bb = e.boundingBox
+                if bb.minPoint.z > -tol and tol < bb.maxPoint.z < floor_z + tol:
+                    corners.add(e)
+            if corners.count == 0:
+                break
+            fin = root.features.filletFeatures.createInput()
+            fin.addConstantRadiusEdgeSet(corners, val(rr), True)
+            try:
+                corner_fillet = root.features.filletFeatures.add(fin)
+                break
+            except:
+                continue
+
         # --- tab root: fillet the inside corners where the tab meets the plate's flat edge ---
+        root_y = TAB_T * math.tan(math.radians(DRAFT_DEG)) * MM   # how far the tapered flat edge leans in over the tab
         root_edges = adsk.core.ObjectCollection.create()
         for i in range(bracket.edges.count):
             e = bracket.edges.item(i)
             bb = e.boundingBox
-            if (abs(bb.minPoint.y) < 0.001 and abs(bb.maxPoint.y) < 0.001
+            if (bb.minPoint.y > -0.001 and bb.maxPoint.y < root_y + 0.001
                     and bb.maxPoint.z <= (TAB_T + 0.01) * MM
                     and abs(bb.minPoint.x) <= (TAB_W / 2.0 + 0.01) * MM
                     and abs(bb.maxPoint.x) <= (TAB_W / 2.0 + 0.01) * MM):
@@ -204,11 +240,14 @@ def run(context):
         except:
             pass
 
-        # --- soften: round the bigger edges, leaving the tab-root fillet alone. All at once
-        #     first; failing that, one edge at a time so one bad edge can't sink the rest ---
+        # --- soften: round the bigger edges, leaving the tab-root fillet and the pocket
+        #     corners alone. All at once first; failing that, one edge at a time so one bad
+        #     edge can't sink the rest ---
+        corner_faces = set(f.tempId for f in corner_fillet.faces) if corner_fillet else set()
         soft = [bracket.edges.item(i) for i in range(bracket.edges.count)
                 if bracket.edges.item(i).length >= EDGE_MIN_LEN * MM
-                and not any(f.tempId in root_faces for f in bracket.edges.item(i).faces)]
+                and not any(f.tempId in root_faces or f.tempId in corner_faces
+                            for f in bracket.edges.item(i).faces)]
         skipped = 0
         coll = adsk.core.ObjectCollection.create()
         for e in soft:

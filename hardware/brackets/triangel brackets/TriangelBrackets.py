@@ -8,9 +8,13 @@
 # Fastening: M3 screw enters from the FRONT (through the tile), threads into an
 # M3 heat-set insert pressed into the bracket from the tile side. Each hole is a
 # Ø3.6mm x 5mm hole (open on the tile-contact face) for the JLC M3x4x3 insert.
-# The plate is 5mm (= the insert depth), so the hole runs straight through with a
-# flat back and the screw shaft passes out the back (screw length is uncritical).
+# The plate is 5mm (= the insert depth), so the hole runs straight through and the
+# screw shaft passes out the back (screw length is uncritical).
 # (Thicker plate -> blind pocket + Ø3.4mm back clearance; thinner -> a boss is added.)
+#
+# Shaped to injection mold as well as print: the back is hollowed (solid rim, solid
+# ring around each insert, floor under the tile face) and every side wall tapers by
+# DRAFT_DEG, wider toward the back, where the mold splits.
 #
 # Run from Utilities > Add-Ins > Scripts and Add-Ins.
 # All dimensions in mm; Fusion's API is cm internally, so we scale by MM=0.1.
@@ -20,13 +24,19 @@ import adsk.core, adsk.fusion, traceback, math
 # ---- Editable parameters (mm) -------------------------------------------------
 R_HOLE       = 28.60   # bolt-circle radius: center to each hole
 PLATE_R      = 34.0    # plate radius (3.6mm insert wall, over JLC 3mm min); binding part is the USB-C J1/J2 at ~35mm body edge -> +1.0mm. Needs the moved-cap board layout.
-PLATE_T      = 5.0     # plate thickness = insert depth: the Ø3.6 pocket now goes fully through (no floor), flat back; thinner = less stiff (~thickness^3)
+PLATE_T      = 5.0     # plate thickness = insert depth: the Ø3.6 pocket now goes fully through (no floor); thinner = less stiff (~thickness^3)
 
 INSERT_HOLE_D = 3.6    # JLC3DP M3x4x3 insert: Ø3.6 hole (from their threaded-insert service table)
 INSERT_DEPTH  = 5.0    # JLC requires a 5.0mm-deep hole for that insert
 SCREW_CLEAR_D = 3.4    # clearance hole below the insert pocket (M3 screw shaft can pass / protrude)
 BOSS_D        = 8.0    # insert boss outer diameter (only used if the plate is set thinner than the insert)
 BOSS_EXT      = 4.0    # how far a boss would extend down the back (only if plate < insert depth)
+
+RIM        = 2.5       # solid edge left around the back pocket
+FLOOR_T    = 2.5       # plate left under the tile face, over the pocket
+BOSS_WALL  = 3.0       # solid around each insert hole; JLC's insert service needs at least 3.0
+POCKET_R   = 1.0       # round in the pocket's inside corners
+DRAFT_DEG  = 1.0       # side-wall taper, wider toward the back
 
 RIDGE_H   = 2.0        # ridge height above the plate (spans the 1.6mm PCB edge + lead-in)
 RIDGE_W   = 1.4        # ridge width (sits in the 2mm gap between tiles)
@@ -94,6 +104,29 @@ def make_bracket(root, name, hole_angles, ridge_angles, half, x_offset):
     def val(mm):
         return adsk.core.ValueInput.createByReal(mm * MM)
 
+    def tapered(sketch, height, shrink):
+        """New bodies extruded `height` up, sides tilted DRAFT_DEG inward (shrink) or outward."""
+        for sign in (-1.0, 1.0):
+            inp = exts.createInput(profiles(sketch), adsk.fusion.FeatureOperations.NewBodyFeatureOperation)
+            inp.setOneSideExtent(adsk.fusion.DistanceExtentDefinition.create(val(height)),
+                                 adsk.fusion.ExtentDirections.PositiveExtentDirection,
+                                 adsk.core.ValueInput.createByReal(math.radians(sign * DRAFT_DEG)))
+            f = exts.add(inp)
+            start = sum(face.area for face in f.startFaces)
+            end = sum(face.area for face in f.endFaces)
+            if DRAFT_DEG == 0 or (end < start) == shrink:
+                return [f.bodies.item(i) for i in range(f.bodies.count)]   # copy first: each cut removes its body from `f.bodies`
+            f.deleteMe()   # undo a taper that went the wrong way
+        raise RuntimeError('taper came out the wrong way with both signs')
+
+    def combine(target, tools, operation):
+        coll = adsk.core.ObjectCollection.create()
+        for b in tools:
+            coll.add(b)
+        cin = root.features.combineFeatures.createInput(target, coll)
+        cin.operation = operation
+        root.features.combineFeatures.add(cin)
+
     # --- 1) plate (up from XY: z = 0 .. PLATE_T) ---
     sk = sketches.add(XY)
     if not half:
@@ -102,9 +135,7 @@ def make_bracket(root, name, hole_angles, ridge_angles, half, x_offset):
         sk.sketchCurves.sketchArcs.addByThreePoints(PT(PLATE_R, 0), PT(0, PLATE_R), PT(-PLATE_R, 0))
         sk.sketchCurves.sketchLines.addByTwoPoints(PT(-PLATE_R, 0), PT(PLATE_R, 0))
 
-    plate_feat = exts.addSimple(sk.profiles.item(0), val(PLATE_T),
-                                adsk.fusion.FeatureOperations.NewBodyFeatureOperation)
-    bracket = plate_feat.bodies.item(0)
+    bracket = tapered(sk, PLATE_T, True)[0]
     bracket.name = name  # this specific body is threaded through every later step
 
     # --- 2) insert bosses on the back -- only when the plate is too thin to hold
@@ -131,7 +162,7 @@ def make_bracket(root, name, hole_angles, ridge_angles, half, x_offset):
     cut_in.participantBodies = [bracket]
     exts.add(cut_in)
 
-    # --- 4) heat-set insert pockets: Ø4.0 x INSERT_DEPTH, open on the top face ---
+    # --- 4) heat-set insert pockets: INSERT_HOLE_D x INSERT_DEPTH, open on the top face ---
     skp = sketches.add(top_plane)
     hole_circles(skp, INSERT_HOLE_D)
     pk_in = exts.createInput(profiles(skp), adsk.fusion.FeatureOperations.CutFeatureOperation)
@@ -141,55 +172,102 @@ def make_bracket(root, name, hole_angles, ridge_angles, half, x_offset):
 
     # --- 5) guide ridges (up from top face, in the gap directions) ---
     hw = RIDGE_W / 2.0
-    skr = sketches.add(top_plane)
-    lines = skr.sketchCurves.sketchLines
+    edge_y = PLATE_T * math.tan(math.radians(DRAFT_DEG))   # the 3-way's tapered flat edge, at the tile face
+    rails = []
 
     def poly(points):
+        skr = sketches.add(top_plane)
+        lines = skr.sketchCurves.sketchLines
         pp = [PT(x, y) for (x, y) in points]
         for i in range(len(pp)):
             lines.addByTwoPoints(pp[i], pp[(i + 1) % len(pp)])
+        rails.append(skr)
 
     if half:
         # 3-way: two constant-width rails, each cut off FLUSH with the plate's flat
-        # edge (y = 0). Full width right to the end -- no taper; the sharp corners at
-        # the flush cut are left for a hand chamfer into the point.
+        # edge, full width right to the end.
         def rail_clipped(a):
             u = (math.cos(a), math.sin(a))
             n = (-math.sin(a), math.cos(a))
             farP = (RIDGE_R1 * u[0] + hw * n[0], RIDGE_R1 * u[1] + hw * n[1])
             farM = (RIDGE_R1 * u[0] - hw * n[0], RIDGE_R1 * u[1] - hw * n[1])
-            baseP = (hw * n[0] - hw * n[1] / u[1] * u[0], 0.0)    # + edge meets y = 0
-            baseM = (-hw * n[0] + hw * n[1] / u[1] * u[0], 0.0)   # - edge meets y = 0
+            baseP = (hw * n[0] + (edge_y - hw * n[1]) / u[1] * u[0], edge_y)    # + edge meets the flat edge
+            baseM = (-hw * n[0] + (edge_y + hw * n[1]) / u[1] * u[0], edge_y)   # - edge meets the flat edge
             return [farP, farM, baseM, baseP]
 
         poly(rail_clipped(math.radians(ridge_angles[0])))
         poly(rail_clipped(math.radians(ridge_angles[1])))
     else:
         # 6-way: independent rails running to the center -> symmetric star hub.
+        r0 = RIDGE_R0 if RIDGE_R0 > 0 else -hw   # rails that meet run half a width past the center
         for a in ridge_angles:
             r = math.radians(a)
             u = (math.cos(r), math.sin(r))
             t = (-math.sin(r), math.cos(r))
             poly([
-                (RIDGE_R0 * u[0] + hw * t[0], RIDGE_R0 * u[1] + hw * t[1]),
+                (r0 * u[0] + hw * t[0], r0 * u[1] + hw * t[1]),
                 (RIDGE_R1 * u[0] + hw * t[0], RIDGE_R1 * u[1] + hw * t[1]),
                 (RIDGE_R1 * u[0] - hw * t[0], RIDGE_R1 * u[1] - hw * t[1]),
-                (RIDGE_R0 * u[0] - hw * t[0], RIDGE_R0 * u[1] - hw * t[1]),
+                (r0 * u[0] - hw * t[0], r0 * u[1] - hw * t[1]),
             ])
 
-    ridge_in = exts.createInput(profiles(skr), adsk.fusion.FeatureOperations.JoinFeatureOperation)
-    ridge_in.setDistanceExtent(False, val(RIDGE_H))
-    ridge_in.participantBodies = [bracket]
-    exts.add(ridge_in)
+    for skr in rails:
+        combine(bracket, tapered(skr, RIDGE_H, True), adsk.fusion.FeatureOperations.JoinFeatureOperation)
 
-    # --- 6) soften: round the bigger edges (plate rim, ridge crests, hole mouths) ---
+    # --- 6) back pocket: the plate shrunk by RIM, minus a ring around each insert ---
+    corner_faces = set()
+    if PLATE_T > FLOOR_T:
+        pin = root.constructionPlanes.createInput()
+        pin.setByOffset(XY, val(-1.0))
+        below = root.constructionPlanes.add(pin)
+        pocket_h = PLATE_T - FLOOR_T + 1.0       # from 1mm below the back up to the floor
+
+        ri = PLATE_R - RIM
+        skk = sketches.add(below)
+        if not half:
+            skk.sketchCurves.sketchCircles.addByCenterRadius(PT(0, 0), ri * MM)
+        else:
+            xr = math.sqrt(ri * ri - RIM * RIM)
+            skk.sketchCurves.sketchArcs.addByThreePoints(PT(xr, RIM), PT(0, ri), PT(-xr, RIM))
+            skk.sketchCurves.sketchLines.addByTwoPoints(PT(-xr, RIM), PT(xr, RIM))
+        pocket = tapered(skk, pocket_h, True)[0]          # narrows toward the floor
+
+        skb = sketches.add(below)
+        hole_circles(skb, INSERT_HOLE_D + 2.0 * BOSS_WALL)
+        combine(pocket, tapered(skb, pocket_h + 1.0, False),     # rings widen toward the floor
+                adsk.fusion.FeatureOperations.CutFeatureOperation)
+        combine(bracket, [pocket], adsk.fusion.FeatureOperations.CutFeatureOperation)
+
+        # round the pocket's inside corners (the edges between the back face and the floor)
+        floor_z = (PLATE_T - FLOOR_T) * MM
+        tol = 0.001                                # 0.01mm, in Fusion's cm
+        for rr in (POCKET_R, POCKET_R * 0.75, POCKET_R * 0.5):
+            corners = adsk.core.ObjectCollection.create()
+            for i in range(bracket.edges.count):
+                e = bracket.edges.item(i)
+                bb = e.boundingBox
+                if bb.minPoint.z > -tol and tol < bb.maxPoint.z < floor_z + tol:
+                    corners.add(e)
+            if corners.count == 0:
+                break
+            fin = root.features.filletFeatures.createInput()
+            fin.addConstantRadiusEdgeSet(corners, val(rr), True)
+            try:
+                corner_fillet = root.features.filletFeatures.add(fin)
+                corner_faces = set(face.tempId for face in corner_fillet.faces)
+                break
+            except:
+                continue
+
+    # --- 7) soften: round the bigger edges (plate rim, ridge crests, hole mouths) ---
     # Blanket 0.5mm on every edge at least EDGE_MIN_LEN long, which skips the tiny
     # star-center slivers. Backs off the radius if a set won't compute.
     for rr in (EDGE_FILLET, 0.4, 0.3):
         soft = adsk.core.ObjectCollection.create()
         for i in range(bracket.edges.count):
             e = bracket.edges.item(i)
-            if e.length >= EDGE_MIN_LEN * MM:
+            if (e.length >= EDGE_MIN_LEN * MM
+                    and not any(face.tempId in corner_faces for face in e.faces)):   # pocket corners are already rounded
                 soft.add(e)
         if soft.count == 0:
             break
