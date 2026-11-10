@@ -40,7 +40,7 @@ Each triangle tile has a stylized eye design in the middle.. After I decided to 
   - [How to order the six-way and three-way brackets](docs/how-to/order-the-brackets.md)
   - [How to order the frame](docs/how-to/order-the-frame.md)
   - [How to order the wall brackets](docs/how-to/order-the-wall-brackets.md)
-  - [How to order the enclosures](docs/how-to/order-the-enclosures.md)
+  - [How to order the controller board enclosure](docs/how-to/order-the-controller-board-enclosure.md)
   - [Print the stickers and overlays](graphics/README.md)
 
 ### If you want to develop

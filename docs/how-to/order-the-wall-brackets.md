@@ -1,6 +1,6 @@
 # How to order the wall brackets
 
-Three wall brackets are used to attach Triangel to a wall or to hang it from something. They also hold the Triangel out from the wall, leaving room behind it for the controller board and the cables. They are the same with or without the frame.
+Three wall brackets are used to attach Triangel to a wall or to hang it from something. They also hold the Triangel out from the wall, leaving room behind it for the cables. They are the same with or without the frame.
 
 There are two kinds, depending on where the Triangel goes. You need 3 of one kind. All three corners use the same bracket.
 
