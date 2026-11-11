@@ -12,6 +12,9 @@
 # Assembly: an M3x4x3 heat-set insert in each of the four bosses, and four M3x10 countersunk
 # screws through the plate and the board.
 #
+# Shaped to injection mold as well as print: every side wall tapers by DRAFT_DEG, with the
+# outside sizes as set at the tray's rim and the plate's inner face, where the molds split.
+#
 # Units are mm. Board coordinates as in controller.kicad_pcb: origin at the board's top-left,
 # X right, Y down. Z = 0 is the board's back face, +Z toward the room.
 
@@ -53,12 +56,12 @@ JACK_PIN_OUT = 2.4                         # how far its pins stand out of them
 FIT        = 0.5    # clearance around the board inside the tray
 WALL       = 2.0    # tray wall and floor thickness
 FRONT_T    = 4.2    # front plate thickness; sets how far the parts' tops stand above it
+DRAFT_DEG  = 1.0    # taper on the side walls, in degrees; 0 for straight
 
 SKIN       = 1.5    # plate thickness over the hollow underside; at least SKIN_MIN
 CAVITY_INSET = 0.5  # hollow's edge, in from the board's edge
-CORNER_BLOCK = 9.5  # solid square under each screw hole, from the board's corner
-CORNER_CHAMFER = 2.0  # cut off the inner corner of each solid square
 MIC_BOSS_D = 4.0    # solid column around the mic hole, sealing it against the board
+HOLLOW_R   = 1.0    # round on the hollow's corners and where its walls meet the skin; about 1.7 max, the IR pocket is close
 
 BODY_CLR   = 0.4    # clearance around each front part's body in its hole
 TOP_CLR    = 0.3    # clearance over the IR sensor's body
@@ -80,6 +83,7 @@ TAB_CLR     = 0.15   # clearance around the plate's tab above the jack
 BOSS_D     = 9.6    # boss size; 9.6 max, parts on the board's back sit close to the bosses
 INSERT_D   = 3.6    # insert pocket diameter (M3x4x3)
 INSERT_L   = 5.0    # insert pocket depth
+BOSS_BORE_D = 3.4   # hole down each boss below the insert pocket, stopping at the floor; under INSERT_D
 MOUTH_R    = 0.5    # round at the pocket mouth
 SCREW_CLR  = 3.4    # screw hole through the plate
 SCREW_HEAD = 6.5    # countersink diameter
@@ -129,6 +133,7 @@ OUTER_W = BOARD_W + 2 * (FIT + WALL)
 OUTER_H = BOARD_H + 2 * (FIT + WALL)
 OUTER_R_XY = BOARD_R + FIT + WALL
 INNER_R_XY = BOARD_R + FIT
+LEAN = math.tan(math.radians(DRAFT_DEG))   # sideways shift of a tapered wall per mm of height
 
 BACK_CLEAR  = JACK_H + JACK_CLR     # gap behind the board, set by the jack
 Z_PCB_BACK  = 0.0
@@ -451,12 +456,17 @@ def run(context):
                     sk = poly_sketch(Z_PLATE_OUT, [(bx + x, my + y) for x, y in geo[0]])
                 engrave(sk.profiles.item(0), ENGRAVE_D, body, what)
 
+        def outer_y(face_y, z):
+            """Model Y at height z of the tray's top or bottom outer face, which is at model Y
+            `face_y` at the rim."""
+            return face_y - math.copysign((Z_PCB - z) * LEAN, face_y - BOARD_H / 2.0)
+
         def wall_text(text, x, z_mid, face_y, up, body):
-            """Engrave `text` on the tray's top or bottom face (model Y `face_y`), centered at X
-            `x` and height `z_mid`, reading from in front. `up` is the Z direction of the
-            letters' tops: -1 (toward the back) on the top face, 1 on the bottom face."""
+            """Engrave `text` on the tray's top or bottom face (model Y `face_y` at the rim),
+            centered at X `x` and height `z_mid`, reading from in front. `up` is the Z direction
+            of the letters' tops: -1 (toward the back) on the top face, 1 on the bottom face."""
             try:
-                target = (face_y + OY) * MM
+                target = (outer_y(face_y, z_mid) + OY) * MM
                 pl = None
                 for sign in (1.0, -1.0):
                     pin = root.constructionPlanes.createInput()
@@ -514,28 +524,33 @@ def run(context):
                 pass
             root.features.loftFeatures.add(li)
 
-        def round_vertical_edges(body, radius, corners):
-            """Round the vertical edges at the given XY corners."""
-            for r in [radius, radius * 0.75, radius * 0.5]:
-                edges = adsk.core.ObjectCollection.create()
-                for i in range(body.edges.count):
-                    e = body.edges.item(i)
-                    g = e.geometry
-                    if isinstance(g, adsk.core.Line3D):
-                        a, b = g.startPoint, g.endPoint
-                        if abs(a.x - b.x) < 1e-6 and abs(a.y - b.y) < 1e-6:
-                            if any(abs(a.x - (cx + OX) * MM) < 0.05 * MM
-                                   and abs(a.y - (cy + OY) * MM) < 0.05 * MM for cx, cy in corners):
-                                edges.add(e)
-                if not edges.count:
-                    return
-                fin = root.features.filletFeatures.createInput()
-                fin.addConstantRadiusEdgeSet(edges, adsk.core.ValueInput.createByReal(r * MM), True)
-                try:
-                    root.features.filletFeatures.add(fin)
-                    return
-                except:
-                    continue
+        def tapered(profile, height, shrink):
+            """New bodies extruded `height` along Z from the profile's sketch (negative = down),
+            sides tilted DRAFT_DEG inward (shrink) or outward."""
+            direction = (adsk.fusion.ExtentDirections.PositiveExtentDirection if height > 0
+                         else adsk.fusion.ExtentDirections.NegativeExtentDirection)
+            for sign in (-1.0, 1.0):
+                inp = exts.createInput(profile, adsk.fusion.FeatureOperations.NewBodyFeatureOperation)
+                inp.setOneSideExtent(adsk.fusion.DistanceExtentDefinition.create(
+                                         adsk.core.ValueInput.createByReal(abs(height) * MM)),
+                                     direction,
+                                     adsk.core.ValueInput.createByReal(math.radians(sign * DRAFT_DEG)))
+                f = exts.add(inp)
+                start = sum(face.area for face in f.startFaces)
+                end = sum(face.area for face in f.endFaces)
+                if DRAFT_DEG == 0 or (end < start) == shrink:
+                    return [f.bodies.item(i) for i in range(f.bodies.count)]   # copy first: each cut removes its body from `f.bodies`
+                f.deleteMe()   # undo a taper that went the wrong way
+            raise RuntimeError('taper came out the wrong way with both signs')
+
+        def combine(target, tools, operation):
+            """Join a list of bodies to `target`, or cut them from it."""
+            coll = adsk.core.ObjectCollection.create()
+            for b in tools:
+                coll.add(b)
+            cin = root.features.combineFeatures.createInput(target, coll)
+            cin.operation = operation
+            root.features.combineFeatures.add(cin)
 
         def in_plane(edge, z):
             bb = edge.boundingBox
@@ -593,15 +608,15 @@ def run(context):
             return 0.0
 
         def fillet_slot(body, x0, x1, face_y, radius):
-            """Round a slot's edges on the outer face at model Y `face_y`.
+            """Round a slot's edges on the outer face, which is at model Y `face_y` at the rim.
             Returns the radius used, 0.0 if none."""
             for r in [radius, radius * 0.6, radius * 0.3]:
                 edges = adsk.core.ObjectCollection.create()
                 for i in range(body.edges.count):
                     e = body.edges.item(i)
                     bb = e.boundingBox
-                    if (abs(bb.minPoint.y - (face_y + OY) * MM) < 0.02 * MM
-                            and abs(bb.maxPoint.y - (face_y + OY) * MM) < 0.02 * MM
+                    pts = (e.startVertex.geometry, e.endVertex.geometry, e.pointOnEdge)
+                    if (all(abs(p.y - (outer_y(face_y, p.z / MM) + OY) * MM) < 0.02 * MM for p in pts)
                             and bb.minPoint.x > (x0 - 0.05 + OX) * MM
                             and bb.maxPoint.x < (x1 + 0.05 + OX) * MM
                             and not in_plane(e, Z_PCB)):
@@ -641,42 +656,50 @@ def run(context):
                     continue
             return 0.0
 
+        def fillet_corners(body, z, points, radius):
+            """Round the upright edges whose bottom end is at height `z` on one of `points`
+            (model XY). Returns the radius used, 0.0 if none."""
+            for r in [radius, radius * 0.75, radius * 0.5]:
+                edges = adsk.core.ObjectCollection.create()
+                for i in range(body.edges.count):
+                    e = body.edges.item(i)
+                    a, b = e.startVertex.geometry, e.endVertex.geometry
+                    low, high = (a, b) if a.z < b.z else (b, a)
+                    if (abs(low.z - z * MM) < 0.02 * MM and high.z - low.z > 0.5 * MM
+                            and any(abs(low.x - (px + OX) * MM) < 0.05 * MM
+                                    and abs(low.y - (py + OY) * MM) < 0.05 * MM
+                                    for px, py in points)):
+                        edges.add(e)
+                if not edges.count:
+                    return 0.0
+                fin = root.features.filletFeatures.createInput()
+                fin.addConstantRadiusEdgeSet(edges, adsk.core.ValueInput.createByReal(r * MM), False)
+                try:
+                    root.features.filletFeatures.add(fin)
+                    return r
+                except:
+                    continue
+            return 0.0
+
         # =====================================================================
         # BACK TRAY
         # =====================================================================
-        tray = solid(rect_sketch(Z_FLOOR_OUT, -OFF, -OFF, BOARD_W + OFF, BOARD_H + OFF),
-                     Z_FLOOR_OUT, Z_FLOOR_IN, None)
+        tray = tapered(rounded_rect_sketch(Z_PCB, BOARD_W / 2.0, BOARD_H / 2.0,
+                                           OUTER_W, OUTER_H, OUTER_R_XY).profiles.item(0),
+                       Z_FLOOR_OUT - Z_PCB, True)[0]
         tray.name = 'ControllerEnclosure_BackTray'
 
-        def ring(z0, z1, out_inset, in_inset, body):
-            """Rectangular ring from z0 to z1, joined to `body`."""
-            o = OFF - out_inset
-            i = o - in_inset
-            sk = root.sketches.add(plane_at(z0))
-            L = sk.sketchCurves.sketchLines
-            L.addTwoPointRectangle(P(-o, -o), P(BOARD_W + o, BOARD_H + o))
-            L.addTwoPointRectangle(P(-i, -i), P(BOARD_W + i, BOARD_H + i))
-            full = (BOARD_W + 2 * o) * (BOARD_H + 2 * o)
-            for n in range(sk.profiles.count):
-                prof = sk.profiles.item(n)
-                if prof.areaProperties().area < full * 0.9 * MM * MM:
-                    inp = exts.createInput(prof, adsk.fusion.FeatureOperations.JoinFeatureOperation)
-                    inp.setDistanceExtent(False, adsk.core.ValueInput.createByReal((z1 - z0) * MM))
-                    inp.participantBodies = [body]
-                    exts.add(inp)
-                    return
+        # Wall, up to the board's front face. The inside narrows toward the floor.
+        top = Z_PCB + 1.0                          # cutters start above the rim
+        grow = (top - Z_PCB) * LEAN
+        inside = rounded_rect_sketch(top, BOARD_W / 2.0, BOARD_H / 2.0,
+                                     BOARD_W + 2 * (FIT + grow), BOARD_H + 2 * (FIT + grow),
+                                     INNER_R_XY + grow)
+        combine(tray, tapered(inside.profiles.item(0), Z_FLOOR_IN - top, True),
+                adsk.fusion.FeatureOperations.CutFeatureOperation)
 
-        # Wall, up to the board's front face.
-        ring(Z_FLOOR_IN, Z_PCB, 0.0, OFF - FIT, tray)
-
-        outer_corners = [(-OFF, -OFF), (BOARD_W + OFF, -OFF),
-                         (-OFF, BOARD_H + OFF), (BOARD_W + OFF, BOARD_H + OFF)]
-        inner_corners = [(-FIT, -FIT), (BOARD_W + FIT, -FIT),
-                         (-FIT, BOARD_H + FIT), (BOARD_W + FIT, BOARD_H + FIT)]
-        round_vertical_edges(tray, OUTER_R_XY, outer_corners)
-        round_vertical_edges(tray, INNER_R_XY, inner_corners)
-
-        # Corner bosses, floor to the board's back.
+        # Corner bosses, floor to the board's back: round around the insert, filled in to the
+        # two walls of the corner.
         for hx, hy in HOLES:
             mx, my = hx, fy(hy)
             left, low = hx < BOARD_W / 2.0, my < BOARD_H / 2.0
@@ -684,19 +707,38 @@ def run(context):
             y0 = -FIT if low else BOARD_H + FIT
             x1 = mx + (BOSS_D / 2.0 if left else -BOSS_D / 2.0)
             y1 = my + (BOSS_D / 2.0 if low else -BOSS_D / 2.0)
-            tray = solid(rect_sketch(Z_FLOOR_IN, x0, y0, x1, y1),
-                         Z_FLOOR_IN, Z_PCB_BACK, tray)
+            sk = root.sketches.add(plane_at(Z_PCB_BACK))
+            lines = sk.sketchCurves.sketchLines
+            lines.addByTwoPoints(P(x0, y0), P(x1, y0))
+            lines.addByTwoPoints(P(x1, y0), P(x1, my))
+            sk.sketchCurves.sketchArcs.addByThreePoints(
+                P(x1, my), P(mx + (x1 - mx) * math.sqrt(0.5), my + (y1 - my) * math.sqrt(0.5)),
+                P(mx, y1))
+            lines.addByTwoPoints(P(mx, y1), P(x0, y1))
+            lines.addByTwoPoints(P(x0, y1), P(x0, y0))
+            combine(tray, tapered(sk.profiles.item(0), Z_FLOOR_IN - Z_PCB_BACK, False),
+                    adsk.fusion.FeatureOperations.JoinFeatureOperation)
+
+        def tile_slot_hw(z):
+            """Half width of a tile slot at height z; TILE_SLOT_W at the board's back."""
+            return TILE_SLOT_W / 2.0 + (z - Z_PCB_BACK) * LEAN
+
+        def jack_slot_hw(z):
+            """Half width of the jack's slot at height z; JACK_SLOT_W at the floor."""
+            return JACK_SLOT_W / 2.0 + (z - Z_FLOOR_IN) * LEAN
 
         # Cable slots: two tile ports in the top wall, the jack in the bottom wall.
         top_wall = (fy(0.0) + FIT, fy(0.0) + OFF)                 # model Y, inner to outer
         bottom_wall = (fy(BOARD_H) - OFF, fy(BOARD_H) - FIT)
         for ux in TILE_USB_X:
-            cut(rect_sketch(Z_PCB, ux - TILE_SLOT_W / 2.0, top_wall[0] - 0.1,
-                            ux + TILE_SLOT_W / 2.0, top_wall[1] + 0.1),
-                Z_TILE_SLOT - Z_PCB, tray)
-        cut(rect_sketch(Z_PCB, JACK_X - JACK_SLOT_W / 2.0, bottom_wall[0] - 0.1,
-                        JACK_X + JACK_SLOT_W / 2.0, bottom_wall[1] + 0.1),
-            Z_FLOOR_IN - Z_PCB, tray)
+            hw = tile_slot_hw(top)
+            sk = rect_sketch(top, ux - hw, top_wall[0] - 1.0, ux + hw, top_wall[1] + 1.0)
+            combine(tray, tapered(sk.profiles.item(0), Z_TILE_SLOT - top, True),
+                    adsk.fusion.FeatureOperations.CutFeatureOperation)
+        hw = jack_slot_hw(top)
+        sk = rect_sketch(top, JACK_X - hw, bottom_wall[0] - 1.0, JACK_X + hw, bottom_wall[1] + 1.0)
+        combine(tray, tapered(sk.profiles.item(0), Z_FLOOR_IN - top, True),
+                adsk.fusion.FeatureOperations.CutFeatureOperation)
 
         # Rounding. The plate and board seats stay flat; the slots are rounded separately,
         # and the jack's slot not at all.
@@ -706,10 +748,11 @@ def run(context):
                     bottom_wall[0] - 1.0, bottom_wall[1] + 1.0)
         tray_r = fillet_edges(tray, EDGE_R_TRAY, keep_flat=(Z_PCB, Z_PCB_BACK, Z_FLOOR_IN),
                               skip=slot_boxes + [jack_box])
-        corner_r = [fillet_slot_corners(tray, ux - TILE_SLOT_W / 2.0, ux + TILE_SLOT_W / 2.0,
+        corner_r = [fillet_slot_corners(tray, ux - tile_slot_hw(Z_TILE_SLOT),
+                                        ux + tile_slot_hw(Z_TILE_SLOT),
                                         Z_TILE_SLOT, box, SLOT_CORNER_R)
                     for ux, box in zip(TILE_USB_X, slot_boxes)]
-        slot_r = [fillet_slot(tray, ux - TILE_SLOT_W / 2.0, ux + TILE_SLOT_W / 2.0,
+        slot_r = [fillet_slot(tray, ux - tile_slot_hw(Z_PCB), ux + tile_slot_hw(Z_PCB),
                               top_wall[1], NOTCH_R) for ux in TILE_USB_X]
         cav_r = fillet_region(tray, Z_FLOOR_IN, -OFF - 1.0, BOARD_W + OFF + 1.0,
                               -OFF - 1.0, BOARD_H + OFF + 1.0, EDGE_R_CAV, skip=[jack_box])
@@ -722,6 +765,10 @@ def run(context):
                           hx - INSERT_D / 2.0 - 0.6, hx + INSERT_D / 2.0 + 0.6,
                           fy(hy) - INSERT_D / 2.0 - 0.6, fy(hy) + INSERT_D / 2.0 + 0.6,
                           MOUTH_R)
+
+        # Hole down each boss below its pocket, stopping at the floor.
+        for hx, hy in HOLES:
+            cut(circle_sketch(Z_PCB_BACK, hx, fy(hy), BOSS_BORE_D), Z_FLOOR_IN - Z_PCB_BACK, tray)
 
         # Keyholes.
         for kx, ky in KEYHOLES:
@@ -750,12 +797,52 @@ def run(context):
         # =====================================================================
         # FRONT PLATE
         # =====================================================================
-        plate = solid(rect_sketch(Z_PLATE_IN, -OFF, -OFF, BOARD_W + OFF, BOARD_H + OFF),
-                      Z_PLATE_IN, Z_PLATE_OUT, None)
+        plate = tapered(rounded_rect_sketch(Z_PLATE_IN, BOARD_W / 2.0, BOARD_H / 2.0,
+                                            OUTER_W, OUTER_H, OUTER_R_XY).profiles.item(0),
+                        FRONT_T, True)[0]
         plate.name = 'ControllerEnclosure_FrontPlate'
 
-        round_vertical_edges(plate, OUTER_R_XY, outer_corners)
         plate_r = fillet_edges(plate, EDGE_R_PLATE, keep_flat=(Z_PLATE_IN,))
+
+        # Hollow underside, leaving solid corners under the screws and a column around the mic.
+        # Each solid corner has the boss's shape: round around the screw, filled out to the edge.
+        def board_pt(p):
+            """Sketch point for a board point (x, y)."""
+            return P(p[0], fy(p[1]))
+
+        ci, half, diag = CAVITY_INSET, BOSS_D / 2.0, math.sqrt(0.5)
+        hollow = root.sketches.add(plane_at(Z_PLATE_IN))
+        lines = hollow.sketchCurves.sketchLines
+        ends = {}                                     # per corner: where its sides meet the edge band
+        for hx, hy in HOLES:
+            sx = 1.0 if hx > BOARD_W / 2.0 else -1.0  # toward the board's corner
+            sy = 1.0 if hy > BOARD_H / 2.0 else -1.0
+            e_h = (hx - sx * half, BOARD_H - ci if sy > 0 else ci)
+            e_v = (BOARD_W - ci if sx > 0 else ci, hy - sy * half)
+            a, b = (hx - sx * half, hy), (hx, hy - sy * half)
+            lines.addByTwoPoints(board_pt(e_h), board_pt(a))
+            hollow.sketchCurves.sketchArcs.addByThreePoints(
+                board_pt(a), board_pt((hx - sx * half * diag, hy - sy * half * diag)), board_pt(b))
+            lines.addByTwoPoints(board_pt(b), board_pt(e_v))
+            ends[(sx, sy)] = (e_h, e_v)
+        tl, tr, br, bl = (ends[(-1.0, -1.0)], ends[(1.0, -1.0)],
+                          ends[(1.0, 1.0)], ends[(-1.0, 1.0)])
+        for p, q in ((tl[0], tr[0]), (tr[1], br[1]), (br[0], bl[0]), (bl[1], tl[1])):
+            lines.addByTwoPoints(board_pt(p), board_pt(q))
+        hollow_pts = [(x, fy(y)) for e in ends.values() for x, y in e]
+        hollow.sketchCurves.sketchCircles.addByCenterRadius(P(MIC_PORT[0], fy(MIC_PORT[1])),
+                                                            MIC_BOSS_D / 2.0 * MM)
+        cavity = next(hollow.profiles.item(k) for k in range(hollow.profiles.count)
+                      if hollow.profiles.item(k).profileLoops.count == 2)
+        combine(plate, tapered(cavity, FRONT_T - SKIN, True),
+                adsk.fusion.FeatureOperations.CutFeatureOperation)
+
+        # Round the hollow's corners.
+        hollow_c = fillet_corners(plate, Z_PLATE_IN, hollow_pts, HOLLOW_R)
+
+        # Round where the hollow's walls meet the skin.
+        hollow_r = fillet_region(plate, Z_PLATE_IN + FRONT_T - SKIN, -OFF - 1.0, BOARD_W + OFF + 1.0,
+                                 -OFF - 1.0, BOARD_H + OFF + 1.0, HOLLOW_R)
 
         def opening(cx, cy, hole, slope):
             """Hole through the plate with a sloped rim at the face. `hole` is (width, height)
@@ -774,22 +861,6 @@ def run(context):
         for bx, by in BUTTONS:
             opening(bx, by, BTN_TOP, RIM_SLOPE)
         opening(SWITCH[0], SWITCH[1], SW_BODY, RIM_SLOPE)
-
-        # Hollow underside, leaving solid corners under the screws and a column around the mic.
-        ci, cb, ch, W, H = CAVITY_INSET, CORNER_BLOCK, CORNER_CHAMFER, BOARD_W, BOARD_H
-        hollow = poly_sketch(Z_PLATE_IN, [(x, fy(y)) for x, y in [
-            (cb, ci), (W - cb, ci), (W - cb, cb - ch), (W - cb + ch, cb), (W - ci, cb),
-            (W - ci, H - cb), (W - cb + ch, H - cb), (W - cb, H - cb + ch), (W - cb, H - ci),
-            (cb, H - ci), (cb, H - cb + ch), (cb - ch, H - cb), (ci, H - cb),
-            (ci, cb), (cb - ch, cb), (cb, cb - ch)]])
-        hollow.sketchCurves.sketchCircles.addByCenterRadius(P(MIC_PORT[0], fy(MIC_PORT[1])),
-                                                            MIC_BOSS_D / 2.0 * MM)
-        cavity = next(hollow.profiles.item(k) for k in range(hollow.profiles.count)
-                      if hollow.profiles.item(k).profileLoops.count == 2)
-        inp = exts.createInput(cavity, adsk.fusion.FeatureOperations.CutFeatureOperation)
-        inp.setDistanceExtent(False, adsk.core.ValueInput.createByReal((FRONT_T - SKIN) * MM))
-        inp.participantBodies = [plate]
-        exts.add(inp)
 
         # IR sensor: body pocket under the skin, round lens window opening out to the face.
         ir_my = fy(SENSOR[1])
@@ -830,8 +901,9 @@ def run(context):
                      'sound-off note')
 
         # Tab that closes the jack's slot above the jack.
-        plate = solid(rect_sketch(Z_PLATE_IN, JACK_X - JACK_SLOT_W / 2.0 + TAB_CLR, bottom_wall[0],
-                                  JACK_X + JACK_SLOT_W / 2.0 - TAB_CLR, bottom_wall[1]),
+        tab_hw = jack_slot_hw(Z_PCB_BACK + TAB_CLR) - TAB_CLR
+        plate = solid(rect_sketch(Z_PLATE_IN, JACK_X - tab_hw, bottom_wall[0],
+                                  JACK_X + tab_hw, bottom_wall[1]),
                       Z_PLATE_IN, Z_PCB_BACK + TAB_CLR + EXPLODE, plate)
 
         # Pocket over the jack's pins, a little deeper than the hollow.
@@ -848,12 +920,12 @@ def run(context):
             'Above the plate: button caps %.1fmm, switch knob %.1fmm, sensor dome %.1fmm.\n'
             'Jack pins: pocket %.1f deep, %.1fmm of plastic over them.\n\n'
             'Edges rounded: tray %.2f of %.2f asked, cavity floor %.2f of %.2f,\n'
-            'plate %.2f of %.2f, tile slots %s of %.2f,\n'
-            'tile slot corners %s of %.2f.\n\n%s'
+            'plate %.2f of %.2f, hollow %.2f of %.2f, hollow corners %.2f of %.2f,\n'
+            'tile slots %s of %.2f, tile slot corners %s of %.2f.\n\n%s'
             % (OUTER_W, OUTER_H, Z_PLATE_OUT - Z_FLOOR_OUT, FRONT_T, SKIN, WALL,
                BTN_TOP_Z - FRONT_T, SW_TOP_Z - FRONT_T, IR_TOP_Z - FRONT_T,
                POCKET_D, FRONT_T - POCKET_D,
-               tray_r, EDGE_R_TRAY, cav_r, EDGE_R_CAV, plate_r, EDGE_R_PLATE,
+               tray_r, EDGE_R_TRAY, cav_r, EDGE_R_CAV, plate_r, EDGE_R_PLATE, hollow_r, HOLLOW_R, hollow_c, HOLLOW_R,
                ', '.join('%.2f' % r for r in slot_r), NOTCH_R,
                ', '.join('%.2f' % r for r in corner_r), SLOT_CORNER_R,
                ('Not engraved: ' + ', '.join(sorted(set(skipped)))) if skipped
