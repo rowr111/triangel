@@ -29,6 +29,8 @@ pub struct RippleStyle {
     /// How many times wider the gaps between rings are by the time a ripple has spread as
     /// far as it goes; 1 keeps them even.
     pub gap_growth: f32,
+    /// How much ripples cancel where a crest meets a trough: 0 adds them, 1 is like water.
+    pub interference: f32,
 }
 
 /// Where a drop lands, and its hue.
@@ -203,7 +205,10 @@ impl Ripples {
     /// The color the rings give one LED.
     fn color_at(&self, led: &Led, inv_reach: f32) -> [u8; 3] {
         let stretch = self.stretch_per_mm;
+        let interference = self.style.interference;
         let mut ripple = 0.0f32;
+        // Water height from all the rings: up at a crest, down at a trough.
+        let mut height = 0.0f32;
         let mut hue_sum = 0.0f32;
         let mut sat_sum = 0.0f32;
         for ring in &self.rings {
@@ -224,22 +229,23 @@ impl Ripples {
             let frac = cell - (cell as u32) as f32;
             // Triangle wave, squared for a sharper crest.
             let crest = 1.0 - (2.0 * frac - 1.0).abs();
-            let brightness = ring.brightness
-                * crest
-                * crest
-                * (1.0 - behind * ring.inv_train)
-                * (1.0 - dist * inv_reach).max(0.0);
+            let train_fade = 1.0 - behind * ring.inv_train;
+            let reach_fade = (1.0 - dist * inv_reach).max(0.0);
+            let brightness = ring.brightness * crest * crest * train_fade * reach_fade;
             ripple += brightness;
+            height += ring.brightness * (2.0 * crest - 1.0) * train_fade * reach_fade;
             hue_sum += ring.hue * brightness;
             sat_sum += ring.sat * brightness;
         }
 
-        if ripple > MIN_RIPPLE {
+        // The rings' summed brightness, moved toward the water height by `interference`.
+        let level = ripple + interference * (height.max(0.0) - ripple);
+        if level > MIN_RIPPLE {
             let inv = 1.0 / ripple;
             hsv(
                 hue_sum * inv,
                 (sat_sum * inv).clamp(0.0, 1.0),
-                ripple.min(1.0),
+                level.min(1.0),
             )
         } else {
             [0, 0, 0]

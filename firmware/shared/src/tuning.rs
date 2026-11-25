@@ -112,6 +112,8 @@ pub mod raindrop {
     /// How many times wider the gaps between rings are by the time a ripple has spread as
     /// far as it goes; 1 keeps them even.
     pub const GAP_GROWTH: f32 = 1.0;
+    /// How much ripples cancel where a crest meets a trough: 0 adds them, 1 is the max.
+    pub const INTERFERENCE: f32 = 0.75;
 }
 
 pub mod firework {

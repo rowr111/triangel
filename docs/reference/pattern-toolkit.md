@@ -78,7 +78,7 @@ hashed_phasor(hash)         // a Phasor for an angle taken from a hash; see How 
 Shared building blocks:
 
 - `glints::Glints` / `GlintStyle`: brief white flashes on single LEDs, mostly on the bright ones. Draw the frame, then call `update` over it.
-- `ripples::Ripples` / `RippleStyle`: trains of raindrop rings on black. The pattern picks where and when each drop falls (`spot`, `land`); `draw` renders them. `gap_growth` is how many times wider the gaps between rings get by the time a ripple has spread as far as it goes, and 1 keeps them even. Drizzle uses 6.6, so a 30 mm gap grows to about 198 mm.
+- `ripples::Ripples` / `RippleStyle`: trains of raindrop rings on black. The pattern picks where and when each drop falls (`spot`, `land`); `draw` renders them. `gap_growth` is how many times wider the gaps between rings get by the time a ripple has spread as far as it goes, and 1 keeps them even. Drizzle uses 6.6, so a 30 mm gap grows to about 198 mm. `interference` is how much overlapping ripples cancel where a crest meets a trough, the way water does: at 0 they just add up, and at 1, which Raindrop and Drizzle use, two equally strong ripples go dark where a crest meets a trough.
 
 ## Sound
 
