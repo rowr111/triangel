@@ -12,10 +12,14 @@ const GAP_MAX_MS: u32 = 3_000;
 /// Drop strength range.
 const STRENGTH_MIN: f32 = 0.35;
 const STRENGTH_MAX: f32 = 1.0;
+/// How many times wider the gaps between rings are by the time a ripple has spread as far
+/// as it goes.
+const GAP_GROWTH: f32 = 6.6;
 
 /// Raindrop's look at half its speed.
 const STYLE: RippleStyle = RippleStyle {
     ripple_speed: RIPPLE_SPEED * 0.5,
+    gap_growth: GAP_GROWTH,
     ..raindrop::STYLE
 };
 

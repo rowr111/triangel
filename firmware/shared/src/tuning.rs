@@ -109,6 +109,9 @@ pub mod raindrop {
     /// How far a ripple travels while still white, and how much brighter it is then.
     pub const WHITE_MM: f32 = 180.0;
     pub const HIT_BOOST: f32 = 4.5;
+    /// How many times wider the gaps between rings are by the time a ripple has spread as
+    /// far as it goes; 1 keeps them even.
+    pub const GAP_GROWTH: f32 = 1.0;
 }
 
 pub mod firework {

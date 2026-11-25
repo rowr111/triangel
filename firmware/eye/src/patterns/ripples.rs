@@ -26,6 +26,9 @@ pub struct RippleStyle {
     /// How far a ripple travels while still white, and how much brighter it is then.
     pub white_mm: f32,
     pub hit_boost: f32,
+    /// How many times wider the gaps between rings are by the time a ripple has spread as
+    /// far as it goes; 1 keeps them even.
+    pub gap_growth: f32,
 }
 
 /// Where a drop lands, and its hue.
@@ -43,7 +46,7 @@ struct Droplet {
     strength: f32,
     hue: f32,
     spacing: f32,
-    /// Distance from the leading edge back to the last ring.
+    /// Distance from the leading edge back to the last ring, before the rings spread apart.
     train: f32,
     alive: bool,
 }
@@ -60,16 +63,20 @@ impl Droplet {
         (radius, young, brightness)
     }
 
+    /// Length of the ring train when its leading edge is at `radius`.
+    fn train_mm(&self, radius: f32, stretch: f32) -> f32 {
+        self.train * (1.0 + stretch * radius) / (1.0 + stretch * self.train)
+    }
+
     /// Roughly how bright the brightest point of the rings is at `t_ms`.
-    fn glow(&self, t_ms: u32, style: &RippleStyle) -> f32 {
+    fn glow(&self, t_ms: u32, style: &RippleStyle, stretch: f32) -> f32 {
         let (radius, _, brightness) = self.front(t_ms, style);
-        let inner = (radius - self.train).max(0.0);
-        let peak_dist = ((style.ripple_max_mm + radius - self.train) * 0.5)
+        let train = self.train_mm(radius, stretch);
+        let inner = (radius - train).max(0.0);
+        let peak_dist = ((style.ripple_max_mm + radius - train) * 0.5)
             .max(inner)
             .min(radius.min(style.ripple_max_mm));
-        brightness
-            * (1.0 - (radius - peak_dist) / self.train)
-            * (1.0 - peak_dist / style.ripple_max_mm)
+        brightness * (1.0 - (radius - peak_dist) / train) * (1.0 - peak_dist / style.ripple_max_mm)
     }
 }
 
@@ -94,6 +101,8 @@ struct Ring {
 pub struct Ripples {
     rng: Rng,
     style: RippleStyle,
+    /// How much the gaps between rings widen per mm from the drop.
+    stretch_per_mm: f32,
     drops: [Droplet; MAX_DROPS],
     rings: Vec<Ring>,
 }
@@ -103,6 +112,7 @@ impl Ripples {
         Ripples {
             rng: Rng::new(seed),
             style,
+            stretch_per_mm: (style.gap_growth - 1.0) / style.ripple_max_mm,
             drops: core::array::from_fn(|_| Droplet {
                 x: 0.0,
                 y: 0.0,
@@ -134,7 +144,7 @@ impl Ripples {
     /// replaces the dimmest drop.
     pub fn land(&mut self, spot: Spot, t_ms: u32, strength: f32, spacing: f32, count: f32) {
         let slot = self.drops.iter().position(|d| !d.alive).unwrap_or_else(|| {
-            let glow = |i: &usize| self.drops[*i].glow(t_ms, &self.style);
+            let glow = |i: &usize| self.drops[*i].glow(t_ms, &self.style, self.stretch_per_mm);
             (0..MAX_DROPS)
                 .min_by(|a, b| glow(a).total_cmp(&glow(b)))
                 .unwrap_or(0)
@@ -162,17 +172,19 @@ impl Ripples {
     /// Ages the drops and lists the live ones' rings for this frame.
     fn collect_rings(&mut self, t_ms: u32) {
         let style = self.style;
+        let stretch = self.stretch_per_mm;
         self.rings.clear();
         for drop in self.drops.iter_mut() {
             if !drop.alive {
                 continue;
             }
             let (radius, young, brightness) = drop.front(t_ms, &style);
-            if radius - drop.train > style.ripple_max_mm {
+            let train = drop.train_mm(radius, stretch);
+            if radius - train > style.ripple_max_mm {
                 drop.alive = false;
                 continue;
             }
-            let inner = (radius - drop.train).max(0.0);
+            let inner = (radius - train).max(0.0);
             self.rings.push(Ring {
                 x: drop.x,
                 y: drop.y,
@@ -190,6 +202,7 @@ impl Ripples {
 
     /// The color the rings give one LED.
     fn color_at(&self, led: &Led, inv_reach: f32) -> [u8; 3] {
+        let stretch = self.stretch_per_mm;
         let mut ripple = 0.0f32;
         let mut hue_sum = 0.0f32;
         let mut sat_sum = 0.0f32;
@@ -203,6 +216,8 @@ impl Ripples {
             let dist = d2.sqrt();
             // Distance behind the leading edge.
             let behind = ring.radius - dist;
+            // Counted in gaps that widen with distance from the drop.
+            let behind = behind / (1.0 + stretch * dist);
             // The 0.5 puts a crest on the leading edge.
             let cell = behind * ring.inv_spacing + 0.5;
             // behind is never negative here, so the cast is a floor.

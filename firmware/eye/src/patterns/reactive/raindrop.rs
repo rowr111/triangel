@@ -12,6 +12,7 @@ pub const STYLE: RippleStyle = RippleStyle {
     start_radius_mm: START_RADIUS_MM,
     white_mm: WHITE_MM,
     hit_boost: HIT_BOOST,
+    gap_growth: GAP_GROWTH,
 };
 
 /// A drop's strength on the softest beat; the hardest beat gives 1.
